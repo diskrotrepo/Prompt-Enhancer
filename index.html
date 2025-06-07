@@ -8,7 +8,7 @@
 </head>
 <body onload="showContent('tool')">
   <div class="top-nav">
-    <a onclick="showContent('tool')" class="top-nav-link">Prompt Enhancer</a>
+    <a href="https://www.diskrot.com" target="_blank" class="top-nav-link diskrot-link">diskrot</a>
   </div>
   <div class="container">
     <div class="main-content">
@@ -21,9 +21,9 @@
         <div class="input-group">
           <label for="desc-input">Bad Descriptor List</label>
           <select id="desc-select">
-            <option value="default">Default bad list</option>
+            <option value="default" selected>Audio bad list</option>
             <option value="image">Image bad list</option>
-            <option value="empty" selected>Empty bad list</option>
+            <option value="empty">Empty bad list</option>
             <option value="custom">Custom list</option>
           </select>
           <textarea id="desc-input" rows="3" placeholder="Custom descriptors" disabled></textarea>
@@ -31,8 +31,8 @@
         <div class="input-group">
           <label for="neg-input">Negative Modifier List</label>
           <select id="neg-select">
-            <option value="default">Default no list</option>
-            <option value="empty" selected>Empty no list</option>
+            <option value="default" selected>Default no list</option>
+            <option value="empty">Empty no list</option>
             <option value="custom">Custom list</option>
           </select>
           <textarea id="neg-input" rows="2" placeholder="Custom negative modifiers" disabled></textarea>
@@ -51,6 +51,7 @@
           <label for="length-select">Length Limit</label>
           <select id="length-select">
             <option value="1000" selected>Suno (1000)</option>
+            <option value="10000">Riffusion (10000)</option>
             <option value="custom">Custom</option>
           </select>
           <input type="number" id="length-input" value="1000" min="1" disabled>
