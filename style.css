@@ -11,7 +11,9 @@ body {
     flex-direction: column;
     min-height: 100vh;
     font-family: Arial, sans-serif;
-    background-color: black;
+    background: radial-gradient(circle at 20% 20%, rgba(102,0,0,0.7), transparent 60%),
+                radial-gradient(circle at 80% 80%, rgba(0,0,102,0.7), transparent 60%),
+                linear-gradient(135deg, #330000, #000033);
     color: white;
     overflow: hidden;
 }
@@ -50,6 +52,8 @@ body {
     height: 100vh;
     flex-direction: row;
     padding-top: 40px;
+    align-items: center;
+    justify-content: center;
 }
 
 .left {
@@ -85,7 +89,10 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 100px;
+    padding: 50px;
+    max-width: 600px;
+    width: 100%;
+    margin: auto;
     overflow-y: auto;
     text-align: center;
 }
@@ -271,11 +278,12 @@ blockquote p {
     }
 
     .right {
-        height: 50vh;
+        height: auto;
         width: 100%;
-        padding: 50px;
+        padding: 20px;
         justify-content: flex-start;
         overflow-y: scroll;
+        margin: 0;
     }
 
     .team img {
@@ -320,6 +328,15 @@ select {
     color: #fff;
     border: 1px solid #444;
     padding: 0.5rem;
+}
+
+input[type=number] {
+    width: 100%;
+    background: #222;
+    color: #fff;
+    border: 1px solid #444;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
 }
 
 select {
