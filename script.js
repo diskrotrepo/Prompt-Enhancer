@@ -24,13 +24,57 @@ function generateBadDescriptorList(items, descs) {
   return badTerms;
 }
 
-function combineLists(negated, bad, limit) {
-  const combined = negated.slice();
-  for (const term of bad) {
+function combineListsByMode(negated, bad, mode, limit) {
+  const combined = [];
+
+  function tryAdd(term) {
     const test = [...combined, term].join(', ');
-    if (test.length > limit) break;
+    if (test.length > limit) return false;
     combined.push(term);
+    return true;
   }
+
+  const addAll = (list) => {
+    for (const term of list) {
+      if (!tryAdd(term)) break;
+    }
+  };
+
+  switch (mode) {
+    case 'bad-only':
+      addAll(bad);
+      break;
+    case 'negative-only':
+      addAll(negated);
+      break;
+    case 'bad-first':
+      addAll(bad);
+      addAll(negated);
+      break;
+    case 'mixed': {
+      let n = 0;
+      let b = 0;
+      while (n < negated.length || b < bad.length) {
+        let useNeg;
+        if (n >= negated.length) {
+          useNeg = false;
+        } else if (b >= bad.length) {
+          useNeg = true;
+        } else {
+          useNeg = Math.random() < 0.5;
+        }
+        const term = useNeg ? negated[n++] : bad[b++];
+        if (!tryAdd(term)) break;
+      }
+      break;
+    }
+    case 'negative-first':
+    default:
+      addAll(negated);
+      addAll(bad);
+      break;
+  }
+
   return combined;
 }
 
@@ -43,10 +87,10 @@ function generatePositiveList(items, combinedNeg) {
   return pos;
 }
 
-function buildVersions(items, descs, negs) {
+function buildVersions(items, descs, negs, mode) {
   const negated = generateNegatedList(items, negs);
   const bad = generateBadDescriptorList(items, descs);
-  const combinedNeg = combineLists(negated, bad, 1000);
+  const combinedNeg = combineListsByMode(negated, bad, mode, 1000);
   const positive = generatePositiveList(items, combinedNeg);
   return {
     good: positive.join(', '),
@@ -82,7 +126,8 @@ function collectInputs() {
   const baseItems = parseInput(document.getElementById('base-input').value);
   const descs = getList(document.getElementById('desc-select'), document.getElementById('desc-input'), DEFAULT_DESCRIPTORS);
   const negs = getList(document.getElementById('neg-select'), document.getElementById('neg-input'), DEFAULT_NEGATIVE_MODIFIERS);
-  return { baseItems, descs, negs };
+  const mode = document.getElementById('mode-select').value;
+  return { baseItems, descs, negs, mode };
 }
 
 function displayOutput(result) {
@@ -91,24 +136,24 @@ function displayOutput(result) {
 }
 
 function generate() {
-  const { baseItems, descs, negs } = collectInputs();
+  const { baseItems, descs, negs, mode } = collectInputs();
   if (!baseItems.length) {
     alert('Please enter at least one base prompt item.');
     return;
   }
-  const result = buildVersions(baseItems, descs, negs);
+  const result = buildVersions(baseItems, descs, negs, mode);
   displayOutput(result);
 }
 
 document.getElementById('generate').addEventListener('click', generate);
 
 document.getElementById('randomize').addEventListener('click', () => {
-  const { baseItems, descs, negs } = collectInputs();
+  const { baseItems, descs, negs, mode } = collectInputs();
   if (!baseItems.length) {
     alert('Please enter at least one base prompt item.');
     return;
   }
   const shuffled = baseItems.slice().sort(() => Math.random() - 0.5);
-  const result = buildVersions(shuffled, descs, negs);
+  const result = buildVersions(shuffled, descs, negs, mode);
   displayOutput(result);
 });
