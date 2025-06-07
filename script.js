@@ -1,10 +1,20 @@
-const DEFAULT_NEGATIVE_MODIFIERS = ["not", "no", "un-"];
-const RAW_DEFAULT_DESCS = `Horrorcore, Rockabilly, Soundtrack, kid's, children's, Christmas, holiday, jingle, oldies, Teen, Vocaloid, idol, K-Pop, mandarin, LGBT, Swing, Country, Anime, Black Metal, Straight Edge, Psychobilly, mediocre, Parody, humorous, Comedy, Reggaetón, Drill, Future Bass, Big Room House, Dubstep, Bounce, Hardstyle, Trance, Jersey Club, Footwork, Chiptune, Psytrance, Moombahton, Riddim Dubstep, Tech-House, Phonk, Electro-swing, Cumbia, Tango, Bossa Nova, Samba, Dancehall, Bhangra, Disco, Polka, Vaporwave, Minimal Techno, Blues, Sea Shanty, Lo-fi Hip-Hop, Synthwave, K-pop`;
-const DEFAULT_DESCRIPTORS = RAW_DEFAULT_DESCS.split(',').map(d => d.trim()).filter(Boolean);
-const RAW_IMAGE_BAD_LIST = `worst quality, normal quality, low quality, low res, old, oldest, blurry, distortion, extra digits, cropped, jpeg artifacts, grainy, pixelated, sketch, error, duplicate, ugly, monochrome, horror, geometry, disgusting, mutation, bad anatomy, bad proportions, bad quality, deformed, disconnected limbs, out of frame, out of focus, dehydrated, disfigured, extra arms, extra limbs, extra hands, fused fingers, gross proportions, long neck, malformed limbs, mutated, mutated hands, mutated limbs, missing arms, missing legs, missing hand, missing fingers, poorly drawn face, poorly drawn hands, poorly drawn feet, bad face, bad hands, ugly face, asymmetrical, fused face, double face, worst face, worst quality, worst face, worst feet, worst thigh, three hands, three legs, three feet, three thigh, three crus, extra crus, fused crus, extra legs, extra fingers, extra toes, extra crus, extra thigh, fused feet, fused thigh, fused crus, fused hands, fused toes, too many fingers, too many toes, long fingers, oversized eyes, huge eyes, extra eyes, cross-eyed, imperfect eyes, bad eyes, day-glo, high CFG artifact, bad illustration, bad composition, malformed, misshapen, disproportioned, gross proportions, mutated body parts, deformed body features, dismembered, amputee, amputation, disfigured, morbid, mutilated, mutation, mutated, mutated hands, mutated limbs, distorted, stretched, conjoined, floating limbs, disconnected limbs, unnatural pose, unnatural, unsightly, unattractive, split image, tiling, duplicated features, cloned face, duplicate, watermark, signature, username, autograph, printed words, text, banner, branding, logo, identifying mark, geometry, script, UI, interface, low resolution, low quality, normal quality, worst quality, jpeg artifacts, color aberration, aberrations, noise, grainy, hazy, blurry, unfocused, underexposed, overexposed, low saturation, oversaturated, harsh lighting, flash, sketch, drawing, abstract, surreal, psychedelic, kitsch, rotten, twisted`;
-const IMAGE_BAD_DESCRIPTORS = RAW_IMAGE_BAD_LIST.split(',').map(d => d.trim()).filter(Boolean);
-const RAW_POSITIVE_IMAGE_LIST = `masterpiece, best quality, high quality, top quality, highest quality, ultra high quality, very aesthetic, aesthetic, beautiful, beautiful and aesthetic, good, great, best, beautiful, newest, 2023, 2022, 2021, depth of field, DOF, bokeh, 8k, 8k resolution, 8k wallpaper, 4k, 4k resolution, UHD, HD, highres, absurdres, ultra high definition, high definition, detailed, highly detailed, very detailed, extremely detailed, ultra detailed, incredibly detailed, hyper detailed, intricate, intricate details, finely detailed, sharp focus, in focus, focused, detailed shadows, detailed background, detailed clothing, detailed eyes, beautiful eyes, vibrant colors, vivid colors, rich colors, colorful, bright colors, volumetric, god rays, lens flare, bloom, ambient occlusion, official, dynamic, detailed skin, detailed skin texture`;
-const DEFAULT_POSITIVE_MODIFIERS = RAW_POSITIVE_IMAGE_LIST.split(",").map(d => d.trim()).filter(Boolean);
+let DEFAULT_NEGATIVE_MODIFIERS = [];
+let DEFAULT_DESCRIPTORS = [];
+let IMAGE_BAD_DESCRIPTORS = [];
+let DEFAULT_POSITIVE_MODIFIERS = [];
+
+function loadLists() {
+  if (typeof BAD_LISTS === 'object') {
+    DEFAULT_DESCRIPTORS = BAD_LISTS.DEFAULT_DESCRIPTORS || [];
+    IMAGE_BAD_DESCRIPTORS = BAD_LISTS.IMAGE_BAD_DESCRIPTORS || [];
+  }
+  if (typeof NEGATIVE_MODIFIER_LISTS === 'object') {
+    DEFAULT_NEGATIVE_MODIFIERS = NEGATIVE_MODIFIER_LISTS.DEFAULT_NEGATIVE_MODIFIERS || [];
+  }
+  if (typeof GOOD_LISTS === 'object') {
+    DEFAULT_POSITIVE_MODIFIERS = GOOD_LISTS.DEFAULT_POSITIVE_MODIFIERS || [];
+  }
+}
 
 function parseInput(raw) {
   if (!raw) return [];
@@ -198,3 +208,5 @@ document.getElementById('randomize').addEventListener('click', () => {
   const result = buildVersions(shuffled, descs, negs, posMods, negMode, posMode, limit);
   displayOutput(result);
 });
+
+loadLists();
