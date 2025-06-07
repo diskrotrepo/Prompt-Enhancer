@@ -38,13 +38,29 @@
           <textarea id="neg-input" rows="2" placeholder="Custom negative modifiers" disabled></textarea>
         </div>
         <div class="input-group">
-          <label for="mode-select">Combination Mode</label>
-          <select id="mode-select">
+          <label for="pos-input">Positive Modifier List</label>
+          <select id="pos-select">
+            <option value="default" selected>Image positive list</option>
+            <option value="empty">Empty positive list</option>
+            <option value="custom">Custom list</option>
+          </select>
+          <textarea id="pos-input" rows="2" placeholder="Custom positive modifiers" disabled></textarea>
+        </div>
+        <div class="input-group">
+          <label for="neg-mode-select">Negative Combination Mode</label>
+          <select id="neg-mode-select">
             <option value="negative-first" selected>Negative first</option>
             <option value="bad-first">Bad first</option>
             <option value="negative-only">Negative only</option>
             <option value="bad-only">Bad only</option>
             <option value="mixed">Mixed</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="pos-mode-select">Positive Combination Mode</label>
+          <select id="pos-mode-select">
+            <option value="on" selected>On</option>
+            <option value="off">Off</option>
           </select>
         </div>
         <div class="input-group">
