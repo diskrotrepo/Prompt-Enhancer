@@ -40,6 +40,10 @@ body {
     cursor: pointer;
 }
 
+.diskrot-link {
+    color: red;
+}
+
 .top-nav-link:hover {
     text-decoration: none;
     color: black;
@@ -301,7 +305,15 @@ h1 {
     margin-bottom: 0.25rem;
 }
 
-textarea,
+textarea {
+    width: 100%;
+    background: #222;
+    color: #fff;
+    border: 1px solid #444;
+    padding: 0.5rem;
+    min-height: 15vh;
+}
+
 select {
     width: 100%;
     background: #222;
