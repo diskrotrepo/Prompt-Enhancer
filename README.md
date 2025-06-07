@@ -16,11 +16,9 @@ Simply open `index.html` in your browser. No build step or server is required.
 3. Choose how the bad descriptors and negatives should be combined using the **Negative Combination Mode** menu:
    - *Negative first* (default)
    - *Bad first*
-   - *Negative only*
-   - *Bad only*
    - *Mixed*
 4. Toggle the **Positive Combination Mode** to turn positive modifiers on or off.
-5. Set the maximum length for the generated output (default 1000 characters).
+5. Set the maximum length for the generated output (default 1000 characters). The lists repeat as needed until this limit is reached.
 6. Click **Generate** to see the good and bad versions, or **Randomize** to shuffle the base list before generating.
 
 Built‑in descriptor lists live in `script.js` and can be extended by editing that file. The interface is styled by `style.css` and uses a dark theme inspired by Diskrot.
