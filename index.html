@@ -31,6 +31,16 @@
     </select>
     <textarea id="neg-input" rows="2" placeholder="Custom negative modifiers" disabled></textarea>
   </div>
+  <div class="input-group">
+    <label for="mode-select">Combination Mode</label>
+    <select id="mode-select">
+      <option value="negative-first" selected>Negative first</option>
+      <option value="bad-first">Bad first</option>
+      <option value="negative-only">Negative only</option>
+      <option value="bad-only">Bad only</option>
+      <option value="mixed">Mixed</option>
+    </select>
+  </div>
   <button id="generate">Generate</button>
   <button id="randomize">Randomize</button>
   <div class="output">
