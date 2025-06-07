@@ -1,17 +1,32 @@
 # Prompt-Enhancer
-A prompt enhancer that includes various modes with sticky negative support.
 
-The project is now purely JavaScript-based with a single web interface.
+A lightweight web utility for creating "good" and "bad" prompt variations. The project is entirely client side with a single HTML page and accompanying JavaScript and CSS files.
 
-## Web Interface
-Open `index.html` in your browser to use the tool. It provides text areas for a base prompt list, a "bad" descriptor list, and a list of negative modifiers. You can choose default, empty, or custom lists using the drop-down menus next to each box. A separate selector allows you to choose the **combination mode** controlling how the negative and bad terms are mixed:
+## Running
 
-* **Negative first** – run through negatives then bad descriptors (default).
-* **Bad first** – run through bad descriptors before negatives.
-* **Negative only** – output only negative-modified items.
-* **Bad only** – output only bad descriptors.
-* **Mixed** – randomly alternate between negatives and bad descriptors.
+Simply open `index.html` in your browser. No build step or server is required.
 
-The page now emulates Diskrot's dark style with a split image/tool layout. All
-images are embedded directly in the HTML using Base64 data URIs so no binary
-files are needed.
+## Usage
+
+1. Enter a comma, semicolon or newline separated **base prompt list**.
+2. For each list below the base prompt you can pick a **default**, **image** or **empty** set, or provide your own values:
+   - **Bad Descriptor List** – adjectives or phrases to prepend in the "bad" variant.
+   - **Negative Modifier List** – short negation words like `not` or `no`.
+3. Choose how the bad descriptors and negatives should be combined using the **Combination Mode** menu:
+   - *Negative first* (default)
+   - *Bad first*
+   - *Negative only*
+   - *Bad only*
+   - *Mixed*
+4. Set the maximum length for the generated output (default 1000 characters).
+5. Click **Generate** to see the good and bad versions, or **Randomize** to shuffle the base list before generating.
+
+Built‑in descriptor lists live in `script.js` and can be extended by editing that file. The interface is styled by `style.css` and uses a dark theme inspired by Diskrot.
+
+## Repository Layout
+
+- `index.html` – the user interface
+- `script.js` – list generation logic
+- `style.css` – page styling
+
+There are no external images or Base64 assets; everything is plain text so the tool works completely offline.
