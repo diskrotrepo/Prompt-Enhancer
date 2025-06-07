@@ -1,0 +1,59 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #111;
+  color: #eee;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: #7ef9ff;
+}
+
+.input-group {
+  margin-bottom: 1rem;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+textarea {
+  width: 100%;
+  background: #222;
+  color: #fff;
+  border: 1px solid #444;
+  padding: 0.5rem;
+}
+
+select {
+  margin-bottom: 0.5rem;
+  background: #222;
+  color: #fff;
+  border: 1px solid #444;
+}
+
+button {
+  margin-right: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #7ef9ff;
+  border: none;
+  color: #000;
+  cursor: pointer;
+}
+
+.output pre {
+  background: #222;
+  padding: 0.5rem;
+  border: 1px solid #444;
+  white-space: pre-wrap;
+}
