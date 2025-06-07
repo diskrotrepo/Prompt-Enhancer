@@ -1,55 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Prompt Enhancer</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prompt Enhancer</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-<body>
-<div class="container">
-  <h1>Prompt Enhancer</h1>
-  <div class="input-group">
-    <label for="base-input">Base Prompt List</label>
-    <textarea id="base-input" rows="4" placeholder="Enter comma, semicolon, or newline separated items"></textarea>
+<body onload="showContent('tool')">
+  <div class="top-nav">
+    <a onclick="showContent('tool')" class="top-nav-link">
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAAq0lEQVR4nO3QOw4BARSF4c+j0VHYhQ2otDT2oLMEzTQoxAp01iAh0bMEqxAJncpQiInXMEFUc3KKm9xzT/5cfq4BxysfWDOhGp+JPCIb15ulTJMFjQQcT4oCMpQYgxzDmEzk9guiHcFlrlD4gChS5t1xoqIi3cu8Yn+77d0+u/606Bza0gIhnW+IQjZMqTF72N49e07+sSKgnwAhKdGfiu6evfwhUapUqV7qBLrRK7o3+qhOAAAAAElFTkSuQmCC" width="24" height="24" alt="logo">
+    </a>
   </div>
-  <div class="input-group">
-    <label for="desc-input">Bad Descriptor List</label>
-    <select id="desc-select">
-      <option value="default">Default bad list</option>
-      <option value="empty" selected>Empty bad list</option>
-      <option value="custom">Custom list</option>
-    </select>
-    <textarea id="desc-input" rows="3" placeholder="Custom descriptors" disabled></textarea>
+  <div class="container">
+    <div class="left">
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlgAAAJYCAIAAAAxBA+LAAAIEklEQVR4nO3dS4iVZRzH8Z860VAIdhHyEpjQJgi6rArKIApadFlUi5KgrRbRopCgTe1sUQslgog2U1SgRC2C0mBqFVFRhBbZorwmqRmmkzNOi3AQw+mcM885z5x5Ph/ezcDwn/95N1/OmfO+bwIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAffYP1BTPd3M1xFkAAAAASUVORK5CYII=" alt="Prompt Enhancer">
+      <div class="diskrot">Prompt Enhancer</div>
+    </div>
+    <div class="right">
+      <div id="tool" class="content">
+        <h1>Prompt Enhancer</h1>
+        <div class="input-group">
+          <label for="base-input">Base Prompt List</label>
+          <textarea id="base-input" rows="4" placeholder="Enter comma, semicolon, or newline separated items"></textarea>
+        </div>
+        <div class="input-group">
+          <label for="desc-input">Bad Descriptor List</label>
+          <select id="desc-select">
+            <option value="default">Default bad list</option>
+            <option value="empty" selected>Empty bad list</option>
+            <option value="custom">Custom list</option>
+          </select>
+          <textarea id="desc-input" rows="3" placeholder="Custom descriptors" disabled></textarea>
+        </div>
+        <div class="input-group">
+          <label for="neg-input">Negative Modifier List</label>
+          <select id="neg-select">
+            <option value="default">Default no list</option>
+            <option value="empty" selected>Empty no list</option>
+            <option value="custom">Custom list</option>
+          </select>
+          <textarea id="neg-input" rows="2" placeholder="Custom negative modifiers" disabled></textarea>
+        </div>
+        <div class="input-group">
+          <label for="mode-select">Combination Mode</label>
+          <select id="mode-select">
+            <option value="negative-first" selected>Negative first</option>
+            <option value="bad-first">Bad first</option>
+            <option value="negative-only">Negative only</option>
+            <option value="bad-only">Bad only</option>
+            <option value="mixed">Mixed</option>
+          </select>
+        </div>
+        <button id="generate">Generate</button>
+        <button id="randomize">Randomize</button>
+        <div class="output">
+          <h2>Good Version</h2>
+          <pre id="good-output"></pre>
+          <h2>Bad Version</h2>
+          <pre id="bad-output"></pre>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="input-group">
-    <label for="neg-input">Negative Modifier List</label>
-    <select id="neg-select">
-      <option value="default">Default no list</option>
-      <option value="empty" selected>Empty no list</option>
-      <option value="custom">Custom list</option>
-    </select>
-    <textarea id="neg-input" rows="2" placeholder="Custom negative modifiers" disabled></textarea>
-  </div>
-  <div class="input-group">
-    <label for="mode-select">Combination Mode</label>
-    <select id="mode-select">
-      <option value="negative-first" selected>Negative first</option>
-      <option value="bad-first">Bad first</option>
-      <option value="negative-only">Negative only</option>
-      <option value="bad-only">Bad only</option>
-      <option value="mixed">Mixed</option>
-    </select>
-  </div>
-  <button id="generate">Generate</button>
-  <button id="randomize">Randomize</button>
-  <div class="output">
-    <h2>Good Version</h2>
-    <pre id="good-output"></pre>
-    <h2>Bad Version</h2>
-    <pre id="bad-output"></pre>
-  </div>
-</div>
-<script src="script.js"></script>
+  <script>
+    function showContent(id) {
+      document.querySelectorAll('.content').forEach(div => div.style.display = 'none');
+      document.getElementById(id).style.display = 'block';
+    }
+  </script>
+  <script src="script.js"></script>
 </body>
 </html>

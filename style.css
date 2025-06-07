@@ -1,25 +1,99 @@
-body {
-  font-family: Arial, sans-serif;
-  background: #111;
-  color: #eee;
+/* Global Reset */
+* {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
 }
 
+/* Body */
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+  background-color: black;
+  color: white;
+}
+
+/* Top Navigation */
+.top-nav {
+  width: 100%;
+  background-color: black;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: flex-end;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+}
+
+.top-nav a {
+  font-size: 0.75em;
+  color: white;
+  text-decoration: none;
+  margin-right: 20px;
+}
+
+.top-nav-link:hover {
+  text-decoration: none;
+  color: black;
+  background-color: white;
+}
+
+/* Layout */
 .container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 2rem;
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  flex-direction: row;
+  padding-top: 40px; /* for nav offset */
+}
+
+.left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.left img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.diskrot {
+  width: 100%;
+  text-align: center;
+  font-size: 2rem;
+  font-weight: bold;
+  color: #ff0000;
+  padding: 20px;
+  background-color: black;
+}
+
+.right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 100px;
+  overflow-y: auto;
+  text-align: center;
 }
 
 h1 {
-  text-align: center;
   margin-bottom: 1rem;
-  color: #7ef9ff;
 }
 
 .input-group {
   margin-bottom: 1rem;
+  width: 100%;
 }
 
 .input-group label {
@@ -27,7 +101,7 @@ h1 {
   margin-bottom: 0.25rem;
 }
 
-textarea {
+textarea, select {
   width: 100%;
   background: #222;
   color: #fff;
@@ -37,17 +111,14 @@ textarea {
 
 select {
   margin-bottom: 0.5rem;
-  background: #222;
-  color: #fff;
-  border: 1px solid #444;
 }
 
 button {
   margin-right: 0.5rem;
   padding: 0.5rem 1rem;
-  background: #7ef9ff;
-  border: none;
+  background: #fff;
   color: #000;
+  border: none;
   cursor: pointer;
 }
 
@@ -56,4 +127,24 @@ button {
   padding: 0.5rem;
   border: 1px solid #444;
   white-space: pre-wrap;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+  }
+
+  .left {
+    height: 50vh;
+    width: 100%;
+  }
+
+  .right {
+    height: 50vh;
+    width: 100%;
+    padding: 50px;
+    justify-content: flex-start;
+    overflow-y: scroll;
+  }
 }
