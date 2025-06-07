@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prompt Enhancer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+  <h1>Prompt Enhancer</h1>
+  <div class="input-group">
+    <label for="base-input">Base Prompt List</label>
+    <textarea id="base-input" rows="4" placeholder="Enter comma, semicolon, or newline separated items"></textarea>
+  </div>
+  <div class="input-group">
+    <label for="desc-input">Bad Descriptor List</label>
+    <select id="desc-select">
+      <option value="default">Default bad list</option>
+      <option value="empty" selected>Empty bad list</option>
+      <option value="custom">Custom list</option>
+    </select>
+    <textarea id="desc-input" rows="3" placeholder="Custom descriptors" disabled></textarea>
+  </div>
+  <div class="input-group">
+    <label for="neg-input">Negative Modifier List</label>
+    <select id="neg-select">
+      <option value="default">Default no list</option>
+      <option value="empty" selected>Empty no list</option>
+      <option value="custom">Custom list</option>
+    </select>
+    <textarea id="neg-input" rows="2" placeholder="Custom negative modifiers" disabled></textarea>
+  </div>
+  <button id="generate">Generate</button>
+  <button id="randomize">Randomize</button>
+  <div class="output">
+    <h2>Good Version</h2>
+    <pre id="good-output"></pre>
+    <h2>Bad Version</h2>
+    <pre id="bad-output"></pre>
+  </div>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
