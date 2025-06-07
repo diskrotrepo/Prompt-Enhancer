@@ -12,4 +12,4 @@ Open `index.html` in your browser to use the tool. It provides text areas for a 
 * **Bad only** – output only bad descriptors.
 * **Mixed** – randomly alternate between negatives and bad descriptors.
 
-The page has a dark style loosely inspired by Diskrot.
+The page now emulates Diskrot's dark style with a split layout. No images are used; the design relies entirely on text and colors.
