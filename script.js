@@ -95,10 +95,10 @@ function generatePositiveList(items, combinedNeg) {
   return pos;
 }
 
-function buildVersions(items, descs, negs, mode) {
+function buildVersions(items, descs, negs, mode, limit) {
   const negated = generateNegatedList(items, negs);
   const bad = generateBadDescriptorList(items, descs);
-  const combinedNeg = combineListsByMode(negated, bad, mode, 1000);
+  const combinedNeg = combineListsByMode(negated, bad, mode, limit);
   const positive = generatePositiveList(items, combinedNeg);
   return {
     good: positive.join(', '),
@@ -134,12 +134,32 @@ document.getElementById('neg-select').addEventListener('change', () => {
   getList(document.getElementById('neg-select'), document.getElementById('neg-input'), DEFAULT_NEGATIVE_MODIFIERS);
 });
 
+document.getElementById('length-select').addEventListener('change', () => {
+  const select = document.getElementById('length-select');
+  const input = document.getElementById('length-input');
+  if (select.value === 'custom') {
+    input.disabled = false;
+  } else {
+    input.value = select.value;
+    input.disabled = true;
+  }
+});
+
 function collectInputs() {
   const baseItems = parseInput(document.getElementById('base-input').value);
   const descs = getList(document.getElementById('desc-select'), document.getElementById('desc-input'), DEFAULT_DESCRIPTORS);
   const negs = getList(document.getElementById('neg-select'), document.getElementById('neg-input'), DEFAULT_NEGATIVE_MODIFIERS);
   const mode = document.getElementById('mode-select').value;
-  return { baseItems, descs, negs, mode };
+  const lengthSelect = document.getElementById('length-select');
+  const lengthInput = document.getElementById('length-input');
+  let limit;
+  if (lengthSelect.value === 'custom') {
+    limit = parseInt(lengthInput.value, 10) || 1000;
+  } else {
+    limit = parseInt(lengthSelect.value, 10);
+    lengthInput.value = limit;
+  }
+  return { baseItems, descs, negs, mode, limit };
 }
 
 function displayOutput(result) {
@@ -148,24 +168,24 @@ function displayOutput(result) {
 }
 
 function generate() {
-  const { baseItems, descs, negs, mode } = collectInputs();
+  const { baseItems, descs, negs, mode, limit } = collectInputs();
   if (!baseItems.length) {
     alert('Please enter at least one base prompt item.');
     return;
   }
-  const result = buildVersions(baseItems, descs, negs, mode);
+  const result = buildVersions(baseItems, descs, negs, mode, limit);
   displayOutput(result);
 }
 
 document.getElementById('generate').addEventListener('click', generate);
 
 document.getElementById('randomize').addEventListener('click', () => {
-  const { baseItems, descs, negs, mode } = collectInputs();
+  const { baseItems, descs, negs, mode, limit } = collectInputs();
   if (!baseItems.length) {
     alert('Please enter at least one base prompt item.');
     return;
   }
   const shuffled = baseItems.slice().sort(() => Math.random() - 0.5);
-  const result = buildVersions(shuffled, descs, negs, mode);
+  const result = buildVersions(shuffled, descs, negs, mode, limit);
   displayOutput(result);
 });

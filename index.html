@@ -50,6 +50,14 @@
             <option value="mixed">Mixed</option>
           </select>
         </div>
+        <div class="input-group">
+          <label for="length-select">Length Limit</label>
+          <select id="length-select">
+            <option value="1000" selected>Suno (1000)</option>
+            <option value="custom">Custom</option>
+          </select>
+          <input type="number" id="length-input" value="1000" min="1" disabled>
+        </div>
         <button id="generate">Generate</button>
         <button id="randomize">Randomize</button>
         <div class="output">
