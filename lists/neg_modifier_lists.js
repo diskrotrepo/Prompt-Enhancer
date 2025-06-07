@@ -3,5 +3,5 @@ const NEGATIVE_MODIFIER_LISTS = {
   "not",
   "no",
   "un-",
-  ]\n};
-
+  ]
+};

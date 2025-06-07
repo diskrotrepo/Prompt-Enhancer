@@ -64,5 +64,5 @@ const GOOD_LISTS = {
   "dynamic",
   "detailed skin",
   "detailed skin texture",
-  ]\n};
-
+  ]
+};

@@ -14,7 +14,18 @@ function loadLists() {
   if (typeof GOOD_LISTS === 'object') {
     DEFAULT_POSITIVE_MODIFIERS = GOOD_LISTS.DEFAULT_POSITIVE_MODIFIERS || [];
   }
+  
+  // Debug: Log loaded lists to verify they're populated
+  console.log('Lists loaded:', {
+    DEFAULT_DESCRIPTORS: DEFAULT_DESCRIPTORS.length,
+    IMAGE_BAD_DESCRIPTORS: IMAGE_BAD_DESCRIPTORS.length,
+    DEFAULT_NEGATIVE_MODIFIERS: DEFAULT_NEGATIVE_MODIFIERS.length,
+    DEFAULT_POSITIVE_MODIFIERS: DEFAULT_POSITIVE_MODIFIERS.length
+  });
 }
+
+// Load lists immediately
+loadLists();
 
 function parseInput(raw) {
   if (!raw) return [];
@@ -140,14 +151,17 @@ function getList(selectEl, textareaEl, defaults) {
 }
 
 document.getElementById('desc-select').addEventListener('change', () => {
+  console.log('Desc select changed to:', document.getElementById('desc-select').value);
   getList(document.getElementById('desc-select'), document.getElementById('desc-input'), DEFAULT_DESCRIPTORS);
 });
 
 document.getElementById('neg-select').addEventListener('change', () => {
+  console.log('Neg select changed to:', document.getElementById('neg-select').value);
   getList(document.getElementById('neg-select'), document.getElementById('neg-input'), DEFAULT_NEGATIVE_MODIFIERS);
 });
 
 document.getElementById('pos-select').addEventListener('change', () => {
+  console.log('Pos select changed to:', document.getElementById('pos-select').value);
   getList(document.getElementById('pos-select'), document.getElementById('pos-input'), DEFAULT_POSITIVE_MODIFIERS);
 });
 
@@ -208,5 +222,3 @@ document.getElementById('randomize').addEventListener('click', () => {
   const result = buildVersions(shuffled, descs, negs, posMods, negMode, posMode, limit);
   displayOutput(result);
 });
-
-loadLists();

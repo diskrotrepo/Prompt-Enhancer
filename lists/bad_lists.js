@@ -218,5 +218,5 @@ const BAD_LISTS = {
   "kitsch",
   "rotten",
   "twisted",
-  ]\n};
-
+  ]
+};
