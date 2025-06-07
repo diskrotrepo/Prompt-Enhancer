@@ -1,6 +1,8 @@
 const DEFAULT_NEGATIVE_MODIFIERS = ["not", "no", "un-"];
 const RAW_DEFAULT_DESCS = `Horrorcore, Rockabilly, Soundtrack, kid's, children's, Christmas, holiday, jingle, oldies, Teen, Vocaloid, idol, K-Pop, mandarin, LGBT, Swing, Country, Anime, Black Metal, Straight Edge, Psychobilly, mediocre, Parody, humorous, Comedy, Reggaetón, Drill, Future Bass, Big Room House, Dubstep, Bounce, Hardstyle, Trance, Jersey Club, Footwork, Chiptune, Psytrance, Moombahton, Riddim Dubstep, Tech-House, Phonk, Electro-swing, Cumbia, Tango, Bossa Nova, Samba, Dancehall, Bhangra, Disco, Polka, Vaporwave, Minimal Techno, Blues, Sea Shanty, Lo-fi Hip-Hop, Synthwave, K-pop`;
 const DEFAULT_DESCRIPTORS = RAW_DEFAULT_DESCS.split(',').map(d => d.trim()).filter(Boolean);
+const RAW_IMAGE_BAD_LIST = `worst quality, normal quality, low quality, low res, old, oldest, blurry, distortion, extra digits, cropped, jpeg artifacts, grainy, pixelated, sketch, error, duplicate, ugly, monochrome, horror, geometry, disgusting, mutation, bad anatomy, bad proportions, bad quality, deformed, disconnected limbs, out of frame, out of focus, dehydrated, disfigured, extra arms, extra limbs, extra hands, fused fingers, gross proportions, long neck, malformed limbs, mutated, mutated hands, mutated limbs, missing arms, missing legs, missing hand, missing fingers, poorly drawn face, poorly drawn hands, poorly drawn feet, bad face, bad hands, ugly face, asymmetrical, fused face, double face, worst face, worst quality, worst face, worst feet, worst thigh, three hands, three legs, three feet, three thigh, three crus, extra crus, fused crus, extra legs, extra fingers, extra toes, extra crus, extra thigh, fused feet, fused thigh, fused crus, fused hands, fused toes, too many fingers, too many toes, long fingers, oversized eyes, huge eyes, extra eyes, cross-eyed, imperfect eyes, bad eyes, day-glo, high CFG artifact, bad illustration, bad composition, malformed, misshapen, disproportioned, gross proportions, mutated body parts, deformed body features, dismembered, amputee, amputation, disfigured, morbid, mutilated, mutation, mutated, mutated hands, mutated limbs, distorted, stretched, conjoined, floating limbs, disconnected limbs, unnatural pose, unnatural, unsightly, unattractive, split image, tiling, duplicated features, cloned face, duplicate, watermark, signature, username, autograph, printed words, text, banner, branding, logo, identifying mark, geometry, script, UI, interface, low resolution, low quality, normal quality, worst quality, jpeg artifacts, color aberration, aberrations, noise, grainy, hazy, blurry, unfocused, underexposed, overexposed, low saturation, oversaturated, harsh lighting, flash, sketch, drawing, abstract, surreal, psychedelic, kitsch, rotten, twisted`;
+const IMAGE_BAD_DESCRIPTORS = RAW_IMAGE_BAD_LIST.split(',').map(d => d.trim()).filter(Boolean);
 
 function parseInput(raw) {
   if (!raw) return [];
@@ -10,7 +12,13 @@ function parseInput(raw) {
 
 function generateNegatedList(items, negs) {
   if (!negs.length) return [];
-  return items.map(item => `${negs[Math.floor(Math.random() * negs.length)]} ${item}`);
+  const result = [];
+  for (const neg of negs) {
+    for (const item of items) {
+      result.push(`${neg} ${item}`);
+    }
+  }
+  return result;
 }
 
 function generateBadDescriptorList(items, descs) {
@@ -104,6 +112,10 @@ function getList(selectEl, textareaEl, defaults) {
     textareaEl.value = defaults.join(', ');
     textareaEl.disabled = true;
     return defaults;
+  } else if (choice === 'image') {
+    textareaEl.value = IMAGE_BAD_DESCRIPTORS.join(', ');
+    textareaEl.disabled = true;
+    return IMAGE_BAD_DESCRIPTORS;
   } else if (choice === 'empty') {
     textareaEl.value = '';
     textareaEl.disabled = true;
