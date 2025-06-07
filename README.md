@@ -12,6 +12,4 @@ Open `index.html` in your browser to use the tool. It provides text areas for a 
 * **Bad only** – output only bad descriptors.
 * **Mixed** – randomly alternate between negatives and bad descriptors.
 
-The page now emulates Diskrot's dark style with a split image/tool layout. All
-images are embedded directly in the HTML using Base64 data URIs so no binary
-files are needed.
+The page now emulates Diskrot's dark style with a split layout. No images are used; the design relies entirely on text and colors.
