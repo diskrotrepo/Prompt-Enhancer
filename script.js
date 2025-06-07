@@ -10,26 +10,24 @@ function parseInput(raw) {
   return normalized.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
 }
 
-function generateNegatedList(items, negs) {
-  if (!negs.length) return [];
+function generatePrependedList(items, prefixes) {
+  if (!prefixes.length) return [];
+  const shuffled = prefixes.slice().sort(() => Math.random() - 0.5);
   const result = [];
-  for (const neg of negs) {
-    for (const item of items) {
-      result.push(`${neg} ${item}`);
-    }
+  for (let i = 0; i < shuffled.length; i++) {
+    const prefix = shuffled[i % shuffled.length];
+    const item = items[i % items.length];
+    result.push(`${prefix} ${item}`);
   }
   return result;
 }
 
+function generateNegatedList(items, negs) {
+  return generatePrependedList(items, negs);
+}
+
 function generateBadDescriptorList(items, descs) {
-  const shuffled = descs.slice().sort(() => Math.random() - 0.5);
-  const badTerms = [];
-  for (let i = 0; i < shuffled.length; i++) {
-    const desc = shuffled[i % shuffled.length];
-    const item = items[i % items.length];
-    badTerms.push(`${desc} ${item}`);
-  }
-  return badTerms;
+  return generatePrependedList(items, descs);
 }
 
 function combineListsByMode(negated, bad, mode, limit) {
