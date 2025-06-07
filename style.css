@@ -314,6 +314,11 @@ textarea {
     min-height: 15vh;
 }
 
+#base-input,
+#desc-input {
+    min-height: 10vh;
+}
+
 select {
     width: 100%;
     background: #222;
