@@ -107,28 +107,99 @@ function combineListsByMode(negated, bad, mode, limit) {
   return combined;
 }
 
-function generatePositiveList(items, combinedNeg) {
-  const target = combinedNeg.length;
-  const pos = [];
-  for (let i = 0; i < target; i++) {
-    pos.push(items[i % items.length]);
-  }
-  return pos;
-}
-
 function buildVersions(items, descs, negs, posMods, negMode, posMode, limit) {
-  const negated = generateNegatedList(items, negs);
-  const bad = generateBadDescriptorList(items, descs);
-  const combinedNeg = combineListsByMode(negated, bad, negMode, limit);
-  const basePos = posMode === 'on'
-    ? generatePrependedList(items, posMods)
-    : items;
-  const positive = generatePositiveList(basePos, combinedNeg);
+  const shuffledNegs = negs.slice().sort(() => Math.random() - 0.5);
+  const shuffledDescs = descs.slice().sort(() => Math.random() - 0.5);
+  const shuffledPos = posMods.slice().sort(() => Math.random() - 0.5);
+
+  const bad = [];
+  const good = [];
+
+  function makeNegTerm(i) {
+    const prefix = shuffledNegs[i % shuffledNegs.length];
+    const item = items[i % items.length];
+    return `${prefix} ${item}`;
+  }
+
+  function makeBadTerm(i) {
+    const prefix = shuffledDescs[i % shuffledDescs.length];
+    const item = items[i % items.length];
+    return `${prefix} ${item}`;
+  }
+
+  function makePosTerm(i) {
+    const item = items[i % items.length];
+    if (posMode !== 'on' || !shuffledPos.length) return item;
+    const prefix = shuffledPos[i % shuffledPos.length];
+    return `${prefix} ${item}`;
+  }
+
+  function tryAdd(negTerm, index) {
+    const test = [...bad, negTerm].join(', ');
+    if (test.length > limit) return false;
+    bad.push(negTerm);
+    good.push(makePosTerm(index));
+    return true;
+  }
+
+  const addAll = (type) => {
+    if (type === 'neg') {
+      for (let i = 0; i < shuffledNegs.length; i++) {
+        if (!tryAdd(makeNegTerm(i), i)) break;
+      }
+    } else if (type === 'bad') {
+      for (let i = 0; i < shuffledDescs.length; i++) {
+        if (!tryAdd(makeBadTerm(i), i)) break;
+      }
+    }
+  };
+
+  switch (negMode) {
+    case 'bad-only':
+      addAll('bad');
+      break;
+    case 'negative-only':
+      addAll('neg');
+      break;
+    case 'bad-first':
+      addAll('bad');
+      addAll('neg');
+      break;
+    case 'mixed': {
+      let n = 0;
+      let b = 0;
+      while (n < shuffledNegs.length || b < shuffledDescs.length) {
+        let useNeg;
+        if (n >= shuffledNegs.length) {
+          useNeg = false;
+        } else if (b >= shuffledDescs.length) {
+          useNeg = true;
+        } else {
+          useNeg = Math.random() < 0.5;
+        }
+        if (useNeg) {
+          if (!tryAdd(makeNegTerm(n), n)) break;
+          n++;
+        } else {
+          if (!tryAdd(makeBadTerm(b), b)) break;
+          b++;
+        }
+      }
+      break;
+    }
+    case 'negative-first':
+    default:
+      addAll('neg');
+      addAll('bad');
+      break;
+  }
+
   return {
-    good: positive.join(', '),
-    bad: combinedNeg.join(', ')
+    good: good.join(', '),
+    bad: bad.join(', ')
   };
 }
+
 
 function getList(selectEl, textareaEl, defaults) {
   const choice = selectEl.value;
