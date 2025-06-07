@@ -102,20 +102,20 @@ function combineListsByMode(negated, bad, mode, limit) {
 }
 
 function buildVersions(items, descs, negs, posMods, negMode, posMode, limit) {
-  function makeCycler(arr) {
-    let pool = [];
+  function makeCycler(arr, shuffle = true) {
+    let pool = shuffle ? [] : arr.slice();
     let idx = 0;
     return () => {
       if (!arr.length) return null;
       if (idx >= pool.length) {
-        pool = arr.slice().sort(() => Math.random() - 0.5);
+        pool = shuffle ? arr.slice().sort(() => Math.random() - 0.5) : arr.slice();
         idx = 0;
       }
       return pool[idx++];
     };
   }
 
-  const nextItem = makeCycler(items);
+  const nextItem = makeCycler(items, false);
   const nextNeg = makeCycler(negs);
   const nextBad = makeCycler(descs);
   const nextPos = makeCycler(posMods);
