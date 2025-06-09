@@ -349,6 +349,17 @@ button {
     cursor: pointer;
 }
 
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    margin-top: 0.25rem;
+    font-size: 0.9rem;
+}
+
+.checkbox-label input[type=checkbox] {
+    margin-right: 0.5rem;
+}
+
 .output pre {
     background: #222;
     padding: 0.5rem;

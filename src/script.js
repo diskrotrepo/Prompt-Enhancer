@@ -45,8 +45,8 @@ function parseInput(raw) {
 }
 
 
-function buildVersions(items, descs, negs, posMods, mode, limit) {
-  function makeCycler(arr, shuffle = true) {
+function buildVersions(items, descs, negs, posMods, shuffleBase, shuffleBad, shufflePos, limit) {
+  function makeCycler(arr, shuffle) {
     let pool = shuffle ? [] : arr.slice();
     let idx = 0;
     return () => {
@@ -59,9 +59,9 @@ function buildVersions(items, descs, negs, posMods, mode, limit) {
     };
   }
 
-  const nextItem = makeCycler(items, mode === 'random');
-  const nextPrefix = makeCycler(negs.concat(descs), mode === 'random');
-  const nextPos = makeCycler(posMods, mode === 'random');
+  const nextItem = makeCycler(items, shuffleBase);
+  const nextPrefix = makeCycler(negs.concat(descs), shuffleBad);
+  const nextPos = makeCycler(posMods, shufflePos);
 
   const bad = [];
   const good = [];
@@ -152,7 +152,9 @@ function collectInputs() {
   const baseItems = parseInput(document.getElementById('base-input').value);
   const { descs, negs } = getDescLists(document.getElementById('desc-select'), document.getElementById('desc-input'));
   const posMods = getList(document.getElementById('pos-select'), document.getElementById('pos-input'), POS_PRESETS);
-  const mode = document.getElementById('list-mode-select').value;
+  const shuffleBase = document.getElementById('base-shuffle').checked;
+  const shuffleBad = document.getElementById('desc-shuffle').checked;
+  const shufflePos = document.getElementById('pos-shuffle').checked;
   const lengthSelect = document.getElementById('length-select');
   const lengthInput = document.getElementById('length-input');
   let limit;
@@ -162,7 +164,7 @@ function collectInputs() {
     limit = parseInt(lengthSelect.value, 10);
     lengthInput.value = limit;
   }
-  return { baseItems, descs, negs, posMods, mode, limit };
+  return { baseItems, descs, negs, posMods, shuffleBase, shuffleBad, shufflePos, limit };
 }
 
 function displayOutput(result) {
@@ -171,24 +173,24 @@ function displayOutput(result) {
 }
 
 function generate() {
-  const { baseItems, descs, negs, posMods, mode, limit } = collectInputs();
+  const { baseItems, descs, negs, posMods, shuffleBase, shuffleBad, shufflePos, limit } = collectInputs();
   if (!baseItems.length) {
     alert('Please enter at least one base prompt item.');
     return;
   }
-  const result = buildVersions(baseItems, descs, negs, posMods, mode, limit);
+  const result = buildVersions(baseItems, descs, negs, posMods, shuffleBase, shuffleBad, shufflePos, limit);
   displayOutput(result);
 }
 
 document.getElementById('generate').addEventListener('click', generate);
 
 document.getElementById('randomize').addEventListener('click', () => {
-  const { baseItems, descs, negs, posMods, mode, limit } = collectInputs();
+  const { baseItems, descs, negs, posMods, shuffleBad, shufflePos, limit } = collectInputs();
   if (!baseItems.length) {
     alert('Please enter at least one base prompt item.');
     return;
   }
   const shuffled = baseItems.slice().sort(() => Math.random() - 0.5);
-  const result = buildVersions(shuffled, descs, negs, posMods, mode, limit);
+  const result = buildVersions(shuffled, descs, negs, posMods, true, shuffleBad, shufflePos, limit);
   displayOutput(result);
 });
