@@ -12,12 +12,9 @@ Simply open `index.html` in your browser. No build step or server is required.
 2. For each list below the base prompt you can pick a **default**, **image** or **empty** set, or provide your own values:
    - **Bad Descriptor List** – adjectives or phrases to prepend in the "bad" variant. The "audio + negations" option mixes in words like `not` or `no`.
    - **Positive Modifier List** – words or phrases to prepend in the "good" variant.
-3. Choose how the bad descriptors and negatives should be combined using the **Negative Combination Mode** menu:
-   - *Negative first* (default)
-   - *Bad first*
-   - *Mixed*
+3. Use the **Randomize order** toggle under each list to control whether that list is shuffled before cycling through its items.
 4. Set the maximum length for the generated output (default 1000 characters). The lists repeat as needed until this limit is reached.
-5. Click **Generate** to see the good and bad versions, or **Randomize** to shuffle the base list before generating.
+5. Click **Generate** to see the good and bad versions. The **Randomize** button shuffles only the base prompt list once before generating.
 
 Built‑in descriptor lists live in the `src/lists` folder and can be extended by editing those files. The interface is styled by `style.css` and uses a dark theme inspired by Diskrot.
 

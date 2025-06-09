@@ -29,6 +29,7 @@
           <label for="base-input">Base Prompt List</label>
           <textarea id="base-input" rows="4"
             placeholder="Enter comma, semicolon, or newline separated items"></textarea>
+          <label class="checkbox-label"><input type="checkbox" id="base-shuffle"> Randomize order</label>
         </div>
         <div class="input-group">
           <label for="desc-input">Bad Descriptor List</label>
@@ -40,6 +41,7 @@
             <option value="custom">Custom list</option>
           </select>
           <textarea id="desc-input" rows="3" placeholder="Custom descriptors" disabled></textarea>
+          <label class="checkbox-label"><input type="checkbox" id="desc-shuffle"> Randomize order</label>
         </div>
         <div class="input-group">
           <label for="pos-input">Positive Modifier List</label>
@@ -49,14 +51,7 @@
             <option value="custom">Custom list</option>
           </select>
           <textarea id="pos-input" rows="2" placeholder="Custom positive modifiers" disabled></textarea>
-        </div>
-        <div class="input-group">
-          <label for="neg-mode-select">Negative Combination Mode</label>
-          <select id="neg-mode-select">
-            <option value="negative-first" selected>Negative first</option>
-            <option value="bad-first">Bad first</option>
-            <option value="mixed">Mixed</option>
-          </select>
+          <label class="checkbox-label"><input type="checkbox" id="pos-shuffle"> Randomize order</label>
         </div>
         <div class="input-group">
           <label for="length-select">Length Limit</label>
