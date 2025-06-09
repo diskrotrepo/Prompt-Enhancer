@@ -81,13 +81,15 @@
         </div>
         <!-- Character length limit selection -->
         <div class="input-group">
-          <label for="length-select">Length Limit</label>
+          <div class="label-row">
+            <label for="length-input">Length Limit</label>
+            <input type="checkbox" id="length-hide" data-targets="length-input" checked hidden>
+            <button type="button" class="toggle-button" data-target="length-hide">Hidden</button>
+          </div>
           <select id="length-select">
-            <option value="1000" selected>Suno (1000)</option>
-            <option value="10000">Riffusion (10000)</option>
-            <option value="custom">Custom</option>
+            <!-- Options will be populated dynamically from LENGTH_LISTS -->
           </select>
-          <input type="number" id="length-input" value="1000" min="1" disabled>
+          <input type="number" id="length-input" value="1000" min="1">
         </div>
         <!-- Action buttons -->
         <button id="generate">Generate</button>
@@ -122,6 +124,7 @@
   <!-- Load list data files first -->
   <script src="lists/bad_lists.js"></script>
   <script src="lists/good_lists.js"></script>
+  <script src="lists/length_lists.js"></script>
   <!-- Then load main application logic -->
   <script src="script.js"></script>
 </body>

@@ -13,6 +13,7 @@
 // Global preset storage for descriptor and positive modifier lists
 let DESC_PRESETS = {};
 let POS_PRESETS = {};
+let LENGTH_PRESETS = {};
 
 /**
  * Populates a select element with options from preset data
@@ -72,9 +73,23 @@ function loadLists() {
     }
   }
 
+  // Process length limit presets
+  if (typeof LENGTH_LISTS === 'object' && LENGTH_LISTS.presets) {
+    LENGTH_PRESETS = {};
+    LENGTH_LISTS.presets.forEach(preset => {
+      LENGTH_PRESETS[preset.id] = preset.items || [];
+    });
+
+    const lengthSelect = document.getElementById('length-select');
+    if (lengthSelect) {
+      populateSelect(lengthSelect, LENGTH_LISTS.presets);
+    }
+  }
+
   console.log('Lists loaded:', {
     descPresets: Object.keys(DESC_PRESETS).length,
-    posPresets: Object.keys(POS_PRESETS).length
+    posPresets: Object.keys(POS_PRESETS).length,
+    lengthPresets: Object.keys(LENGTH_PRESETS).length
   });
 }
 
@@ -197,11 +212,15 @@ function buildVersions(items, descs, posMods, shuffleBase, shuffleBad, shufflePo
  * @param {HTMLTextAreaElement} textareaEl - Associated textarea
  * @param {Object} presets - Preset lists object
  */
-function applyPreset(selectEl, textareaEl, presets) {
+function applyPreset(selectEl, inputEl, presets) {
   const key = selectEl.value;
   const list = presets[key] || [];
-  textareaEl.value = list.join(', ');
-  textareaEl.disabled = false;
+  if (inputEl.tagName === 'TEXTAREA') {
+    inputEl.value = list.join(', ');
+  } else {
+    inputEl.value = list[0] || '';
+  }
+  inputEl.disabled = false;
 }
 
 // Event listener for bad descriptor dropdown changes
@@ -218,14 +237,11 @@ document.getElementById('pos-select').addEventListener('change', () => {
 
 // Event listener for length limit dropdown changes
 document.getElementById('length-select').addEventListener('change', () => {
-  const select = document.getElementById('length-select');
-  const input = document.getElementById('length-input');
-  if (select.value === 'custom') {
-    input.disabled = false;
-  } else {
-    input.value = select.value;
-    input.disabled = true;
-  }
+  applyPreset(
+    document.getElementById('length-select'),
+    document.getElementById('length-input'),
+    LENGTH_PRESETS
+  );
 });
 
 /**
@@ -241,13 +257,12 @@ function collectInputs() {
   const shufflePos = document.getElementById('pos-shuffle').checked;
   const lengthSelect = document.getElementById('length-select');
   const lengthInput = document.getElementById('length-input');
-  
+
   // Determine character limit
-  let limit;
-  if (lengthSelect.value === 'custom') {
-    limit = parseInt(lengthInput.value, 10) || 1000;
-  } else {
-    limit = parseInt(lengthSelect.value, 10);
+  let limit = parseInt(lengthInput.value, 10);
+  if (isNaN(limit) || limit <= 0) {
+    const preset = LENGTH_PRESETS[lengthSelect.value];
+    limit = preset ? parseInt(preset[0], 10) : 1000;
     lengthInput.value = limit;
   }
   
@@ -292,6 +307,7 @@ function initializeUI() {
   // Populate textareas with initially selected presets
   applyPreset(document.getElementById('desc-select'), document.getElementById('desc-input'), DESC_PRESETS);
   applyPreset(document.getElementById('pos-select'), document.getElementById('pos-input'), POS_PRESETS);
+  applyPreset(document.getElementById('length-select'), document.getElementById('length-input'), LENGTH_PRESETS);
 
   // Set up toggle buttons linked to hidden checkboxes
   document.querySelectorAll('.toggle-button').forEach(btn => {

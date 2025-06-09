@@ -38,9 +38,9 @@ The Prompt Enhancer helps you create more effective prompts by:
    - Use the shuffle toggle next to each list title to randomize that list
 
 4. **Set Length Limit**:
-   - Suno (1000 characters) - for Suno AI audio generation
-   - Riffusion (10000 characters) - for Riffusion
-   - Custom - set your own limit
+   - Choose a preset such as Suno (1000) or Riffusion (10000)
+   - The number field remains editable for custom values
+   - Use the **Hidden** toggle to hide this section if desired
 
 5. **Generate**:
    - Click "Generate" to create variations
@@ -78,8 +78,9 @@ src/
 ├── assets/
 │   └── logo.png        # Diskrot logo
 └── lists/
-    ├── bad_lists.js    # Negative descriptor presets
-    └── good_lists.js   # Positive modifier presets
+    ├── bad_lists.js     # Negative descriptor presets
+    ├── good_lists.js    # Positive modifier presets
+    └── length_lists.js  # Length limit presets
 ```
 
 ### Key Files
@@ -108,6 +109,8 @@ const BAD_LISTS = {
   ]
 };
 ```
+
+Length presets follow the same structure in `length_lists.js` with a single value per list.
 
 The system will automatically detect and add new presets to the dropdown menus.
 
