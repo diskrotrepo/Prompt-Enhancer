@@ -115,7 +115,7 @@ body {
     padding: 20px;
     width: 100%;
     max-width: 800px;
-    text-align: center;
+    text-align: left; /* left align everything by default */
 }
 
 /* Middle Finger section - monospace font styling */
@@ -364,12 +364,20 @@ button {
     cursor: pointer;
 }
 
+#generate {
+    display: block;
+    margin: 1rem auto; /* center the generate button */
+}
+
 /* Checkbox label styling */
 .label-row {
     display: flex;
-    justify-content: space-between;
     align-items: center;
     margin-bottom: 0.25rem;
+}
+
+.label-row label {
+    margin-right: auto; /* push button stack to the right */
 }
 
 
@@ -389,7 +397,37 @@ button {
     border-color: transparent;
 }
 
+/* Copy button styling */
+.copy-button {
+    background: transparent;
+    border: 1px solid #888;
+    color: #fff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 0.25rem;
+}
+
+.copy-button:hover {
+    background: #444;
+}
+
 /* ===== OUTPUT SECTION ===== */
+.output h2 {
+    display: flex;
+    align-items: center;
+    text-align: left;
+}
+
+.output h2 span {
+    margin-right: auto;
+}
+
+.output h2 .toggle-button,
+.output h2 .copy-button {
+    margin-left: 0.25rem;
+}
+
 .output pre {
     background: #222;
     padding: 0.5rem;

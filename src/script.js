@@ -312,6 +312,36 @@ function initializeUI() {
     btn.addEventListener('click', () => {
       checkbox.checked = !checkbox.checked;
       btn.classList.toggle('active', checkbox.checked);
+      checkbox.dispatchEvent(new Event('change'));
+    });
+  });
+
+  // Set up hide toggles that show/hide target elements
+  document.querySelectorAll('input[type="checkbox"][data-targets]').forEach(cb => {
+    const ids = cb.dataset.targets.split(',').map(id => id.trim());
+    const elems = ids.map(id => document.getElementById(id)).filter(Boolean);
+    const update = () => {
+      elems.forEach(el => {
+        el.style.display = cb.checked ? 'none' : '';
+      });
+    };
+    cb.addEventListener('change', update);
+    update();
+  });
+
+  // Copy buttons
+  document.querySelectorAll('.copy-button').forEach(btn => {
+    const target = document.getElementById(btn.dataset.target);
+    if (!target) return;
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(target.textContent);
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = orig; }, 1000);
+      } catch (err) {
+        console.error('Copy failed', err);
+      }
     });
   });
 }
