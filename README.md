@@ -40,7 +40,7 @@ The Prompt Enhancer helps you create more effective prompts by:
 4. **Set Length Limit**:
    - Suno (1000 characters) - for Suno AI audio generation
    - Riffusion (10000 characters) - for Riffusion
-   - Custom - set your own limit
+   - Edit the value directly to set your own limit
 
 5. **Generate**:
    - Click "Generate" to create variations

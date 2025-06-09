@@ -220,12 +220,7 @@ document.getElementById('pos-select').addEventListener('change', () => {
 document.getElementById('length-select').addEventListener('change', () => {
   const select = document.getElementById('length-select');
   const input = document.getElementById('length-input');
-  if (select.value === 'custom') {
-    input.disabled = false;
-  } else {
-    input.value = select.value;
-    input.disabled = true;
-  }
+  input.value = select.value;
 });
 
 /**
@@ -241,13 +236,11 @@ function collectInputs() {
   const shufflePos = document.getElementById('pos-shuffle').checked;
   const lengthSelect = document.getElementById('length-select');
   const lengthInput = document.getElementById('length-input');
-  
+
   // Determine character limit
-  let limit;
-  if (lengthSelect.value === 'custom') {
-    limit = parseInt(lengthInput.value, 10) || 1000;
-  } else {
-    limit = parseInt(lengthSelect.value, 10);
+  let limit = parseInt(lengthInput.value, 10);
+  if (isNaN(limit) || limit <= 0) {
+    limit = parseInt(lengthSelect.value, 10) || 1000;
     lengthInput.value = limit;
   }
   
