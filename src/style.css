@@ -388,7 +388,7 @@ button {
 .checkbox-label .slider {
     width: 40px;
     height: 20px;
-    background: #777;
+    background: #888;
     border-radius: 10px;
     position: relative;
     flex-shrink: 0;
@@ -417,6 +417,7 @@ button {
 
 .toggle-text {
     margin-left: 0;
+    line-height: 20px;
 }
 
 /* ===== OUTPUT SECTION ===== */
