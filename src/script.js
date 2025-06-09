@@ -312,6 +312,7 @@ function initializeUI() {
     btn.addEventListener('click', () => {
       checkbox.checked = !checkbox.checked;
       btn.classList.toggle('active', checkbox.checked);
+      checkbox.dispatchEvent(new Event('change'));
     });
   });
 
