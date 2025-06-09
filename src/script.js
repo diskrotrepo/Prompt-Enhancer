@@ -44,75 +44,8 @@ function parseInput(raw) {
   return normalized.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
 }
 
-function generatePrependedList(items, prefixes) {
-  if (!prefixes.length) return [];
-  const shuffled = prefixes.slice().sort(() => Math.random() - 0.5);
-  const result = [];
-  for (let i = 0; i < shuffled.length; i++) {
-    const prefix = shuffled[i % shuffled.length];
-    const item = items[i % items.length];
-    result.push(`${prefix} ${item}`);
-  }
-  return result;
-}
 
-function generateNegatedList(items, negs) {
-  return generatePrependedList(items, negs);
-}
-
-function generateBadDescriptorList(items, descs) {
-  return generatePrependedList(items, descs);
-}
-
-function combineListsByMode(negated, bad, mode, limit) {
-  const combined = [];
-
-  function tryAdd(term) {
-    const test = [...combined, term].join(', ');
-    if (test.length > limit) return false;
-    combined.push(term);
-    return true;
-  }
-
-  const addAll = (list) => {
-    for (const term of list) {
-      if (!tryAdd(term)) break;
-    }
-  };
-
-  switch (mode) {
-    case 'bad-first':
-      addAll(bad);
-      addAll(negated);
-      break;
-    case 'mixed': {
-      let n = 0;
-      let b = 0;
-      while (n < negated.length || b < bad.length) {
-        let useNeg;
-        if (n >= negated.length) {
-          useNeg = false;
-        } else if (b >= bad.length) {
-          useNeg = true;
-        } else {
-          useNeg = Math.random() < 0.5;
-        }
-        const term = useNeg ? negated[n++] : bad[b++];
-        if (!tryAdd(term)) break;
-      }
-      break;
-    }
-    case 'negative-first':
-    default:
-      addAll(negated);
-      addAll(bad);
-      break;
-  }
-
-  return combined;
-}
-
-function buildVersions(items, descs, negs, posMods, negMode, limit) {
+function buildVersions(items, descs, negs, posMods, mode, limit) {
   function makeCycler(arr, shuffle = true) {
     let pool = shuffle ? [] : arr.slice();
     let idx = 0;
@@ -126,23 +59,14 @@ function buildVersions(items, descs, negs, posMods, negMode, limit) {
     };
   }
 
-  const nextItem = makeCycler(items, false);
-  const nextNeg = makeCycler(negs);
-  const nextBad = makeCycler(descs);
-  const nextPos = makeCycler(posMods);
+  const nextItem = makeCycler(items, mode === 'random');
+  const nextPrefix = makeCycler(negs.concat(descs), mode === 'random');
+  const nextPos = makeCycler(posMods, mode === 'random');
 
   const bad = [];
   const good = [];
 
-  function makeNegTerm() {
-    const prefix = nextNeg();
-    if (prefix === null) return null;
-    const item = nextItem();
-    return { term: `${prefix} ${item}`, item };
-  }
-
-  function makeBadTerm() {
-    const prefix = nextBad();
+  function makeTerm(prefix) {
     if (prefix === null) return null;
     const item = nextItem();
     return { term: `${prefix} ${item}`, item };
@@ -163,31 +87,11 @@ function buildVersions(items, descs, negs, posMods, negMode, limit) {
     return true;
   }
 
-  const addAll = (maker) => {
-    while (true) {
-      const obj = maker();
-      if (!obj) break;
-      if (!tryAdd(obj)) break;
-    }
-  };
-
-  switch (negMode) {
-    case 'bad-first':
-      addAll(makeBadTerm);
-      if (bad.join(', ').length < limit) addAll(makeNegTerm);
-      break;
-    case 'mixed':
-      while (true) {
-        const useNeg = descs.length === 0 ? true : negs.length === 0 ? false : Math.random() < 0.5;
-        const maker = useNeg ? makeNegTerm : makeBadTerm;
-        if (!tryAdd(maker())) break;
-      }
-      break;
-    case 'negative-first':
-    default:
-      addAll(makeNegTerm);
-      if (bad.join(', ').length < limit) addAll(makeBadTerm);
-      break;
+  while (true) {
+    const prefix = nextPrefix();
+    if (prefix === null) break;
+    const obj = makeTerm(prefix);
+    if (!tryAdd(obj)) break;
   }
 
   return {
@@ -248,7 +152,7 @@ function collectInputs() {
   const baseItems = parseInput(document.getElementById('base-input').value);
   const { descs, negs } = getDescLists(document.getElementById('desc-select'), document.getElementById('desc-input'));
   const posMods = getList(document.getElementById('pos-select'), document.getElementById('pos-input'), POS_PRESETS);
-  const negMode = document.getElementById('neg-mode-select').value;
+  const mode = document.getElementById('list-mode-select').value;
   const lengthSelect = document.getElementById('length-select');
   const lengthInput = document.getElementById('length-input');
   let limit;
@@ -258,7 +162,7 @@ function collectInputs() {
     limit = parseInt(lengthSelect.value, 10);
     lengthInput.value = limit;
   }
-  return { baseItems, descs, negs, posMods, negMode, limit };
+  return { baseItems, descs, negs, posMods, mode, limit };
 }
 
 function displayOutput(result) {
@@ -267,24 +171,24 @@ function displayOutput(result) {
 }
 
 function generate() {
-  const { baseItems, descs, negs, posMods, negMode, limit } = collectInputs();
+  const { baseItems, descs, negs, posMods, mode, limit } = collectInputs();
   if (!baseItems.length) {
     alert('Please enter at least one base prompt item.');
     return;
   }
-  const result = buildVersions(baseItems, descs, negs, posMods, negMode, limit);
+  const result = buildVersions(baseItems, descs, negs, posMods, mode, limit);
   displayOutput(result);
 }
 
 document.getElementById('generate').addEventListener('click', generate);
 
 document.getElementById('randomize').addEventListener('click', () => {
-  const { baseItems, descs, negs, posMods, negMode, limit } = collectInputs();
+  const { baseItems, descs, negs, posMods, mode, limit } = collectInputs();
   if (!baseItems.length) {
     alert('Please enter at least one base prompt item.');
     return;
   }
   const shuffled = baseItems.slice().sort(() => Math.random() - 0.5);
-  const result = buildVersions(shuffled, descs, negs, posMods, negMode, limit);
+  const result = buildVersions(shuffled, descs, negs, posMods, mode, limit);
   displayOutput(result);
 });
