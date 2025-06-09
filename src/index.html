@@ -83,12 +83,11 @@
         <div class="input-group">
           <div class="label-row">
             <label for="length-input">Length Limit</label>
-            <input type="checkbox" id="length-hide" data-targets="length-select,length-input" checked hidden>
+            <input type="checkbox" id="length-hide" data-targets="length-input" checked hidden>
             <button type="button" class="toggle-button" data-target="length-hide">Hidden</button>
           </div>
           <select id="length-select">
-            <option value="1000" selected>Suno (1000)</option>
-            <option value="10000">Riffusion (10000)</option>
+            <!-- Options will be populated dynamically from LENGTH_LISTS -->
           </select>
           <input type="number" id="length-input" value="1000" min="1">
         </div>

@@ -261,7 +261,8 @@ function collectInputs() {
   // Determine character limit
   let limit = parseInt(lengthInput.value, 10);
   if (isNaN(limit) || limit <= 0) {
-    limit = parseInt(lengthSelect.value, 10) || 1000;
+    const preset = LENGTH_PRESETS[lengthSelect.value];
+    limit = preset ? parseInt(preset[0], 10) : 1000;
     lengthInput.value = limit;
   }
   
