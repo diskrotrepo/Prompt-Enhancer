@@ -54,9 +54,8 @@
           </div>
           <select id="desc-select">
             <!-- Options will be populated dynamically from BAD_LISTS -->
-            <option value="custom">Custom list</option>
           </select>
-          <textarea id="desc-input" rows="3" placeholder="Custom descriptors" disabled></textarea>
+          <textarea id="desc-input" rows="3" placeholder="Negative descriptors"></textarea>
         </div>
         <!-- Positive modifier selection section -->
         <div class="input-group">
@@ -69,9 +68,8 @@
           </div>
           <select id="pos-select">
             <!-- Options will be populated dynamically from GOOD_LISTS -->
-            <option value="custom">Custom list</option>
           </select>
-          <textarea id="pos-input" rows="2" placeholder="Custom positive modifiers" disabled></textarea>
+          <textarea id="pos-input" rows="2" placeholder="Positive modifiers"></textarea>
         </div>
         <!-- Character length limit selection -->
         <div class="input-group">
@@ -90,14 +88,14 @@
         <div class="output">
           <h2><span>Good Version</span>
             <input type="checkbox" id="good-hide" data-targets="good-output" checked hidden>
-            <button type="button" class="toggle-button" data-target="good-hide">Hidden</button>
             <button type="button" class="copy-button" data-target="good-output">Copy</button>
+            <button type="button" class="toggle-button" data-target="good-hide">Hidden</button>
           </h2>
           <pre id="good-output"></pre>
           <h2><span>Bad Version</span>
             <input type="checkbox" id="bad-hide" data-targets="bad-output" checked hidden>
-            <button type="button" class="toggle-button" data-target="bad-hide">Hidden</button>
             <button type="button" class="copy-button" data-target="bad-output">Copy</button>
+            <button type="button" class="toggle-button" data-target="bad-hide">Hidden</button>
           </h2>
           <pre id="bad-output"></pre>
         </div>

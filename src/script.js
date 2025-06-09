@@ -20,8 +20,7 @@ let POS_PRESETS = {};
  * @param {Array} presets - Array of preset objects with id, title, and items
  */
 function populateSelect(selectEl, presets) {
-  // Clear existing options except custom
-  const customOption = selectEl.querySelector('option[value="custom"]');
+  // Clear existing options
   selectEl.innerHTML = '';
   
   // Add preset options
@@ -36,10 +35,6 @@ function populateSelect(selectEl, presets) {
     selectEl.appendChild(option);
   });
   
-  // Re-add custom option at the end
-  if (customOption) {
-    selectEl.appendChild(customOption);
-  }
 }
 
 /**
@@ -196,37 +191,29 @@ function buildVersions(items, descs, posMods, shuffleBase, shuffleBad, shufflePo
 }
 
 /**
- * Gets the appropriate list based on select dropdown value
- * Handles preset lists and custom input
- * 
+ * Loads the selected preset into the textarea
+ *
  * @param {HTMLSelectElement} selectEl - Dropdown element
  * @param {HTMLTextAreaElement} textareaEl - Associated textarea
  * @param {Object} presets - Preset lists object
- * @returns {string[]} Selected or custom list
  */
-function getList(selectEl, textareaEl, presets) {
+function applyPreset(selectEl, textareaEl, presets) {
   const key = selectEl.value;
-  if (key === 'custom') {
-    textareaEl.disabled = false;
-    return parseInput(textareaEl.value);
-  }
-  // Use preset list
   const list = presets[key] || [];
   textareaEl.value = list.join(', ');
-  textareaEl.disabled = true;
-  return list;
+  textareaEl.disabled = false;
 }
 
 // Event listener for bad descriptor dropdown changes
 document.getElementById('desc-select').addEventListener('change', () => {
   console.log('Desc select changed to:', document.getElementById('desc-select').value);
-  getList(document.getElementById('desc-select'), document.getElementById('desc-input'), DESC_PRESETS);
+  applyPreset(document.getElementById('desc-select'), document.getElementById('desc-input'), DESC_PRESETS);
 });
 
 // Event listener for positive modifier dropdown changes
 document.getElementById('pos-select').addEventListener('change', () => {
   console.log('Pos select changed to:', document.getElementById('pos-select').value);
-  getList(document.getElementById('pos-select'), document.getElementById('pos-input'), POS_PRESETS);
+  applyPreset(document.getElementById('pos-select'), document.getElementById('pos-input'), POS_PRESETS);
 });
 
 // Event listener for length limit dropdown changes
@@ -247,8 +234,8 @@ document.getElementById('length-select').addEventListener('change', () => {
  */
 function collectInputs() {
   const baseItems = parseInput(document.getElementById('base-input').value);
-  const descs = getList(document.getElementById('desc-select'), document.getElementById('desc-input'), DESC_PRESETS);
-  const posMods = getList(document.getElementById('pos-select'), document.getElementById('pos-input'), POS_PRESETS);
+  const descs = parseInput(document.getElementById('desc-input').value);
+  const posMods = parseInput(document.getElementById('pos-input').value);
   const shuffleBase = document.getElementById('base-shuffle').checked;
   const shuffleBad = document.getElementById('desc-shuffle').checked;
   const shufflePos = document.getElementById('pos-shuffle').checked;
@@ -301,6 +288,10 @@ document.getElementById('generate').addEventListener('click', generate);
 function initializeUI() {
   // Load lists and populate dropdowns
   loadLists();
+
+  // Populate textareas with initially selected presets
+  applyPreset(document.getElementById('desc-select'), document.getElementById('desc-input'), DESC_PRESETS);
+  applyPreset(document.getElementById('pos-select'), document.getElementById('pos-input'), POS_PRESETS);
 
   // Set up toggle buttons linked to hidden checkboxes
   document.querySelectorAll('.toggle-button').forEach(btn => {
