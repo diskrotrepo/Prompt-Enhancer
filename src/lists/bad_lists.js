@@ -6,6 +6,11 @@ const BAD_LISTS = {
   // List of available presets with titles and data
   presets: [
     {
+      id: 'empty',
+      title: 'Empty bad list',
+      items: []
+    },
+    {
       id: 'audio-bad',
       title: 'Audio bad list',
       items: [
@@ -299,10 +304,5 @@ const BAD_LISTS = {
         "twisted",
       ]
     },
-    {
-      id: 'empty',
-      title: 'Empty bad list',
-      items: []
-    }
   ]
 };

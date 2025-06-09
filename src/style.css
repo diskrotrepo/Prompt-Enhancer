@@ -365,15 +365,53 @@ button {
 }
 
 /* Checkbox label styling */
+.label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
 .checkbox-label {
     display: flex;
     align-items: center;
-    margin-top: 0.25rem;
+    cursor: pointer;
     font-size: 0.9rem;
 }
 
 .checkbox-label input[type=checkbox] {
-    margin-right: 0.5rem;
+    display: none;
+}
+
+.checkbox-label .slider {
+    width: 34px;
+    height: 18px;
+    background: #444;
+    border-radius: 12px;
+    position: relative;
+    margin-right: 0.4rem;
+    transition: background 0.2s;
+}
+
+.checkbox-label .slider::before {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.checkbox-label input[type=checkbox]:checked + .slider {
+    background: #fff;
+}
+
+.checkbox-label input[type=checkbox]:checked + .slider::before {
+    transform: translateX(16px);
+    background: #000;
 }
 
 /* ===== OUTPUT SECTION ===== */

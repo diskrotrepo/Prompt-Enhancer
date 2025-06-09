@@ -33,30 +33,45 @@
         <h1>Prompt Enhancer</h1>
         <!-- Base prompt input section -->
         <div class="input-group">
-          <label for="base-input">Base Prompt List</label>
+          <div class="label-row">
+            <label for="base-input">Base Prompt List</label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="base-shuffle">
+              <span class="slider"></span>Random
+            </label>
+          </div>
           <textarea id="base-input" rows="4"
             placeholder="Enter comma, semicolon, or newline separated items"></textarea>
-          <label class="checkbox-label"><input type="checkbox" id="base-shuffle"> Randomize order</label>
         </div>
         <!-- Bad descriptor selection section -->
         <div class="input-group">
-          <label for="desc-input">Bad Descriptor List</label>
+          <div class="label-row">
+            <label for="desc-input">Bad Descriptor List</label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="desc-shuffle">
+              <span class="slider"></span>Random
+            </label>
+          </div>
           <select id="desc-select">
             <!-- Options will be populated dynamically from BAD_LISTS -->
             <option value="custom">Custom list</option>
           </select>
           <textarea id="desc-input" rows="3" placeholder="Custom descriptors" disabled></textarea>
-          <label class="checkbox-label"><input type="checkbox" id="desc-shuffle"> Randomize order</label>
         </div>
         <!-- Positive modifier selection section -->
         <div class="input-group">
-          <label for="pos-input">Positive Modifier List</label>
+          <div class="label-row">
+            <label for="pos-input">Positive Modifier List</label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="pos-shuffle">
+              <span class="slider"></span>Random
+            </label>
+          </div>
           <select id="pos-select">
             <!-- Options will be populated dynamically from GOOD_LISTS -->
             <option value="custom">Custom list</option>
           </select>
           <textarea id="pos-input" rows="2" placeholder="Custom positive modifiers" disabled></textarea>
-          <label class="checkbox-label"><input type="checkbox" id="pos-shuffle"> Randomize order</label>
         </div>
         <!-- Character length limit selection -->
         <div class="input-group">
@@ -70,7 +85,6 @@
         </div>
         <!-- Action buttons -->
         <button id="generate">Generate</button>
-        <button id="randomize">Randomize</button>
         
         <!-- Output display section -->
         <div class="output">
