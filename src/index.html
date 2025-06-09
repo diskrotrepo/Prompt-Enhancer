@@ -35,11 +35,8 @@
         <div class="input-group">
           <div class="label-row">
             <label for="base-input">Base Prompt List</label>
-            <label class="checkbox-label">
-              <input type="checkbox" id="base-shuffle">
-              <span class="slider"></span>
-              <span class="toggle-text">Randomize</span>
-            </label>
+            <input type="checkbox" id="base-shuffle" hidden>
+            <button type="button" class="toggle-button" data-target="base-shuffle">Randomize</button>
           </div>
           <textarea id="base-input" rows="4"
             placeholder="Enter comma, semicolon, or newline separated items"></textarea>
@@ -48,11 +45,8 @@
         <div class="input-group">
           <div class="label-row">
             <label for="desc-input">Bad Descriptor List</label>
-            <label class="checkbox-label">
-              <input type="checkbox" id="desc-shuffle">
-              <span class="slider"></span>
-              <span class="toggle-text">Randomize</span>
-            </label>
+            <input type="checkbox" id="desc-shuffle" hidden>
+            <button type="button" class="toggle-button" data-target="desc-shuffle">Randomize</button>
           </div>
           <select id="desc-select">
             <!-- Options will be populated dynamically from BAD_LISTS -->
@@ -64,11 +58,8 @@
         <div class="input-group">
           <div class="label-row">
             <label for="pos-input">Positive Modifier List</label>
-            <label class="checkbox-label">
-              <input type="checkbox" id="pos-shuffle">
-              <span class="slider"></span>
-              <span class="toggle-text">Randomize</span>
-            </label>
+            <input type="checkbox" id="pos-shuffle" hidden>
+            <button type="button" class="toggle-button" data-target="pos-shuffle">Randomize</button>
           </div>
           <select id="pos-select">
             <!-- Options will be populated dynamically from GOOD_LISTS -->

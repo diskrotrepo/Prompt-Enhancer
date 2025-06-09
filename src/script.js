@@ -301,6 +301,19 @@ document.getElementById('generate').addEventListener('click', generate);
 function initializeUI() {
   // Load lists and populate dropdowns
   loadLists();
+
+  // Set up toggle buttons linked to hidden checkboxes
+  document.querySelectorAll('.toggle-button').forEach(btn => {
+    const target = btn.dataset.target;
+    const checkbox = document.getElementById(target);
+    if (!checkbox) return;
+    // Reflect initial state
+    btn.classList.toggle('active', checkbox.checked);
+    btn.addEventListener('click', () => {
+      checkbox.checked = !checkbox.checked;
+      btn.classList.toggle('active', checkbox.checked);
+    });
+  });
 }
 
 // Initialize UI when DOM is ready
