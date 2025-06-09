@@ -35,7 +35,7 @@ The Prompt Enhancer helps you create more effective prompts by:
 3. **Select Modifier Lists**:
    - **Bad Descriptor List**: Choose a preset or create custom negative modifiers
    - **Positive Modifier List**: Choose a preset or create custom quality enhancers
-   - Toggle "Randomize order" to shuffle each list during generation
+   - Use the shuffle toggle next to each list title to randomize that list
 
 4. **Set Length Limit**:
    - Suno (1000 characters) - for Suno AI audio generation
@@ -44,7 +44,7 @@ The Prompt Enhancer helps you create more effective prompts by:
 
 5. **Generate**:
    - Click "Generate" to create variations
-   - Use the shuffle toggle next to "Base Prompt List" to randomize base items when needed
+   - Shuffle toggles control whether each list is randomized
 
 ## How It Works
 
