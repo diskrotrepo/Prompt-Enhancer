@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Prompt Enhancer</title>
   <link rel="stylesheet" href="style.css">
+  
+  <!-- Google Analytics tracking -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-D5NMHFTQDK"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -18,41 +20,45 @@
 
 <body onload="showContent('tool')">
 
+  <!-- Top navigation bar with logo -->
   <div class="top-nav">
     <a href="https://www.diskrot.com"><img src="assets/logo.png" width="24" height="24"></a>
   </div>
+  
+  <!-- Main container -->
   <div class="container">
     <div class="main-content">
+      <!-- Tool content section -->
       <div id="tool" class="content">
         <h1>Prompt Enhancer</h1>
+        <!-- Base prompt input section -->
         <div class="input-group">
           <label for="base-input">Base Prompt List</label>
           <textarea id="base-input" rows="4"
             placeholder="Enter comma, semicolon, or newline separated items"></textarea>
           <label class="checkbox-label"><input type="checkbox" id="base-shuffle"> Randomize order</label>
         </div>
+        <!-- Bad descriptor selection section -->
         <div class="input-group">
           <label for="desc-input">Bad Descriptor List</label>
           <select id="desc-select">
-            <option value="default">Audio bad list</option>
-            <option value="audio-neg">Audio bad list + negations</option>
-            <option value="image">Image bad list</option>
-            <option value="empty" selected>Empty bad list</option>
+            <!-- Options will be populated dynamically from BAD_LISTS -->
             <option value="custom">Custom list</option>
           </select>
           <textarea id="desc-input" rows="3" placeholder="Custom descriptors" disabled></textarea>
           <label class="checkbox-label"><input type="checkbox" id="desc-shuffle"> Randomize order</label>
         </div>
+        <!-- Positive modifier selection section -->
         <div class="input-group">
           <label for="pos-input">Positive Modifier List</label>
           <select id="pos-select">
-            <option value="default">Image positive list</option>
-            <option value="empty" selected>Empty positive list</option>
+            <!-- Options will be populated dynamically from GOOD_LISTS -->
             <option value="custom">Custom list</option>
           </select>
           <textarea id="pos-input" rows="2" placeholder="Custom positive modifiers" disabled></textarea>
           <label class="checkbox-label"><input type="checkbox" id="pos-shuffle"> Randomize order</label>
         </div>
+        <!-- Character length limit selection -->
         <div class="input-group">
           <label for="length-select">Length Limit</label>
           <select id="length-select">
@@ -62,8 +68,11 @@
           </select>
           <input type="number" id="length-input" value="1000" min="1" disabled>
         </div>
+        <!-- Action buttons -->
         <button id="generate">Generate</button>
         <button id="randomize">Randomize</button>
+        
+        <!-- Output display section -->
         <div class="output">
           <h2>Good Version</h2>
           <pre id="good-output"></pre>
@@ -73,14 +82,19 @@
       </div>
     </div>
   </div>
+  <!-- Inline script for content display management -->
   <script>
     function showContent(id) {
       document.querySelectorAll('.content').forEach(div => div.style.display = 'none');
       document.getElementById(id).style.display = 'block';
     }
   </script>
+  
+  <!-- External script loading order is important -->
+  <!-- Load list data files first -->
   <script src="lists/bad_lists.js"></script>
   <script src="lists/good_lists.js"></script>
+  <!-- Then load main application logic -->
   <script src="script.js"></script>
 </body>
 

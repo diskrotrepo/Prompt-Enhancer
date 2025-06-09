@@ -1,16 +1,24 @@
-/* Global Reset */
+/**
+ * Prompt Enhancer - Stylesheet
+ * 
+ * Dark theme inspired by Diskrot with gradient background
+ * Responsive design with mobile-first approach
+ */
+
+/* ===== GLOBAL RESET ===== */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-/* Body */
+/* ===== BODY & BACKGROUND ===== */
 body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
     font-family: Arial, sans-serif;
+    /* Complex gradient background with radial and linear gradients */
     background: radial-gradient(circle at 20% 20%, rgba(102,0,0,0.7), transparent 60%),
                 radial-gradient(circle at 80% 80%, rgba(0,0,102,0.7), transparent 60%),
                 linear-gradient(135deg, #330000, #000033);
@@ -19,7 +27,7 @@ body {
     overflow-y: auto;
 }
 
-/* Top Navigation */
+/* ===== TOP NAVIGATION ===== */
 .top-nav {
     width: 100%;
     background-color: black;
@@ -40,6 +48,7 @@ body {
     cursor: pointer;
 }
 
+/* Diskrot branding link style */
 .diskrot-link {
     color: red;
 }
@@ -50,13 +59,13 @@ body {
     background-color: white;
 }
 
-/* Layout */
+/* ===== LAYOUT STRUCTURE ===== */
 .container {
     display: flex;
     width: 100%;
     min-height: 100vh;
     flex-direction: column;
-    padding-top: 40px;
+    padding-top: 40px; /* Account for fixed navigation */
     align-items: center;
     justify-content: flex-start;
 }
@@ -73,6 +82,7 @@ body {
     overflow-y: auto;
 }
 
+/* Navigation content positioning */
 .nav-content {
     display: flex;
     flex-direction: column;
@@ -84,7 +94,7 @@ body {
     bottom: 6%;
 }
 
-/* Navigation Links */
+/* ===== NAVIGATION LINKS ===== */
 .nav-link {
     font-size: 2rem;
     margin: 15px 0;
@@ -99,7 +109,7 @@ body {
     color: black;
 }
 
-/* Content */
+/* ===== CONTENT SECTIONS ===== */
 .content {
     display: none;
     padding: 20px;
@@ -108,7 +118,7 @@ body {
     text-align: center;
 }
 
-/* Middle Finger Section */
+/* Middle Finger section - monospace font styling */
 .middleFinger {
     font-size: 0.85em;
     font-weight: lighter;
@@ -128,7 +138,7 @@ body {
     list-style-type: square;
 }
 
-/* Team Section */
+/* ===== TEAM SECTION ===== */
 .human {
     display: flex;
     flex-direction: row;
@@ -155,7 +165,7 @@ body {
     letter-spacing: 0.1em;
 }
 
-/* What Section */
+/* ===== WHAT SECTION ===== */
 #what {
     flex: 1;
     display: flex;
@@ -167,7 +177,7 @@ body {
     text-align: center;
 }
 
-/* Blockquote */
+/* ===== TYPOGRAPHY ===== */
 blockquote {
     position: relative;
     font-size: 1.5rem;
@@ -177,7 +187,7 @@ blockquote p {
     font-weight: bold;
 }
 
-/* Code Section */
+/* Code section with large monospace font */
 .code-font {
     font-family: monospace;
     font-size: 2.5em;
@@ -205,12 +215,12 @@ blockquote p {
     background-color: black;
 }
 
-/* Signature */
+/* ===== MISCELLANEOUS STYLES ===== */
 #signature {
     text-align: right;
 }
 
-/* Miscellaneous */
+/* Diskrot branding styles */
 .diskrot-red {
     color: #000;
     background-color: #fff;
@@ -238,7 +248,8 @@ blockquote p {
     margin-top: 180px;
 }
 
-/* Responsive Styles */
+/* ===== RESPONSIVE DESIGN ===== */
+/* Tablet breakpoint */
 @media (max-width: 768px) {
     .main-content {
         padding: 15px;
@@ -270,6 +281,7 @@ blockquote p {
     }
 }
 
+/* Mobile breakpoint */
 @media (max-width: 480px) {
     .main-content {
         padding: 10px;
@@ -290,11 +302,12 @@ blockquote p {
     }
 }
 
-/* Additional form styling */
+/* ===== FORM ELEMENTS ===== */
 h1 {
     margin-bottom: 1rem;
 }
 
+/* Input group container */
 .input-group {
     margin-bottom: 1rem;
     width: 100%;
@@ -305,6 +318,7 @@ h1 {
     margin-bottom: 0.25rem;
 }
 
+/* Textarea styling */
 textarea {
     width: 100%;
     background: #222;
@@ -314,19 +328,23 @@ textarea {
     min-height: 15vh;
 }
 
+/* Specific textarea heights */
 #base-input,
 #desc-input {
     min-height: 10vh;
 }
 
+/* Select dropdown styling */
 select {
     width: 100%;
     background: #222;
     color: #fff;
     border: 1px solid #444;
     padding: 0.5rem;
+    margin-bottom: 0.5rem;
 }
 
+/* Number input styling */
 input[type=number] {
     width: 100%;
     background: #222;
@@ -336,10 +354,7 @@ input[type=number] {
     margin-top: 0.5rem;
 }
 
-select {
-    margin-bottom: 0.5rem;
-}
-
+/* Button styling */
 button {
     margin-right: 0.5rem;
     padding: 0.5rem 1rem;
@@ -349,6 +364,7 @@ button {
     cursor: pointer;
 }
 
+/* Checkbox label styling */
 .checkbox-label {
     display: flex;
     align-items: center;
@@ -360,9 +376,10 @@ button {
     margin-right: 0.5rem;
 }
 
+/* ===== OUTPUT SECTION ===== */
 .output pre {
     background: #222;
     padding: 0.5rem;
     border: 1px solid #444;
-    white-space: pre-wrap;
+    white-space: pre-wrap; /* Wrap long lines */
 }
