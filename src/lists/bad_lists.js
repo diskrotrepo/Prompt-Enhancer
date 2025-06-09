@@ -58,6 +58,12 @@ const BAD_LISTS = {
   "Synthwave",
   "K-pop",
   ],
+  DEFAULT_NEGATIVE_MODIFIERS: [
+  "not",
+  "no",
+  "un-",
+  ],
+  DEFAULT_DESCRIPTORS_WITH_NEGATIONS: [],
   IMAGE_BAD_DESCRIPTORS: [
   "worst quality",
   "normal quality",
@@ -220,3 +226,6 @@ const BAD_LISTS = {
   "twisted",
   ]
 };
+
+BAD_LISTS.DEFAULT_DESCRIPTORS_WITH_NEGATIONS =
+  BAD_LISTS.DEFAULT_NEGATIVE_MODIFIERS.concat(BAD_LISTS.DEFAULT_DESCRIPTORS);

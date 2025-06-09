@@ -1,26 +1,37 @@
-let DEFAULT_NEGATIVE_MODIFIERS = [];
-let DEFAULT_DESCRIPTORS = [];
-let IMAGE_BAD_DESCRIPTORS = [];
-let DEFAULT_POSITIVE_MODIFIERS = [];
+let DESC_PRESETS = {};
+let POS_PRESETS = {};
 
 function loadLists() {
   if (typeof BAD_LISTS === 'object') {
-    DEFAULT_DESCRIPTORS = BAD_LISTS.DEFAULT_DESCRIPTORS || [];
-    IMAGE_BAD_DESCRIPTORS = BAD_LISTS.IMAGE_BAD_DESCRIPTORS || [];
-  }
-  if (typeof NEGATIVE_MODIFIER_LISTS === 'object') {
-    DEFAULT_NEGATIVE_MODIFIERS = NEGATIVE_MODIFIER_LISTS.DEFAULT_NEGATIVE_MODIFIERS || [];
+    DESC_PRESETS = {
+      default: {
+        display: BAD_LISTS.DEFAULT_DESCRIPTORS || [],
+        descs: BAD_LISTS.DEFAULT_DESCRIPTORS || [],
+        negs: []
+      },
+      'audio-neg': {
+        display: BAD_LISTS.DEFAULT_DESCRIPTORS_WITH_NEGATIONS || [],
+        descs: BAD_LISTS.DEFAULT_DESCRIPTORS || [],
+        negs: BAD_LISTS.DEFAULT_NEGATIVE_MODIFIERS || []
+      },
+      image: {
+        display: BAD_LISTS.IMAGE_BAD_DESCRIPTORS || [],
+        descs: BAD_LISTS.IMAGE_BAD_DESCRIPTORS || [],
+        negs: []
+      },
+      empty: { display: [], descs: [], negs: [] }
+    };
   }
   if (typeof GOOD_LISTS === 'object') {
-    DEFAULT_POSITIVE_MODIFIERS = GOOD_LISTS.DEFAULT_POSITIVE_MODIFIERS || [];
+    POS_PRESETS = {
+      default: GOOD_LISTS.DEFAULT_POSITIVE_MODIFIERS || [],
+      empty: []
+    };
   }
-  
-  // Debug: Log loaded lists to verify they're populated
+
   console.log('Lists loaded:', {
-    DEFAULT_DESCRIPTORS: DEFAULT_DESCRIPTORS.length,
-    IMAGE_BAD_DESCRIPTORS: IMAGE_BAD_DESCRIPTORS.length,
-    DEFAULT_NEGATIVE_MODIFIERS: DEFAULT_NEGATIVE_MODIFIERS.length,
-    DEFAULT_POSITIVE_MODIFIERS: DEFAULT_POSITIVE_MODIFIERS.length
+    descPresets: Object.keys(DESC_PRESETS).length,
+    posPresets: Object.keys(POS_PRESETS).length
   });
 }
 
@@ -101,7 +112,7 @@ function combineListsByMode(negated, bad, mode, limit) {
   return combined;
 }
 
-function buildVersions(items, descs, negs, posMods, negMode, posMode, limit) {
+function buildVersions(items, descs, negs, posMods, negMode, limit) {
   function makeCycler(arr, shuffle = true) {
     let pool = shuffle ? [] : arr.slice();
     let idx = 0;
@@ -138,7 +149,7 @@ function buildVersions(items, descs, negs, posMods, negMode, posMode, limit) {
   }
 
   function makePosTerm(item) {
-    if (posMode !== 'on' || posMods.length === 0) return item;
+    if (posMods.length === 0) return item;
     const prefix = nextPos();
     return `${prefix} ${item}`;
   }
@@ -186,39 +197,40 @@ function buildVersions(items, descs, negs, posMods, negMode, posMode, limit) {
 }
 
 
-function getList(selectEl, textareaEl, defaults) {
-  const choice = selectEl.value;
-  if (choice === 'default') {
-    textareaEl.value = defaults.join(', ');
-    textareaEl.disabled = true;
-    return defaults;
-  } else if (choice === 'image') {
-    textareaEl.value = IMAGE_BAD_DESCRIPTORS.join(', ');
-    textareaEl.disabled = true;
-    return IMAGE_BAD_DESCRIPTORS;
-  } else if (choice === 'empty') {
-    textareaEl.value = '';
-    textareaEl.disabled = true;
-    return [];
-  } else {
+function getList(selectEl, textareaEl, presets) {
+  const key = selectEl.value;
+  if (key === 'custom') {
     textareaEl.disabled = false;
     return parseInput(textareaEl.value);
   }
+  const list = presets[key] || [];
+  textareaEl.value = list.join(', ');
+  textareaEl.disabled = true;
+  return list;
+}
+
+function getDescLists(selectEl, textareaEl) {
+  const key = selectEl.value;
+  if (key === 'custom') {
+    textareaEl.disabled = false;
+    const parsed = parseInput(textareaEl.value);
+    return { descs: parsed, negs: [] };
+  }
+  const preset = DESC_PRESETS[key] || { display: [], descs: [], negs: [] };
+  textareaEl.value = preset.display.join(', ');
+  textareaEl.disabled = true;
+  return { descs: preset.descs, negs: preset.negs };
 }
 
 document.getElementById('desc-select').addEventListener('change', () => {
   console.log('Desc select changed to:', document.getElementById('desc-select').value);
-  getList(document.getElementById('desc-select'), document.getElementById('desc-input'), DEFAULT_DESCRIPTORS);
+  getDescLists(document.getElementById('desc-select'), document.getElementById('desc-input'));
 });
 
-document.getElementById('neg-select').addEventListener('change', () => {
-  console.log('Neg select changed to:', document.getElementById('neg-select').value);
-  getList(document.getElementById('neg-select'), document.getElementById('neg-input'), DEFAULT_NEGATIVE_MODIFIERS);
-});
 
 document.getElementById('pos-select').addEventListener('change', () => {
   console.log('Pos select changed to:', document.getElementById('pos-select').value);
-  getList(document.getElementById('pos-select'), document.getElementById('pos-input'), DEFAULT_POSITIVE_MODIFIERS);
+  getList(document.getElementById('pos-select'), document.getElementById('pos-input'), POS_PRESETS);
 });
 
 document.getElementById('length-select').addEventListener('change', () => {
@@ -234,11 +246,9 @@ document.getElementById('length-select').addEventListener('change', () => {
 
 function collectInputs() {
   const baseItems = parseInput(document.getElementById('base-input').value);
-  const descs = getList(document.getElementById('desc-select'), document.getElementById('desc-input'), DEFAULT_DESCRIPTORS);
-  const negs = getList(document.getElementById('neg-select'), document.getElementById('neg-input'), DEFAULT_NEGATIVE_MODIFIERS);
-  const posMods = getList(document.getElementById('pos-select'), document.getElementById('pos-input'), DEFAULT_POSITIVE_MODIFIERS);
+  const { descs, negs } = getDescLists(document.getElementById('desc-select'), document.getElementById('desc-input'));
+  const posMods = getList(document.getElementById('pos-select'), document.getElementById('pos-input'), POS_PRESETS);
   const negMode = document.getElementById('neg-mode-select').value;
-  const posMode = document.getElementById('pos-mode-select').value;
   const lengthSelect = document.getElementById('length-select');
   const lengthInput = document.getElementById('length-input');
   let limit;
@@ -248,7 +258,7 @@ function collectInputs() {
     limit = parseInt(lengthSelect.value, 10);
     lengthInput.value = limit;
   }
-  return { baseItems, descs, negs, posMods, negMode, posMode, limit };
+  return { baseItems, descs, negs, posMods, negMode, limit };
 }
 
 function displayOutput(result) {
@@ -257,24 +267,24 @@ function displayOutput(result) {
 }
 
 function generate() {
-  const { baseItems, descs, negs, posMods, negMode, posMode, limit } = collectInputs();
+  const { baseItems, descs, negs, posMods, negMode, limit } = collectInputs();
   if (!baseItems.length) {
     alert('Please enter at least one base prompt item.');
     return;
   }
-  const result = buildVersions(baseItems, descs, negs, posMods, negMode, posMode, limit);
+  const result = buildVersions(baseItems, descs, negs, posMods, negMode, limit);
   displayOutput(result);
 }
 
 document.getElementById('generate').addEventListener('click', generate);
 
 document.getElementById('randomize').addEventListener('click', () => {
-  const { baseItems, descs, negs, posMods, negMode, posMode, limit } = collectInputs();
+  const { baseItems, descs, negs, posMods, negMode, limit } = collectInputs();
   if (!baseItems.length) {
     alert('Please enter at least one base prompt item.');
     return;
   }
   const shuffled = baseItems.slice().sort(() => Math.random() - 0.5);
-  const result = buildVersions(shuffled, descs, negs, posMods, negMode, posMode, limit);
+  const result = buildVersions(shuffled, descs, negs, posMods, negMode, limit);
   displayOutput(result);
 });
