@@ -43,8 +43,8 @@ The Prompt Enhancer helps you create more effective prompts by:
    - Custom - set your own limit
 
 5. **Generate**:
-   - Click "Generate" to create variations using the current order
-   - Click "Randomize" to shuffle the base prompt list before generation
+   - Click "Generate" to create variations
+   - Use the shuffle toggle next to "Base Prompt List" to randomize base items when needed
 
 ## How It Works
 

@@ -369,7 +369,20 @@ button {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative;
+    padding-left: 1rem;
     margin-bottom: 0.25rem;
+}
+
+.label-row::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    background: #fff;
+    transform: translateY(-50%) rotate(45deg);
 }
 
 .checkbox-label {
@@ -384,34 +397,50 @@ button {
 }
 
 .checkbox-label .slider {
-    width: 34px;
-    height: 18px;
-    background: #444;
-    border-radius: 12px;
+    width: 36px;
+    height: 20px;
+    background: repeating-linear-gradient(
+        45deg,
+        #444,
+        #444 3px,
+        #333 3px,
+        #333 6px
+    );
+    border-radius: 6px;
     position: relative;
-    margin-right: 0.4rem;
+    margin-right: 0.25rem;
     transition: background 0.2s;
 }
 
 .checkbox-label .slider::before {
     content: '';
     position: absolute;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
+    width: 12px;
+    height: 12px;
     background: #fff;
-    top: 2px;
-    left: 2px;
+    top: 4px;
+    left: 4px;
+    transform: rotate(45deg) translateX(0);
     transition: transform 0.2s, background 0.2s;
 }
 
 .checkbox-label input[type=checkbox]:checked + .slider {
-    background: #fff;
+    background: repeating-linear-gradient(
+        45deg,
+        #fff,
+        #fff 3px,
+        #ddd 3px,
+        #ddd 6px
+    );
 }
 
 .checkbox-label input[type=checkbox]:checked + .slider::before {
-    transform: translateX(16px);
+    transform: rotate(45deg) translateX(16px);
     background: #000;
+}
+
+.toggle-text {
+    margin-left: 0.25rem;
 }
 
 /* ===== OUTPUT SECTION ===== */
