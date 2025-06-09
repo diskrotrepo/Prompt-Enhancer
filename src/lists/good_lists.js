@@ -6,6 +6,11 @@ const GOOD_LISTS = {
   // List of available presets with titles and data
   presets: [
     {
+      id: 'empty',
+      title: 'Empty positive list',
+      items: []
+    },
+    {
       id: 'image-positive',
       title: 'Image positive list',
       items: [
@@ -75,10 +80,5 @@ const GOOD_LISTS = {
         "detailed skin texture",
       ]
     },
-    {
-      id: 'empty',
-      title: 'Empty positive list',
-      items: []
-    }
   ]
 };

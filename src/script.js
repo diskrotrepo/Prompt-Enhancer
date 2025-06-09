@@ -293,18 +293,6 @@ function generate() {
 // Attach generate function to button click
 document.getElementById('generate').addEventListener('click', generate);
 
-// Randomize button - forces shuffle of base items regardless of checkbox
-document.getElementById('randomize').addEventListener('click', () => {
-  const { baseItems, descs, posMods, shuffleBad, shufflePos, limit } = collectInputs();
-  if (!baseItems.length) {
-    alert('Please enter at least one base prompt item.');
-    return;
-  }
-  // Pre-shuffle the base items
-  const shuffled = baseItems.slice().sort(() => Math.random() - 0.5);
-  const result = buildVersions(shuffled, descs, posMods, true, shuffleBad, shufflePos, limit);
-  displayOutput(result);
-});
 
 /**
  * Initialize the UI with default selections
@@ -313,20 +301,6 @@ document.getElementById('randomize').addEventListener('click', () => {
 function initializeUI() {
   // Load lists and populate dropdowns
   loadLists();
-  
-  // Initialize descriptor list
-  const descSelect = document.getElementById('desc-select');
-  const descInput = document.getElementById('desc-input');
-  if (descSelect && descInput) {
-    getList(descSelect, descInput, DESC_PRESETS);
-  }
-  
-  // Initialize positive modifier list
-  const posSelect = document.getElementById('pos-select');
-  const posInput = document.getElementById('pos-input');
-  if (posSelect && posInput) {
-    getList(posSelect, posInput, POS_PRESETS);
-  }
 }
 
 // Initialize UI when DOM is ready
