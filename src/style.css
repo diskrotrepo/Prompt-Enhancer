@@ -389,6 +389,21 @@ button {
     border-color: transparent;
 }
 
+/* Copy button styling */
+.copy-button {
+    background: transparent;
+    border: 1px solid #888;
+    color: #fff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 0.25rem;
+}
+
+.copy-button:hover {
+    background: #444;
+}
+
 /* ===== OUTPUT SECTION ===== */
 .output pre {
     background: #222;

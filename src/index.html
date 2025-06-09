@@ -37,6 +37,8 @@
             <label for="base-input">Base Prompt List</label>
             <input type="checkbox" id="base-shuffle" hidden>
             <button type="button" class="toggle-button" data-target="base-shuffle">Randomize</button>
+            <input type="checkbox" id="base-hide" data-targets="base-input" checked hidden>
+            <button type="button" class="toggle-button" data-target="base-hide">Hidden</button>
           </div>
           <textarea id="base-input" rows="4"
             placeholder="Enter comma, semicolon, or newline separated items"></textarea>
@@ -47,6 +49,8 @@
             <label for="desc-input">Bad Descriptor List</label>
             <input type="checkbox" id="desc-shuffle" hidden>
             <button type="button" class="toggle-button" data-target="desc-shuffle">Randomize</button>
+            <input type="checkbox" id="desc-hide" data-targets="desc-select,desc-input" checked hidden>
+            <button type="button" class="toggle-button" data-target="desc-hide">Hidden</button>
           </div>
           <select id="desc-select">
             <!-- Options will be populated dynamically from BAD_LISTS -->
@@ -60,6 +64,8 @@
             <label for="pos-input">Positive Modifier List</label>
             <input type="checkbox" id="pos-shuffle" hidden>
             <button type="button" class="toggle-button" data-target="pos-shuffle">Randomize</button>
+            <input type="checkbox" id="pos-hide" data-targets="pos-select,pos-input" checked hidden>
+            <button type="button" class="toggle-button" data-target="pos-hide">Hidden</button>
           </div>
           <select id="pos-select">
             <!-- Options will be populated dynamically from GOOD_LISTS -->
@@ -82,9 +88,17 @@
         
         <!-- Output display section -->
         <div class="output">
-          <h2>Good Version</h2>
+          <h2>Good Version
+            <input type="checkbox" id="good-hide" data-targets="good-output" checked hidden>
+            <button type="button" class="toggle-button" data-target="good-hide">Hidden</button>
+            <button type="button" class="copy-button" data-target="good-output">Copy</button>
+          </h2>
           <pre id="good-output"></pre>
-          <h2>Bad Version</h2>
+          <h2>Bad Version
+            <input type="checkbox" id="bad-hide" data-targets="bad-output" checked hidden>
+            <button type="button" class="toggle-button" data-target="bad-hide">Hidden</button>
+            <button type="button" class="copy-button" data-target="bad-output">Copy</button>
+          </h2>
           <pre id="bad-output"></pre>
         </div>
       </div>
