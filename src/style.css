@@ -417,6 +417,8 @@ button {
     display: flex;
     align-items: center;
     text-align: left;
+    margin-top: 1rem;
+    margin-bottom: 0.25rem;
 }
 
 .output h2 span {
@@ -433,4 +435,6 @@ button {
     padding: 0.5rem;
     border: 1px solid #444;
     white-space: pre-wrap; /* Wrap long lines */
+    font-family: inherit;
+    margin-bottom: 1rem;
 }

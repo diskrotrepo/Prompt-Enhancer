@@ -308,7 +308,8 @@ function initializeUI() {
   });
 
   // Set up hide toggles that show/hide target elements
-  document.querySelectorAll('input[type="checkbox"][data-targets]').forEach(cb => {
+  const hideCheckboxes = Array.from(document.querySelectorAll('input[type="checkbox"][data-targets]'));
+  hideCheckboxes.forEach(cb => {
     const ids = cb.dataset.targets.split(',').map(id => id.trim());
     const elems = ids.map(id => document.getElementById(id)).filter(Boolean);
     const update = () => {
@@ -319,6 +320,19 @@ function initializeUI() {
     cb.addEventListener('change', update);
     update();
   });
+
+  // Master hide toggle
+  const allHide = document.getElementById('all-hide');
+  if (allHide) {
+    allHide.addEventListener('change', () => {
+      hideCheckboxes.forEach(cb => {
+        cb.checked = allHide.checked;
+        const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
+        if (btn) btn.classList.toggle('active', cb.checked);
+        cb.dispatchEvent(new Event('change'));
+      });
+    });
+  }
 
   // Copy buttons
   document.querySelectorAll('.copy-button').forEach(btn => {
