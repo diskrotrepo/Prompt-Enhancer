@@ -296,7 +296,7 @@ blockquote p {
     }
 
     button {
-        width: 100%;
+        width: auto; /* keep buttons at their natural size */
         margin-bottom: 0.5rem;
         margin-right: 0;
     }
