@@ -1,7 +1,7 @@
 /**
  * Prompt Enhancer - Main Application Logic
  * 
- * This script handles the generation of "good" and "bad" prompt variations
+ * This script handles the generation of positive and negative prompt variations
  * by cycling through base prompts and applying different modifiers.
  * 
  * The tool is designed for AI prompt engineering, particularly for:
@@ -10,8 +10,8 @@
  * - Other AI models that benefit from negative prompting
  */
 
-// Global preset storage for descriptor and positive modifier lists
-let DESC_PRESETS = {};
+// Global preset storage for negative and positive descriptor lists
+let NEG_PRESETS = {};
 let POS_PRESETS = {};
 let LENGTH_PRESETS = {};
 
@@ -43,33 +43,33 @@ function populateSelect(selectEl, presets) {
  * Dynamically structures the data based on available lists
  */
 function loadLists() {
-  // Process bad descriptor presets
-  if (typeof BAD_LISTS === 'object' && BAD_LISTS.presets) {
+  // Process negative descriptor presets
+  if (typeof NEGATIVE_LISTS === 'object' && NEGATIVE_LISTS.presets) {
     // Convert presets array to object for easier access
-    DESC_PRESETS = {};
-    BAD_LISTS.presets.forEach(preset => {
-      DESC_PRESETS[preset.id] = preset.items || [];
+    NEG_PRESETS = {};
+    NEGATIVE_LISTS.presets.forEach(preset => {
+      NEG_PRESETS[preset.id] = preset.items || [];
     });
     
-    // Populate the bad descriptor dropdown
-    const descSelect = document.getElementById('desc-select');
+    // Populate the negative descriptor dropdown
+    const descSelect = document.getElementById('neg-select');
     if (descSelect) {
-      populateSelect(descSelect, BAD_LISTS.presets);
+      populateSelect(descSelect, NEGATIVE_LISTS.presets);
     }
   }
   
   // Process positive modifier presets
-  if (typeof GOOD_LISTS === 'object' && GOOD_LISTS.presets) {
+  if (typeof POSITIVE_LISTS === 'object' && POSITIVE_LISTS.presets) {
     // Convert presets array to object for easier access
     POS_PRESETS = {};
-    GOOD_LISTS.presets.forEach(preset => {
+    POSITIVE_LISTS.presets.forEach(preset => {
       POS_PRESETS[preset.id] = preset.items || [];
     });
     
     // Populate the positive modifier dropdown
     const posSelect = document.getElementById('pos-select');
     if (posSelect) {
-      populateSelect(posSelect, GOOD_LISTS.presets);
+      populateSelect(posSelect, POSITIVE_LISTS.presets);
     }
   }
 
@@ -87,7 +87,7 @@ function loadLists() {
   }
 
   console.log('Lists loaded:', {
-    descPresets: Object.keys(DESC_PRESETS).length,
+    descPresets: Object.keys(NEG_PRESETS).length,
     posPresets: Object.keys(POS_PRESETS).length,
     lengthPresets: Object.keys(LENGTH_PRESETS).length
   });
@@ -173,29 +173,29 @@ function buildPrefixedList(orderedItems, prefixes, limit, shuffleItems = false, 
  * until the character limit is reached.
  *
  * @param {string[]} items - Base prompt items to enhance
- * @param {string[]} descs - Negative descriptors for bad version
- * @param {string[]} posMods - Positive modifiers for good version
+ * @param {string[]} negDescs - Negative descriptors for the negative version
+ * @param {string[]} posMods - Positive descriptors for the positive version
  * @param {boolean} shuffleBase - Whether to randomize base items
- * @param {boolean} shuffleBad - Whether to randomize bad descriptors
+ * @param {boolean} shuffleNeg - Whether to randomize negative descriptors
  * @param {boolean} shufflePos - Whether to randomize positive modifiers
  * @param {number} limit - Character limit for output
- * @returns {{good: string, bad: string}} Object with good and bad prompt strings
- */
-function buildVersions(items, descs, posMods, shuffleBase, shuffleBad, shufflePos, limit) {
+ * @returns {{positive: string, negative: string}} Object with positive and negative prompt strings
+*/
+function buildVersions(items, negDescs, posMods, shuffleBase, shuffleNeg, shufflePos, limit) {
   if (!items.length) {
-    return { good: '', bad: '' };
+    return { positive: '', negative: '' };
   }
 
   if (shuffleBase) shuffle(items);
 
-  const badTerms = buildPrefixedList(items, descs, limit, false, shuffleBad);
-  const goodTerms = buildPrefixedList(items, posMods, limit, false, shufflePos);
+  const negTerms = buildPrefixedList(items, negDescs, limit, false, shuffleNeg);
+  const posTerms = buildPrefixedList(items, posMods, limit, false, shufflePos);
 
-  const [trimBad, trimGood] = equalizeLength(badTerms, goodTerms);
+  const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
 
   return {
-    good: trimGood.join(', '),
-    bad: trimBad.join(', ')
+    positive: trimPos.join(', '),
+    negative: trimNeg.join(', ')
   };
 }
 
@@ -217,10 +217,10 @@ function applyPreset(selectEl, inputEl, presets) {
   inputEl.disabled = false;
 }
 
-// Event listener for bad descriptor dropdown changes
-document.getElementById('desc-select').addEventListener('change', () => {
-  console.log('Desc select changed to:', document.getElementById('desc-select').value);
-  applyPreset(document.getElementById('desc-select'), document.getElementById('desc-input'), DESC_PRESETS);
+// Event listener for negative descriptor dropdown changes
+document.getElementById('neg-select').addEventListener('change', () => {
+  console.log('Neg select changed to:', document.getElementById('neg-select').value);
+  applyPreset(document.getElementById('neg-select'), document.getElementById('neg-input'), NEG_PRESETS);
 });
 
 // Event listener for positive modifier dropdown changes
@@ -244,10 +244,10 @@ document.getElementById('length-select').addEventListener('change', () => {
  */
 function collectInputs() {
   const baseItems = parseInput(document.getElementById('base-input').value);
-  const descs = parseInput(document.getElementById('desc-input').value);
+  const negDescs = parseInput(document.getElementById('neg-input').value);
   const posMods = parseInput(document.getElementById('pos-input').value);
   const shuffleBase = document.getElementById('base-shuffle').checked;
-  const shuffleBad = document.getElementById('desc-shuffle').checked;
+  const shuffleNeg = document.getElementById('neg-shuffle').checked;
   const shufflePos = document.getElementById('pos-shuffle').checked;
   const lengthSelect = document.getElementById('length-select');
   const lengthInput = document.getElementById('length-input');
@@ -260,16 +260,16 @@ function collectInputs() {
     lengthInput.value = limit;
   }
   
-  return { baseItems, descs, posMods, shuffleBase, shuffleBad, shufflePos, limit };
+  return { baseItems, negDescs, posMods, shuffleBase, shuffleNeg, shufflePos, limit };
 }
 
 /**
  * Displays the generated output in the UI
- * @param {{good: string, bad: string}} result - Generated prompts
- */
+ * @param {{positive: string, negative: string}} result - Generated prompts
+*/
 function displayOutput(result) {
-  document.getElementById('good-output').textContent = result.good;
-  document.getElementById('bad-output').textContent = result.bad;
+  document.getElementById('positive-output').textContent = result.positive;
+  document.getElementById('negative-output').textContent = result.negative;
 }
 
 /**
@@ -277,12 +277,12 @@ function displayOutput(result) {
  * Validates input and generates both versions
  */
 function generate() {
-  const { baseItems, descs, posMods, shuffleBase, shuffleBad, shufflePos, limit } = collectInputs();
+  const { baseItems, negDescs, posMods, shuffleBase, shuffleNeg, shufflePos, limit } = collectInputs();
   if (!baseItems.length) {
     alert('Please enter at least one base prompt item.');
     return;
   }
-  const result = buildVersions(baseItems, descs, posMods, shuffleBase, shuffleBad, shufflePos, limit);
+  const result = buildVersions(baseItems, negDescs, posMods, shuffleBase, shuffleNeg, shufflePos, limit);
   displayOutput(result);
 }
 
@@ -299,7 +299,7 @@ function initializeUI() {
   loadLists();
 
   // Populate textareas with initially selected presets
-  applyPreset(document.getElementById('desc-select'), document.getElementById('desc-input'), DESC_PRESETS);
+  applyPreset(document.getElementById('neg-select'), document.getElementById('neg-input'), NEG_PRESETS);
   applyPreset(document.getElementById('pos-select'), document.getElementById('pos-input'), POS_PRESETS);
   applyPreset(document.getElementById('length-select'), document.getElementById('length-input'), LENGTH_PRESETS);
 

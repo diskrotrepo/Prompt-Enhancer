@@ -1,18 +1,18 @@
 /**
- * Bad/Negative descriptor lists for prompt generation
+ * Negative descriptor lists for prompt generation
  * Each list includes a title and the actual list items
  */
-const BAD_LISTS = {
+const NEGATIVE_LISTS = {
   // List of available presets with titles and data
   presets: [
     {
       id: 'empty',
-      title: 'Empty bad list',
+      title: 'Empty negative list',
       items: []
     },
     {
       id: 'audio-bad',
-      title: 'Audio bad list',
+      title: 'Audio negative list',
       items: [
         "Horrorcore",
         "Rockabilly",
@@ -75,7 +75,7 @@ const BAD_LISTS = {
     },
     {
       id: 'audio-bad-neg',
-      title: 'Audio bad list + negations',
+      title: 'Audio negative list + negations',
       items: [
         "not",
         "no",
@@ -141,7 +141,7 @@ const BAD_LISTS = {
     },
     {
       id: 'image-bad',
-      title: 'Image bad list',
+      title: 'Image negative list',
       items: [
         "worst quality",
         "normal quality",

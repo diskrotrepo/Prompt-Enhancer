@@ -1,8 +1,8 @@
 /**
- * Good/Positive modifier lists for prompt generation
+ * Positive descriptor lists for prompt generation
  * Each list includes a title and the actual list items
  */
-const GOOD_LISTS = {
+const POSITIVE_LISTS = {
   // List of available presets with titles and data
   presets: [
     {

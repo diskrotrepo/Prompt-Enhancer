@@ -1,20 +1,20 @@
 # Prompt Enhancer
 
-A lightweight web utility for creating enhanced prompt variations for AI models. This tool generates both "good" (quality-enhanced) and "bad" (negative prompt) versions of your base prompts, optimized for various AI generation platforms like Suno AI (audio) and Stable Diffusion (images).
+A lightweight web utility for creating enhanced prompt variations for AI models. This tool generates both positive (quality-enhanced) and negative prompt versions of your base prompts, optimized for various AI generation platforms like Suno AI (audio) and Stable Diffusion (images).
 
 ## Overview
 
 The Prompt Enhancer helps you create more effective prompts by:
-- **Good Version**: Adds positive quality modifiers to enhance output quality
-- **Bad Version**: Prepends negative descriptors to help AI models avoid unwanted characteristics
+- **Positive Conditioning**: Adds positive descriptors to enhance output quality
+- **Negative Conditioning**: Prepends negative descriptors to help AI models avoid unwanted characteristics
 - **Cycling Algorithm**: Intelligently cycles through modifiers to maximize prompt diversity within character limits
 
 ## Features
 
 - **Multiple Input Formats**: Supports comma, semicolon, or newline-separated prompt lists
 - **Preset Lists**: Built-in curated lists for audio and image generation
-  - Audio bad lists (genres/styles to avoid)
-  - Image bad lists (quality issues, artifacts)
+  - Audio negative lists (genres/styles to avoid)
+  - Image negative lists (quality issues, artifacts)
   - Image positive lists (quality enhancers)
 - **Custom Lists**: Full support for user-defined modifier lists
 - **Smart Cycling**: Automatically cycles through base prompts and modifiers
@@ -33,8 +33,8 @@ The Prompt Enhancer helps you create more effective prompts by:
    - Example: `cyberpunk city, neon lights, rain`
 
 3. **Select Modifier Lists**:
-   - **Bad Descriptor List**: Choose a preset or create custom negative modifiers
-   - **Positive Modifier List**: Choose a preset or create custom quality enhancers
+   - **Negative Descriptor List**: Choose a preset or create custom negative descriptors
+   - **Positive Descriptor List**: Choose a preset or create custom positive descriptors
    - Use the shuffle toggle next to each list title to randomize that list
 
 4. **Set Length Limit**:
@@ -54,19 +54,19 @@ The tool uses a cycling algorithm that:
 2. Combines it with base prompts in sequence
 3. Creates pairs like: `[modifier] [base prompt]`
 4. Continues cycling until the character limit is reached
-5. Generates parallel good/bad versions maintaining the same base prompt order
+5. Generates parallel positive/negative versions maintaining the same base prompt order
 
 ### Example
 
 **Input Base Prompts**: `jazz, blues, rock`
 
-**Bad Descriptors**: `mediocre, amateur`
+**Negative Descriptors**: `mediocre, amateur`
 
-**Positive Modifiers**: `masterpiece, high quality`
+**Positive Descriptors**: `masterpiece, high quality`
 
 **Output**:
-- Bad Version: `mediocre jazz, amateur blues, mediocre rock, amateur jazz...`
-- Good Version: `masterpiece jazz, high quality blues, masterpiece rock, high quality jazz...`
+- Negative Conditioning: `mediocre jazz, amateur blues, mediocre rock, amateur jazz...`
+- Positive Conditioning: `masterpiece jazz, high quality blues, masterpiece rock, high quality jazz...`
 
 ## File Structure
 
@@ -79,7 +79,7 @@ src/
 │   └── logo.png        # Diskrot logo
 └── lists/
     ├── bad_lists.js     # Negative descriptor presets
-    ├── good_lists.js    # Positive modifier presets
+    ├── good_lists.js    # Positive descriptor presets
     └── length_lists.js  # Length limit presets
 ```
 
@@ -98,7 +98,7 @@ Edit the list files in `src/lists/`:
 
 ```javascript
 // In bad_lists.js
-const BAD_LISTS = {
+const NEGATIVE_LISTS = {
   presets: [
     {
       id: 'your-list-id',

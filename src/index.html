@@ -51,33 +51,33 @@
           <textarea id="base-input" rows="4"
             placeholder="Enter comma, semicolon, or newline separated items"></textarea>
         </div>
-        <!-- Bad descriptor selection section -->
+        <!-- Negative descriptor selection section -->
         <div class="input-group">
           <div class="label-row">
-            <label for="desc-input">Bad Descriptor List</label>
-            <input type="checkbox" id="desc-shuffle" hidden>
-            <button type="button" class="toggle-button" data-target="desc-shuffle">Randomize</button>
-            <input type="checkbox" id="desc-hide" data-targets="desc-input" checked hidden>
-            <button type="button" class="toggle-button" data-target="desc-hide">Hidden</button>
+            <label for="neg-input">Negative Descriptor List</label>
+            <input type="checkbox" id="neg-shuffle" hidden>
+            <button type="button" class="toggle-button" data-target="neg-shuffle">Randomize</button>
+            <input type="checkbox" id="neg-hide" data-targets="neg-input" checked hidden>
+            <button type="button" class="toggle-button" data-target="neg-hide">Hidden</button>
           </div>
-          <select id="desc-select">
-            <!-- Options will be populated dynamically from BAD_LISTS -->
+          <select id="neg-select">
+            <!-- Options will be populated dynamically from NEGATIVE_LISTS -->
           </select>
-          <textarea id="desc-input" rows="3" placeholder="Negative descriptors"></textarea>
+          <textarea id="neg-input" rows="3" placeholder="Negative descriptors"></textarea>
         </div>
-        <!-- Positive modifier selection section -->
+        <!-- Positive descriptor selection section -->
         <div class="input-group">
           <div class="label-row">
-            <label for="pos-input">Positive Modifier List</label>
+            <label for="pos-input">Positive Descriptor List</label>
             <input type="checkbox" id="pos-shuffle" hidden>
             <button type="button" class="toggle-button" data-target="pos-shuffle">Randomize</button>
             <input type="checkbox" id="pos-hide" data-targets="pos-input" checked hidden>
             <button type="button" class="toggle-button" data-target="pos-hide">Hidden</button>
           </div>
           <select id="pos-select">
-            <!-- Options will be populated dynamically from GOOD_LISTS -->
+            <!-- Options will be populated dynamically from POSITIVE_LISTS -->
           </select>
-          <textarea id="pos-input" rows="2" placeholder="Positive modifiers"></textarea>
+          <textarea id="pos-input" rows="2" placeholder="Positive descriptors"></textarea>
         </div>
         <!-- Character length limit selection -->
         <div class="input-group">
@@ -96,18 +96,18 @@
         
         <!-- Output display section -->
         <div class="output">
-          <h2><span>Good Version</span>
-            <input type="checkbox" id="good-hide" data-targets="good-output" checked hidden>
-            <button type="button" class="copy-button" data-target="good-output">Copy</button>
-            <button type="button" class="toggle-button" data-target="good-hide">Hidden</button>
+          <h2><span>Positive Conditioning</span>
+            <input type="checkbox" id="positive-hide" data-targets="positive-output" checked hidden>
+            <button type="button" class="copy-button" data-target="positive-output">Copy</button>
+            <button type="button" class="toggle-button" data-target="positive-hide">Hidden</button>
           </h2>
-          <pre id="good-output"></pre>
-          <h2><span>Bad Version</span>
-            <input type="checkbox" id="bad-hide" data-targets="bad-output" checked hidden>
-            <button type="button" class="copy-button" data-target="bad-output">Copy</button>
-            <button type="button" class="toggle-button" data-target="bad-hide">Hidden</button>
+          <pre id="positive-output"></pre>
+          <h2><span>Negative Conditioning</span>
+            <input type="checkbox" id="negative-hide" data-targets="negative-output" checked hidden>
+            <button type="button" class="copy-button" data-target="negative-output">Copy</button>
+            <button type="button" class="toggle-button" data-target="negative-hide">Hidden</button>
           </h2>
-          <pre id="bad-output"></pre>
+          <pre id="negative-output"></pre>
         </div>
       </div>
     </div>
