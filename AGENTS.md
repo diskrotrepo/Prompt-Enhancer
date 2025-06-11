@@ -17,7 +17,8 @@ This runs the Jest test suite located under `tests/`.
 
 Whenever you modify any JavaScript logic, especially functions in
 `src/script.js`, add or update the corresponding tests to keep coverage up to
-date.
+date. Tests should exercise edge cases and boundary conditions so that unusual
+inputs do not cause regressions.
 
 ## Conventions
 
@@ -25,6 +26,13 @@ date.
 * Keep HTML and CSS under the `src/` directory.
 * Avoid introducing build steps; the tool should remain fully client side.
 * Prefer modular, reusable code, that assumes the underlying structure may change over time ie functional programming is preferred over OOP
+
+## Code Health
+
+Be wary of code "ballooning" where older structures linger and complicate the
+current direction of the program. When a simpler or more efficient approach is
+apparent, refactor instead of layering on more code. Keep functions short and
+focused and remove obsolete parts when revising features.
 
 ## Lists Folder
 
