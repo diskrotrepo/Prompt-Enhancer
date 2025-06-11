@@ -280,7 +280,11 @@ function generate() {
 function updateButtonState(btn, checkbox) {
   btn.classList.toggle('active', checkbox.checked);
   if (btn.dataset.on && btn.dataset.off) {
-    btn.textContent = checkbox.checked ? btn.dataset.on : btn.dataset.off;
+    if (checkbox.indeterminate && btn.dataset.third) {
+      btn.textContent = btn.dataset.third;
+    } else {
+      btn.textContent = checkbox.checked ? btn.dataset.on : btn.dataset.off;
+    }
   }
 }
 
@@ -292,7 +296,12 @@ function setupToggleButtons() {
     if (!checkbox) return;
     updateButtonState(btn, checkbox);
     btn.addEventListener('click', () => {
-      checkbox.checked = !checkbox.checked;
+      if (checkbox.indeterminate) {
+        checkbox.indeterminate = false;
+        checkbox.checked = true;
+      } else {
+        checkbox.checked = !checkbox.checked;
+      }
       updateButtonState(btn, checkbox);
       checkbox.dispatchEvent(new Event('change'));
     });
@@ -375,11 +384,13 @@ function initializeUI() {
   setupPresetListener('length-select', 'length-input', LENGTH_PRESETS);
   document.getElementById('generate').addEventListener('click', generate);
 
+  const allHide = document.getElementById('all-hide');
+  if (allHide) allHide.indeterminate = true;
+
   setupToggleButtons();
   setupShuffleAll();
   const hideCheckboxes = setupHideToggles();
 
-  const allHide = document.getElementById('all-hide');
   if (allHide) {
     allHide.addEventListener('change', () => {
       hideCheckboxes.forEach(cb => {
