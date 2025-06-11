@@ -103,9 +103,17 @@ function loadLists() {
  */
 function parseInput(raw) {
   if (!raw) return [];
-  // Normalize delimiters to commas, then split
-  const normalized = raw.replace(/;/g, ',').replace(/\s*,\s*/g, ',');
-  return normalized.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+  const result = [];
+  const regex = /([^,.;:!?\n]+)([,.;:!?]|\n)?/g;
+  let match;
+  while ((match = regex.exec(raw)) !== null) {
+    let item = match[1].trim();
+    const delim = match[2];
+    if (item) {
+      result.push(delim ? `${item}${delim}` : item);
+    }
+  }
+  return result;
 }
 
 /**

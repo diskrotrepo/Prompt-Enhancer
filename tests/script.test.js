@@ -7,9 +7,14 @@ const {
 } = require('../src/script');
 
 describe('Utility functions', () => {
-  test('parseInput splits and trims correctly', () => {
+  test('parseInput keeps delimiters', () => {
     const input = 'a, b; c\nd';
-    expect(parseInput(input)).toEqual(['a', 'b', 'c', 'd']);
+    expect(parseInput(input)).toEqual(['a,', 'b;', 'c\n', 'd']);
+  });
+
+  test('parseInput recognizes various delimiters', () => {
+    const input = 'hello! world? great: yes.';
+    expect(parseInput(input)).toEqual(['hello!', 'world?', 'great:', 'yes.']);
   });
 
   test('shuffle retains all items', () => {
