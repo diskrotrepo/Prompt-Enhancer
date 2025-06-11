@@ -1,0 +1,11 @@
+{
+  "name": "prompt-enhancer",
+  "version": "1.0.0",
+  "description": "Prompt Enhancer tests",
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "jest": "^29.6.1"
+  }
+}
