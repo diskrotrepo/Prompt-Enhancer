@@ -5,8 +5,8 @@ A lightweight web utility for creating enhanced prompt variations for AI models.
 ## Overview
 
 The Prompt Enhancer helps you create more effective prompts by:
-- **Positive Conditioning**: Adds positive descriptors to enhance output quality
-- **Negative Conditioning**: Prepends negative descriptors to help AI models avoid unwanted characteristics
+- **Positive Conditioning**: Adds positive modifiers to enhance output quality
+- **Negative Conditioning**: Prepends negative modifiers to help AI models avoid unwanted characteristics
 - **Cycling Algorithm**: Intelligently cycles through modifiers to maximize prompt diversity within character limits
 
 ## Features
@@ -33,8 +33,8 @@ The Prompt Enhancer helps you create more effective prompts by:
    - Example: `cyberpunk city, neon lights, rain`
 
 3. **Select Modifier Lists**:
-   - **Negative Descriptor List**: Choose a preset or create custom negative descriptors
-   - **Positive Descriptor List**: Choose a preset or create custom positive descriptors
+   - **Negative Modifier List**: Choose a preset or create custom negative modifiers
+   - **Positive Modifier List**: Choose a preset or create custom positive modifiers
    - Use the shuffle toggle next to each list title to randomize that list
 
 4. **Set Length Limit**:
@@ -60,9 +60,9 @@ The tool uses a cycling algorithm that:
 
 **Input Base Prompts**: `jazz, blues, rock`
 
-**Negative Descriptors**: `mediocre, amateur`
+**Negative Modifiers**: `mediocre, amateur`
 
-**Positive Descriptors**: `masterpiece, high quality`
+**Positive Modifiers**: `masterpiece, high quality`
 
 **Output**:
 - Negative Conditioning: `mediocre jazz, amateur blues, mediocre rock, amateur jazz...`
@@ -78,8 +78,8 @@ src/
 ├── assets/
 │   └── logo.png        # Diskrot logo
 └── lists/
-    ├── bad_lists.js     # Negative descriptor presets
-    ├── good_lists.js    # Positive descriptor presets
+    ├── bad_lists.js     # Negative modifier presets
+    ├── good_lists.js    # Positive modifier presets
     └── length_lists.js  # Length limit presets
 ```
 

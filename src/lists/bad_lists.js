@@ -1,5 +1,5 @@
 /**
- * Negative descriptor lists for prompt generation
+ * Negative modifier lists for prompt generation
  * Each list includes a title and the actual list items
  */
 const NEGATIVE_LISTS = {
