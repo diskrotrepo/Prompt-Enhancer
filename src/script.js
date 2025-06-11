@@ -105,16 +105,16 @@ function loadLists() {
  * @param {string} raw - Raw input string from textarea
  * @returns {string[]} Array of trimmed, non-empty items
  */
+const DELIMS = new Set([',', '.', ';', ':', '!', '?', '\n']);
+
 function parseInput(raw) {
   if (!raw) return [];
-
-  const delims = new Set([',', '.', ';', ':', '!', '?', '\n']);
   const result = [];
   let token = '';
 
   for (let i = 0; i < raw.length; i++) {
     const ch = raw[i];
-    if (delims.has(ch)) {
+    if (DELIMS.has(ch)) {
       token = token.trim();
       if (token) {
         let segment = token + ch;
@@ -166,6 +166,17 @@ function equalizeLength(a, b) {
   return [a.slice(0, len), b.slice(0, len)];
 }
 
+// Extracts trailing delimiter and spaces from a string
+function extractDelimiter(str) {
+  const match = str.match(/([,.;:!?]+\s*|\n)$/);
+  return match ? match[0] : '';
+}
+
+// Checks if a string already ends with a delimiter
+function endsWithDelimiter(str) {
+  return Boolean(extractDelimiter(str));
+}
+
 /**
  * Builds a list by pairing items with prefixes until the
  * character limit is reached. Items are concatenated directly
@@ -184,16 +195,29 @@ function buildPrefixedList(orderedItems, prefixes, limit, shufflePrefixes = fals
   const prefixPool = prefixes.slice();
   if (shufflePrefixes) shuffle(prefixPool);
 
+  const defaultDelim = extractDelimiter(items[0]) || ', ';
+
   const result = [];
+  let output = '';
   let idx = 0;
   while (true) {
-    const item = items[idx % items.length];
+    const raw = items[idx % items.length];
     const prefix = prefixPool.length ? prefixPool[idx % prefixPool.length] : '';
-    const term = prefix ? `${prefix} ${item}` : item;
-    const next = result.length ? `${result.join('')}${term}` : term;
-    if (next.length > limit) break;
+    let term = prefix ? `${prefix} ${raw}` : raw;
+    const needsDelim = !endsWithDelimiter(raw);
+    if (needsDelim) term += defaultDelim;
+
+    if (output.length + term.length > limit) break;
     result.push(term);
+    output += term;
     idx++;
+  }
+
+  if (result.length) {
+    const rawLast = items[(idx - 1) % items.length];
+    if (!endsWithDelimiter(rawLast) && result[result.length - 1].endsWith(defaultDelim)) {
+      result[result.length - 1] = result[result.length - 1].slice(0, -defaultDelim.length);
+    }
   }
 
   return result;
