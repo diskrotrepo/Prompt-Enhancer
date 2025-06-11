@@ -121,9 +121,21 @@ function parseInput(raw, keepDelim = false) {
     const ch = normalized[i];
     current += ch;
     if (delims.includes(ch)) {
-      while (i + 1 < normalized.length && normalized[i + 1] === ' ') {
-        current += ' ';
-        i++;
+      let natural = /[,.!:;?\n]/.test(ch);
+      while (i + 1 < normalized.length) {
+        const next = normalized[i + 1];
+        if (delims.includes(next)) {
+          if (/[,.!:;?\n]/.test(next)) natural = true;
+          current += next;
+          i++;
+          continue;
+        }
+        if (next === ' ' && natural) {
+          current += ' ';
+          i++;
+          continue;
+        }
+        break;
       }
       items.push(current);
       current = '';

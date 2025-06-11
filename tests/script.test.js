@@ -17,6 +17,11 @@ describe('Utility functions', () => {
     expect(parseInput(input, true)).toEqual(['a, ', 'b. ', 'c. ']);
   });
 
+  test('parseInput handles multiple delimiters together', () => {
+    const input = 'a,,. b';
+    expect(parseInput(input, true)).toEqual(['a,,. ', 'b. ']);
+  });
+
   test('shuffle retains all items', () => {
     const arr = [1, 2, 3, 4];
     const result = shuffle(arr.slice());
