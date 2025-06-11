@@ -288,6 +288,25 @@ function updateButtonState(btn, checkbox) {
   }
 }
 
+// Keep a master checkbox synced with a list of child checkboxes
+function syncMasterState(master, children) {
+  if (!master) return;
+  const allChecked = children.every(cb => cb.checked);
+  const allUnchecked = children.every(cb => !cb.checked);
+  if (allChecked) {
+    master.checked = true;
+    master.indeterminate = false;
+  } else if (allUnchecked) {
+    master.checked = false;
+    master.indeterminate = false;
+  } else {
+    master.checked = false;
+    master.indeterminate = true;
+  }
+  const btn = document.querySelector(`.toggle-button[data-target="${master.id}"]`);
+  if (btn) updateButtonState(btn, master);
+}
+
 // Toggle button helper
 function setupToggleButtons() {
   document.querySelectorAll('.toggle-button').forEach(btn => {
@@ -323,13 +342,20 @@ function setupShuffleAll() {
       const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
       if (btn) updateButtonState(btn, cb);
     });
-    const allBtn = document.querySelector('.toggle-button[data-target="all-random"]');
-    if (allBtn) updateButtonState(allBtn, allRandom);
+    syncMasterState(allRandom, shuffleCheckboxes);
   });
+
+  shuffleCheckboxes.forEach(cb => {
+    cb.addEventListener('change', () => {
+      syncMasterState(allRandom, shuffleCheckboxes);
+    });
+  });
+
+  syncMasterState(allRandom, shuffleCheckboxes);
 }
 
 // Show/hide element toggles
-function setupHideToggles() {
+function setupHideToggles(allHide) {
   const hideCheckboxes = Array.from(document.querySelectorAll('input[type="checkbox"][data-targets]'));
   hideCheckboxes.forEach(cb => {
     const ids = cb.dataset.targets.split(',').map(id => id.trim());
@@ -340,10 +366,12 @@ function setupHideToggles() {
       });
       const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
       if (btn) updateButtonState(btn, cb);
+      syncMasterState(allHide, hideCheckboxes);
     };
     cb.addEventListener('change', update);
     update();
   });
+  syncMasterState(allHide, hideCheckboxes);
   return hideCheckboxes;
 }
 
@@ -385,11 +413,15 @@ function initializeUI() {
   document.getElementById('generate').addEventListener('click', generate);
 
   const allHide = document.getElementById('all-hide');
-  if (allHide) allHide.indeterminate = true;
+  if (allHide) {
+    allHide.indeterminate = true;
+    const btn = document.querySelector('.toggle-button[data-target="all-hide"]');
+    if (btn) updateButtonState(btn, allHide);
+  }
 
   setupToggleButtons();
   setupShuffleAll();
-  const hideCheckboxes = setupHideToggles();
+  const hideCheckboxes = setupHideToggles(allHide);
 
   if (allHide) {
     allHide.addEventListener('change', () => {
@@ -399,8 +431,7 @@ function initializeUI() {
         if (btn) updateButtonState(btn, cb);
         cb.dispatchEvent(new Event('change'));
       });
-      const allHideBtn = document.querySelector('.toggle-button[data-target="all-hide"]');
-      if (allHideBtn) updateButtonState(allHideBtn, allHide);
+      syncMasterState(allHide, hideCheckboxes);
     });
   }
 
