@@ -27,7 +27,7 @@ The Prompt Enhancer helps you create more effective prompts by:
 
 1. **Open the Tool**: Simply open `src/index.html` in your browser. No build step or server required.
 
-2. **Enter Base Prompts**: 
+2. **Enter Base Prompts**:
    - Add your base prompts in the first textarea
    - Separate multiple prompts with commas, semicolons, or newlines
    - Example: `cyberpunk city, neon lights, rain`
@@ -125,6 +125,22 @@ Simply edit the `items` array in any preset. The changes will be reflected immed
 - **Browser Compatibility**: Works in all modern browsers
 - **Responsive Design**: Mobile-friendly interface
 - **Modular Architecture**: Clean separation of data, logic, and presentation
+
+## Development & Testing
+
+1. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+2. Run the test suite:
+
+   ```bash
+   npm test
+   ```
+
+Tests live in the `tests/` directory and use the [Jest](https://jestjs.io/) framework.
 
 ## Use Cases
 
