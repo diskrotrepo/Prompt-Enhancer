@@ -35,6 +35,8 @@
         <div class="input-group">
           <div class="label-row">
             <label>Visibility</label>
+            <input type="checkbox" id="all-random" hidden>
+            <button type="button" class="toggle-button" data-target="all-random">Randomize All</button>
             <input type="checkbox" id="all-hide" checked hidden>
             <button type="button" class="toggle-button" data-target="all-hide">Hide All</button>
           </div>
@@ -45,7 +47,7 @@
             <label for="base-input">Base Prompt List</label>
             <input type="checkbox" id="base-shuffle" hidden>
             <button type="button" class="toggle-button" data-target="base-shuffle">Randomize</button>
-            <input type="checkbox" id="base-hide" data-targets="base-input" checked hidden>
+            <input type="checkbox" id="base-hide" data-targets="base-input" hidden>
             <button type="button" class="toggle-button" data-target="base-hide">Hidden</button>
           </div>
           <textarea id="base-input" rows="4"
@@ -57,6 +59,8 @@
             <label for="neg-input">Negative Modifier List</label>
             <input type="checkbox" id="neg-shuffle" hidden>
             <button type="button" class="toggle-button" data-target="neg-shuffle">Randomize</button>
+            <input type="checkbox" id="neg-include-pos" hidden>
+            <button type="button" class="toggle-button" data-target="neg-include-pos">Include Positive Mods</button>
             <input type="checkbox" id="neg-hide" data-targets="neg-input" checked hidden>
             <button type="button" class="toggle-button" data-target="neg-hide">Hidden</button>
           </div>
