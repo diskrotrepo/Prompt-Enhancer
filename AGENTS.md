@@ -24,3 +24,27 @@ date.
 * Prefer vanilla JavaScript and keep dependencies minimal.
 * Keep HTML and CSS under the `src/` directory.
 * Avoid introducing build steps; the tool should remain fully client side.
+
+## Lists Folder
+
+The `src/lists/` directory holds large data files with modifier presets. Each
+file defines constants used by `script.js`:
+
+* `bad_lists.js` and `good_lists.js` contain objects like:
+
+  ```javascript
+  const NEGATIVE_LISTS = {
+    presets: [
+      { id: 'example', title: 'Some title', items: ['item1', 'item2'] }
+    ]
+  };
+  ```
+
+  `POSITIVE_LISTS` and `LENGTH_LISTS` follow the same structure. Only the
+  contents of `items` differ (strings vs a single numeric value).
+
+* `adjectives.js`, `genres.js`, `prefixes.js` and `suffix.js` simply export
+  arrays of strings.
+
+These lists are very long but contain no logic, so there is rarely a need to
+examine them in detail when modifying functionality.
