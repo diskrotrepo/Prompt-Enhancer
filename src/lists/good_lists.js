@@ -1,5 +1,5 @@
 /**
- * Positive descriptor lists for prompt generation
+ * Positive modifier lists for prompt generation
  * Each list includes a title and the actual list items
  */
 const POSITIVE_LISTS = {

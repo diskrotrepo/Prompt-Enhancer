@@ -10,7 +10,7 @@
  * - Other AI models that benefit from negative prompting
  */
 
-// Global preset storage for negative and positive descriptor lists
+// Global preset storage for negative and positive modifier lists
 let NEG_PRESETS = {};
 let POS_PRESETS = {};
 let LENGTH_PRESETS = {};
@@ -43,7 +43,7 @@ function populateSelect(selectEl, presets) {
  * Dynamically structures the data based on available lists
  */
 function loadLists() {
-  // Process negative descriptor presets
+  // Process negative modifier presets
   if (typeof NEGATIVE_LISTS === 'object' && NEGATIVE_LISTS.presets) {
     // Convert presets array to object for easier access
     NEG_PRESETS = {};
@@ -51,10 +51,10 @@ function loadLists() {
       NEG_PRESETS[preset.id] = preset.items || [];
     });
     
-    // Populate the negative descriptor dropdown
-    const descSelect = document.getElementById('neg-select');
-    if (descSelect) {
-      populateSelect(descSelect, NEGATIVE_LISTS.presets);
+    // Populate the negative modifier dropdown
+    const negSelect = document.getElementById('neg-select');
+    if (negSelect) {
+      populateSelect(negSelect, NEGATIVE_LISTS.presets);
     }
   }
   
@@ -87,7 +87,7 @@ function loadLists() {
   }
 
   console.log('Lists loaded:', {
-    descPresets: Object.keys(NEG_PRESETS).length,
+    negPresets: Object.keys(NEG_PRESETS).length,
     posPresets: Object.keys(POS_PRESETS).length,
     lengthPresets: Object.keys(LENGTH_PRESETS).length
   });
@@ -173,22 +173,22 @@ function buildPrefixedList(orderedItems, prefixes, limit, shuffleItems = false, 
  * until the character limit is reached.
  *
  * @param {string[]} items - Base prompt items to enhance
- * @param {string[]} negDescs - Negative descriptors for the negative version
- * @param {string[]} posMods - Positive descriptors for the positive version
+ * @param {string[]} negMods - Negative modifiers for the negative version
+ * @param {string[]} posMods - Positive modifiers for the positive version
  * @param {boolean} shuffleBase - Whether to randomize base items
- * @param {boolean} shuffleNeg - Whether to randomize negative descriptors
+ * @param {boolean} shuffleNeg - Whether to randomize negative modifiers
  * @param {boolean} shufflePos - Whether to randomize positive modifiers
  * @param {number} limit - Character limit for output
  * @returns {{positive: string, negative: string}} Object with positive and negative prompt strings
 */
-function buildVersions(items, negDescs, posMods, shuffleBase, shuffleNeg, shufflePos, limit) {
+function buildVersions(items, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit) {
   if (!items.length) {
     return { positive: '', negative: '' };
   }
 
   if (shuffleBase) shuffle(items);
 
-  const negTerms = buildPrefixedList(items, negDescs, limit, false, shuffleNeg);
+  const negTerms = buildPrefixedList(items, negMods, limit, false, shuffleNeg);
   const posTerms = buildPrefixedList(items, posMods, limit, false, shufflePos);
 
   const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
@@ -217,7 +217,7 @@ function applyPreset(selectEl, inputEl, presets) {
   inputEl.disabled = false;
 }
 
-// Event listener for negative descriptor dropdown changes
+// Event listener for negative modifier dropdown changes
 document.getElementById('neg-select').addEventListener('change', () => {
   console.log('Neg select changed to:', document.getElementById('neg-select').value);
   applyPreset(document.getElementById('neg-select'), document.getElementById('neg-input'), NEG_PRESETS);
@@ -244,7 +244,7 @@ document.getElementById('length-select').addEventListener('change', () => {
  */
 function collectInputs() {
   const baseItems = parseInput(document.getElementById('base-input').value);
-  const negDescs = parseInput(document.getElementById('neg-input').value);
+  const negMods = parseInput(document.getElementById('neg-input').value);
   const posMods = parseInput(document.getElementById('pos-input').value);
   const shuffleBase = document.getElementById('base-shuffle').checked;
   const shuffleNeg = document.getElementById('neg-shuffle').checked;
@@ -260,7 +260,7 @@ function collectInputs() {
     lengthInput.value = limit;
   }
   
-  return { baseItems, negDescs, posMods, shuffleBase, shuffleNeg, shufflePos, limit };
+  return { baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit };
 }
 
 /**
@@ -277,12 +277,12 @@ function displayOutput(result) {
  * Validates input and generates both versions
  */
 function generate() {
-  const { baseItems, negDescs, posMods, shuffleBase, shuffleNeg, shufflePos, limit } = collectInputs();
+  const { baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit } = collectInputs();
   if (!baseItems.length) {
     alert('Please enter at least one base prompt item.');
     return;
   }
-  const result = buildVersions(baseItems, negDescs, posMods, shuffleBase, shuffleNeg, shufflePos, limit);
+  const result = buildVersions(baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit);
   displayOutput(result);
 }
 
