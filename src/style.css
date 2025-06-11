@@ -330,7 +330,7 @@ textarea {
 
 /* Specific textarea heights */
 #base-input,
-#desc-input {
+#neg-input {
     min-height: 10vh;
 }
 
