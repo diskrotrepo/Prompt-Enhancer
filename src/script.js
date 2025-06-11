@@ -218,25 +218,31 @@ function applyPreset(selectEl, inputEl, presets) {
 }
 
 // Event listener for negative modifier dropdown changes
-document.getElementById('neg-select').addEventListener('change', () => {
-  console.log('Neg select changed to:', document.getElementById('neg-select').value);
-  applyPreset(document.getElementById('neg-select'), document.getElementById('neg-input'), NEG_PRESETS);
-});
+if (typeof document !== 'undefined') {
+  // Event listener for negative modifier dropdown changes
+  document.getElementById('neg-select').addEventListener('change', () => {
+    console.log('Neg select changed to:', document.getElementById('neg-select').value);
+    applyPreset(document.getElementById('neg-select'), document.getElementById('neg-input'), NEG_PRESETS);
+  });
 
-// Event listener for positive modifier dropdown changes
-document.getElementById('pos-select').addEventListener('change', () => {
-  console.log('Pos select changed to:', document.getElementById('pos-select').value);
-  applyPreset(document.getElementById('pos-select'), document.getElementById('pos-input'), POS_PRESETS);
-});
+  // Event listener for positive modifier dropdown changes
+  document.getElementById('pos-select').addEventListener('change', () => {
+    console.log('Pos select changed to:', document.getElementById('pos-select').value);
+    applyPreset(document.getElementById('pos-select'), document.getElementById('pos-input'), POS_PRESETS);
+  });
 
-// Event listener for length limit dropdown changes
-document.getElementById('length-select').addEventListener('change', () => {
-  applyPreset(
-    document.getElementById('length-select'),
-    document.getElementById('length-input'),
-    LENGTH_PRESETS
-  );
-});
+  // Event listener for length limit dropdown changes
+  document.getElementById('length-select').addEventListener('change', () => {
+    applyPreset(
+      document.getElementById('length-select'),
+      document.getElementById('length-input'),
+      LENGTH_PRESETS
+    );
+  });
+
+  // Attach generate function to button click
+  document.getElementById('generate').addEventListener('click', generate);
+}
 
 /**
  * Collects all input values from the UI
@@ -285,9 +291,6 @@ function generate() {
   const result = buildVersions(baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit);
   displayOutput(result);
 }
-
-// Attach generate function to button click
-document.getElementById('generate').addEventListener('click', generate);
 
 
 /**
@@ -362,9 +365,22 @@ function initializeUI() {
 }
 
 // Initialize UI when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeUI);
-} else {
-  // DOM is already loaded
-  initializeUI();
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeUI);
+  } else {
+    // DOM is already loaded
+    initializeUI();
+  }
+}
+
+// Export functions for testing in Node
+if (typeof module !== 'undefined') {
+  module.exports = {
+    parseInput,
+    shuffle,
+    equalizeLength,
+    buildPrefixedList,
+    buildVersions,
+  };
 }
