@@ -178,17 +178,19 @@ function buildPrefixedList(orderedItems, prefixes, limit, shufflePrefixes = fals
  * @param {boolean} shuffleNeg - Whether to randomize negative modifiers
  * @param {boolean} shufflePos - Whether to randomize positive modifiers
  * @param {number} limit - Character limit for output
+ * @param {boolean} includePosForNeg - Whether negative generation should use the positive terms as its base
  * @returns {{positive: string, negative: string}} Object with positive and negative prompt strings
 */
-function buildVersions(items, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit) {
+function buildVersions(items, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit, includePosForNeg = false) {
   if (!items.length) {
     return { positive: '', negative: '' };
   }
 
   if (shuffleBase) shuffle(items);
 
-  const negTerms = buildPrefixedList(items, negMods, limit, shuffleNeg);
   const posTerms = buildPrefixedList(items, posMods, limit, shufflePos);
+  const negBase = includePosForNeg ? posTerms : items;
+  const negTerms = buildPrefixedList(negBase, negMods, limit, shuffleNeg);
 
   const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
 
@@ -236,6 +238,7 @@ function collectInputs() {
   const shuffleBase = document.getElementById('base-shuffle').checked;
   const shuffleNeg = document.getElementById('neg-shuffle').checked;
   const shufflePos = document.getElementById('pos-shuffle').checked;
+  const includePosForNeg = document.getElementById('neg-include-pos').checked;
   const lengthSelect = document.getElementById('length-select');
   const lengthInput = document.getElementById('length-input');
 
@@ -247,7 +250,7 @@ function collectInputs() {
     lengthInput.value = limit;
   }
   
-  return { baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit };
+  return { baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit, includePosForNeg };
 }
 
 /**
@@ -264,12 +267,12 @@ function displayOutput(result) {
  * Validates input and generates both versions
  */
 function generate() {
-  const { baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit } = collectInputs();
+  const { baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit, includePosForNeg } = collectInputs();
   if (!baseItems.length) {
     alert('Please enter at least one base prompt item.');
     return;
   }
-  const result = buildVersions(baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit);
+  const result = buildVersions(baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit, includePosForNeg);
   displayOutput(result);
 }
 
@@ -284,6 +287,24 @@ function setupToggleButtons() {
       checkbox.checked = !checkbox.checked;
       btn.classList.toggle('active', checkbox.checked);
       checkbox.dispatchEvent(new Event('change'));
+    });
+  });
+}
+
+// Randomize all toggles
+function setupShuffleAll() {
+  const allRandom = document.getElementById('all-random');
+  if (!allRandom) return;
+  const shuffleCheckboxes = [
+    document.getElementById('base-shuffle'),
+    document.getElementById('neg-shuffle'),
+    document.getElementById('pos-shuffle')
+  ].filter(Boolean);
+  allRandom.addEventListener('change', () => {
+    shuffleCheckboxes.forEach(cb => {
+      cb.checked = allRandom.checked;
+      const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
+      if (btn) btn.classList.toggle('active', cb.checked);
     });
   });
 }
@@ -343,6 +364,7 @@ function initializeUI() {
   document.getElementById('generate').addEventListener('click', generate);
 
   setupToggleButtons();
+  setupShuffleAll();
   const hideCheckboxes = setupHideToggles();
 
   const allHide = document.getElementById('all-hide');
