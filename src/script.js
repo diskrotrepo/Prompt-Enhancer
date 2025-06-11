@@ -108,9 +108,35 @@ function parseInput(raw) {
 }
 
 /**
- * Core algorithm that builds good and bad versions of prompts
- * Cycles through items and modifiers to create variations up to the character limit
- * 
+ * Creates a cycling iterator for an array.
+ * Optionally shuffles the array on each cycle.
+ * Returns `null` if the source array is empty.
+ *
+ * @param {string[]} arr - Array to cycle through
+ * @param {boolean} shuffle - Whether to shuffle on each cycle
+ * @returns {() => string|null} Iterator function that returns next item
+ */
+function createCycler(arr, shuffle) {
+  if (!Array.isArray(arr) || arr.length === 0) {
+    return () => null;
+  }
+  let pool = [];
+  let idx = 0;
+  const refill = () => {
+    pool = arr.slice();
+    if (shuffle) pool.sort(() => Math.random() - 0.5);
+    idx = 0;
+  };
+  return () => {
+    if (idx >= pool.length) refill();
+    return pool[idx++];
+  };
+}
+
+/**
+ * Core algorithm that builds good and bad versions of prompts.
+ * Cycles through items and modifiers to create variations up to the character limit.
+ *
  * @param {string[]} items - Base prompt items to enhance
  * @param {string[]} descs - Negative descriptors for bad version
  * @param {string[]} posMods - Positive modifiers for good version
@@ -121,82 +147,41 @@ function parseInput(raw) {
  * @returns {{good: string, bad: string}} Object with good and bad prompt strings
  */
 function buildVersions(items, descs, posMods, shuffleBase, shuffleBad, shufflePos, limit) {
-  /**
-   * Creates a cycling iterator for an array
-   * Optionally shuffles the array on each cycle
-   * 
-   * @param {string[]} arr - Array to cycle through
-   * @param {boolean} shuffle - Whether to shuffle on each cycle
-   * @returns {Function} Iterator function that returns next item
-   */
-  function makeCycler(arr, shuffle) {
-    let pool = shuffle ? [] : arr.slice();
-    let idx = 0;
-    return () => {
-      if (!arr.length) return null;
-      // Reset and optionally shuffle when we've used all items
-      if (idx >= pool.length) {
-        pool = shuffle ? arr.slice().sort(() => Math.random() - 0.5) : arr.slice();
-        idx = 0;
-      }
-      return pool[idx++];
-    };
-  }
 
   // Create cyclers for each list type
-  const nextItem = makeCycler(items, shuffleBase);
-  const nextPrefix = makeCycler(descs, shuffleBad);
-  const nextPos = makeCycler(posMods, shufflePos);
+  const nextItem = createCycler(items, shuffleBase);
+  const nextPrefix = createCycler(descs, shuffleBad);
+  const nextPos = createCycler(posMods, shufflePos);
 
   // Output arrays
   const bad = [];
   const good = [];
 
   /**
-   * Creates a term by combining a prefix with the next base item
-   * @param {string} prefix - Prefix to add (negative descriptor)
-   * @returns {{term: string, item: string}|null} Object with combined term and original item
+   * Tests whether adding the next terms would exceed the limit
+   * for either version.
+   *
+   * @param {string} nextBad - Candidate bad term
+   * @param {string} nextGood - Candidate good term
+   * @returns {boolean} True if both strings remain within the limit
    */
-  function makeTerm(prefix) {
-    if (prefix === null) return null;
-    const item = nextItem();
-    return { term: `${prefix} ${item}`, item };
-  }
-
-  /**
-   * Creates positive version of an item by adding positive modifier
-   * @param {string} item - Base item to enhance
-   * @returns {string} Enhanced item with positive modifier
-   */
-  function makePosTerm(item) {
-    if (posMods.length === 0) return item;
-    const prefix = nextPos();
-    return `${prefix} ${item}`;
-  }
-
-  /**
-   * Attempts to add a term to both good and bad outputs
-   * Checks character limit before adding
-   * @param {Object} obj - Term object from makeTerm
-   * @returns {boolean} Whether the term was successfully added
-   */
-  function tryAdd(obj) {
-    if (!obj) return false;
-    // Check if adding this term would exceed the limit
-    const test = [...bad, obj.term].join(', ');
-    if (test.length > limit) return false;
-    // Add to both versions
-    bad.push(obj.term);
-    good.push(makePosTerm(obj.item));
-    return true;
-  }
+  const canAdd = (nextBad, nextGood) => {
+    const badTest = [...bad, nextBad].join(', ');
+    const goodTest = [...good, nextGood].join(', ');
+    return badTest.length <= limit && goodTest.length <= limit;
+  };
 
   // Main generation loop - continues until character limit is reached
   while (true) {
     const prefix = nextPrefix();
-    if (prefix === null) break; // No more prefixes available
-    const obj = makeTerm(prefix);
-    if (!tryAdd(obj)) break; // Character limit reached
+    if (prefix === null) break; // No descriptors available
+    const item = nextItem();
+    const badTerm = `${prefix} ${item}`;
+    const posPrefix = posMods.length ? nextPos() : '';
+    const goodTerm = posPrefix ? `${posPrefix} ${item}` : item;
+    if (!canAdd(badTerm, goodTerm)) break; // Character limit reached
+    bad.push(badTerm);
+    good.push(goodTerm);
   }
 
   return {
