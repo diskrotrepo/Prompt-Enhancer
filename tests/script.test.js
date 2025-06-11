@@ -7,14 +7,14 @@ const {
 } = require('../src/script');
 
 describe('Utility functions', () => {
-  test('parseInput keeps delimiters', () => {
+  test('parseInput keeps delimiters and spaces', () => {
     const input = 'a, b; c\nd';
-    expect(parseInput(input)).toEqual(['a,', 'b;', 'c\n', 'd']);
+    expect(parseInput(input)).toEqual(['a, ', 'b; ', 'c\n', 'd']);
   });
 
   test('parseInput recognizes various delimiters', () => {
     const input = 'hello! world? great: yes.';
-    expect(parseInput(input)).toEqual(['hello!', 'world?', 'great:', 'yes.']);
+    expect(parseInput(input)).toEqual(['hello! ', 'world? ', 'great: ', 'yes.']);
   });
 
   test('shuffle retains all items', () => {
@@ -37,8 +37,9 @@ describe('Prompt building', () => {
   });
 
   test('buildVersions builds positive and negative prompts', () => {
-    const out = buildVersions(['cat'], ['bad'], ['good'], false, false, false, 20);
-    expect(out).toEqual({ positive: 'good cat good cat', negative: 'bad cat bad cat' });
+    const items = parseInput('cat, dog');
+    const out = buildVersions(items, ['bad'], ['good'], false, false, false, 18);
+    expect(out).toEqual({ positive: 'good cat, good dog', negative: 'bad cat, bad dog' });
   });
 
   test('buildVersions can include positive terms for negatives', () => {

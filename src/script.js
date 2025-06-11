@@ -97,23 +97,46 @@ function loadLists() {
 /**
  * Parses user input string into an array of items
  * Handles delimiters including commas, periods, semicolons,
- * colons, question marks, exclamation points and newlines
+ * colons, question marks, exclamation points and newlines.
+ * The delimiter and any following space are kept with the
+ * preceding term so the original prompt can be rebuilt
+ * exactly.
  * 
  * @param {string} raw - Raw input string from textarea
  * @returns {string[]} Array of trimmed, non-empty items
  */
 function parseInput(raw) {
   if (!raw) return [];
+
+  const delims = new Set([',', '.', ';', ':', '!', '?', '\n']);
   const result = [];
-  const regex = /([^,.;:!?\n]+)([,.;:!?]|\n)?/g;
-  let match;
-  while ((match = regex.exec(raw)) !== null) {
-    let item = match[1].trim();
-    const delim = match[2];
-    if (item) {
-      result.push(delim ? `${item}${delim}` : item);
+  let token = '';
+
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (delims.has(ch)) {
+      token = token.trim();
+      if (token) {
+        let segment = token + ch;
+        i++;
+        if (ch !== '\n') {
+          while (raw[i] === ' ') {
+            segment += raw[i];
+            i++;
+          }
+        }
+        result.push(segment);
+        token = '';
+        i--; // adjust for loop increment
+      }
+    } else {
+      token += ch;
     }
   }
+
+  token = token.trim();
+  if (token) result.push(token);
+
   return result;
 }
 
@@ -145,8 +168,8 @@ function equalizeLength(a, b) {
 
 /**
  * Builds a list by pairing items with prefixes until the
- * character limit is reached. Items are combined with spaces
- * rather than commas so existing punctuation is preserved.
+ * character limit is reached. Items are concatenated directly
+ * so that existing punctuation and spacing remain intact.
  *
  * @param {string[]} orderedItems - Items in the order they should appear
  * @param {string[]} prefixes - Prefix strings to cycle through
@@ -167,7 +190,7 @@ function buildPrefixedList(orderedItems, prefixes, limit, shufflePrefixes = fals
     const item = items[idx % items.length];
     const prefix = prefixPool.length ? prefixPool[idx % prefixPool.length] : '';
     const term = prefix ? `${prefix} ${item}` : item;
-    const next = result.length ? `${result.join(' ')} ${term}` : term;
+    const next = result.length ? `${result.join('')}${term}` : term;
     if (next.length > limit) break;
     result.push(term);
     idx++;
@@ -205,8 +228,8 @@ function buildVersions(items, negMods, posMods, shuffleBase, shuffleNeg, shuffle
   const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
 
   return {
-    positive: trimPos.join(' '),
-    negative: trimNeg.join(' ')
+    positive: trimPos.join(''),
+    negative: trimNeg.join('')
   };
 }
 
