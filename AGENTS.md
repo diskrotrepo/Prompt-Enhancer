@@ -1,7 +1,7 @@
 # AGENT Instructions for Prompt-Enhancer
 
 This repository contains a static web tool implemented in vanilla JavaScript. The
-`src/script.js` file defines the core logic and now also exposes a small API for
+`src/script.js` file defines the core logic and exposes a small API for
 unit tests. Indentation throughout the repository uses **two spaces** and no
 trailing whitespace.
 
@@ -21,9 +21,10 @@ date.
 
 ## Conventions
 
-* Prefer vanilla JavaScript and keep dependencies minimal.
+* Prefer vanilla JavaScript and avoid dependencies.
 * Keep HTML and CSS under the `src/` directory.
 * Avoid introducing build steps; the tool should remain fully client side.
+* Prefer modular, reusable code, that assumes the underlying structure may change over time ie functional programming is preferred over OOP
 
 ## Lists Folder
 
