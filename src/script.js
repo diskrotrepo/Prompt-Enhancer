@@ -165,7 +165,7 @@ function buildPrefixedList(orderedItems, prefixes, limit, shufflePrefixes = fals
     const item = items[idx % items.length];
     const prefix = prefixPool.length ? prefixPool[idx % prefixPool.length] : '';
     const term = prefix ? `${prefix} ${item}` : item;
-    const next = result.length ? `${result.join(', ')}, ${term}` : term;
+    const next = result.length ? `${result.join(' ')} ${term}` : term;
     if (next.length > limit) break;
     result.push(term);
     idx++;
@@ -203,8 +203,8 @@ function buildVersions(items, negMods, posMods, shuffleBase, shuffleNeg, shuffle
   const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
 
   return {
-    positive: trimPos.join(', '),
-    negative: trimNeg.join(', ')
+    positive: trimPos.join(' '),
+    negative: trimNeg.join(' ')
   };
 }
 

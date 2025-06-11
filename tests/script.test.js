@@ -38,7 +38,7 @@ describe('Prompt building', () => {
 
   test('buildVersions builds positive and negative prompts', () => {
     const out = buildVersions(['cat'], ['bad'], ['good'], false, false, false, 20);
-    expect(out).toEqual({ positive: 'good cat, good cat', negative: 'bad cat, bad cat' });
+    expect(out).toEqual({ positive: 'good cat good cat', negative: 'bad cat bad cat' });
   });
 
   test('buildVersions can include positive terms for negatives', () => {
