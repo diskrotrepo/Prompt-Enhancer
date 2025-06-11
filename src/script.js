@@ -96,7 +96,8 @@ function loadLists() {
 
 /**
  * Parses user input string into an array of items
- * Handles multiple delimiters: comma, semicolon, and newline
+ * Handles delimiters including commas, periods, semicolons,
+ * colons, question marks, exclamation points and newlines
  * 
  * @param {string} raw - Raw input string from textarea
  * @returns {string[]} Array of trimmed, non-empty items
@@ -143,8 +144,9 @@ function equalizeLength(a, b) {
 }
 
 /**
- * Builds a comma-separated list by pairing items with prefixes
- * until the character limit is reached.
+ * Builds a list by pairing items with prefixes until the
+ * character limit is reached. Items are combined with spaces
+ * rather than commas so existing punctuation is preserved.
  *
  * @param {string[]} orderedItems - Items in the order they should appear
  * @param {string[]} prefixes - Prefix strings to cycle through
