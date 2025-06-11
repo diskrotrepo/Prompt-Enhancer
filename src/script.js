@@ -108,34 +108,69 @@ function parseInput(raw) {
 }
 
 /**
- * Creates a cycling iterator for an array.
- * Optionally shuffles the array on each cycle.
- * Returns `null` if the source array is empty.
+ * Utility to shuffle an array in place using Fisher-Yates.
  *
- * @param {string[]} arr - Array to cycle through
- * @param {boolean} shuffle - Whether to shuffle on each cycle
- * @returns {() => string|null} Iterator function that returns next item
+ * @param {Array} arr - Array to shuffle
+ * @returns {Array} The same array shuffled
  */
-function createCycler(arr, shuffle) {
-  if (!Array.isArray(arr) || arr.length === 0) {
-    return () => null;
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
-  let pool = [];
-  let idx = 0;
-  const refill = () => {
-    pool = arr.slice();
-    if (shuffle) pool.sort(() => Math.random() - 0.5);
-    idx = 0;
-  };
-  return () => {
-    if (idx >= pool.length) refill();
-    return pool[idx++];
-  };
+  return arr;
 }
 
 /**
- * Core algorithm that builds good and bad versions of prompts.
- * Cycles through items and modifiers to create variations up to the character limit.
+ * Returns new arrays trimmed to the length of the shorter one.
+ *
+ * @param {Array} a - First array
+ * @param {Array} b - Second array
+ * @returns {[Array, Array]} Tuple of trimmed arrays
+ */
+function equalizeLength(a, b) {
+  const len = Math.min(a.length, b.length);
+  return [a.slice(0, len), b.slice(0, len)];
+}
+
+/**
+ * Builds a comma-separated list by pairing items with prefixes
+ * until the character limit is reached.
+ *
+ * @param {string[]} orderedItems - Items in the order they should appear
+ * @param {string[]} prefixes - Prefix strings to cycle through
+ * @param {number} limit - Character length limit for output
+ * @param {boolean} shuffleItems - Whether to shuffle items once
+ * @param {boolean} shufflePrefixes - Whether to shuffle the prefixes once
+ * @returns {string[]} Array of prefixed items within the limit
+ */
+function buildPrefixedList(orderedItems, prefixes, limit, shuffleItems = false, shufflePrefixes = false) {
+  if (!Array.isArray(orderedItems) || orderedItems.length === 0) return [];
+
+  const items = orderedItems.slice();
+  if (shuffleItems) shuffle(items);
+  const prefixPool = prefixes.slice();
+  if (shufflePrefixes) shuffle(prefixPool);
+
+  const result = [];
+  let idx = 0;
+  while (true) {
+    const item = items[idx % items.length];
+    const prefix = prefixPool.length ? prefixPool[idx % prefixPool.length] : '';
+    const term = prefix ? `${prefix} ${item}` : item;
+    const next = result.length ? `${result.join(', ')}, ${term}` : term;
+    if (next.length > limit) break;
+    result.push(term);
+    idx++;
+  }
+
+  return result;
+}
+
+/**
+ * Core algorithm that builds two prefixed versions of the prompts.
+ * Uses the same base order for both versions and cycles prefixes
+ * until the character limit is reached.
  *
  * @param {string[]} items - Base prompt items to enhance
  * @param {string[]} descs - Negative descriptors for bad version
@@ -147,46 +182,20 @@ function createCycler(arr, shuffle) {
  * @returns {{good: string, bad: string}} Object with good and bad prompt strings
  */
 function buildVersions(items, descs, posMods, shuffleBase, shuffleBad, shufflePos, limit) {
-
-  // Create cyclers for each list type
-  const nextItem = createCycler(items, shuffleBase);
-  const nextPrefix = createCycler(descs, shuffleBad);
-  const nextPos = createCycler(posMods, shufflePos);
-
-  // Output arrays
-  const bad = [];
-  const good = [];
-
-  /**
-   * Tests whether adding the next terms would exceed the limit
-   * for either version.
-   *
-   * @param {string} nextBad - Candidate bad term
-   * @param {string} nextGood - Candidate good term
-   * @returns {boolean} True if both strings remain within the limit
-   */
-  const canAdd = (nextBad, nextGood) => {
-    const badTest = [...bad, nextBad].join(', ');
-    const goodTest = [...good, nextGood].join(', ');
-    return badTest.length <= limit && goodTest.length <= limit;
-  };
-
-  // Main generation loop - continues until character limit is reached
-  while (true) {
-    const prefix = nextPrefix();
-    if (prefix === null) break; // No descriptors available
-    const item = nextItem();
-    const badTerm = `${prefix} ${item}`;
-    const posPrefix = posMods.length ? nextPos() : '';
-    const goodTerm = posPrefix ? `${posPrefix} ${item}` : item;
-    if (!canAdd(badTerm, goodTerm)) break; // Character limit reached
-    bad.push(badTerm);
-    good.push(goodTerm);
+  if (!items.length) {
+    return { good: '', bad: '' };
   }
 
+  if (shuffleBase) shuffle(items);
+
+  const badTerms = buildPrefixedList(items, descs, limit, false, shuffleBad);
+  const goodTerms = buildPrefixedList(items, posMods, limit, false, shufflePos);
+
+  const [trimBad, trimGood] = equalizeLength(badTerms, goodTerms);
+
   return {
-    good: good.join(', '),
-    bad: bad.join(', ')
+    good: trimGood.join(', '),
+    bad: trimBad.join(', ')
   };
 }
 
