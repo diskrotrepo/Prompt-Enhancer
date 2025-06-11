@@ -305,8 +305,8 @@ function setupShuffleAll() {
   if (!allRandom) return;
   const shuffleCheckboxes = [
     document.getElementById('base-shuffle'),
-    document.getElementById('neg-shuffle'),
-    document.getElementById('pos-shuffle')
+    document.getElementById('pos-shuffle'),
+    document.getElementById('neg-shuffle')
   ].filter(Boolean);
   allRandom.addEventListener('change', () => {
     shuffleCheckboxes.forEach(cb => {
