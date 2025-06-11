@@ -101,11 +101,43 @@ function loadLists() {
  * @param {string} raw - Raw input string from textarea
  * @returns {string[]} Array of trimmed, non-empty items
  */
-function parseInput(raw) {
+function parseInput(raw, keepDelim = false) {
   if (!raw) return [];
-  // Normalize delimiters to commas, then split
-  const normalized = raw.replace(/;/g, ',').replace(/\s*,\s*/g, ',');
-  return normalized.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+
+  if (!keepDelim) {
+    const normalized = raw.replace(/;/g, ',').replace(/\s*,\s*/g, ',');
+    return normalized
+      .split(/[,\n]+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+  }
+
+  const normalized = raw.replace(/\r\n/g, '\n');
+  const delims = [',', '.', ';', ':', '!', '?', '\n'];
+  const items = [];
+  let current = '';
+
+  for (let i = 0; i < normalized.length; i++) {
+    const ch = normalized[i];
+    current += ch;
+    if (delims.includes(ch)) {
+      while (i + 1 < normalized.length && normalized[i + 1] === ' ') {
+        current += ' ';
+        i++;
+      }
+      items.push(current);
+      current = '';
+    }
+  }
+
+  if (current) {
+    if (!/[,.!:;?\n]\s*$/.test(current)) {
+      current += '. ';
+    }
+    items.push(current);
+  }
+
+  return items.filter(Boolean);
 }
 
 /**
@@ -144,7 +176,13 @@ function equalizeLength(a, b) {
  * @param {boolean} shufflePrefixes - Whether to shuffle the prefixes once
  * @returns {string[]} Array of prefixed items within the limit
  */
-function buildPrefixedList(orderedItems, prefixes, limit, shufflePrefixes = false) {
+function buildPrefixedList(
+  orderedItems,
+  prefixes,
+  limit,
+  shufflePrefixes = false,
+  delimited = false
+) {
   if (!Array.isArray(orderedItems) || orderedItems.length === 0) return [];
 
   const items = orderedItems.slice();
@@ -157,7 +195,9 @@ function buildPrefixedList(orderedItems, prefixes, limit, shufflePrefixes = fals
     const item = items[idx % items.length];
     const prefix = prefixPool.length ? prefixPool[idx % prefixPool.length] : '';
     const term = prefix ? `${prefix} ${item}` : item;
-    const next = result.length ? `${result.join(', ')}, ${term}` : term;
+    const next = result.length
+      ? `${result.join(delimited ? '' : ', ')}${delimited ? '' : ', '}${term}`
+      : term;
     if (next.length > limit) break;
     result.push(term);
     idx++;
@@ -181,22 +221,45 @@ function buildPrefixedList(orderedItems, prefixes, limit, shufflePrefixes = fals
  * @param {boolean} includePosForNeg - Whether negative generation should use the positive terms as its base
  * @returns {{positive: string, negative: string}} Object with positive and negative prompt strings
 */
-function buildVersions(items, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit, includePosForNeg = false) {
+function buildVersions(
+  items,
+  negMods,
+  posMods,
+  shuffleBase,
+  shuffleNeg,
+  shufflePos,
+  limit,
+  includePosForNeg = false
+) {
   if (!items.length) {
     return { positive: '', negative: '' };
   }
 
   if (shuffleBase) shuffle(items);
 
-  const posTerms = buildPrefixedList(items, posMods, limit, shufflePos);
+  const delimited = /[,.!:;?\n]\s*$/.test(items[0]);
+
+  const posTerms = buildPrefixedList(
+    items,
+    posMods,
+    limit,
+    shufflePos,
+    delimited
+  );
   const negBase = includePosForNeg ? posTerms : items;
-  const negTerms = buildPrefixedList(negBase, negMods, limit, shuffleNeg);
+  const negTerms = buildPrefixedList(
+    negBase,
+    negMods,
+    limit,
+    shuffleNeg,
+    delimited
+  );
 
   const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
 
   return {
-    positive: trimPos.join(', '),
-    negative: trimNeg.join(', ')
+    positive: trimPos.join(delimited ? '' : ', '),
+    negative: trimNeg.join(delimited ? '' : ', ')
   };
 }
 
@@ -232,7 +295,10 @@ function setupPresetListener(selectId, inputId, presets) {
  * @returns {Object} Object containing all configuration values
  */
 function collectInputs() {
-  const baseItems = parseInput(document.getElementById('base-input').value);
+  const baseItems = parseInput(
+    document.getElementById('base-input').value,
+    true
+  );
   const negMods = parseInput(document.getElementById('neg-input').value);
   const posMods = parseInput(document.getElementById('pos-input').value);
   const shuffleBase = document.getElementById('base-shuffle').checked;
