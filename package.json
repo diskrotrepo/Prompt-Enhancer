@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Prompt Enhancer tests",
   "scripts": {
+    "pretest": "npm install",
     "test": "jest"
   },
   "devDependencies": {

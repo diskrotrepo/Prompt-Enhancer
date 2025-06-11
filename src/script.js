@@ -86,11 +86,12 @@ function loadLists() {
     }
   }
 
-  console.log('Lists loaded:', {
-    negPresets: Object.keys(NEG_PRESETS).length,
-    posPresets: Object.keys(POS_PRESETS).length,
-    lengthPresets: Object.keys(LENGTH_PRESETS).length
-  });
+  // Uncomment the following lines for a quick summary when debugging
+  // console.log('Lists loaded:', {
+  //   negPresets: Object.keys(NEG_PRESETS).length,
+  //   posPresets: Object.keys(POS_PRESETS).length,
+  //   lengthPresets: Object.keys(LENGTH_PRESETS).length
+  // });
 }
 
 /**
@@ -140,15 +141,13 @@ function equalizeLength(a, b) {
  * @param {string[]} orderedItems - Items in the order they should appear
  * @param {string[]} prefixes - Prefix strings to cycle through
  * @param {number} limit - Character length limit for output
- * @param {boolean} shuffleItems - Whether to shuffle items once
  * @param {boolean} shufflePrefixes - Whether to shuffle the prefixes once
  * @returns {string[]} Array of prefixed items within the limit
  */
-function buildPrefixedList(orderedItems, prefixes, limit, shuffleItems = false, shufflePrefixes = false) {
+function buildPrefixedList(orderedItems, prefixes, limit, shufflePrefixes = false) {
   if (!Array.isArray(orderedItems) || orderedItems.length === 0) return [];
 
   const items = orderedItems.slice();
-  if (shuffleItems) shuffle(items);
   const prefixPool = prefixes.slice();
   if (shufflePrefixes) shuffle(prefixPool);
 
@@ -188,8 +187,8 @@ function buildVersions(items, negMods, posMods, shuffleBase, shuffleNeg, shuffle
 
   if (shuffleBase) shuffle(items);
 
-  const negTerms = buildPrefixedList(items, negMods, limit, false, shuffleNeg);
-  const posTerms = buildPrefixedList(items, posMods, limit, false, shufflePos);
+  const negTerms = buildPrefixedList(items, negMods, limit, shuffleNeg);
+  const posTerms = buildPrefixedList(items, posMods, limit, shufflePos);
 
   const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
 
@@ -217,32 +216,14 @@ function applyPreset(selectEl, inputEl, presets) {
   inputEl.disabled = false;
 }
 
-// Event listener for negative modifier dropdown changes
-if (typeof document !== 'undefined') {
-  // Event listener for negative modifier dropdown changes
-  document.getElementById('neg-select').addEventListener('change', () => {
-    console.log('Neg select changed to:', document.getElementById('neg-select').value);
-    applyPreset(document.getElementById('neg-select'), document.getElementById('neg-input'), NEG_PRESETS);
-  });
-
-  // Event listener for positive modifier dropdown changes
-  document.getElementById('pos-select').addEventListener('change', () => {
-    console.log('Pos select changed to:', document.getElementById('pos-select').value);
-    applyPreset(document.getElementById('pos-select'), document.getElementById('pos-input'), POS_PRESETS);
-  });
-
-  // Event listener for length limit dropdown changes
-  document.getElementById('length-select').addEventListener('change', () => {
-    applyPreset(
-      document.getElementById('length-select'),
-      document.getElementById('length-input'),
-      LENGTH_PRESETS
-    );
-  });
-
-  // Attach generate function to button click
-  document.getElementById('generate').addEventListener('click', generate);
+// Attach preset dropdowns to their inputs
+function setupPresetListener(selectId, inputId, presets) {
+  const select = document.getElementById(selectId);
+  const input = document.getElementById(inputId);
+  if (!select || !input) return;
+  select.addEventListener('change', () => applyPreset(select, input, presets));
 }
+
 
 /**
  * Collects all input values from the UI
@@ -292,26 +273,12 @@ function generate() {
   displayOutput(result);
 }
 
-
-/**
- * Initialize the UI with default selections
- * Populates textareas based on the initially selected dropdown options
- */
-function initializeUI() {
-  // Load lists and populate dropdowns
-  loadLists();
-
-  // Populate textareas with initially selected presets
-  applyPreset(document.getElementById('neg-select'), document.getElementById('neg-input'), NEG_PRESETS);
-  applyPreset(document.getElementById('pos-select'), document.getElementById('pos-input'), POS_PRESETS);
-  applyPreset(document.getElementById('length-select'), document.getElementById('length-input'), LENGTH_PRESETS);
-
-  // Set up toggle buttons linked to hidden checkboxes
+// Toggle button helper
+function setupToggleButtons() {
   document.querySelectorAll('.toggle-button').forEach(btn => {
     const target = btn.dataset.target;
     const checkbox = document.getElementById(target);
     if (!checkbox) return;
-    // Reflect initial state
     btn.classList.toggle('active', checkbox.checked);
     btn.addEventListener('click', () => {
       checkbox.checked = !checkbox.checked;
@@ -319,8 +286,10 @@ function initializeUI() {
       checkbox.dispatchEvent(new Event('change'));
     });
   });
+}
 
-  // Set up hide toggles that show/hide target elements
+// Show/hide element toggles
+function setupHideToggles() {
   const hideCheckboxes = Array.from(document.querySelectorAll('input[type="checkbox"][data-targets]'));
   hideCheckboxes.forEach(cb => {
     const ids = cb.dataset.targets.split(',').map(id => id.trim());
@@ -333,21 +302,11 @@ function initializeUI() {
     cb.addEventListener('change', update);
     update();
   });
+  return hideCheckboxes;
+}
 
-  // Master hide toggle
-  const allHide = document.getElementById('all-hide');
-  if (allHide) {
-    allHide.addEventListener('change', () => {
-      hideCheckboxes.forEach(cb => {
-        cb.checked = allHide.checked;
-        const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
-        if (btn) btn.classList.toggle('active', cb.checked);
-        cb.dispatchEvent(new Event('change'));
-      });
-    });
-  }
-
-  // Copy buttons
+// Copy text buttons
+function setupCopyButtons() {
   document.querySelectorAll('.copy-button').forEach(btn => {
     const target = document.getElementById(btn.dataset.target);
     if (!target) return;
@@ -362,6 +321,43 @@ function initializeUI() {
       }
     });
   });
+}
+
+
+/**
+ * Initialize the UI with default selections
+ * Populates textareas based on the initially selected dropdown options
+ */
+function initializeUI() {
+  // Load lists and populate dropdowns
+  loadLists();
+
+  // Populate textareas with initially selected presets
+  applyPreset(document.getElementById('neg-select'), document.getElementById('neg-input'), NEG_PRESETS);
+  applyPreset(document.getElementById('pos-select'), document.getElementById('pos-input'), POS_PRESETS);
+  applyPreset(document.getElementById('length-select'), document.getElementById('length-input'), LENGTH_PRESETS);
+
+  setupPresetListener('neg-select', 'neg-input', NEG_PRESETS);
+  setupPresetListener('pos-select', 'pos-input', POS_PRESETS);
+  setupPresetListener('length-select', 'length-input', LENGTH_PRESETS);
+  document.getElementById('generate').addEventListener('click', generate);
+
+  setupToggleButtons();
+  const hideCheckboxes = setupHideToggles();
+
+  const allHide = document.getElementById('all-hide');
+  if (allHide) {
+    allHide.addEventListener('change', () => {
+      hideCheckboxes.forEach(cb => {
+        cb.checked = allHide.checked;
+        const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
+        if (btn) btn.classList.toggle('active', cb.checked);
+        cb.dispatchEvent(new Event('change'));
+      });
+    });
+  }
+
+  setupCopyButtons();
 }
 
 // Initialize UI when DOM is ready
