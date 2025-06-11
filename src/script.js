@@ -276,16 +276,24 @@ function generate() {
   displayOutput(result);
 }
 
+// Update button appearance and text based on checkbox state
+function updateButtonState(btn, checkbox) {
+  btn.classList.toggle('active', checkbox.checked);
+  if (btn.dataset.on && btn.dataset.off) {
+    btn.textContent = checkbox.checked ? btn.dataset.on : btn.dataset.off;
+  }
+}
+
 // Toggle button helper
 function setupToggleButtons() {
   document.querySelectorAll('.toggle-button').forEach(btn => {
     const target = btn.dataset.target;
     const checkbox = document.getElementById(target);
     if (!checkbox) return;
-    btn.classList.toggle('active', checkbox.checked);
+    updateButtonState(btn, checkbox);
     btn.addEventListener('click', () => {
       checkbox.checked = !checkbox.checked;
-      btn.classList.toggle('active', checkbox.checked);
+      updateButtonState(btn, checkbox);
       checkbox.dispatchEvent(new Event('change'));
     });
   });
@@ -304,8 +312,10 @@ function setupShuffleAll() {
     shuffleCheckboxes.forEach(cb => {
       cb.checked = allRandom.checked;
       const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
-      if (btn) btn.classList.toggle('active', cb.checked);
+      if (btn) updateButtonState(btn, cb);
     });
+    const allBtn = document.querySelector('.toggle-button[data-target="all-random"]');
+    if (allBtn) updateButtonState(allBtn, allRandom);
   });
 }
 
@@ -319,6 +329,8 @@ function setupHideToggles() {
       elems.forEach(el => {
         el.style.display = cb.checked ? 'none' : '';
       });
+      const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
+      if (btn) updateButtonState(btn, cb);
     };
     cb.addEventListener('change', update);
     update();
@@ -373,9 +385,11 @@ function initializeUI() {
       hideCheckboxes.forEach(cb => {
         cb.checked = allHide.checked;
         const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
-        if (btn) btn.classList.toggle('active', cb.checked);
+        if (btn) updateButtonState(btn, cb);
         cb.dispatchEvent(new Event('change'));
       });
+      const allHideBtn = document.querySelector('.toggle-button[data-target="all-hide"]');
+      if (allHideBtn) updateButtonState(allHideBtn, allHide);
     });
   }
 
