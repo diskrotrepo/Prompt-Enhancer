@@ -12,7 +12,7 @@ const NEGATIVE_LISTS = {
     },
     {
       id: 'audio-bad',
-      title: 'Audio negative list',
+      title: 'Poor preference data list',
       items: [
         "Horrorcore",
         "Rockabilly",
@@ -71,11 +71,14 @@ const NEGATIVE_LISTS = {
         "Lo-fi Hip-Hop",
         "Synthwave",
         "K-pop",
+        "christian",
+        "islamic",
+        "religious",
       ]
     },
     {
       id: 'audio-bad-neg',
-      title: 'Audio negative list + negations',
+      title: 'Poor preference data list + negations',
       items: [
         "not",
         "no",
@@ -137,6 +140,9 @@ const NEGATIVE_LISTS = {
         "Lo-fi Hip-Hop",
         "Synthwave",
         "K-pop",
+        "christian",
+        "islamic",
+        "religious",
       ]
     },
     {
