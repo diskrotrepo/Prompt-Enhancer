@@ -421,12 +421,17 @@ function setupCopyButtons() {
   document.querySelectorAll('.copy-button').forEach(btn => {
     const target = document.getElementById(btn.dataset.target);
     if (!target) return;
+    // Preserve the original button label for reliable reset
+    if (!btn.dataset.orig) {
+      btn.dataset.orig = btn.textContent;
+    }
     btn.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(target.textContent);
-        const orig = btn.textContent;
         btn.textContent = 'Copied!';
-        setTimeout(() => { btn.textContent = orig; }, 1000);
+        setTimeout(() => {
+          btn.textContent = btn.dataset.orig;
+        }, 1000);
       } catch (err) {
         console.error('Copy failed', err);
       }
