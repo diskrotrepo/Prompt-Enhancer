@@ -72,6 +72,11 @@ describe('Prompt building', () => {
     expect(result).toEqual(['a', 'b', 'i.e., ', 'a', 'b']);
   });
 
+  test('buildPrefixedList omits divider when limit lacks room for item', () => {
+    const result = buildPrefixedList(['a', 'b'], [], 12, false, false, ['i.e., ']);
+    expect(result).toEqual(['a', 'b']);
+  });
+
   test('buildVersions builds positive and negative prompts', () => {
     const out = buildVersions(['cat'], ['bad'], ['good'], false, false, false, 20);
     expect(out).toEqual({ positive: 'good cat, good cat', negative: 'bad cat, bad cat' });

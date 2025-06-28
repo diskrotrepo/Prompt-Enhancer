@@ -15,20 +15,20 @@ let NEG_PRESETS = {};
 let POS_PRESETS = {};
 let LENGTH_PRESETS = {};
 const NATURAL_DIVIDERS = [
-  'in other words, ',
+  'In other words, ',
   'i.e., ',
-  'put another way, ',
-  'restated, ',
-  'which is to say, ',
-  'to be precise, ',
-  'in essence, ',
-  'put differently, ',
-  'to put it another way, ',
-  'that is to say, ',
-  'namely, ',
-  'rephrased, ',
-  'to say it another way, ',
-  'let me put it this way. '
+  'Put another way, ',
+  'Restated, ',
+  'Which is to say, ',
+  'To be precise, ',
+  'In essence, ',
+  'Put differently, ',
+  'To put it another way, ',
+  'That is to say, ',
+  'Namely, ',
+  'Rephrased, ',
+  'To say it another way, ',
+  'Let me put it this way. '
 ];
 
 /**
@@ -224,22 +224,23 @@ function buildPrefixedList(
   let idx = 0;
   let divIdx = 0;
   while (true) {
-    if (idx > 0 && idx % items.length === 0 && dividers.length) {
-      const divider = dividers[divIdx % dividers.length];
-      const nextDivider = result.length
-        ? `${result.join(delimited ? '' : ', ')}${delimited ? '' : ', '}${divider}`
-        : divider;
-      if (nextDivider.length > limit) break;
-      result.push(divider);
+    const needDivider = idx > 0 && idx % items.length === 0 && dividers.length;
+    const prefix = prefixPool.length ? prefixPool[idx % prefixPool.length] : '';
+    const item = items[idx % items.length];
+    const term = prefix ? `${prefix} ${item}` : item;
+    const pieces = [];
+    if (needDivider) {
+      pieces.push(dividers[divIdx % dividers.length]);
+    }
+    pieces.push(term);
+    const candidate =
+      (result.length ? result.join(delimited ? '' : ', ') + (delimited ? '' : ', ') : '') +
+      pieces.join(delimited ? '' : ', ');
+    if (candidate.length > limit) break;
+    if (needDivider) {
+      result.push(dividers[divIdx % dividers.length]);
       divIdx++;
     }
-    const item = items[idx % items.length];
-    const prefix = prefixPool.length ? prefixPool[idx % prefixPool.length] : '';
-    const term = prefix ? `${prefix} ${item}` : item;
-    const next = result.length
-      ? `${result.join(delimited ? '' : ', ')}${delimited ? '' : ', '}${term}`
-      : term;
-    if (next.length > limit) break;
     result.push(term);
     idx++;
   }
