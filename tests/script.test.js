@@ -68,8 +68,8 @@ describe('Prompt building', () => {
   });
 
   test('buildPrefixedList inserts dividers on repeat', () => {
-    const result = buildPrefixedList(['a', 'b'], [], 20, false, false, ['i.e.']);
-    expect(result).toEqual(['a', 'b', 'i.e.', 'a', 'b']);
+    const result = buildPrefixedList(['a', 'b'], [], 20, false, false, ['i.e., ']);
+    expect(result).toEqual(['a', 'b', 'i.e., ', 'a', 'b']);
   });
 
   test('buildVersions builds positive and negative prompts', () => {
@@ -110,10 +110,10 @@ describe('Prompt building', () => {
       false,
       50,
       false,
-      ['i.e. ']
+      ['i.e., ']
     );
-    expect(out.positive.includes('i.e.')).toBe(true);
-    expect(out.positive.startsWith('a, b, i.e. ')).toBe(true);
+    expect(out.positive.includes('i.e.,')).toBe(true);
+    expect(out.positive.startsWith('a, b, i.e., ')).toBe(true);
   });
 });
 

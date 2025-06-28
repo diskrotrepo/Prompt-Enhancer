@@ -14,7 +14,22 @@
 let NEG_PRESETS = {};
 let POS_PRESETS = {};
 let LENGTH_PRESETS = {};
-const NATURAL_DIVIDERS = ['in other words... ', 'i.e.... ', 'put another way... ', 'restated, ... '];
+const NATURAL_DIVIDERS = [
+  'in other words, ',
+  'i.e., ',
+  'put another way, ',
+  'restated, ',
+  'which is to say, ',
+  'to be precise, ',
+  'in essence, ',
+  'put differently, ',
+  'to put it another way, ',
+  'that is to say, ',
+  'namely, ',
+  'rephrased, ',
+  'to say it another way, ',
+  'let me put it this way. '
+];
 
 /**
  * Populates a select element with options from preset data
