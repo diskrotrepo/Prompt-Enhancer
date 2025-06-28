@@ -121,12 +121,25 @@ describe('Prompt building', () => {
     expect(out.positive.startsWith('a, b, i.e., ')).toBe(true);
   });
 
-  test('buildPrefixedList randomizes divider order', () => {
+  test('buildVersions reuses divider order for negatives', () => {
     const orig = Math.random;
-    Math.random = jest.fn().mockReturnValue(0);
-    const result = buildPrefixedList(['a', 'b'], [], 50, false, false, ['x', 'y']);
+    Math.random = jest.fn().mockReturnValue(0.99);
+    const out = buildVersions(
+      ['a', 'b'],
+      [],
+      [],
+      false,
+      false,
+      false,
+      50,
+      false,
+      ['x ', 'y ']
+    );
     Math.random = orig;
-    expect(result[2]).toBe('y');
+    const posDivs = out.positive.match(/[xy] /g);
+    const negDivs = out.negative.match(/[xy] /g);
+    expect(posDivs).toEqual(['x ', 'y ', 'x ', 'y ']);
+    expect(negDivs).toEqual(posDivs);
   });
 
   test('buildVersions places dividers on new lines', () => {

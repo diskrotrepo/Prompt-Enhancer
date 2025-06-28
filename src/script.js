@@ -220,7 +220,6 @@ function buildPrefixedList(
   const prefixPool = prefixes.slice();
   if (shufflePrefixes) shuffle(prefixPool);
   const dividerPool = dividers.slice();
-  if (dividerPool.length) shuffle(dividerPool);
 
   const result = [];
   let idx = 0;
@@ -285,13 +284,16 @@ function buildVersions(
 
   const delimited = /[,.!:;?\n]\s*$/.test(items[0]);
 
+  const dividerPool = dividers.slice();
+  if (dividerPool.length) shuffle(dividerPool);
+
   const posTerms = buildPrefixedList(
     items,
     posMods,
     limit,
     shufflePos,
     delimited,
-    dividers
+    dividerPool
   );
   const negBase = includePosForNeg ? posTerms : items;
   const negTerms = buildPrefixedList(
@@ -300,7 +302,7 @@ function buildVersions(
     limit,
     shuffleNeg,
     delimited,
-    dividers
+    dividerPool
   );
 
   const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
