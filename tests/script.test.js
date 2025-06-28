@@ -67,6 +67,11 @@ describe('Prompt building', () => {
     expect(buildPrefixedList([], ['x'], 10)).toEqual([]);
   });
 
+  test('buildPrefixedList inserts dividers on repeat', () => {
+    const result = buildPrefixedList(['a', 'b'], [], 20, false, false, ['i.e.']);
+    expect(result).toEqual(['a', 'b', 'i.e.', 'a', 'b']);
+  });
+
   test('buildVersions builds positive and negative prompts', () => {
     const out = buildVersions(['cat'], ['bad'], ['good'], false, false, false, 20);
     expect(out).toEqual({ positive: 'good cat, good cat', negative: 'bad cat, bad cat' });
@@ -93,6 +98,22 @@ describe('Prompt building', () => {
     expect(out.negative.includes(',')).toBe(false);
     expect(out.positive.startsWith('p a.\n')).toBe(true);
     expect(out.positive.endsWith('\n')).toBe(true);
+  });
+
+  test('buildVersions inserts dividers when provided', () => {
+    const out = buildVersions(
+      ['a', 'b'],
+      [],
+      [],
+      false,
+      false,
+      false,
+      50,
+      false,
+      ['i.e. ']
+    );
+    expect(out.positive.includes('i.e.')).toBe(true);
+    expect(out.positive.startsWith('a, b, i.e. ')).toBe(true);
   });
 });
 
