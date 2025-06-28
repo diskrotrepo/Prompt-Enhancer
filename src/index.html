@@ -90,12 +90,28 @@
             <input type="checkbox" id="length-hide" data-targets="length-input" hidden>
             <button type="button" class="toggle-button" data-target="length-hide" data-on="Hidden" data-off="Visible">Visible</button>
           </div>
-          <select id="length-select">
-            <!-- Options will be populated dynamically from LENGTH_LISTS -->
-          </select>
-          <input type="number" id="length-input" value="1000" min="1">
+        <select id="length-select">
+          <!-- Options will be populated dynamically from LENGTH_LISTS -->
+        </select>
+        <input type="number" id="length-input" value="1000" min="1">
+      </div>
+      <!-- Lyrics processing input -->
+      <div class="input-group">
+        <div class="label-row">
+          <label for="lyrics-input">Lyrics</label>
+          <input type="checkbox" id="lyrics-hide" data-targets="lyrics-input,lyrics-space" hidden>
+          <button type="button" class="toggle-button" data-target="lyrics-hide" data-on="Hidden" data-off="Visible">Visible</button>
         </div>
-        <!-- Action buttons -->
+        <textarea id="lyrics-input" rows="4" placeholder="Enter lyrics"></textarea>
+        <select id="lyrics-space">
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+      </div>
+      <!-- Action buttons -->
         <button id="generate">Generate</button>
         
         <!-- Output display section -->
@@ -112,6 +128,12 @@
             <button type="button" class="toggle-button" data-target="negative-hide" data-on="Hidden" data-off="Visible">Visible</button>
           </h2>
           <pre id="negative-output"></pre>
+          <h2><span>Processed Lyrics</span>
+            <input type="checkbox" id="lyrics-output-hide" data-targets="lyrics-output" hidden>
+            <button type="button" class="copy-button" data-target="lyrics-output">Copy</button>
+            <button type="button" class="toggle-button" data-target="lyrics-output-hide" data-on="Hidden" data-off="Visible">Visible</button>
+          </h2>
+          <pre id="lyrics-output"></pre>
         </div>
       </div>
     </div>

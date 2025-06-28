@@ -4,6 +4,7 @@ const {
   equalizeLength,
   buildPrefixedList,
   buildVersions,
+  processLyrics,
 } = require('../src/script');
 
 describe('Utility functions', () => {
@@ -92,5 +93,21 @@ describe('Prompt building', () => {
     expect(out.negative.includes(',')).toBe(false);
     expect(out.positive.startsWith('p a.\n')).toBe(true);
     expect(out.positive.endsWith('\n')).toBe(true);
+  });
+});
+
+describe('Lyrics processing', () => {
+  test('processLyrics normalizes text with max 1 space', () => {
+    const input = 'Hello, WORLD!\nThis is? a TEST.';
+    const out = processLyrics(input, 1);
+    expect(out).toBe('hello world this is a test');
+  });
+
+  test('processLyrics inserts random spaces up to max', () => {
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0.9);
+    const out = processLyrics('a b', 3);
+    Math.random = orig;
+    expect(out).toBe('a   b');
   });
 });
