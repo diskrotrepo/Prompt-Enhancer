@@ -282,13 +282,23 @@ function buildVersions(
  *
  * @param {string} text - Raw lyrics text
  * @param {number} maxSpaces - Maximum number of spaces to insert
+ * @param {boolean} removeParen - Whether to remove content inside parentheses
+ * @param {boolean} removeBrackets - Whether to remove content inside any brackets
  * @returns {string} The processed lyrics string
  */
-function processLyrics(text, maxSpaces) {
+function processLyrics(text, maxSpaces, removeParen = false, removeBrackets = false) {
   if (!text) return '';
   const limit = parseInt(maxSpaces, 10);
   const max = !isNaN(limit) && limit > 0 ? limit : 1;
   let cleaned = text.toLowerCase();
+
+  if (removeParen) {
+    cleaned = cleaned.replace(/\([^)]*\)/g, ' ');
+  }
+  if (removeBrackets) {
+    cleaned = cleaned.replace(/\[[^\]]*\]|\{[^}]*\}|<[^>]*>/g, ' ');
+  }
+
   cleaned = cleaned.replace(/[^\w\s]/g, '');
   cleaned = cleaned.replace(/\r?\n/g, ' ');
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
@@ -384,7 +394,14 @@ function generate() {
   if (lyricsInput && lyricsInput.value.trim()) {
     const spaceSel = document.getElementById('lyrics-space');
     const maxSpaces = spaceSel ? spaceSel.value : 1;
-    const processed = processLyrics(lyricsInput.value, maxSpaces);
+    const parenCb = document.getElementById('lyrics-remove-paren');
+    const bracketCb = document.getElementById('lyrics-remove-brackets');
+    const processed = processLyrics(
+      lyricsInput.value,
+      maxSpaces,
+      parenCb ? parenCb.checked : false,
+      bracketCb ? bracketCb.checked : false
+    );
     document.getElementById('lyrics-output').textContent = processed;
   } else {
     const out = document.getElementById('lyrics-output');

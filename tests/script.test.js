@@ -110,4 +110,14 @@ describe('Lyrics processing', () => {
     Math.random = orig;
     expect(out).toBe('a   b');
   });
+
+  test('processLyrics removes parenthetical content', () => {
+    const out = processLyrics('hello (skip) world', 1, true, false);
+    expect(out).toBe('hello world');
+  });
+
+  test('processLyrics removes bracketed content', () => {
+    const out = processLyrics('hello [skip] {also} world', 1, false, true);
+    expect(out).toBe('hello world');
+  });
 });

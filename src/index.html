@@ -99,17 +99,24 @@
       <div class="input-group">
         <div class="label-row">
           <label for="lyrics-input">Lyrics</label>
-          <input type="checkbox" id="lyrics-hide" data-targets="lyrics-input,lyrics-space" hidden>
+          <input type="checkbox" id="lyrics-hide" data-targets="lyrics-input,lyrics-space,lyrics-remove-paren,lyrics-remove-brackets" hidden>
           <button type="button" class="toggle-button" data-target="lyrics-hide" data-on="Hidden" data-off="Visible">Visible</button>
         </div>
         <textarea id="lyrics-input" rows="4" placeholder="Enter lyrics"></textarea>
-        <select id="lyrics-space">
-          <option value="1">1</option>
-          <option value="2" selected>2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-        </select>
+        <div class="label-row">
+          <label for="lyrics-space">Max Spaces</label>
+          <select id="lyrics-space">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+          <input type="checkbox" id="lyrics-remove-paren" hidden>
+          <button type="button" class="toggle-button" data-target="lyrics-remove-paren" data-on="Parenthesis Removed" data-off="Parenthesis Kept">Parenthesis Kept</button>
+          <input type="checkbox" id="lyrics-remove-brackets" hidden>
+          <button type="button" class="toggle-button" data-target="lyrics-remove-brackets" data-on="Brackets Removed" data-off="Brackets Kept">Brackets Kept</button>
+        </div>
       </div>
       <!-- Action buttons -->
         <button id="generate">Generate</button>
