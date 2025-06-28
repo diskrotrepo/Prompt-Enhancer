@@ -110,4 +110,16 @@ describe('Lyrics processing', () => {
     Math.random = orig;
     expect(out).toBe('a   b');
   });
+
+  test('processLyrics removes parenthetical content when requested', () => {
+    const input = 'hello (remove me) world';
+    const out = processLyrics(input, 1, true, false);
+    expect(out).toBe('hello world');
+  });
+
+  test('processLyrics removes bracketed content when requested', () => {
+    const input = 'alpha [beta] gamma {delta} <epsilon>'; 
+    const out = processLyrics(input, 1, false, true);
+    expect(out).toBe('alpha gamma');
+  });
 });
