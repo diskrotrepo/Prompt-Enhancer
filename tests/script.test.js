@@ -120,6 +120,43 @@ describe('Prompt building', () => {
     expect(out.positive.includes('i.e.,')).toBe(true);
     expect(out.positive.startsWith('a, b, i.e., ')).toBe(true);
   });
+
+  test('buildVersions reuses divider order for negatives', () => {
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0.99);
+    const out = buildVersions(
+      ['a', 'b'],
+      [],
+      [],
+      false,
+      false,
+      false,
+      50,
+      false,
+      ['x ', 'y ']
+    );
+    Math.random = orig;
+    const posDivs = out.positive.match(/[xy] /g);
+    const negDivs = out.negative.match(/[xy] /g);
+    expect(posDivs).toEqual(['x ', 'y ', 'x ', 'y ']);
+    expect(negDivs).toEqual(posDivs);
+  });
+
+  test('buildVersions places dividers on new lines', () => {
+    const out = buildVersions(
+      ['a', 'b'],
+      [],
+      [],
+      false,
+      false,
+      false,
+      50,
+      false,
+      ['\nfoo ']
+    );
+    expect(out.positive).toContain('\nfoo ');
+    expect(out.positive.startsWith('a, b')).toBe(true);
+  });
 });
 
 describe('Lyrics processing', () => {
