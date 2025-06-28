@@ -120,6 +120,30 @@ describe('Prompt building', () => {
     expect(out.positive.includes('i.e.,')).toBe(true);
     expect(out.positive.startsWith('a, b, i.e., ')).toBe(true);
   });
+
+  test('buildPrefixedList randomizes divider order', () => {
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0);
+    const result = buildPrefixedList(['a', 'b'], [], 50, false, false, ['x', 'y']);
+    Math.random = orig;
+    expect(result[2]).toBe('y');
+  });
+
+  test('buildVersions places dividers on new lines', () => {
+    const out = buildVersions(
+      ['a', 'b'],
+      [],
+      [],
+      false,
+      false,
+      false,
+      50,
+      false,
+      ['\nfoo ']
+    );
+    expect(out.positive).toContain('\nfoo ');
+    expect(out.positive.startsWith('a, b')).toBe(true);
+  });
 });
 
 describe('Lyrics processing', () => {

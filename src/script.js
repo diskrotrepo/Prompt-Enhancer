@@ -15,20 +15,20 @@ let NEG_PRESETS = {};
 let POS_PRESETS = {};
 let LENGTH_PRESETS = {};
 const NATURAL_DIVIDERS = [
-  'In other words, ',
-  'i.e., ',
-  'Put another way, ',
-  'Restated, ',
-  'Which is to say, ',
-  'To be precise, ',
-  'In essence, ',
-  'Put differently, ',
-  'To put it another way, ',
-  'That is to say, ',
-  'Namely, ',
-  'Rephrased, ',
-  'To say it another way, ',
-  'Let me put it this way. '
+  '\nIn other words, ',
+  '\ni.e., ',
+  '\nPut another way, ',
+  '\nRestated, ',
+  '\nWhich is to say, ',
+  '\nTo be precise, ',
+  '\nIn essence, ',
+  '\nPut differently, ',
+  '\nTo put it another way, ',
+  '\nThat is to say, ',
+  '\nNamely, ',
+  '\nRephrased, ',
+  '\nTo say it another way, ',
+  '\nLet me put it this way. '
 ];
 
 /**
@@ -219,18 +219,20 @@ function buildPrefixedList(
   const items = orderedItems.slice();
   const prefixPool = prefixes.slice();
   if (shufflePrefixes) shuffle(prefixPool);
+  const dividerPool = dividers.slice();
+  if (dividerPool.length) shuffle(dividerPool);
 
   const result = [];
   let idx = 0;
   let divIdx = 0;
   while (true) {
-    const needDivider = idx > 0 && idx % items.length === 0 && dividers.length;
+    const needDivider = idx > 0 && idx % items.length === 0 && dividerPool.length;
     const prefix = prefixPool.length ? prefixPool[idx % prefixPool.length] : '';
     const item = items[idx % items.length];
     const term = prefix ? `${prefix} ${item}` : item;
     const pieces = [];
     if (needDivider) {
-      pieces.push(dividers[divIdx % dividers.length]);
+      pieces.push(dividerPool[divIdx % dividerPool.length]);
     }
     pieces.push(term);
     const candidate =
@@ -238,7 +240,7 @@ function buildPrefixedList(
       pieces.join(delimited ? '' : ', ');
     if (candidate.length > limit) break;
     if (needDivider) {
-      result.push(dividers[divIdx % dividers.length]);
+      result.push(dividerPool[divIdx % dividerPool.length]);
       divIdx++;
     }
     result.push(term);
