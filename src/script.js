@@ -14,6 +14,22 @@
 let NEG_PRESETS = {};
 let POS_PRESETS = {};
 let LENGTH_PRESETS = {};
+const NATURAL_DIVIDERS = [
+  'In other words, ',
+  'i.e., ',
+  'Put another way, ',
+  'Restated, ',
+  'Which is to say, ',
+  'To be precise, ',
+  'In essence, ',
+  'Put differently, ',
+  'To put it another way, ',
+  'That is to say, ',
+  'Namely, ',
+  'Rephrased, ',
+  'To say it another way, ',
+  'Let me put it this way. '
+];
 
 /**
  * Populates a select element with options from preset data
@@ -186,6 +202,8 @@ function equalizeLength(a, b) {
  * @param {string[]} prefixes - Prefix strings to cycle through
  * @param {number} limit - Character length limit for output
  * @param {boolean} shufflePrefixes - Whether to shuffle the prefixes once
+ * @param {boolean} delimited - Items already include punctuation delimiters
+ * @param {string[]} dividers - Optional divider strings inserted on repeats
  * @returns {string[]} Array of prefixed items within the limit
  */
 function buildPrefixedList(
@@ -193,7 +211,8 @@ function buildPrefixedList(
   prefixes,
   limit,
   shufflePrefixes = false,
-  delimited = false
+  delimited = false,
+  dividers = []
 ) {
   if (!Array.isArray(orderedItems) || orderedItems.length === 0) return [];
 
@@ -203,14 +222,25 @@ function buildPrefixedList(
 
   const result = [];
   let idx = 0;
+  let divIdx = 0;
   while (true) {
-    const item = items[idx % items.length];
+    const needDivider = idx > 0 && idx % items.length === 0 && dividers.length;
     const prefix = prefixPool.length ? prefixPool[idx % prefixPool.length] : '';
+    const item = items[idx % items.length];
     const term = prefix ? `${prefix} ${item}` : item;
-    const next = result.length
-      ? `${result.join(delimited ? '' : ', ')}${delimited ? '' : ', '}${term}`
-      : term;
-    if (next.length > limit) break;
+    const pieces = [];
+    if (needDivider) {
+      pieces.push(dividers[divIdx % dividers.length]);
+    }
+    pieces.push(term);
+    const candidate =
+      (result.length ? result.join(delimited ? '' : ', ') + (delimited ? '' : ', ') : '') +
+      pieces.join(delimited ? '' : ', ');
+    if (candidate.length > limit) break;
+    if (needDivider) {
+      result.push(dividers[divIdx % dividers.length]);
+      divIdx++;
+    }
     result.push(term);
     idx++;
   }
@@ -231,6 +261,7 @@ function buildPrefixedList(
  * @param {boolean} shufflePos - Whether to randomize positive modifiers
  * @param {number} limit - Character limit for output
  * @param {boolean} includePosForNeg - Whether negative generation should use the positive terms as its base
+ * @param {string[]} dividers - Optional divider strings inserted on repeats
  * @returns {{positive: string, negative: string}} Object with positive and negative prompt strings
 */
 function buildVersions(
@@ -241,7 +272,8 @@ function buildVersions(
   shuffleNeg,
   shufflePos,
   limit,
-  includePosForNeg = false
+  includePosForNeg = false,
+  dividers = []
 ) {
   if (!items.length) {
     return { positive: '', negative: '' };
@@ -256,7 +288,8 @@ function buildVersions(
     posMods,
     limit,
     shufflePos,
-    delimited
+    delimited,
+    dividers
   );
   const negBase = includePosForNeg ? posTerms : items;
   const negTerms = buildPrefixedList(
@@ -264,7 +297,8 @@ function buildVersions(
     negMods,
     limit,
     shuffleNeg,
-    delimited
+    delimited,
+    dividers
   );
 
   const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
@@ -359,6 +393,7 @@ function collectInputs() {
   const shuffleNeg = document.getElementById('neg-shuffle').checked;
   const shufflePos = document.getElementById('pos-shuffle').checked;
   const includePosForNeg = document.getElementById('neg-include-pos').checked;
+  const useNaturalDivider = document.getElementById('nl-divider')?.checked;
   const lengthSelect = document.getElementById('length-select');
   const lengthInput = document.getElementById('length-input');
 
@@ -370,7 +405,7 @@ function collectInputs() {
     lengthInput.value = limit;
   }
   
-  return { baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit, includePosForNeg };
+  return { baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit, includePosForNeg, useNaturalDivider };
 }
 
 /**
@@ -387,12 +422,13 @@ function displayOutput(result) {
  * Validates input and generates both versions
  */
 function generate() {
-  const { baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit, includePosForNeg } = collectInputs();
+  const { baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit, includePosForNeg, useNaturalDivider } = collectInputs();
   if (!baseItems.length) {
     alert('Please enter at least one base prompt item.');
     return;
   }
-  const result = buildVersions(baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit, includePosForNeg);
+  const dividers = useNaturalDivider ? NATURAL_DIVIDERS : [];
+  const result = buildVersions(baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit, includePosForNeg, dividers);
   displayOutput(result);
 
   const lyricsInput = document.getElementById('lyrics-input');
