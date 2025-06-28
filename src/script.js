@@ -276,6 +276,33 @@ function buildVersions(
 }
 
 /**
+ * Processes a lyrics string by removing punctuation, collapsing line breaks
+ * and spaces, lowercasing, then inserting a random number of spaces between
+ * each word.
+ *
+ * @param {string} text - Raw lyrics text
+ * @param {number} maxSpaces - Maximum number of spaces to insert
+ * @returns {string} The processed lyrics string
+ */
+function processLyrics(text, maxSpaces) {
+  if (!text) return '';
+  const limit = parseInt(maxSpaces, 10);
+  const max = !isNaN(limit) && limit > 0 ? limit : 1;
+  let cleaned = text.toLowerCase();
+  cleaned = cleaned.replace(/[^\w\s]/g, '');
+  cleaned = cleaned.replace(/\r?\n/g, ' ');
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  const words = cleaned.split(' ');
+  return words
+    .map((w, i) => {
+      if (i === words.length - 1) return w;
+      const spaces = 1 + Math.floor(Math.random() * max);
+      return w + ' '.repeat(spaces);
+    })
+    .join('');
+}
+
+/**
  * Loads the selected preset into the textarea
  *
  * @param {HTMLSelectElement} selectEl - Dropdown element
@@ -352,6 +379,17 @@ function generate() {
   }
   const result = buildVersions(baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit, includePosForNeg);
   displayOutput(result);
+
+  const lyricsInput = document.getElementById('lyrics-input');
+  if (lyricsInput && lyricsInput.value.trim()) {
+    const spaceSel = document.getElementById('lyrics-space');
+    const maxSpaces = spaceSel ? spaceSel.value : 1;
+    const processed = processLyrics(lyricsInput.value, maxSpaces);
+    document.getElementById('lyrics-output').textContent = processed;
+  } else {
+    const out = document.getElementById('lyrics-output');
+    if (out) out.textContent = '';
+  }
 }
 
 // Update button appearance and text based on checkbox state
@@ -497,5 +535,6 @@ if (typeof module !== 'undefined') {
     equalizeLength,
     buildPrefixedList,
     buildVersions,
+    processLyrics,
   };
 }
