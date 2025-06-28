@@ -103,11 +103,35 @@ describe('Lyrics processing', () => {
     expect(out).toBe('hello world this is a test');
   });
 
+  test('processLyrics keeps parenthetical content by default', () => {
+    const input = 'keep (this) text';
+    const out = processLyrics(input, 1);
+    expect(out).toBe('keep (this) text');
+  });
+
+  test('processLyrics keeps bracketed content by default', () => {
+    const input = 'a [b] c {d} <e>';
+    const out = processLyrics(input, 1);
+    expect(out).toBe('a [b] c {d} <e>');
+  });
+
   test('processLyrics inserts random spaces up to max', () => {
     const orig = Math.random;
     Math.random = jest.fn().mockReturnValue(0.9);
     const out = processLyrics('a b', 3);
     Math.random = orig;
     expect(out).toBe('a   b');
+  });
+
+  test('processLyrics removes parenthetical content when requested', () => {
+    const input = 'hello (remove me) world';
+    const out = processLyrics(input, 1, true, false);
+    expect(out).toBe('hello world');
+  });
+
+  test('processLyrics removes bracketed content when requested', () => {
+    const input = 'alpha [beta] gamma {delta} <epsilon>'; 
+    const out = processLyrics(input, 1, false, true);
+    expect(out).toBe('alpha gamma');
   });
 });
