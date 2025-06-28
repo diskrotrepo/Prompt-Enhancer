@@ -291,14 +291,20 @@ function processLyrics(text, maxSpaces, removeParens = false, removeBrackets = f
   const limit = parseInt(maxSpaces, 10);
   const max = !isNaN(limit) && limit > 0 ? limit : 1;
   let cleaned = text.toLowerCase();
-  if (removeParens) cleaned = cleaned.replace(/\([^)]*\)/g, ' ');
-  if (removeBrackets) {
-    cleaned = cleaned
-      .replace(/\[[^\]]*\]/g, ' ')
-      .replace(/\{[^}]*\}/g, ' ')
-      .replace(/<[^>]*>/g, ' ');
+
+  if (removeParens) {
+    cleaned = cleaned.replace(/\([^()]*\)/g, ' ');
   }
-  cleaned = cleaned.replace(/[^\w\s]/g, '');
+  if (removeBrackets) {
+    cleaned = cleaned.replace(/\[[^\]]*\]|\{[^}]*\}|<[^>]*>/g, ' ');
+  }
+
+  let pattern = '[^\\w\\s';
+  if (!removeParens) pattern += '\\(\\)';
+  if (!removeBrackets) pattern += '\\[\\]\\{\\}<>';
+  pattern += ']';
+
+  cleaned = cleaned.replace(new RegExp(pattern, 'g'), '');
   cleaned = cleaned.replace(/\r?\n/g, ' ');
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
   const words = cleaned.split(' ');
