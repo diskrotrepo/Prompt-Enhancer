@@ -186,6 +186,14 @@ describe('Lyrics processing', () => {
     expect(out).toBe('a   b');
   });
 
+  test('processLyrics handles up to 10 spaces', () => {
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0.9);
+    const out = processLyrics('a b', 10);
+    Math.random = orig;
+    expect(out).toBe('a          b');
+  });
+
   test('processLyrics removes parenthetical content when requested', () => {
     const input = 'hello (remove me) world';
     const out = processLyrics(input, 1, true, false);
