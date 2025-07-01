@@ -206,6 +206,39 @@ describe('Prompt building', () => {
     const divMatches = out.positive.match(/, \nfoo /g) || [];
     expect(divMatches.length).toBeGreaterThan(0);
   });
+
+  test('natural divider never appears at end', () => {
+    const out = buildVersions(
+      ['a', 'b', 'c'],
+      ['n'],
+      ['p'],
+      false,
+      false,
+      false,
+      35,
+      false,
+      ['\nbar ']
+    );
+    expect(out.positive.trim().endsWith('\nbar')).toBe(false);
+    expect(out.negative.trim().endsWith('\nbar')).toBe(false);
+  });
+
+  test('includePosForNeg handles natural dividers', () => {
+    const out = buildVersions(
+      ['a', 'b'],
+      ['n'],
+      ['p'],
+      false,
+      false,
+      false,
+      100,
+      true,
+      ['\nfoo ']
+    );
+    expect(out.negative).not.toMatch(/n p \nfoo /);
+    const divMatches = out.negative.match(/, \nfoo /g) || [];
+    expect(divMatches.length).toBeGreaterThan(0);
+  });
 });
 
 describe('Lyrics processing', () => {

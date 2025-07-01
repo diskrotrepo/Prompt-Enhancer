@@ -195,6 +195,21 @@ function equalizeLength(a, b) {
 }
 
 /**
+ * Removes the final array element if it matches one of the divider strings.
+ *
+ * @param {Array} arr - Array potentially ending in a divider
+ * @param {string[]} dividers - Divider strings to check against
+ * @returns {Array} New array without a trailing divider
+ */
+function removeTrailingDivider(arr, dividers) {
+  const copy = arr.slice();
+  if (copy.length && dividers.includes(copy[copy.length - 1])) {
+    copy.pop();
+  }
+  return copy;
+}
+
+/**
  * Builds a comma-separated list by pairing items with prefixes
  * until the character limit is reached.
  *
@@ -353,7 +368,11 @@ function buildVersions(
     delimited,
     dividerPool
   );
-  const negBase = includePosForNeg ? posTerms : items;
+  let negBase = items;
+  if (includePosForNeg) {
+    const filtered = posTerms.filter(t => !dividers.includes(t));
+    negBase = filtered.slice(0, items.length);
+  }
   const negTerms = applyModifierStack(
     negBase,
     negMods,
@@ -366,9 +385,13 @@ function buildVersions(
 
   const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
 
+  const natural = dividers.length && dividers[0].startsWith('\n');
+  const finalNeg = natural ? removeTrailingDivider(trimNeg, dividers) : trimNeg;
+  const finalPos = natural ? removeTrailingDivider(trimPos, dividers) : trimPos;
+
   return {
-    positive: trimPos.join(delimited ? '' : ', '),
-    negative: trimNeg.join(delimited ? '' : ', ')
+    positive: finalPos.join(delimited ? '' : ', '),
+    negative: finalNeg.join(delimited ? '' : ', ')
   };
 }
 
@@ -748,6 +771,7 @@ if (typeof module !== 'undefined') {
     parseInput,
     shuffle,
     equalizeLength,
+    removeTrailingDivider,
     buildPrefixedList,
     applyModifierStack,
     buildVersions,
