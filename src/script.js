@@ -353,16 +353,40 @@ function buildVersions(
     delimited,
     dividerPool
   );
-  const negBase = includePosForNeg ? posTerms : items;
-  const negTerms = applyModifierStack(
-    negBase,
-    negMods,
-    limit,
-    negStackSize,
-    shuffleNeg,
-    delimited,
-    dividerPool
-  );
+  let negTerms;
+  if (includePosForNeg && dividerPool.length) {
+    const isDivider = term => dividerPool.includes(term);
+    const base = posTerms.filter(t => !isDivider(t));
+    const negRaw = applyModifierStack(
+      base,
+      negMods,
+      limit,
+      negStackSize,
+      shuffleNeg,
+      delimited,
+      []
+    );
+    negTerms = [];
+    let idx = 0;
+    posTerms.forEach(term => {
+      if (isDivider(term)) {
+        negTerms.push(term);
+      } else if (idx < negRaw.length) {
+        negTerms.push(negRaw[idx++]);
+      }
+    });
+  } else {
+    const negBase = includePosForNeg ? posTerms : items;
+    negTerms = applyModifierStack(
+      negBase,
+      negMods,
+      limit,
+      negStackSize,
+      shuffleNeg,
+      delimited,
+      dividerPool
+    );
+  }
 
   const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
 

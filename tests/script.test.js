@@ -206,6 +206,24 @@ describe('Prompt building', () => {
     const divMatches = out.positive.match(/, \nfoo /g) || [];
     expect(divMatches.length).toBeGreaterThan(0);
   });
+
+  test('positives for negatives keep divider placement', () => {
+    const out = buildVersions(
+      ['a'],
+      ['n'],
+      ['p'],
+      false,
+      false,
+      false,
+      50,
+      true,
+      ['div ']
+    );
+    expect(out.negative).not.toMatch(/n div /);
+    const posDivs = out.positive.match(/div /g) || [];
+    const negDivs = out.negative.match(/div /g) || [];
+    expect(negDivs).toEqual(posDivs);
+  });
 });
 
 describe('Lyrics processing', () => {
