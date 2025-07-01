@@ -274,7 +274,9 @@ function buildVersions(
   shufflePos,
   limit,
   includePosForNeg = false,
-  dividers = []
+  dividers = [],
+  posStack = 1,
+  negStack = 1
 ) {
   if (!items.length) {
     return { positive: '', negative: '' };
@@ -287,23 +289,30 @@ function buildVersions(
   const dividerPool = dividers.slice();
   if (dividerPool.length) shuffle(dividerPool);
 
-  const posTerms = buildPrefixedList(
-    items,
-    posMods,
-    limit,
-    shufflePos,
-    delimited,
-    dividerPool
-  );
+  let posTerms = items.slice();
+  for (let i = 0; i < posStack; i++) {
+    posTerms = buildPrefixedList(
+      posTerms,
+      posMods,
+      limit,
+      shufflePos || posStack > 1,
+      delimited,
+      dividerPool
+    );
+  }
+
   const negBase = includePosForNeg ? posTerms : items;
-  const negTerms = buildPrefixedList(
-    negBase,
-    negMods,
-    limit,
-    shuffleNeg,
-    delimited,
-    dividerPool
-  );
+  let negTerms = negBase.slice();
+  for (let i = 0; i < negStack; i++) {
+    negTerms = buildPrefixedList(
+      negTerms,
+      negMods,
+      limit,
+      shuffleNeg || negStack > 1,
+      delimited,
+      dividerPool
+    );
+  }
 
   const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
 
@@ -396,7 +405,19 @@ function collectInputs() {
   const shuffleBase = document.getElementById('base-shuffle').checked;
   const shuffleNeg = document.getElementById('neg-shuffle').checked;
   const shufflePos = document.getElementById('pos-shuffle').checked;
+  const posStackOn = document.getElementById('pos-stack')?.checked;
+  const posStackSizeInput = document.getElementById('pos-stack-size');
+  let posStack = parseInt(posStackSizeInput?.value, 10);
+  if (isNaN(posStack) || posStack < 1) posStack = 1;
+  posStack = Math.min(posStack, 4);
+  if (!posStackOn) posStack = 1;
   const includePosForNeg = document.getElementById('neg-include-pos').checked;
+  const negStackOn = document.getElementById('neg-stack')?.checked;
+  const negStackSizeInput = document.getElementById('neg-stack-size');
+  let negStack = parseInt(negStackSizeInput?.value, 10);
+  if (isNaN(negStack) || negStack < 1) negStack = 1;
+  negStack = Math.min(negStack, 4);
+  if (!negStackOn) negStack = 1;
   const useNaturalDivider = document.getElementById('nl-divider')?.checked;
   const lengthSelect = document.getElementById('length-select');
   const lengthInput = document.getElementById('length-input');
@@ -409,7 +430,19 @@ function collectInputs() {
     lengthInput.value = limit;
   }
   
-  return { baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit, includePosForNeg, useNaturalDivider };
+  return {
+    baseItems,
+    negMods,
+    posMods,
+    shuffleBase,
+    shuffleNeg,
+    shufflePos,
+    limit,
+    includePosForNeg,
+    useNaturalDivider,
+    posStack,
+    negStack
+  };
 }
 
 /**
@@ -426,13 +459,37 @@ function displayOutput(result) {
  * Validates input and generates both versions
  */
 function generate() {
-  const { baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit, includePosForNeg, useNaturalDivider } = collectInputs();
+  const {
+    baseItems,
+    negMods,
+    posMods,
+    shuffleBase,
+    shuffleNeg,
+    shufflePos,
+    limit,
+    includePosForNeg,
+    useNaturalDivider,
+    posStack,
+    negStack
+  } = collectInputs();
   if (!baseItems.length) {
     alert('Please enter at least one base prompt item.');
     return;
   }
   const dividers = useNaturalDivider ? NATURAL_DIVIDERS : [];
-  const result = buildVersions(baseItems, negMods, posMods, shuffleBase, shuffleNeg, shufflePos, limit, includePosForNeg, dividers);
+  const result = buildVersions(
+    baseItems,
+    negMods,
+    posMods,
+    shuffleBase,
+    shuffleNeg,
+    shufflePos,
+    limit,
+    includePosForNeg,
+    dividers,
+    posStack,
+    negStack
+  );
   displayOutput(result);
 
   const lyricsInput = document.getElementById('lyrics-input');
@@ -494,6 +551,40 @@ function setupShuffleAll() {
     });
     const allBtn = document.querySelector('.toggle-button[data-target="all-random"]');
     if (allBtn) updateButtonState(allBtn, allRandom);
+  });
+}
+
+// Manage stack toggles and stack size inputs
+function setupStackToggles() {
+  const configs = [
+    { stack: 'pos-stack', shuffle: 'pos-shuffle', size: 'pos-stack-size' },
+    { stack: 'neg-stack', shuffle: 'neg-shuffle', size: 'neg-stack-size' }
+  ];
+  configs.forEach(cfg => {
+    const stack = document.getElementById(cfg.stack);
+    const shuffleCb = document.getElementById(cfg.shuffle);
+    const sizeInput = document.getElementById(cfg.size);
+    if (!stack || !shuffleCb || !sizeInput) return;
+    const update = () => {
+      if (stack.checked) {
+        shuffleCb.checked = true;
+        shuffleCb.disabled = true;
+        sizeInput.style.display = '';
+      } else {
+        shuffleCb.disabled = false;
+        sizeInput.style.display = 'none';
+      }
+      const shuffleBtn = document.querySelector(
+        `.toggle-button[data-target="${cfg.shuffle}"]`
+      );
+      if (shuffleBtn) updateButtonState(shuffleBtn, shuffleCb);
+      const stackBtn = document.querySelector(
+        `.toggle-button[data-target="${cfg.stack}"]`
+      );
+      if (stackBtn) updateButtonState(stackBtn, stack);
+    };
+    stack.addEventListener('change', update);
+    update();
   });
 }
 
@@ -560,6 +651,7 @@ function initializeUI() {
 
   setupToggleButtons();
   setupShuffleAll();
+  setupStackToggles();
   const hideCheckboxes = setupHideToggles();
 
   const allHide = document.getElementById('all-hide');

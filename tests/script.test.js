@@ -157,6 +157,24 @@ describe('Prompt building', () => {
     expect(out.positive).toContain('\nfoo ');
     expect(out.positive.startsWith('a, b')).toBe(true);
   });
+
+  test('buildVersions supports stacked modifiers', () => {
+    const out = buildVersions(
+      ['x'],
+      ['n'],
+      ['p'],
+      false,
+      false,
+      false,
+      50,
+      false,
+      [],
+      2,
+      2
+    );
+    expect(out.positive.startsWith('p p ')).toBe(true);
+    expect(out.negative.startsWith('n n ')).toBe(true);
+  });
 });
 
 describe('Lyrics processing', () => {
