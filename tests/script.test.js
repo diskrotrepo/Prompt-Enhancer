@@ -1,3 +1,10 @@
+/** @jest-environment jsdom */
+
+global.__TEST__ = true;
+if (typeof window !== 'undefined') {
+  window.__TEST__ = true;
+}
+
 const {
   parseInput,
   shuffle,
@@ -5,6 +12,8 @@ const {
   buildPrefixedList,
   buildVersions,
   processLyrics,
+  setupShuffleAll,
+  setupStackControls,
 } = require('../src/script');
 
 describe('Utility functions', () => {
@@ -157,6 +166,46 @@ describe('Prompt building', () => {
     expect(out.positive).toContain('\nfoo ');
     expect(out.positive.startsWith('a, b')).toBe(true);
   });
+
+  test('buildVersions supports modifier stacking', () => {
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0.999999);
+    const out = buildVersions(
+      ['x'],
+      ['n1', 'n2'],
+      ['p1', 'p2'],
+      false,
+      false,
+      false,
+      10,
+      false,
+      [],
+      2,
+      2
+    );
+    Math.random = orig;
+    expect(out).toEqual({ positive: 'p1 p1 x', negative: 'n1 n1 x' });
+  });
+
+  test('stacking works with natural dividers', () => {
+    const out = buildVersions(
+      ['a', 'b'],
+      ['n1'],
+      ['p1'],
+      false,
+      false,
+      false,
+      100,
+      false,
+      ['\nfoo '],
+      2,
+      2
+    );
+    expect(out.positive).not.toMatch(/p1 \nfoo /);
+    expect(out.negative).not.toMatch(/n1 \nfoo /);
+    const divMatches = out.positive.match(/, \nfoo /g) || [];
+    expect(divMatches.length).toBeGreaterThan(0);
+  });
 });
 
 describe('Lyrics processing', () => {
@@ -201,8 +250,43 @@ describe('Lyrics processing', () => {
   });
 
   test('processLyrics removes bracketed content when requested', () => {
-    const input = 'alpha [beta] gamma {delta} <epsilon>'; 
+    const input = 'alpha [beta] gamma {delta} <epsilon>';
     const out = processLyrics(input, 1, false, true);
     expect(out).toBe('alpha gamma');
+  });
+});
+
+describe('UI interactions', () => {
+  test('shuffle all respects stack lock', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="pos-stack">
+      <select id="pos-stack-size"></select>
+      <input type="checkbox" id="pos-shuffle">
+      <button class="toggle-button" data-target="pos-shuffle"></button>
+      <input type="checkbox" id="neg-stack">
+      <select id="neg-stack-size"></select>
+      <input type="checkbox" id="neg-shuffle">
+      <button class="toggle-button" data-target="neg-shuffle"></button>
+      <input type="checkbox" id="all-random">
+      <button class="toggle-button" data-target="all-random"></button>
+    `;
+    setupStackControls();
+    setupShuffleAll();
+    const posShuffle = document.getElementById('pos-shuffle');
+    const posBtn = document.querySelector('[data-target="pos-shuffle"]');
+    const posStack = document.getElementById('pos-stack');
+    posStack.checked = true;
+    posStack.dispatchEvent(new Event('change'));
+    expect(posShuffle.checked).toBe(true);
+    expect(posBtn.classList.contains('disabled')).toBe(true);
+    const allRandom = document.getElementById('all-random');
+    allRandom.checked = false;
+    allRandom.dispatchEvent(new Event('change'));
+    expect(posShuffle.checked).toBe(true);
+    expect(posBtn.classList.contains('disabled')).toBe(true);
+    posStack.checked = false;
+    posStack.dispatchEvent(new Event('change'));
+    expect(posShuffle.checked).toBe(false);
+    expect(posBtn.classList.contains('disabled')).toBe(false);
   });
 });
