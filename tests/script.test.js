@@ -157,6 +157,26 @@ describe('Prompt building', () => {
     expect(out.positive).toContain('\nfoo ');
     expect(out.positive.startsWith('a, b')).toBe(true);
   });
+
+  test('buildVersions supports modifier stacking', () => {
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0.999999);
+    const out = buildVersions(
+      ['x'],
+      ['n1', 'n2'],
+      ['p1', 'p2'],
+      false,
+      false,
+      false,
+      10,
+      false,
+      [],
+      2,
+      2
+    );
+    Math.random = orig;
+    expect(out).toEqual({ positive: 'p1 p1 x', negative: 'n1 n1 x' });
+  });
 });
 
 describe('Lyrics processing', () => {

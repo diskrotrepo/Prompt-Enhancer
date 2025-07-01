@@ -66,9 +66,17 @@
             <label for="pos-input">Positive Modifier List</label>
             <input type="checkbox" id="pos-shuffle" hidden>
             <button type="button" class="toggle-button" data-target="pos-shuffle" data-on="Randomized" data-off="Canonical">Canonical</button>
+            <input type="checkbox" id="pos-stack" hidden>
+            <button type="button" class="toggle-button" data-target="pos-stack" data-on="Stack On" data-off="Stack Off">Stack Off</button>
             <input type="checkbox" id="pos-hide" data-targets="pos-input" hidden>
             <button type="button" class="toggle-button" data-target="pos-hide" data-on="Hidden" data-off="Visible">Visible</button>
           </div>
+          <select id="pos-stack-size" style="display:none">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
           <select id="pos-select">
             <!-- Options will be populated dynamically from POSITIVE_LISTS -->
           </select>
@@ -82,9 +90,17 @@
             <button type="button" class="toggle-button" data-target="neg-include-pos" data-on="Positive Mods Included" data-off="Positive Mods Ignored">Positive Mods Ignored</button>
             <input type="checkbox" id="neg-shuffle" hidden>
             <button type="button" class="toggle-button" data-target="neg-shuffle" data-on="Randomized" data-off="Canonical">Canonical</button>
+            <input type="checkbox" id="neg-stack" hidden>
+            <button type="button" class="toggle-button" data-target="neg-stack" data-on="Stack On" data-off="Stack Off">Stack Off</button>
             <input type="checkbox" id="neg-hide" data-targets="neg-input" hidden>
             <button type="button" class="toggle-button" data-target="neg-hide" data-on="Hidden" data-off="Visible">Visible</button>
           </div>
+          <select id="neg-stack-size" style="display:none">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
           <select id="neg-select">
             <!-- Options will be populated dynamically from NEGATIVE_LISTS -->
           </select>
