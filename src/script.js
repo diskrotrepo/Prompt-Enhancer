@@ -209,6 +209,23 @@ function removeTrailingDivider(arr, dividers) {
   return copy;
 }
 
+// Joins array terms, removing commas around natural dividers
+function joinWithNatural(arr, dividers, delimited) {
+  let str = '';
+  for (let i = 0; i < arr.length; i++) {
+    const item = arr[i];
+    const prev = arr[i - 1];
+    if (dividers.includes(item)) {
+      if (str.endsWith(', ')) str = str.slice(0, -2);
+      str += item;
+    } else {
+      if (i > 0 && !dividers.includes(prev)) str += delimited ? '' : ', ';
+      str += item;
+    }
+  }
+  return str;
+}
+
 /**
  * Builds a comma-separated list by pairing items with prefixes
  * until the character limit is reached.
@@ -386,8 +403,12 @@ function buildVersions(
   const finalPos = natural ? removeTrailingDivider(trimPos, dividers) : trimPos;
 
   return {
-    positive: finalPos.join(delimited ? '' : ', '),
-    negative: finalNeg.join(delimited ? '' : ', ')
+    positive: natural
+      ? joinWithNatural(finalPos, dividers, delimited)
+      : finalPos.join(delimited ? '' : ', '),
+    negative: natural
+      ? joinWithNatural(finalNeg, dividers, delimited)
+      : finalNeg.join(delimited ? '' : ', ')
   };
 }
 
@@ -768,6 +789,7 @@ if (typeof module !== 'undefined') {
     shuffle,
     equalizeLength,
     removeTrailingDivider,
+    joinWithNatural,
     buildPrefixedList,
     applyModifierStack,
     buildVersions,

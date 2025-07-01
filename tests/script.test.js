@@ -203,8 +203,12 @@ describe('Prompt building', () => {
     );
     expect(out.positive).not.toMatch(/p1 \nfoo /);
     expect(out.negative).not.toMatch(/n1 \nfoo /);
-    const divMatches = out.positive.match(/, \nfoo /g) || [];
-    expect(divMatches.length).toBeGreaterThan(0);
+    expect(out.positive).toMatch(/\nfoo /);
+    expect(out.negative).toMatch(/\nfoo /);
+    expect(out.positive).not.toMatch(/,\nfoo /);
+    expect(out.negative).not.toMatch(/,\nfoo /);
+    expect(out.positive).not.toMatch(/\nfoo ,/);
+    expect(out.negative).not.toMatch(/\nfoo ,/);
   });
 
   test('natural divider never appears at end', () => {
