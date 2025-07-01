@@ -304,6 +304,57 @@ function applyModifierStack(
   return result;
 }
 
+// Apply negative modifiers to an already positive list while preserving
+// the placement of natural divider tokens. Divider terms are left
+// untouched and the modifier cycle only advances on non-divider items.
+function applyNegativeOnPositive(
+  posTerms,
+  negMods,
+  limit,
+  stackSize = 1,
+  shuffleMods = false,
+  delimited = false,
+  dividers = []
+) {
+  const count = stackSize > 0 ? stackSize : 1;
+  const orders = [];
+  for (let i = 0; i < count; i++) {
+    const mods = negMods.slice();
+    if (shuffleMods) shuffle(mods);
+    orders.push(mods);
+  }
+
+  const dividerSet = new Set(dividers);
+  const result = [];
+  let modIdx = 0;
+
+  for (let i = 0; i < posTerms.length; i++) {
+    const base = posTerms[i];
+    if (dividerSet.has(base)) {
+      const candidate =
+        (result.length ? result.join(delimited ? '' : ', ') + (delimited ? '' : ', ') : '') +
+        base;
+      if (candidate.length > limit) break;
+      result.push(base);
+      continue;
+    }
+
+    let term = base;
+    orders.forEach(mods => {
+      const mod = mods[modIdx % mods.length];
+      term = mod ? `${mod} ${term}` : term;
+    });
+    const candidate =
+      (result.length ? result.join(delimited ? '' : ', ') + (delimited ? '' : ', ') : '') +
+      term;
+    if (candidate.length > limit) break;
+    result.push(term);
+    modIdx++;
+  }
+
+  return result;
+}
+
 /**
  * Core algorithm that builds two prefixed versions of the prompts.
  * Uses the same base order for both versions and cycles prefixes
@@ -353,16 +404,26 @@ function buildVersions(
     delimited,
     dividerPool
   );
-  const negBase = includePosForNeg ? posTerms : items;
-  const negTerms = applyModifierStack(
-    negBase,
-    negMods,
-    limit,
-    negStackSize,
-    shuffleNeg,
-    delimited,
-    dividerPool
-  );
+
+  const negTerms = includePosForNeg
+    ? applyNegativeOnPositive(
+        posTerms,
+        negMods,
+        limit,
+        negStackSize,
+        shuffleNeg,
+        delimited,
+        dividerPool
+      )
+    : applyModifierStack(
+        items,
+        negMods,
+        limit,
+        negStackSize,
+        shuffleNeg,
+        delimited,
+        dividerPool
+      );
 
   const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
 
@@ -750,6 +811,7 @@ if (typeof module !== 'undefined') {
     equalizeLength,
     buildPrefixedList,
     applyModifierStack,
+    applyNegativeOnPositive,
     buildVersions,
     processLyrics,
     setupShuffleAll,
