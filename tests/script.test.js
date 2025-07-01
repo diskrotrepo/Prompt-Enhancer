@@ -157,6 +157,38 @@ describe('Prompt building', () => {
     expect(out.positive).toContain('\nfoo ');
     expect(out.positive.startsWith('a, b')).toBe(true);
   });
+
+  test('buildVersions never ends with a natural divider', () => {
+    const NAT_DIVS = [
+      '\nIn other words, ',
+      '\ni.e., ',
+      '\nPut another way, ',
+      '\nRestated, ',
+      '\nWhich is to say, ',
+      '\nTo be precise, ',
+      '\nIn essence, ',
+      '\nPut differently, ',
+      '\nTo put it another way, ',
+      '\nThat is to say, ',
+      '\nNamely, ',
+      '\nRephrased, ',
+      '\nTo say it another way, ',
+      '\nLet me put it this way. '
+    ];
+    const out = buildVersions(
+      ['alpha'],
+      [],
+      [],
+      false,
+      false,
+      false,
+      30,
+      false,
+      NAT_DIVS
+    );
+    expect(NAT_DIVS.some(d => out.positive.endsWith(d))).toBe(false);
+    expect(NAT_DIVS.some(d => out.negative.endsWith(d))).toBe(false);
+  });
 });
 
 describe('Lyrics processing', () => {
