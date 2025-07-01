@@ -3,6 +3,7 @@ const {
   shuffle,
   equalizeLength,
   buildPrefixedList,
+  buildStackedList,
   buildVersions,
   processLyrics,
 } = require('../src/script');
@@ -77,28 +78,69 @@ describe('Prompt building', () => {
     expect(result).toEqual(['a', 'b']);
   });
 
+  test('buildStackedList repeats modifiers by stack size', () => {
+    const result = buildStackedList(['x'], ['a', 'b'], 2, 10, false, false, []);
+    expect(result).toEqual(['a x', 'b x', 'a x', 'b x']);
+  });
+
   test('buildVersions builds positive and negative prompts', () => {
-    const out = buildVersions(['cat'], ['bad'], ['good'], false, false, false, 20);
+    const out = buildVersions(
+      ['cat'],
+      ['bad'],
+      ['good'],
+      false,
+      false,
+      false,
+      20,
+      false,
+      [],
+      1,
+      1
+    );
     expect(out).toEqual({ positive: 'good cat, good cat', negative: 'bad cat, bad cat' });
   });
 
   test('buildVersions can include positive terms for negatives', () => {
-    const out = buildVersions(['cat'], ['bad'], ['good'], false, false, false, 20, true);
+    const out = buildVersions(
+      ['cat'],
+      ['bad'],
+      ['good'],
+      false,
+      false,
+      false,
+      20,
+      true,
+      [],
+      1,
+      1
+    );
     expect(out).toEqual({ positive: 'good cat', negative: 'bad good cat' });
   });
 
   test('buildVersions returns empty strings when items list is empty', () => {
-    const out = buildVersions([], ['n'], ['p'], false, false, false, 10);
+    const out = buildVersions([], ['n'], ['p'], false, false, false, 10, false, [], 1, 1);
     expect(out).toEqual({ positive: '', negative: '' });
   });
 
   test('buildVersions respects very small limits', () => {
-    const out = buildVersions(['hello'], ['n'], ['p'], false, false, false, 2);
+    const out = buildVersions(['hello'], ['n'], ['p'], false, false, false, 2, false, [], 1, 1);
     expect(out).toEqual({ positive: '', negative: '' });
   });
 
   test('buildVersions joins items without commas when delimited', () => {
-    const out = buildVersions(['a.\n', 'b.\n'], ['n'], ['p'], false, false, false, 30);
+    const out = buildVersions(
+      ['a.\n', 'b.\n'],
+      ['n'],
+      ['p'],
+      false,
+      false,
+      false,
+      30,
+      false,
+      [],
+      1,
+      1
+    );
     expect(out.positive.includes(',')).toBe(false);
     expect(out.negative.includes(',')).toBe(false);
     expect(out.positive.startsWith('p a.\n')).toBe(true);
@@ -115,7 +157,9 @@ describe('Prompt building', () => {
       false,
       50,
       false,
-      ['i.e., ']
+      ['i.e., '],
+      1,
+      1
     );
     expect(out.positive.includes('i.e.,')).toBe(true);
     expect(out.positive.startsWith('a, b, i.e., ')).toBe(true);
@@ -133,7 +177,9 @@ describe('Prompt building', () => {
       false,
       50,
       false,
-      ['x ', 'y ']
+      ['x ', 'y '],
+      1,
+      1
     );
     Math.random = orig;
     const posDivs = out.positive.match(/[xy] /g);
@@ -152,7 +198,9 @@ describe('Prompt building', () => {
       false,
       50,
       false,
-      ['\nfoo ']
+      ['\nfoo '],
+      1,
+      1
     );
     expect(out.positive).toContain('\nfoo ');
     expect(out.positive.startsWith('a, b')).toBe(true);

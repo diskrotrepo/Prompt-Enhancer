@@ -354,6 +354,12 @@ input[type=number] {
     margin-top: 0.5rem;
 }
 
+.stack-size {
+  width: 4rem;
+  margin-left: 0.5rem;
+  margin-top: 0;
+}
+
 /* Button styling */
 button {
     margin-right: 0.5rem;
