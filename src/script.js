@@ -259,14 +259,49 @@ function applyModifierStack(
   delimited = false,
   dividers = []
 ) {
-  let items = baseItems.slice();
   const count = stackSize > 0 ? stackSize : 1;
+  if (count === 1) {
+    const mods = modifiers.slice();
+    if (shuffleMods) shuffle(mods);
+    return buildPrefixedList(baseItems, mods, limit, false, delimited, dividers);
+  }
+
+  const orders = [];
   for (let i = 0; i < count; i++) {
     const mods = modifiers.slice();
-    if (shuffleMods || stackSize > 1) shuffle(mods);
-    items = buildPrefixedList(items, mods, limit, false, delimited, dividers);
+    shuffle(mods);
+    orders.push(mods);
   }
-  return items;
+
+  const dividerPool = dividers.slice();
+  const items = baseItems.slice();
+  const result = [];
+  let idx = 0;
+  let divIdx = 0;
+
+  while (true) {
+    const needDivider = idx > 0 && idx % items.length === 0 && dividerPool.length;
+    let term = items[idx % items.length];
+    orders.forEach(mods => {
+      const mod = mods[idx % mods.length];
+      term = mod ? `${mod} ${term}` : term;
+    });
+    const pieces = [];
+    if (needDivider) pieces.push(dividerPool[divIdx % dividerPool.length]);
+    pieces.push(term);
+    const candidate =
+      (result.length ? result.join(delimited ? '' : ', ') + (delimited ? '' : ', ') : '') +
+      pieces.join(delimited ? '' : ', ');
+    if (candidate.length > limit) break;
+    if (needDivider) {
+      result.push(dividerPool[divIdx % dividerPool.length]);
+      divIdx++;
+    }
+    result.push(term);
+    idx++;
+  }
+
+  return result;
 }
 
 /**
@@ -562,8 +597,11 @@ function setupShuffleAll() {
   ].filter(Boolean);
   allRandom.addEventListener('change', () => {
     shuffleCheckboxes.forEach(cb => {
-      cb.checked = allRandom.checked;
       const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
+      if (btn && btn.classList.contains('disabled')) {
+        return;
+      }
+      cb.checked = allRandom.checked;
       if (btn) updateButtonState(btn, cb);
     });
     const allBtn = document.querySelector('.toggle-button[data-target="all-random"]');
@@ -695,7 +733,7 @@ function initializeUI() {
 }
 
 // Initialize UI when DOM is ready
-if (typeof document !== 'undefined') {
+if (typeof document !== 'undefined' && !(typeof window !== 'undefined' && window.__TEST__)) {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeUI);
   } else {
@@ -714,5 +752,7 @@ if (typeof module !== 'undefined') {
     applyModifierStack,
     buildVersions,
     processLyrics,
+    setupShuffleAll,
+    setupStackControls,
   };
 }
