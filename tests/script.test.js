@@ -206,6 +206,22 @@ describe('Prompt building', () => {
     const divMatches = out.positive.match(/, \nfoo /g) || [];
     expect(divMatches.length).toBeGreaterThan(0);
   });
+
+  test('negative preserves divider placement when built on positives', () => {
+    const out = buildVersions(
+      ['cat'],
+      ['bad'],
+      ['good'],
+      false,
+      false,
+      false,
+      50,
+      true,
+      ['\nfoo ']
+    );
+    expect(out.positive).toBe('good cat, \nfoo , good cat, \nfoo ');
+    expect(out.negative).toBe('bad good cat, \nfoo , bad good cat, \nfoo ');
+  });
 });
 
 describe('Lyrics processing', () => {
