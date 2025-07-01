@@ -206,6 +206,22 @@ describe('Prompt building', () => {
     const divMatches = out.positive.match(/, \nfoo /g) || [];
     expect(divMatches.length).toBeGreaterThan(0);
   });
+
+  test('natural divider never appears at end', () => {
+    const out = buildVersions(
+      ['a', 'b', 'c'],
+      ['n'],
+      ['p'],
+      false,
+      false,
+      false,
+      35,
+      false,
+      ['\nbar ']
+    );
+    expect(out.positive.trim().endsWith('\nbar')).toBe(false);
+    expect(out.negative.trim().endsWith('\nbar')).toBe(false);
+  });
 });
 
 describe('Lyrics processing', () => {
