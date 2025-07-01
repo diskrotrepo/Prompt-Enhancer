@@ -195,6 +195,21 @@ function equalizeLength(a, b) {
 }
 
 /**
+ * Removes a trailing divider from an array if present
+ *
+ * @param {Array} arr - Array that may end with a divider
+ * @param {string[]} dividers - Divider strings to remove
+ * @returns {Array} A copy of the array without a trailing divider
+ */
+function removeTrailingDivider(arr, dividers = []) {
+  const out = arr.slice();
+  while (out.length && dividers.includes(out[out.length - 1])) {
+    out.pop();
+  }
+  return out;
+}
+
+/**
  * Builds a comma-separated list by pairing items with prefixes
  * until the character limit is reached.
  *
@@ -366,9 +381,16 @@ function buildVersions(
 
   const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
 
+  let finalNeg = trimNeg;
+  let finalPos = trimPos;
+  if (dividerPool.length) {
+    finalNeg = removeTrailingDivider(trimNeg, dividerPool);
+    finalPos = removeTrailingDivider(trimPos, dividerPool);
+  }
+
   return {
-    positive: trimPos.join(delimited ? '' : ', '),
-    negative: trimNeg.join(delimited ? '' : ', ')
+    positive: finalPos.join(delimited ? '' : ', '),
+    negative: finalNeg.join(delimited ? '' : ', ')
   };
 }
 
@@ -748,6 +770,7 @@ if (typeof module !== 'undefined') {
     parseInput,
     shuffle,
     equalizeLength,
+    removeTrailingDivider,
     buildPrefixedList,
     applyModifierStack,
     buildVersions,

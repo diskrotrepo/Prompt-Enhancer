@@ -206,6 +206,23 @@ describe('Prompt building', () => {
     const divMatches = out.positive.match(/, \nfoo /g) || [];
     expect(divMatches.length).toBeGreaterThan(0);
   });
+
+  test('output never ends with a divider under tight limits', () => {
+    const out = buildVersions(
+      ['a', 'b'],
+      [],
+      [],
+      false,
+      false,
+      false,
+      25,
+      false,
+      ['\nfoo ']
+    );
+    expect(out.positive.endsWith('\nfoo ')).toBe(false);
+    expect(out.negative.endsWith('\nfoo ')).toBe(false);
+    expect(out.positive.includes('\nfoo ')).toBe(true);
+  });
 });
 
 describe('Lyrics processing', () => {
