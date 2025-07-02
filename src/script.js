@@ -14,6 +14,35 @@
 let NEG_PRESETS = {};
 let POS_PRESETS = {};
 let LENGTH_PRESETS = {};
+
+// Combined lists object used for import/export operations
+let LISTS;
+if (typeof ALL_LISTS !== 'undefined' && Array.isArray(ALL_LISTS.presets)) {
+  LISTS = JSON.parse(JSON.stringify(ALL_LISTS));
+} else if (
+  typeof NEGATIVE_LISTS !== 'undefined' ||
+  typeof POSITIVE_LISTS !== 'undefined' ||
+  typeof LENGTH_LISTS !== 'undefined'
+) {
+  LISTS = { presets: [] };
+  if (typeof NEGATIVE_LISTS !== 'undefined') {
+    NEGATIVE_LISTS.presets.forEach(p =>
+      LISTS.presets.push({ ...p, type: 'negative' })
+    );
+  }
+  if (typeof POSITIVE_LISTS !== 'undefined') {
+    POSITIVE_LISTS.presets.forEach(p =>
+      LISTS.presets.push({ ...p, type: 'positive' })
+    );
+  }
+  if (typeof LENGTH_LISTS !== 'undefined') {
+    LENGTH_LISTS.presets.forEach(p =>
+      LISTS.presets.push({ ...p, type: 'length' })
+    );
+  }
+} else {
+  LISTS = { presets: [] };
+}
 const NATURAL_DIVIDERS = [
   '\nIn other words, ',
   '\ni.e., ',
@@ -59,48 +88,36 @@ function populateSelect(selectEl, presets) {
  * Dynamically structures the data based on available lists
  */
 function loadLists() {
-  // Process negative modifier presets
-  if (typeof NEGATIVE_LISTS === 'object' && NEGATIVE_LISTS.presets) {
-    // Convert presets array to object for easier access
-    NEG_PRESETS = {};
-    NEGATIVE_LISTS.presets.forEach(preset => {
-      NEG_PRESETS[preset.id] = preset.items || [];
+  NEG_PRESETS = {};
+  POS_PRESETS = {};
+  LENGTH_PRESETS = {};
+  const neg = [];
+  const pos = [];
+  const len = [];
+
+  if (LISTS.presets && Array.isArray(LISTS.presets)) {
+    LISTS.presets.forEach(p => {
+      if (p.type === 'negative') {
+        NEG_PRESETS[p.id] = p.items || [];
+        neg.push(p);
+      } else if (p.type === 'positive') {
+        POS_PRESETS[p.id] = p.items || [];
+        pos.push(p);
+      } else if (p.type === 'length') {
+        LENGTH_PRESETS[p.id] = p.items || [];
+        len.push(p);
+      }
     });
-    
-    // Populate the negative modifier dropdown
-    const negSelect = document.getElementById('neg-select');
-    if (negSelect) {
-      populateSelect(negSelect, NEGATIVE_LISTS.presets);
-    }
-  }
-  
-  // Process positive modifier presets
-  if (typeof POSITIVE_LISTS === 'object' && POSITIVE_LISTS.presets) {
-    // Convert presets array to object for easier access
-    POS_PRESETS = {};
-    POSITIVE_LISTS.presets.forEach(preset => {
-      POS_PRESETS[preset.id] = preset.items || [];
-    });
-    
-    // Populate the positive modifier dropdown
-    const posSelect = document.getElementById('pos-select');
-    if (posSelect) {
-      populateSelect(posSelect, POSITIVE_LISTS.presets);
-    }
   }
 
-  // Process length limit presets
-  if (typeof LENGTH_LISTS === 'object' && LENGTH_LISTS.presets) {
-    LENGTH_PRESETS = {};
-    LENGTH_LISTS.presets.forEach(preset => {
-      LENGTH_PRESETS[preset.id] = preset.items || [];
-    });
+  const negSelect = document.getElementById('neg-select');
+  if (negSelect) populateSelect(negSelect, neg);
 
-    const lengthSelect = document.getElementById('length-select');
-    if (lengthSelect) {
-      populateSelect(lengthSelect, LENGTH_LISTS.presets);
-    }
-  }
+  const posSelect = document.getElementById('pos-select');
+  if (posSelect) populateSelect(posSelect, pos);
+
+  const lengthSelect = document.getElementById('length-select');
+  if (lengthSelect) populateSelect(lengthSelect, len);
 
   // Uncomment the following lines for a quick summary when debugging
   // console.log('Lists loaded:', {
@@ -480,9 +497,21 @@ function processLyrics(text, maxSpaces, removeParens = false, removeBrackets = f
  *
  * @param {HTMLSelectElement} selectEl - Dropdown element
  * @param {HTMLTextAreaElement} textareaEl - Associated textarea
- * @param {Object} presets - Preset lists object
+ * @param {Object|string} presetsOrType - Preset lists object or type key
  */
-function applyPreset(selectEl, inputEl, presets) {
+function applyPreset(selectEl, inputEl, presetsOrType) {
+  let presets = presetsOrType;
+  if (typeof presetsOrType === 'string') {
+    if (presetsOrType === 'negative') {
+      presets = NEG_PRESETS;
+    } else if (presetsOrType === 'positive') {
+      presets = POS_PRESETS;
+    } else if (presetsOrType === 'length') {
+      presets = LENGTH_PRESETS;
+    } else {
+      presets = {};
+    }
+  }
   const key = selectEl.value;
   const list = presets[key] || [];
   if (inputEl.tagName === 'TEXTAREA') {
@@ -494,11 +523,11 @@ function applyPreset(selectEl, inputEl, presets) {
 }
 
 // Attach preset dropdowns to their inputs
-function setupPresetListener(selectId, inputId, presets) {
+function setupPresetListener(selectId, inputId, type) {
   const select = document.getElementById(selectId);
   const input = document.getElementById(inputId);
   if (!select || !input) return;
-  select.addEventListener('change', () => applyPreset(select, input, presets));
+  select.addEventListener('change', () => applyPreset(select, input, type));
 }
 
 
@@ -752,6 +781,82 @@ function setupCopyButtons() {
   });
 }
 
+// Export the current LISTS object as a JSON string
+function exportLists() {
+  return JSON.stringify(LISTS, null, 2);
+}
+
+// Replace LISTS with the provided object and reload presets
+function importLists(obj) {
+  if (!obj || typeof obj !== 'object' || !Array.isArray(obj.presets)) return;
+  LISTS = {
+    presets: obj.presets.map(p => ({
+      id: p.id,
+      title: p.title,
+      type: p.type,
+      items: Array.isArray(p.items) ? p.items : []
+    }))
+  };
+  loadLists();
+}
+
+// Load lists from a File object
+function loadListsFromFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      importLists(data);
+    } catch (err) {
+      alert('Invalid lists file');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// Trigger download of the current lists
+function downloadLists() {
+  const blob = new Blob([exportLists()], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'lists.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Save the current textarea values back into LISTS
+function saveList(type) {
+  const map = {
+    negative: { select: 'neg-select', input: 'neg-input', store: NEG_PRESETS },
+    positive: { select: 'pos-select', input: 'pos-input', store: POS_PRESETS },
+    length: { select: 'length-select', input: 'length-input', store: LENGTH_PRESETS }
+  };
+  const cfg = map[type];
+  if (!cfg) return;
+  const sel = document.getElementById(cfg.select);
+  const inp = document.getElementById(cfg.input);
+  if (!sel || !inp) return;
+  const name = prompt('Enter list name', sel.value);
+  if (!name) return;
+  const items = parseInput(inp.value);
+  let preset = LISTS.presets.find(p => p.id === name && p.type === type);
+  if (!preset) {
+    preset = { id: name, title: name, type, items };
+    LISTS.presets.push(preset);
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  } else {
+    preset.items = items;
+  }
+  cfg.store[name] = items;
+  sel.value = name;
+}
+
 
 /**
  * Initialize the UI with default selections
@@ -762,13 +867,25 @@ function initializeUI() {
   loadLists();
 
   // Populate textareas with initially selected presets
-  applyPreset(document.getElementById('neg-select'), document.getElementById('neg-input'), NEG_PRESETS);
-  applyPreset(document.getElementById('pos-select'), document.getElementById('pos-input'), POS_PRESETS);
-  applyPreset(document.getElementById('length-select'), document.getElementById('length-input'), LENGTH_PRESETS);
+  applyPreset(
+    document.getElementById('neg-select'),
+    document.getElementById('neg-input'),
+    'negative'
+  );
+  applyPreset(
+    document.getElementById('pos-select'),
+    document.getElementById('pos-input'),
+    'positive'
+  );
+  applyPreset(
+    document.getElementById('length-select'),
+    document.getElementById('length-input'),
+    'length'
+  );
 
-  setupPresetListener('neg-select', 'neg-input', NEG_PRESETS);
-  setupPresetListener('pos-select', 'pos-input', POS_PRESETS);
-  setupPresetListener('length-select', 'length-input', LENGTH_PRESETS);
+  setupPresetListener('neg-select', 'neg-input', 'negative');
+  setupPresetListener('pos-select', 'pos-input', 'positive');
+  setupPresetListener('length-select', 'length-input', 'length');
   document.getElementById('generate').addEventListener('click', generate);
 
   setupToggleButtons();
@@ -791,6 +908,25 @@ function initializeUI() {
   }
 
   setupCopyButtons();
+
+  const loadBtn = document.getElementById('load-lists');
+  const fileInput = document.getElementById('lists-file');
+  if (loadBtn && fileInput) {
+    loadBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', e => {
+      const f = e.target.files[0];
+      if (f) loadListsFromFile(f);
+      fileInput.value = '';
+    });
+  }
+  const dlBtn = document.getElementById('download-lists');
+  if (dlBtn) dlBtn.addEventListener('click', downloadLists);
+  const posSave = document.getElementById('pos-save');
+  if (posSave) posSave.addEventListener('click', () => saveList('positive'));
+  const negSave = document.getElementById('neg-save');
+  if (negSave) negSave.addEventListener('click', () => saveList('negative'));
+  const lenSave = document.getElementById('length-save');
+  if (lenSave) lenSave.addEventListener('click', () => saveList('length'));
 }
 
 // Initialize UI when DOM is ready
@@ -816,5 +952,11 @@ if (typeof module !== 'undefined') {
     processLyrics,
     setupShuffleAll,
     setupStackControls,
+    applyPreset,
+    exportLists,
+    importLists,
+    saveList,
+    downloadLists,
+    loadListsFromFile,
   };
 }
