@@ -14,6 +14,10 @@ const {
   processLyrics,
   setupShuffleAll,
   setupStackControls,
+  applyPreset,
+  exportLists,
+  importLists,
+  saveList,
 } = require('../src/script');
 
 describe('Utility functions', () => {
@@ -304,5 +308,78 @@ describe('UI interactions', () => {
     posStack.dispatchEvent(new Event('change'));
     expect(posShuffle.checked).toBe(false);
     expect(posBtn.classList.contains('disabled')).toBe(false);
+  });
+});
+
+describe('List persistence', () => {
+  test('exportLists and importLists round trip', () => {
+    importLists({ presets: [{ id: 'x', title: 'x', type: 'positive', items: ['1'] }] });
+    const json = exportLists();
+    importLists(JSON.parse(json));
+    const again = exportLists();
+    expect(again).toBe(json);
+  });
+
+  test('saveList updates LISTS', () => {
+    document.body.innerHTML = `
+      <select id="pos-select"></select>
+      <textarea id="pos-input">a,b</textarea>
+    `;
+    importLists({ presets: [] });
+    global.prompt = jest.fn().mockReturnValue('myPos');
+    saveList('positive');
+    const data = JSON.parse(exportLists());
+    const preset = data.presets.find(p => p.id === 'myPos' && p.type === 'positive');
+    expect(preset.items).toEqual(['a', 'b']);
+    const opt = document.querySelector('#pos-select option[value="myPos"]');
+    expect(opt).not.toBeNull();
+  });
+
+  test('sequential save and reload', () => {
+    document.body.innerHTML = `
+      <select id="pos-select"></select>
+      <textarea id="pos-input"></textarea>
+      <select id="neg-select"></select>
+      <textarea id="neg-input"></textarea>
+      <select id="length-select"></select>
+      <input id="length-input">
+    `;
+    importLists({ presets: [] });
+    let names = ['p1', 'p2', 'n1', 'l1'];
+    global.prompt = jest.fn(() => names.shift());
+    document.getElementById('pos-input').value = 'x';
+    saveList('positive');
+    document.getElementById('pos-input').value = 'z';
+    saveList('positive');
+    document.getElementById('neg-input').value = 'y';
+    saveList('negative');
+    document.getElementById('length-input').value = '5';
+    saveList('length');
+
+    const exported = JSON.parse(exportLists());
+    expect(exported.presets.length).toBe(4);
+
+    document.body.innerHTML = `
+      <select id="pos-select"></select>
+      <textarea id="pos-input"></textarea>
+      <select id="neg-select"></select>
+      <textarea id="neg-input"></textarea>
+      <select id="length-select"></select>
+      <input id="length-input">
+    `;
+    importLists(exported);
+    const posSelVals = Array.from(document.querySelectorAll('#pos-select option')).map(o => o.value);
+    expect(posSelVals).toEqual(expect.arrayContaining(['p1','p2']));
+    const posSelect = document.getElementById('pos-select');
+    const posInput = document.getElementById('pos-input');
+    posSelect.value = 'p1';
+    applyPreset(posSelect, posInput, 'positive');
+    expect(posInput.value).toBe('x');
+    posSelect.value = 'p2';
+    applyPreset(posSelect, posInput, 'positive');
+    expect(posInput.value).toBe('z');
+    posSelect.value = 'p1';
+    applyPreset(posSelect, posInput, 'positive');
+    expect(posInput.value).toBe('x');
   });
 });

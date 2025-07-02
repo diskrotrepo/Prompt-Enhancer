@@ -417,6 +417,30 @@ button {
     background: #444;
 }
 
+/* Row layout for textarea/input with save button */
+.input-row {
+    display: flex;
+    align-items: flex-start;
+}
+.input-row textarea,
+.input-row input[type=number] {
+    flex: 1;
+}
+
+/* Save button styling */
+.save-button {
+    background: transparent;
+    border: 1px solid #888;
+    color: #fff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 0.25rem;
+}
+.save-button:hover {
+    background: #444;
+}
+
 /* ===== OUTPUT SECTION ===== */
 .output h2 {
     display: flex;
