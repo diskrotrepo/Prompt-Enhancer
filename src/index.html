@@ -60,16 +60,16 @@
         <div class="input-group">
           <div class="label-row">
             <label for="base-input">Base Prompt List</label>
+            <div class="button-col">
+              <input type="checkbox" id="base-shuffle" hidden>
+              <button type="button" class="toggle-button icon-button random-button" data-target="base-shuffle" data-on="🎲" data-off="🎲">&#127922;</button>
+              <input type="checkbox" id="base-hide" data-targets="base-input" hidden>
+              <button type="button" class="toggle-button icon-button hide-button" data-target="base-hide" data-on="☰" data-off="✖">☰</button>
+            </div>
           </div>
           <div class="input-row">
             <textarea id="base-input" rows="4"
               placeholder="Enter comma, semicolon, or newline separated items"></textarea>
-            <div class="button-col">
-              <input type="checkbox" id="base-hide" data-targets="base-input" hidden>
-              <button type="button" class="toggle-button icon-button hide-button" data-target="base-hide" data-on="☰" data-off="✖">☰</button>
-              <input type="checkbox" id="base-shuffle" hidden>
-              <button type="button" class="toggle-button icon-button random-button" data-target="base-shuffle" data-on="🎲" data-off="🎲">&#127922;</button>
-            </div>
           </div>
         </div>
         <!-- Positive modifier selection section -->
@@ -87,16 +87,18 @@
           <select id="pos-select">
             <!-- Options will be populated dynamically from POSITIVE_LISTS -->
           </select>
-          <div class="input-row">
-            <textarea id="pos-input" rows="2" placeholder="Positive modifiers"></textarea>
+          <div class="label-row">
             <div class="button-col">
-              <input type="checkbox" id="pos-hide" data-targets="pos-input" hidden>
-              <button type="button" class="toggle-button icon-button hide-button" data-target="pos-hide" data-on="☰" data-off="✖">☰</button>
               <button type="button" class="copy-button icon-button" data-target="pos-input" title="Copy">&#128203;</button>
               <button type="button" id="pos-save" class="save-button icon-button" title="Save">&#128190;</button>
               <input type="checkbox" id="pos-shuffle" hidden>
               <button type="button" class="toggle-button icon-button random-button" data-target="pos-shuffle" data-on="🎲" data-off="🎲">&#127922;</button>
+              <input type="checkbox" id="pos-hide" data-targets="pos-input" hidden>
+              <button type="button" class="toggle-button icon-button hide-button" data-target="pos-hide" data-on="☰" data-off="✖">☰</button>
             </div>
+          </div>
+          <div class="input-row">
+            <textarea id="pos-input" rows="2" placeholder="Positive modifiers"></textarea>
           </div>
         </div>
         <!-- Negative modifier selection section -->
@@ -116,34 +118,36 @@
           <select id="neg-select">
             <!-- Options will be populated dynamically from NEGATIVE_LISTS -->
           </select>
-          <div class="input-row">
-            <textarea id="neg-input" rows="3" placeholder="Negative modifiers"></textarea>
+          <div class="label-row">
             <div class="button-col">
-              <input type="checkbox" id="neg-hide" data-targets="neg-input" hidden>
-              <button type="button" class="toggle-button icon-button hide-button" data-target="neg-hide" data-on="☰" data-off="✖">☰</button>
               <button type="button" class="copy-button icon-button" data-target="neg-input" title="Copy">&#128203;</button>
               <button type="button" id="neg-save" class="save-button icon-button" title="Save">&#128190;</button>
               <input type="checkbox" id="neg-shuffle" hidden>
               <button type="button" class="toggle-button icon-button random-button" data-target="neg-shuffle" data-on="🎲" data-off="🎲">&#127922;</button>
+              <input type="checkbox" id="neg-hide" data-targets="neg-input" hidden>
+              <button type="button" class="toggle-button icon-button hide-button" data-target="neg-hide" data-on="☰" data-off="✖">☰</button>
             </div>
+          </div>
+          <div class="input-row">
+            <textarea id="neg-input" rows="3" placeholder="Negative modifiers"></textarea>
           </div>
         </div>
         <!-- Character length limit selection -->
         <div class="input-group">
           <div class="label-row">
             <label for="length-input">Length Limit</label>
+            <div class="button-col">
+              <button type="button" class="copy-button icon-button" data-target="length-input" title="Copy">&#128203;</button>
+              <button type="button" id="length-save" class="save-button icon-button" title="Save">&#128190;</button>
+              <input type="checkbox" id="length-hide" data-targets="length-input" hidden>
+              <button type="button" class="toggle-button icon-button hide-button" data-target="length-hide" data-on="☰" data-off="✖">☰</button>
+            </div>
           </div>
         <select id="length-select">
           <!-- Options will be populated dynamically from LENGTH_LISTS -->
         </select>
         <div class="input-row">
           <input type="number" id="length-input" value="1000" min="1">
-          <div class="button-col">
-            <input type="checkbox" id="length-hide" data-targets="length-input" hidden>
-            <button type="button" class="toggle-button icon-button hide-button" data-target="length-hide" data-on="☰" data-off="✖">☰</button>
-            <button type="button" class="copy-button icon-button" data-target="length-input" title="Copy">&#128203;</button>
-            <button type="button" id="length-save" class="save-button icon-button" title="Save">&#128190;</button>
-          </div>
         </div>
       </div>
       <!-- Lyrics processing input -->
@@ -154,14 +158,14 @@
           <button type="button" class="toggle-button" data-target="lyrics-remove-parens" data-on="Parens Removed" data-off="Parens Kept">Parens Kept</button>
           <input type="checkbox" id="lyrics-remove-brackets" hidden>
           <button type="button" class="toggle-button" data-target="lyrics-remove-brackets" data-on="Brackets Removed" data-off="Brackets Kept">Brackets Kept</button>
+          <div class="button-col">
+            <button type="button" class="copy-button icon-button" data-target="lyrics-input" title="Copy">&#128203;</button>
+            <input type="checkbox" id="lyrics-hide" data-targets="lyrics-input,lyrics-space,lyrics-remove-parens,lyrics-remove-brackets" hidden>
+            <button type="button" class="toggle-button icon-button hide-button" data-target="lyrics-hide" data-on="☰" data-off="✖">☰</button>
+          </div>
         </div>
         <div class="input-row">
           <textarea id="lyrics-input" rows="4" placeholder="Enter lyrics"></textarea>
-          <div class="button-col">
-            <input type="checkbox" id="lyrics-hide" data-targets="lyrics-input,lyrics-space,lyrics-remove-parens,lyrics-remove-brackets" hidden>
-            <button type="button" class="toggle-button icon-button hide-button" data-target="lyrics-hide" data-on="☰" data-off="✖">☰</button>
-            <button type="button" class="copy-button icon-button" data-target="lyrics-input" title="Copy">&#128203;</button>
-          </div>
         </div>
         <div class="label-row">
           <label for="lyrics-space">Max Spaces</label>
@@ -184,32 +188,29 @@
 
         <!-- Output display section -->
         <div class="output">
-          <h2><span>Positive Conditioning</span></h2>
+          <h2><span>Positive Conditioning</span><span class="button-col">
+            <button type="button" class="copy-button icon-button" data-target="positive-output" title="Copy">&#128203;</button>
+            <input type="checkbox" id="positive-hide" data-targets="positive-output" hidden>
+            <button type="button" class="toggle-button icon-button hide-button" data-target="positive-hide" data-on="☰" data-off="✖">☰</button>
+          </span></h2>
           <div class="input-row">
             <pre id="positive-output"></pre>
-            <div class="button-col">
-              <input type="checkbox" id="positive-hide" data-targets="positive-output" hidden>
-              <button type="button" class="toggle-button icon-button hide-button" data-target="positive-hide" data-on="☰" data-off="✖">☰</button>
-              <button type="button" class="copy-button icon-button" data-target="positive-output" title="Copy">&#128203;</button>
-            </div>
           </div>
-          <h2><span>Negative Conditioning</span></h2>
+          <h2><span>Negative Conditioning</span><span class="button-col">
+            <button type="button" class="copy-button icon-button" data-target="negative-output" title="Copy">&#128203;</button>
+            <input type="checkbox" id="negative-hide" data-targets="negative-output" hidden>
+            <button type="button" class="toggle-button icon-button hide-button" data-target="negative-hide" data-on="☰" data-off="✖">☰</button>
+          </span></h2>
           <div class="input-row">
             <pre id="negative-output"></pre>
-            <div class="button-col">
-              <input type="checkbox" id="negative-hide" data-targets="negative-output" hidden>
-              <button type="button" class="toggle-button icon-button hide-button" data-target="negative-hide" data-on="☰" data-off="✖">☰</button>
-              <button type="button" class="copy-button icon-button" data-target="negative-output" title="Copy">&#128203;</button>
-            </div>
           </div>
-          <h2><span>Processed Lyrics</span></h2>
+          <h2><span>Processed Lyrics</span><span class="button-col">
+            <button type="button" class="copy-button icon-button" data-target="lyrics-output" title="Copy">&#128203;</button>
+            <input type="checkbox" id="lyrics-output-hide" data-targets="lyrics-output" hidden>
+            <button type="button" class="toggle-button icon-button hide-button" data-target="lyrics-output-hide" data-on="☰" data-off="✖">☰</button>
+          </span></h2>
           <div class="input-row">
             <pre id="lyrics-output"></pre>
-            <div class="button-col">
-              <input type="checkbox" id="lyrics-output-hide" data-targets="lyrics-output" hidden>
-              <button type="button" class="toggle-button icon-button hide-button" data-target="lyrics-output-hide" data-on="☰" data-off="✖">☰</button>
-              <button type="button" class="copy-button icon-button" data-target="lyrics-output" title="Copy">&#128203;</button>
-            </div>
           </div>
         </div>
       </div>
