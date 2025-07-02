@@ -14,6 +14,9 @@
 let NEG_PRESETS = {};
 let POS_PRESETS = {};
 let LENGTH_PRESETS = {};
+
+// Combined lists object used for import/export operations
+let LISTS = typeof ALL_LISTS !== 'undefined' ? JSON.parse(JSON.stringify(ALL_LISTS)) : { negative: { presets: [] }, positive: { presets: [] }, length: { presets: [] } };
 const NATURAL_DIVIDERS = [
   '\nIn other words, ',
   '\ni.e., ',
@@ -60,45 +63,41 @@ function populateSelect(selectEl, presets) {
  */
 function loadLists() {
   // Process negative modifier presets
-  if (typeof NEGATIVE_LISTS === 'object' && NEGATIVE_LISTS.presets) {
-    // Convert presets array to object for easier access
+  if (LISTS.negative && LISTS.negative.presets) {
     NEG_PRESETS = {};
-    NEGATIVE_LISTS.presets.forEach(preset => {
+    LISTS.negative.presets.forEach(preset => {
       NEG_PRESETS[preset.id] = preset.items || [];
     });
-    
-    // Populate the negative modifier dropdown
+
     const negSelect = document.getElementById('neg-select');
     if (negSelect) {
-      populateSelect(negSelect, NEGATIVE_LISTS.presets);
+      populateSelect(negSelect, LISTS.negative.presets);
     }
   }
-  
+
   // Process positive modifier presets
-  if (typeof POSITIVE_LISTS === 'object' && POSITIVE_LISTS.presets) {
-    // Convert presets array to object for easier access
+  if (LISTS.positive && LISTS.positive.presets) {
     POS_PRESETS = {};
-    POSITIVE_LISTS.presets.forEach(preset => {
+    LISTS.positive.presets.forEach(preset => {
       POS_PRESETS[preset.id] = preset.items || [];
     });
-    
-    // Populate the positive modifier dropdown
+
     const posSelect = document.getElementById('pos-select');
     if (posSelect) {
-      populateSelect(posSelect, POSITIVE_LISTS.presets);
+      populateSelect(posSelect, LISTS.positive.presets);
     }
   }
 
   // Process length limit presets
-  if (typeof LENGTH_LISTS === 'object' && LENGTH_LISTS.presets) {
+  if (LISTS.length && LISTS.length.presets) {
     LENGTH_PRESETS = {};
-    LENGTH_LISTS.presets.forEach(preset => {
+    LISTS.length.presets.forEach(preset => {
       LENGTH_PRESETS[preset.id] = preset.items || [];
     });
 
     const lengthSelect = document.getElementById('length-select');
     if (lengthSelect) {
-      populateSelect(lengthSelect, LENGTH_LISTS.presets);
+      populateSelect(lengthSelect, LISTS.length.presets);
     }
   }
 
@@ -752,6 +751,81 @@ function setupCopyButtons() {
   });
 }
 
+// Export the current LISTS object as a JSON string
+function exportLists() {
+  return JSON.stringify(LISTS, null, 2);
+}
+
+// Replace LISTS with the provided object and reload presets
+function importLists(obj) {
+  if (!obj || typeof obj !== 'object') return;
+  LISTS = {
+    negative: obj.negative && obj.negative.presets ? obj.negative : { presets: [] },
+    positive: obj.positive && obj.positive.presets ? obj.positive : { presets: [] },
+    length: obj.length && obj.length.presets ? obj.length : { presets: [] }
+  };
+  loadLists();
+}
+
+// Load lists from a File object
+function loadListsFromFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      importLists(data);
+    } catch (err) {
+      alert('Invalid lists file');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// Trigger download of the current lists
+function downloadLists() {
+  const blob = new Blob([exportLists()], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'lists.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Save the current textarea values back into LISTS
+function saveList(type) {
+  const map = {
+    negative: { select: 'neg-select', input: 'neg-input', store: NEG_PRESETS },
+    positive: { select: 'pos-select', input: 'pos-input', store: POS_PRESETS },
+    length: { select: 'length-select', input: 'length-input', store: LENGTH_PRESETS }
+  };
+  const cfg = map[type];
+  if (!cfg) return;
+  const sel = document.getElementById(cfg.select);
+  const inp = document.getElementById(cfg.input);
+  if (!sel || !inp) return;
+  const name = typeof prompt === 'function' ? prompt('Enter list name', sel.value) : sel.value;
+  if (!name) return;
+  const id = name.trim();
+  const items = type === 'length' ? [String(inp.value).trim()] : parseInput(inp.value);
+  let preset = LISTS[type].presets.find(p => p.id === id);
+  if (!preset) {
+    preset = { id, title: id, items };
+    LISTS[type].presets.push(preset);
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = id;
+    sel.appendChild(opt);
+  } else {
+    preset.items = items;
+    preset.title = id;
+  }
+  cfg.store[id] = items;
+  sel.value = id;
+}
+
 
 /**
  * Initialize the UI with default selections
@@ -791,6 +865,25 @@ function initializeUI() {
   }
 
   setupCopyButtons();
+
+  const loadBtn = document.getElementById('load-lists');
+  const fileInput = document.getElementById('lists-file');
+  if (loadBtn && fileInput) {
+    loadBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', e => {
+      const f = e.target.files[0];
+      if (f) loadListsFromFile(f);
+      fileInput.value = '';
+    });
+  }
+  const dlBtn = document.getElementById('download-lists');
+  if (dlBtn) dlBtn.addEventListener('click', downloadLists);
+  const posSave = document.getElementById('pos-save');
+  if (posSave) posSave.addEventListener('click', () => saveList('positive'));
+  const negSave = document.getElementById('neg-save');
+  if (negSave) negSave.addEventListener('click', () => saveList('negative'));
+  const lenSave = document.getElementById('length-save');
+  if (lenSave) lenSave.addEventListener('click', () => saveList('length'));
 }
 
 // Initialize UI when DOM is ready
@@ -816,5 +909,10 @@ if (typeof module !== 'undefined') {
     processLyrics,
     setupShuffleAll,
     setupStackControls,
+    exportLists,
+    importLists,
+    saveList,
+    downloadLists,
+    loadListsFromFile,
   };
 }

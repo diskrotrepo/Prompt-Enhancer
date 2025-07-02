@@ -354,6 +354,22 @@ input[type=number] {
     margin-top: 0.5rem;
 }
 
+/* Container for inputs with save buttons */
+.save-container {
+    display: flex;
+    align-items: center;
+}
+
+.save-container textarea,
+.save-container input[type=number] {
+    flex: 1;
+}
+
+.save-button {
+    margin-left: 0.25rem;
+    padding: 0.25rem 0.5rem;
+}
+
 /* Button styling */
 button {
     margin-right: 0.5rem;

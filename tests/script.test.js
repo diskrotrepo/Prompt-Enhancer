@@ -14,6 +14,9 @@ const {
   processLyrics,
   setupShuffleAll,
   setupStackControls,
+  exportLists,
+  importLists,
+  saveList,
 } = require('../src/script');
 
 describe('Utility functions', () => {
@@ -304,5 +307,84 @@ describe('UI interactions', () => {
     posStack.dispatchEvent(new Event('change'));
     expect(posShuffle.checked).toBe(false);
     expect(posBtn.classList.contains('disabled')).toBe(false);
+  });
+});
+
+describe('List persistence', () => {
+  const originalPrompt = global.prompt;
+
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <select id="pos-select"></select>
+      <textarea id="pos-input"></textarea>
+      <select id="neg-select"></select>
+      <textarea id="neg-input"></textarea>
+      <select id="length-select"></select>
+      <input id="length-input" type="number">
+    `;
+    importLists({ positive: { presets: [] }, negative: { presets: [] }, length: { presets: [] } });
+  });
+
+  afterEach(() => {
+    window.prompt = originalPrompt;
+  });
+
+  test('exportLists and importLists round trip', () => {
+    const json = exportLists();
+    importLists(JSON.parse(json));
+    expect(exportLists()).toBe(json);
+  });
+
+  test('saveList prompts for name and stores data', () => {
+    window.prompt = jest.fn().mockReturnValue('myList');
+    document.getElementById('pos-input').value = 'a,b';
+    saveList('positive');
+    const data = JSON.parse(exportLists());
+    expect(data.positive.presets[0].id).toBe('myList');
+    expect(data.positive.presets[0].items).toEqual(['a', 'b']);
+    const sel = document.getElementById('pos-select');
+    expect(sel.options.length).toBe(1);
+    expect(sel.value).toBe('myList');
+  });
+
+  test('sequential save and reload operations preserve lists', () => {
+    window.prompt = jest
+      .fn()
+      .mockReturnValueOnce('p1')
+      .mockReturnValueOnce('n1');
+    document.getElementById('pos-input').value = 'x';
+    saveList('positive');
+    document.getElementById('neg-input').value = 'y';
+    saveList('negative');
+    const exported = exportLists();
+    importLists({ positive: { presets: [] }, negative: { presets: [] }, length: { presets: [] } });
+    importLists(JSON.parse(exported));
+    const lists = JSON.parse(exportLists());
+    expect(lists.positive.presets[0].id).toBe('p1');
+    expect(lists.negative.presets[0].id).toBe('n1');
+  });
+
+  test('randomized operation ordering keeps state valid', () => {
+    const ops = [
+      () => { window.prompt = jest.fn().mockReturnValue('pa'); document.getElementById('pos-input').value = '1'; saveList('positive'); },
+      () => { window.prompt = jest.fn().mockReturnValue('na'); document.getElementById('neg-input').value = '2'; saveList('negative'); },
+      () => { exportLists(); },
+      () => { const j = exportLists(); importLists(JSON.parse(j)); }
+    ];
+    for (let i = 0; i < 5; i++) {
+      ops[Math.floor(Math.random() * ops.length)]();
+    }
+    const lists = JSON.parse(exportLists());
+    expect(Array.isArray(lists.positive.presets)).toBe(true);
+    expect(Array.isArray(lists.negative.presets)).toBe(true);
+  });
+
+  test('special characters are preserved for length lists', () => {
+    window.prompt = jest.fn().mockReturnValue('len!');
+    document.getElementById('length-input').value = '42';
+    saveList('length');
+    const lists = JSON.parse(exportLists());
+    expect(lists.length.presets[0].id).toBe('len!');
+    expect(lists.length.presets[0].items).toEqual(['42']);
   });
 });
