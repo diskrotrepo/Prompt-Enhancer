@@ -750,7 +750,21 @@ function setupHideToggles() {
         el.style.display = cb.checked ? 'none' : '';
       });
       const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
-      if (btn) updateButtonState(btn, cb);
+      if (btn) {
+        updateButtonState(btn, cb);
+        const col = btn.parentElement;
+        if (col && col.classList.contains('button-col')) {
+          Array.from(col.children).forEach(child => {
+            if (child !== btn) {
+              child.style.display = cb.checked ? 'none' : '';
+            }
+          });
+          const row = col.parentElement;
+          if (row && row.classList.contains('input-row')) {
+            row.style.justifyContent = cb.checked ? 'flex-end' : '';
+          }
+        }
+      }
     };
     cb.addEventListener('change', update);
     update();

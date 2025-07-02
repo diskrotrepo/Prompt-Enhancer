@@ -426,6 +426,7 @@ button {
 .input-row {
   display: flex;
   align-items: flex-start;
+  width: 100%;
 }
 .input-row textarea,
 .input-row input[type=number],
@@ -450,6 +451,25 @@ button {
 }
 .button-col .icon-button:last-child {
   margin-bottom: 0;
+}
+
+.toggle-button.icon-button {
+  background: transparent;
+  border: 1px solid #888;
+  color: #fff;
+}
+
+.icon-button.toggle-button.active {
+  background: transparent;
+  border-color: #0d6efd;
+}
+
+.random-button.active {
+  color: #0d6efd;
+}
+
+.hide-button {
+  font-size: 1rem;
 }
 
 /* Save button styling */
