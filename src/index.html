@@ -48,6 +48,14 @@
             <button type="button" class="toggle-button" data-target="nl-divider" data-on="Natural" data-off="Simple">Simple</button>
           </div>
         </div>
+        <div class="input-group">
+          <div class="label-row">
+            <label>Lists Manager</label>
+            <input type="file" id="lists-file" accept="application/json" style="display:none">
+            <button type="button" id="load-lists">Load Lists</button>
+            <button type="button" id="download-lists">Download Lists</button>
+          </div>
+        </div>
         <!-- Base prompt input section -->
         <div class="input-group">
           <div class="label-row">
@@ -81,6 +89,7 @@
             <!-- Options will be populated dynamically from POSITIVE_LISTS -->
           </select>
           <textarea id="pos-input" rows="2" placeholder="Positive modifiers"></textarea>
+          <button type="button" id="pos-save">Save List</button>
         </div>
         <!-- Negative modifier selection section -->
         <div class="input-group">
@@ -105,6 +114,7 @@
             <!-- Options will be populated dynamically from NEGATIVE_LISTS -->
           </select>
           <textarea id="neg-input" rows="3" placeholder="Negative modifiers"></textarea>
+          <button type="button" id="neg-save">Save List</button>
         </div>
         <!-- Character length limit selection -->
         <div class="input-group">
@@ -117,6 +127,7 @@
           <!-- Options will be populated dynamically from LENGTH_LISTS -->
         </select>
         <input type="number" id="length-input" value="1000" min="1">
+        <button type="button" id="length-save">Save List</button>
       </div>
       <!-- Lyrics processing input -->
       <div class="input-group">
@@ -186,6 +197,7 @@
   <script src="lists/bad_lists.js"></script>
   <script src="lists/good_lists.js"></script>
   <script src="lists/length_lists.js"></script>
+  <script src="lists/all_lists.js"></script>
   <!-- Then load main application logic -->
   <script src="script.js"></script>
 </body>

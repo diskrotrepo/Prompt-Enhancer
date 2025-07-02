@@ -14,6 +14,9 @@ const {
   processLyrics,
   setupShuffleAll,
   setupStackControls,
+  exportLists,
+  importLists,
+  saveList,
 } = require('../src/script');
 
 describe('Utility functions', () => {
@@ -304,5 +307,25 @@ describe('UI interactions', () => {
     posStack.dispatchEvent(new Event('change'));
     expect(posShuffle.checked).toBe(false);
     expect(posBtn.classList.contains('disabled')).toBe(false);
+  });
+});
+
+describe('List persistence', () => {
+  test('exportLists and importLists round trip', () => {
+    const json = exportLists();
+    importLists(JSON.parse(json));
+    const again = exportLists();
+    expect(again).toBe(json);
+  });
+
+  test('saveList updates LISTS', () => {
+    document.body.innerHTML = `
+      <select id="pos-select"><option value="custom" selected>custom</option></select>
+      <textarea id="pos-input">a,b</textarea>
+    `;
+    importLists({ positive: { presets: [] }, negative: { presets: [] }, length: { presets: [] } });
+    saveList('positive');
+    const data = JSON.parse(exportLists());
+    expect(data.positive.presets[0].items).toEqual(['a', 'b']);
   });
 });
