@@ -491,10 +491,13 @@ button {
     margin-bottom: 0.25rem;
 }
 
-.output h2 span {
+.output h2 span:first-child {
     margin-right: auto;
 }
 
+.output h2 .button-col {
+  margin-left: auto;
+}
 .output h2 .toggle-button {
   margin-left: 0.25rem;
 }
