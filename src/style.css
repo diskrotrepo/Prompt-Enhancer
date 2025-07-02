@@ -1,6 +1,6 @@
 /**
  * Prompt Enhancer - Stylesheet
- * 
+ *
  * Dark theme inspired by Diskrot with gradient background
  * Responsive design with mobile-first approach
  */
@@ -397,9 +397,9 @@ button {
     cursor: not-allowed;
 }
 
-.toggle-button.active {
-    background: linear-gradient(45deg, #0d6efd, #6610f2);
-    border-color: transparent;
+.toggle-button:not(.hide-button).active {
+  background: linear-gradient(45deg, #0d6efd, #6610f2);
+  border-color: transparent;
 }
 
 /* Copy button styling */
@@ -426,6 +426,7 @@ button {
 .input-row {
   display: flex;
   align-items: flex-start;
+  width: 100%;
 }
 .input-row textarea,
 .input-row input[type=number],
@@ -450,6 +451,21 @@ button {
 }
 .button-col .icon-button:last-child {
   margin-bottom: 0;
+}
+
+.toggle-button.icon-button {
+  background: transparent;
+  border: 1px solid #888;
+  color: #fff;
+}
+
+.random-button.active {
+  background: linear-gradient(45deg, #0d6efd, #6610f2);
+  border-color: transparent;
+}
+
+.hide-button {
+  font-size: 1rem;
 }
 
 /* Save button styling */
