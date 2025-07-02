@@ -88,8 +88,10 @@
           <select id="pos-select">
             <!-- Options will be populated dynamically from POSITIVE_LISTS -->
           </select>
-          <textarea id="pos-input" rows="2" placeholder="Positive modifiers"></textarea>
-          <button type="button" id="pos-save">Save List</button>
+          <div class="input-row">
+            <textarea id="pos-input" rows="2" placeholder="Positive modifiers"></textarea>
+            <button type="button" id="pos-save" class="save-button" title="Save">&#128190;</button>
+          </div>
         </div>
         <!-- Negative modifier selection section -->
         <div class="input-group">
@@ -113,8 +115,10 @@
           <select id="neg-select">
             <!-- Options will be populated dynamically from NEGATIVE_LISTS -->
           </select>
-          <textarea id="neg-input" rows="3" placeholder="Negative modifiers"></textarea>
-          <button type="button" id="neg-save">Save List</button>
+          <div class="input-row">
+            <textarea id="neg-input" rows="3" placeholder="Negative modifiers"></textarea>
+            <button type="button" id="neg-save" class="save-button" title="Save">&#128190;</button>
+          </div>
         </div>
         <!-- Character length limit selection -->
         <div class="input-group">
@@ -126,8 +130,10 @@
         <select id="length-select">
           <!-- Options will be populated dynamically from LENGTH_LISTS -->
         </select>
-        <input type="number" id="length-input" value="1000" min="1">
-        <button type="button" id="length-save">Save List</button>
+        <div class="input-row">
+          <input type="number" id="length-input" value="1000" min="1">
+          <button type="button" id="length-save" class="save-button" title="Save">&#128190;</button>
+        </div>
       </div>
       <!-- Lyrics processing input -->
       <div class="input-group">
@@ -194,9 +200,6 @@
   
   <!-- External script loading order is important -->
   <!-- Load list data files first -->
-  <script src="lists/bad_lists.js"></script>
-  <script src="lists/good_lists.js"></script>
-  <script src="lists/length_lists.js"></script>
   <script src="lists/all_lists.js"></script>
   <!-- Then load main application logic -->
   <script src="script.js"></script>

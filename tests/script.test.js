@@ -312,6 +312,7 @@ describe('UI interactions', () => {
 
 describe('List persistence', () => {
   test('exportLists and importLists round trip', () => {
+    importLists({ presets: [{ id: 'x', title: 'x', type: 'positive', items: ['1'] }] });
     const json = exportLists();
     importLists(JSON.parse(json));
     const again = exportLists();
@@ -320,12 +321,51 @@ describe('List persistence', () => {
 
   test('saveList updates LISTS', () => {
     document.body.innerHTML = `
-      <select id="pos-select"><option value="custom" selected>custom</option></select>
+      <select id="pos-select"></select>
       <textarea id="pos-input">a,b</textarea>
     `;
-    importLists({ positive: { presets: [] }, negative: { presets: [] }, length: { presets: [] } });
+    importLists({ presets: [] });
+    global.prompt = jest.fn().mockReturnValue('myPos');
     saveList('positive');
     const data = JSON.parse(exportLists());
-    expect(data.positive.presets[0].items).toEqual(['a', 'b']);
+    const preset = data.presets.find(p => p.id === 'myPos' && p.type === 'positive');
+    expect(preset.items).toEqual(['a', 'b']);
+    const opt = document.querySelector('#pos-select option[value="myPos"]');
+    expect(opt).not.toBeNull();
+  });
+
+  test('sequential save and reload', () => {
+    document.body.innerHTML = `
+      <select id="pos-select"></select>
+      <textarea id="pos-input"></textarea>
+      <select id="neg-select"></select>
+      <textarea id="neg-input"></textarea>
+      <select id="length-select"></select>
+      <input id="length-input">
+    `;
+    importLists({ presets: [] });
+    let names = ['p1', 'n1', 'l1'];
+    global.prompt = jest.fn(() => names.shift());
+    document.getElementById('pos-input').value = 'x';
+    saveList('positive');
+    document.getElementById('neg-input').value = 'y';
+    saveList('negative');
+    document.getElementById('length-input').value = '5';
+    saveList('length');
+
+    const exported = JSON.parse(exportLists());
+    expect(exported.presets.length).toBe(3);
+
+    document.body.innerHTML = `
+      <select id="pos-select"></select>
+      <textarea id="pos-input"></textarea>
+      <select id="neg-select"></select>
+      <textarea id="neg-input"></textarea>
+      <select id="length-select"></select>
+      <input id="length-input">
+    `;
+    importLists(exported);
+    const posSelVals = Array.from(document.querySelectorAll('#pos-select option')).map(o => o.value);
+    expect(posSelVals).toContain('p1');
   });
 });

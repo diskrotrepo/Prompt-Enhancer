@@ -16,17 +16,33 @@ let POS_PRESETS = {};
 let LENGTH_PRESETS = {};
 
 // Combined lists object used for import/export operations
-let LISTS =
-  typeof ALL_LISTS !== 'undefined'
-    ? JSON.parse(JSON.stringify(ALL_LISTS))
-    : {
-        negative:
-          typeof NEGATIVE_LISTS !== 'undefined' ? NEGATIVE_LISTS : { presets: [] },
-        positive:
-          typeof POSITIVE_LISTS !== 'undefined' ? POSITIVE_LISTS : { presets: [] },
-        length:
-          typeof LENGTH_LISTS !== 'undefined' ? LENGTH_LISTS : { presets: [] }
-      };
+let LISTS;
+if (typeof ALL_LISTS !== 'undefined' && Array.isArray(ALL_LISTS.presets)) {
+  LISTS = JSON.parse(JSON.stringify(ALL_LISTS));
+} else if (
+  typeof NEGATIVE_LISTS !== 'undefined' ||
+  typeof POSITIVE_LISTS !== 'undefined' ||
+  typeof LENGTH_LISTS !== 'undefined'
+) {
+  LISTS = { presets: [] };
+  if (typeof NEGATIVE_LISTS !== 'undefined') {
+    NEGATIVE_LISTS.presets.forEach(p =>
+      LISTS.presets.push({ ...p, type: 'negative' })
+    );
+  }
+  if (typeof POSITIVE_LISTS !== 'undefined') {
+    POSITIVE_LISTS.presets.forEach(p =>
+      LISTS.presets.push({ ...p, type: 'positive' })
+    );
+  }
+  if (typeof LENGTH_LISTS !== 'undefined') {
+    LENGTH_LISTS.presets.forEach(p =>
+      LISTS.presets.push({ ...p, type: 'length' })
+    );
+  }
+} else {
+  LISTS = { presets: [] };
+}
 const NATURAL_DIVIDERS = [
   '\nIn other words, ',
   '\ni.e., ',
@@ -72,44 +88,36 @@ function populateSelect(selectEl, presets) {
  * Dynamically structures the data based on available lists
  */
 function loadLists() {
-  // Process negative modifier presets
-  if (LISTS.negative && LISTS.negative.presets) {
-    NEG_PRESETS = {};
-    LISTS.negative.presets.forEach(preset => {
-      NEG_PRESETS[preset.id] = preset.items || [];
-    });
+  NEG_PRESETS = {};
+  POS_PRESETS = {};
+  LENGTH_PRESETS = {};
+  const neg = [];
+  const pos = [];
+  const len = [];
 
-    const negSelect = document.getElementById('neg-select');
-    if (negSelect) {
-      populateSelect(negSelect, LISTS.negative.presets);
-    }
+  if (LISTS.presets && Array.isArray(LISTS.presets)) {
+    LISTS.presets.forEach(p => {
+      if (p.type === 'negative') {
+        NEG_PRESETS[p.id] = p.items || [];
+        neg.push(p);
+      } else if (p.type === 'positive') {
+        POS_PRESETS[p.id] = p.items || [];
+        pos.push(p);
+      } else if (p.type === 'length') {
+        LENGTH_PRESETS[p.id] = p.items || [];
+        len.push(p);
+      }
+    });
   }
 
-  // Process positive modifier presets
-  if (LISTS.positive && LISTS.positive.presets) {
-    POS_PRESETS = {};
-    LISTS.positive.presets.forEach(preset => {
-      POS_PRESETS[preset.id] = preset.items || [];
-    });
+  const negSelect = document.getElementById('neg-select');
+  if (negSelect) populateSelect(negSelect, neg);
 
-    const posSelect = document.getElementById('pos-select');
-    if (posSelect) {
-      populateSelect(posSelect, LISTS.positive.presets);
-    }
-  }
+  const posSelect = document.getElementById('pos-select');
+  if (posSelect) populateSelect(posSelect, pos);
 
-  // Process length limit presets
-  if (LISTS.length && LISTS.length.presets) {
-    LENGTH_PRESETS = {};
-    LISTS.length.presets.forEach(preset => {
-      LENGTH_PRESETS[preset.id] = preset.items || [];
-    });
-
-    const lengthSelect = document.getElementById('length-select');
-    if (lengthSelect) {
-      populateSelect(lengthSelect, LISTS.length.presets);
-    }
-  }
+  const lengthSelect = document.getElementById('length-select');
+  if (lengthSelect) populateSelect(lengthSelect, len);
 
   // Uncomment the following lines for a quick summary when debugging
   // console.log('Lists loaded:', {
@@ -768,11 +776,14 @@ function exportLists() {
 
 // Replace LISTS with the provided object and reload presets
 function importLists(obj) {
-  if (!obj || typeof obj !== 'object') return;
+  if (!obj || typeof obj !== 'object' || !Array.isArray(obj.presets)) return;
   LISTS = {
-    negative: obj.negative && obj.negative.presets ? obj.negative : { presets: [] },
-    positive: obj.positive && obj.positive.presets ? obj.positive : { presets: [] },
-    length: obj.length && obj.length.presets ? obj.length : { presets: [] }
+    presets: obj.presets.map(p => ({
+      id: p.id,
+      title: p.title,
+      type: p.type,
+      items: Array.isArray(p.items) ? p.items : []
+    }))
   };
   loadLists();
 }
@@ -816,20 +827,22 @@ function saveList(type) {
   const sel = document.getElementById(cfg.select);
   const inp = document.getElementById(cfg.input);
   if (!sel || !inp) return;
-  const id = sel.value || 'custom';
+  const name = prompt('Enter list name', sel.value);
+  if (!name) return;
   const items = parseInput(inp.value);
-  let preset = LISTS[type].presets.find(p => p.id === id);
+  let preset = LISTS.presets.find(p => p.id === name && p.type === type);
   if (!preset) {
-    preset = { id, title: id, items };
-    LISTS[type].presets.push(preset);
+    preset = { id: name, title: name, type, items };
+    LISTS.presets.push(preset);
     const opt = document.createElement('option');
-    opt.value = id;
-    opt.textContent = id;
+    opt.value = name;
+    opt.textContent = name;
     sel.appendChild(opt);
   } else {
     preset.items = items;
   }
-  cfg.store[id] = items;
+  cfg.store[name] = items;
+  sel.value = name;
 }
 
 
