@@ -404,38 +404,62 @@ button {
 
 /* Copy button styling */
 .copy-button {
-    background: transparent;
-    border: 1px solid #888;
-    color: #fff;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-left: 0.25rem;
+  background: transparent;
+  border: 1px solid #888;
+  color: #fff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .copy-button:hover {
-    background: #444;
+  background: #444;
+}
+
+.copied {
+  background: linear-gradient(45deg, #0d6efd, #6610f2);
+  border-color: transparent;
+  transition: background 0.3s;
 }
 
 /* Row layout for textarea/input with save button */
 .input-row {
-    display: flex;
-    align-items: flex-start;
+  display: flex;
+  align-items: flex-start;
 }
 .input-row textarea,
-.input-row input[type=number] {
-    flex: 1;
+.input-row input[type=number],
+.input-row pre {
+  flex: 1;
+}
+
+.button-col {
+  display: flex;
+  flex-direction: column;
+  margin-left: 0.25rem;
+}
+.button-col .icon-button {
+  width: 1.8rem;
+  height: 1.8rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  margin-left: 0;
+  margin-bottom: 0.25rem;
+}
+.button-col .icon-button:last-child {
+  margin-bottom: 0;
 }
 
 /* Save button styling */
 .save-button {
-    background: transparent;
-    border: 1px solid #888;
-    color: #fff;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-left: 0.25rem;
+  background: transparent;
+  border: 1px solid #888;
+  color: #fff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
 }
 .save-button:hover {
     background: #444;
@@ -454,9 +478,8 @@ button {
     margin-right: auto;
 }
 
-.output h2 .toggle-button,
-.output h2 .copy-button {
-    margin-left: 0.25rem;
+.output h2 .toggle-button {
+  margin-left: 0.25rem;
 }
 
 .output pre {
