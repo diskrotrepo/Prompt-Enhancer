@@ -763,17 +763,19 @@ function setupCopyButtons() {
   document.querySelectorAll('.copy-button').forEach(btn => {
     const target = document.getElementById(btn.dataset.target);
     if (!target) return;
-    // Preserve the original button label for reliable reset
     if (!btn.dataset.orig) {
-      btn.dataset.orig = btn.textContent;
+      btn.dataset.orig = btn.innerHTML;
     }
     btn.addEventListener('click', async () => {
       try {
-        await navigator.clipboard.writeText(target.textContent);
-        btn.textContent = 'Copied!';
+        const text = target.value !== undefined ? target.value : target.textContent;
+        await navigator.clipboard.writeText(text);
+        btn.innerHTML = '&#10003;';
+        btn.classList.add('copied');
         setTimeout(() => {
-          btn.textContent = btn.dataset.orig;
-        }, 1000);
+          btn.innerHTML = btn.dataset.orig;
+          btn.classList.remove('copied');
+        }, 800);
       } catch (err) {
         console.error('Copy failed', err);
       }

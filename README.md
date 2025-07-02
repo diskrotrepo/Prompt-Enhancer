@@ -23,6 +23,7 @@ The Prompt Enhancer helps you create more effective prompts by:
 - **Character Limits**: Configurable output length limits (presets for Suno and Riffusion)
 - **No Dependencies**: Pure vanilla JavaScript, works completely offline
 - **Dark Theme**: Eye-friendly interface inspired by Diskrot
+- **Quick Copy Buttons**: Every textbox has a copy icon that briefly turns blue with a check mark when clicked
 
 ## How to Use
 
@@ -78,10 +79,7 @@ src/
 ├── style.css           # Dark theme styling
 ├── assets/
 │   └── logo.png        # Diskrot logo
-└── lists/
-    ├── bad_lists.js     # Negative modifier presets
-    ├── good_lists.js    # Positive modifier presets
-    └── length_lists.js  # Length limit presets
+└── all_lists.js        # Modifier presets
 ```
 
 ### Key Files
@@ -89,21 +87,21 @@ src/
 - **index.html**: Contains the user interface with dynamically populated dropdown menus
 - **script.js**: Implements the prompt generation algorithm with comprehensive comments
 - **style.css**: Provides responsive dark theme styling with gradient backgrounds
-- **lists/**: Contains curated modifier lists in a structured format
+- **all_lists.js**: Contains curated modifier lists in a structured format
 
 ## Customization
 
 ### Adding New Preset Lists
 
-Edit the list files in `src/lists/`:
+Edit the preset file `src/all_lists.js`:
 
 ```javascript
-// In bad_lists.js
-const NEGATIVE_LISTS = {
+const ALL_LISTS = {
   presets: [
     {
       id: 'your-list-id',
       title: 'Your List Title',
+      type: 'negative',
       items: ['item1', 'item2', 'item3']
     }
     // ... more presets
@@ -111,7 +109,7 @@ const NEGATIVE_LISTS = {
 };
 ```
 
-Length presets follow the same structure in `length_lists.js` with a single value per list.
+Each preset includes a `type` of `negative`, `positive` or `length`. Length presets use a single numeric value in `items`.
 
 The system will automatically detect and add new presets to the dropdown menus.
 

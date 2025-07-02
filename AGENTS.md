@@ -20,6 +20,12 @@ Whenever you modify any JavaScript logic, especially functions in
 date. Tests should exercise edge cases and boundary conditions so that unusual
 inputs do not cause regressions.
 
+Testing should happen in layers. Start with the usual unit tests and manual
+checks where you purposely examine uncommon scenarios. Next, build a functional
+test suite that modularizes typical user actions (loading files, generating,
+saving). Create a "random use" mode that chooses a sequence of these actions on
+randomized list data and repeat it many times to explore the error space.
+
 ## Conventions
 
 * Prefer vanilla JavaScript and avoid dependencies.
@@ -34,26 +40,15 @@ current direction of the program. When a simpler or more efficient approach is
 apparent, refactor instead of layering on more code. Keep functions short and
 focused and remove obsolete parts when revising features.
 
-## Lists Folder
+## Lists File
 
-The `src/lists/` directory holds large data files with modifier presets. Each
-file defines constants used by `script.js`:
+The `src/all_lists.js` file stores all modifier presets in one object. Each
+entry in `ALL_LISTS.presets` has the shape:
 
-* `bad_lists.js` and `good_lists.js` contain objects like:
+```javascript
+{ id: 'example', title: 'Some title', type: 'negative', items: ['item1', 'item2'] }
+```
 
-  ```javascript
-  const NEGATIVE_LISTS = {
-    presets: [
-      { id: 'example', title: 'Some title', items: ['item1', 'item2'] }
-    ]
-  };
-  ```
-
-  `POSITIVE_LISTS` and `LENGTH_LISTS` follow the same structure. Only the
-  contents of `items` differ (strings vs a single numeric value).
-
-* `adjectives.js`, `genres.js`, `prefixes.js` and `suffix.js` simply export
-  arrays of strings.
-
-These lists are very long but contain no logic, so there is rarely a need to
-examine them in detail when modifying functionality.
+`type` can be `negative`, `positive` or `length` (length lists contain a single
+numeric value). The file is large but purely data driven, so you rarely need to
+inspect it when working on functionality.
