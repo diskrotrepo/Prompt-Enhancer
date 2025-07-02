@@ -436,7 +436,9 @@ button {
 .button-col {
   display: flex;
   flex-direction: column;
+  align-items: center;
   margin-left: 0.25rem;
+  width: 1.8rem;
 }
 .button-col .icon-button {
   width: 1.8rem;
@@ -450,6 +452,21 @@ button {
 }
 .button-col .icon-button:last-child {
   margin-bottom: 0;
+}
+
+.button-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.dice-button.active {
+  color: #0d6efd;
+  background: transparent;
+  border-color: #0d6efd;
+}
+
+.accordion-button.active {
+  background: transparent;
 }
 
 /* Save button styling */
