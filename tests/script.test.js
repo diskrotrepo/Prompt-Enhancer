@@ -14,6 +14,7 @@ const {
   processLyrics,
   setupShuffleAll,
   setupStackControls,
+  setupHideToggles,
   applyPreset,
   exportLists,
   importLists,
@@ -308,6 +309,30 @@ describe('UI interactions', () => {
     posStack.dispatchEvent(new Event('change'));
     expect(posShuffle.checked).toBe(false);
     expect(posBtn.classList.contains('disabled')).toBe(false);
+  });
+
+  test('hide toggle does not hide sibling buttons', () => {
+    document.body.innerHTML = `
+      <div class="input-row">
+        <textarea id="txt"></textarea>
+        <div class="button-col">
+          <input type="checkbox" id="hide" data-targets="txt" hidden>
+          <button class="toggle-button" data-target="hide"></button>
+          <button class="copy-button">c</button>
+        </div>
+      </div>
+    `;
+    setupHideToggles();
+    const cb = document.getElementById('hide');
+    const txt = document.getElementById('txt');
+    const copy = document.querySelector('.copy-button');
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+    expect(txt.style.display).toBe('none');
+    expect(copy.style.display).toBe('');
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change'));
+    expect(txt.style.display).toBe('');
   });
 });
 
