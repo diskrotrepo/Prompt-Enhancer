@@ -754,11 +754,6 @@ function setupHideToggles() {
         updateButtonState(btn, cb);
         const col = btn.parentElement;
         if (col && col.classList.contains('button-col')) {
-          Array.from(col.children).forEach(child => {
-            if (child !== btn) {
-              child.style.display = cb.checked ? 'none' : '';
-            }
-          });
           const row = col.parentElement;
           if (row && row.classList.contains('input-row')) {
             row.style.justifyContent = cb.checked ? 'flex-end' : '';
@@ -968,6 +963,7 @@ if (typeof module !== 'undefined') {
     processLyrics,
     setupShuffleAll,
     setupStackControls,
+    setupHideToggles,
     applyPreset,
     exportLists,
     importLists,
