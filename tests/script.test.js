@@ -8,6 +8,7 @@ if (typeof window !== 'undefined') {
 const utils = require('../src/promptUtils');
 const lists = require('../src/listManager');
 const ui = require('../src/uiControls');
+const stateModule = require('../src/state');
 
 const {
   parseInput,
@@ -552,5 +553,23 @@ describe('List persistence', () => {
     const data = JSON.parse(exportLists());
     const lists = data.presets.filter(p => p.id === 'a' && p.type === 'positive');
     expect(lists.length).toBe(2);
+  });
+});
+
+describe('State persistence', () => {
+  const { state, exportState, importState } = stateModule;
+
+  test('exportState and importState round trip', () => {
+    state.NEG_PRESETS = { a: ['x'] };
+    state.shuffleBase = true;
+    state.seed = 42;
+    const json = exportState();
+    state.NEG_PRESETS = {};
+    state.shuffleBase = false;
+    state.seed = null;
+    importState(json);
+    expect(state.NEG_PRESETS).toEqual({ a: ['x'] });
+    expect(state.shuffleBase).toBe(true);
+    expect(state.seed).toBe(42);
   });
 });
