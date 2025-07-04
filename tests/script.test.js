@@ -489,7 +489,7 @@ describe('List persistence', () => {
     expect(divInput.value).toBe('foo');
   });
 
-  test('importLists combine without overwrite', () => {
+  test('importLists additive merges lists', () => {
     importLists({
       presets: [
         { id: 'a', title: 'a', type: 'positive', items: ['1'] },
@@ -503,28 +503,27 @@ describe('List persistence', () => {
           { id: 'c', title: 'c', type: 'positive', items: ['2'] }
         ]
       },
-      true,
-      false
+      true
     );
     const data = JSON.parse(exportLists());
-    const neg = data.presets.filter(p => p.id === 'b' && p.type === 'negative');
-    expect(neg.length).toBe(1);
-    expect(neg[0].items).toEqual(['x']);
+    const neg = data.presets.find(
+      p => p.id === 'b' && p.type === 'negative' && p.title === 'b'
+    );
+    expect(neg.items).toEqual(['y']);
     expect(
       data.presets.some(p => p.id === 'c' && p.type === 'positive')
     ).toBe(true);
   });
 
-  test('importLists combine with overwrite', () => {
+  test('importLists additive keeps different titles separate', () => {
     importLists({ presets: [] });
     importLists({ presets: [{ id: 'a', title: 'a', type: 'positive', items: ['1'] }] });
     importLists(
-      { presets: [{ id: 'a', title: 'a', type: 'positive', items: ['2'] }] },
-      true,
+      { presets: [{ id: 'a', title: 'b', type: 'positive', items: ['2'] }] },
       true
     );
     const data = JSON.parse(exportLists());
-    const pos = data.presets.find(p => p.id === 'a' && p.type === 'positive');
-    expect(pos.items).toEqual(['2']);
+    const lists = data.presets.filter(p => p.id === 'a' && p.type === 'positive');
+    expect(lists.length).toBe(2);
   });
 });

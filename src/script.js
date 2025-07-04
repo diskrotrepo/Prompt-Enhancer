@@ -761,19 +761,6 @@ function setupStackControls() {
   });
 }
 
-// Show/hide overwrite toggle when combining lists
-function setupCombineToggle() {
-  const combineCb = document.getElementById('combine-lists');
-  const overwriteBtn = document.querySelector(
-    '.toggle-button[data-target="overwrite-lists"]'
-  );
-  if (!combineCb || !overwriteBtn) return;
-  const update = () => {
-    overwriteBtn.style.display = combineCb.checked ? '' : 'none';
-  };
-  combineCb.addEventListener('change', update);
-  update();
-}
 
 // Show/hide element toggles
 function setupHideToggles() {
@@ -834,9 +821,9 @@ function exportLists() {
 }
 
 // Replace LISTS with the provided object and reload presets
-function importLists(obj, combine = false, overwrite = false) {
+function importLists(obj, additive = false) {
   if (!obj || typeof obj !== 'object' || !Array.isArray(obj.presets)) return;
-  if (!combine) {
+  if (!additive) {
     LISTS = {
       presets: obj.presets.map(p => ({
         id: p.id,
@@ -849,7 +836,7 @@ function importLists(obj, combine = false, overwrite = false) {
     const existing = LISTS.presets.slice();
     obj.presets.forEach(p => {
       const idx = existing.findIndex(
-        e => e.id === p.id && e.type === p.type
+        e => e.id === p.id && e.type === p.type && e.title === p.title
       );
       const preset = {
         id: p.id,
@@ -858,9 +845,7 @@ function importLists(obj, combine = false, overwrite = false) {
         items: Array.isArray(p.items) ? p.items : []
       };
       if (idx !== -1) {
-        if (overwrite) {
-          existing[idx] = preset;
-        }
+        existing[idx] = preset;
       } else {
         existing.push(preset);
       }
@@ -871,18 +856,12 @@ function importLists(obj, combine = false, overwrite = false) {
 }
 
 // Load lists from a File object
-function loadListsFromFile(file) {
+function loadListsFromFile(file, additive = false) {
   const reader = new FileReader();
   reader.onload = () => {
     try {
       const data = JSON.parse(reader.result);
-      const combine = document.getElementById('combine-lists');
-      const overwrite = document.getElementById('overwrite-lists');
-      importLists(
-        data,
-        combine ? combine.checked : false,
-        overwrite ? overwrite.checked : false
-      );
+      importLists(data, additive);
     } catch (err) {
       alert('Invalid lists file');
     }
@@ -981,7 +960,6 @@ function initializeUI() {
   setupToggleButtons();
   setupStackControls();
   setupShuffleAll();
-  setupCombineToggle();
   const hideCheckboxes = setupHideToggles();
 
   const allHide = document.getElementById('all-hide');
@@ -1001,12 +979,24 @@ function initializeUI() {
   setupCopyButtons();
 
   const loadBtn = document.getElementById('load-lists');
+  const additiveBtn = document.getElementById('additive-load');
   const fileInput = document.getElementById('lists-file');
   if (loadBtn && fileInput) {
-    loadBtn.addEventListener('click', () => fileInput.click());
+    loadBtn.addEventListener('click', () => {
+      fileInput.dataset.additive = 'false';
+      fileInput.click();
+    });
+  }
+  if (additiveBtn && fileInput) {
+    additiveBtn.addEventListener('click', () => {
+      fileInput.dataset.additive = 'true';
+      fileInput.click();
+    });
+  }
+  if (fileInput) {
     fileInput.addEventListener('change', e => {
       const f = e.target.files[0];
-      if (f) loadListsFromFile(f);
+      if (f) loadListsFromFile(f, fileInput.dataset.additive === 'true');
       fileInput.value = '';
     });
   }
@@ -1047,7 +1037,6 @@ if (typeof module !== 'undefined') {
     processLyrics,
     setupShuffleAll,
     setupStackControls,
-    setupCombineToggle,
     setupHideToggles,
     applyPreset,
     parseDividerInput,
