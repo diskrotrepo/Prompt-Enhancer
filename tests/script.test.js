@@ -553,4 +553,28 @@ describe('List persistence', () => {
     const lists = data.presets.filter(p => p.id === 'a' && p.type === 'positive');
     expect(lists.length).toBe(2);
   });
+
+  test('loadLists populates preset maps', () => {
+    document.body.innerHTML = `<select id="pos-select"></select><select id="neg-select"></select>`;
+    importLists({
+      presets: [
+        { id: 'p1', title: 'p1', type: 'positive', items: ['a'] },
+        { id: 'n1', title: 'n1', type: 'negative', items: ['b'] }
+      ]
+    });
+    expect(lists.POS_PRESETS.p1).toEqual(['a']);
+    expect(lists.NEG_PRESETS.n1).toEqual(['b']);
+  });
+
+  test('exportState and importState round trip', () => {
+    const { state, exportState, importState } = require('../src/state');
+    state.shuffle.base = true;
+    state.seed = 123;
+    const json = exportState();
+    state.shuffle.base = false;
+    state.seed = null;
+    importState(JSON.parse(json));
+    expect(state.shuffle.base).toBe(true);
+    expect(state.seed).toBe(123);
+  });
 });
