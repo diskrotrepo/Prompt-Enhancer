@@ -50,6 +50,28 @@
     return raw.split(/\r?\n/).filter(line => line !== '');
   }
 
+  function parseOrderInput(raw) {
+    return parseInput(raw)
+      .map(n => parseInt(n, 10))
+      .filter(n => !isNaN(n));
+  }
+
+  function applyOrder(items, order) {
+    if (!order || !order.length) return items.slice();
+    return order.map(i => items[i % items.length]);
+  }
+
+  function insertAtDepth(phrase, term, depth) {
+    if (!term) return phrase;
+    const m = phrase.match(/(\s*)$/) || [''];
+    const trailing = m[0];
+    const trimmed = phrase.slice(0, phrase.length - trailing.length);
+    const words = trimmed.split(' ');
+    const pos = depth % (words.length + 1);
+    words.splice(pos, 0, term);
+    return words.join(' ') + trailing;
+  }
+
   function shuffle(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -69,7 +91,8 @@
     limit,
     shufflePrefixes = false,
     delimited = false,
-    dividers = []
+    dividers = [],
+    depths = []
   ) {
     if (!Array.isArray(orderedItems) || orderedItems.length === 0) return [];
     const items = orderedItems.slice();
@@ -82,8 +105,9 @@
     while (true) {
       const needDivider = idx > 0 && idx % items.length === 0 && dividerPool.length;
       const prefix = prefixPool.length ? prefixPool[idx % prefixPool.length] : '';
+      const depth = depths.length ? depths[idx % depths.length] : 0;
       const item = items[idx % items.length];
-      const term = prefix ? `${prefix} ${item}` : item;
+      const term = prefix ? insertAtDepth(item, prefix, depth) : item;
       const pieces = [];
       if (needDivider) pieces.push(dividerPool[divIdx % dividerPool.length]);
       pieces.push(term);
@@ -108,13 +132,14 @@
     stackSize = 1,
     shuffleMods = false,
     delimited = false,
-    dividers = []
+    dividers = [],
+    depths = []
   ) {
     const count = stackSize > 0 ? stackSize : 1;
     if (count === 1) {
       const mods = modifiers.slice();
       if (shuffleMods) shuffle(mods);
-      return buildPrefixedList(baseItems, mods, limit, false, delimited, dividers);
+      return buildPrefixedList(baseItems, mods, limit, false, delimited, dividers, depths);
     }
     const orders = [];
     for (let i = 0; i < count; i++) {
@@ -130,9 +155,10 @@
     while (true) {
       const needDivider = idx > 0 && idx % items.length === 0 && dividerPool.length;
       let term = items[idx % items.length];
+      const depth = depths.length ? depths[idx % depths.length] : 0;
       orders.forEach(mods => {
         const mod = mods[idx % mods.length];
-        term = mod ? `${mod} ${term}` : term;
+        term = mod ? insertAtDepth(term, mod, depth) : term;
       });
       const pieces = [];
       if (needDivider) pieces.push(dividerPool[divIdx % dividerPool.length]);
@@ -158,7 +184,8 @@
     stackSize = 1,
     shuffleMods = false,
     delimited = false,
-    dividers = []
+    dividers = [],
+    depths = []
   ) {
     const count = stackSize > 0 ? stackSize : 1;
     const orders = [];
@@ -181,9 +208,10 @@
         continue;
       }
       let term = base;
+      const depth = depths.length ? depths[modIdx % depths.length] : 0;
       orders.forEach(mods => {
         const mod = mods[modIdx % mods.length];
-        term = mod ? `${mod} ${term}` : term;
+        term = mod ? insertAtDepth(term, mod, depth) : term;
       });
       const candidate =
         (result.length ? result.join(delimited ? '' : ', ') + (delimited ? '' : ', ') : '') +
@@ -207,10 +235,15 @@
     dividers = [],
     shuffleDividers = true,
     posStackSize = 1,
-    negStackSize = 1
+    negStackSize = 1,
+    orderList = [],
+    depthList = []
   ) {
     if (!items.length) {
       return { positive: '', negative: '' };
+    }
+    if (orderList && orderList.length) {
+      items = applyOrder(items, orderList);
     }
     if (shuffleBase) shuffle(items);
     const delimited = /[,.!:;?\n]\s*$/.test(items[0]);
@@ -223,7 +256,8 @@
       posStackSize,
       shufflePos,
       delimited,
-      dividerPool
+      dividerPool,
+      depthList
     );
     const negTerms = includePosForNeg
       ? applyNegativeOnPositive(
@@ -233,7 +267,8 @@
           negStackSize,
           shuffleNeg,
           delimited,
-          dividerPool
+          dividerPool,
+          depthList
         )
       : applyModifierStack(
           items,
@@ -242,7 +277,8 @@
           negStackSize,
           shuffleNeg,
           delimited,
-          dividerPool
+          dividerPool,
+          depthList
         );
     const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
     return {
@@ -278,6 +314,9 @@
   const api = {
     parseInput,
     parseDividerInput,
+    parseOrderInput,
+    applyOrder,
+    insertAtDepth,
     shuffle,
     equalizeLength,
     buildPrefixedList,

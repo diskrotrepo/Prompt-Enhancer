@@ -20,6 +20,9 @@ The Prompt Enhancer helps you create more effective prompts by:
 - **Smart Cycling**: Automatically cycles through base prompts and modifiers
 - **Randomization Options**: Optional shuffling for each list independently
 - **Divider Lists**: Choose between simple or natural newline phrases and create your own
+- **Order Lists**: Reorder base prompts using numeric lists for deterministic sequences
+- **Insertion Depths**: Insert modifiers at specific word positions using saved depth lists
+- **State Saving**: Export or import all current settings for repeatable runs
 - **Character Limits**: Configurable output length limits (presets for Suno and Riffusion)
 - **No Dependencies**: Pure vanilla JavaScript, works completely offline
 - **Dark Theme**: Eye-friendly interface inspired by Diskrot
@@ -47,6 +50,8 @@ The Prompt Enhancer helps you create more effective prompts by:
 5. **Generate**:
    - Click "Generate" to create variations
    - Shuffle toggles control whether each list is randomized
+   - Use **Save State** to download a JSON snapshot of all lists and options
+   - Load the same file later with **Load State** for repeatable output
 
 ## How It Works
 

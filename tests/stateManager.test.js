@@ -33,6 +33,13 @@ function setupDOM() {
     <select id="lyrics-space"><option value="1">1</option><option value="2">2</option></select>
     <input type="checkbox" id="lyrics-remove-parens">
     <input type="checkbox" id="lyrics-remove-brackets">
+    <select id="order-select"></select>
+    <textarea id="order-input"></textarea>
+    <select id="insert-select"></select>
+    <textarea id="insert-input"></textarea>
+    <input type="radio" name="insert-mode" id="insert-prepend" checked>
+    <input type="radio" name="insert-mode" id="insert-append">
+    <input type="radio" name="insert-mode" id="insert-random">
     <pre id="positive-output"></pre>
     <pre id="negative-output"></pre>
     <pre id="lyrics-output"></pre>
@@ -48,7 +55,8 @@ function sampleLists() {
       { id: 'len', title: 'len', type: 'length', items: ['20'] },
       { id: 'div', title: 'div', type: 'divider', items: ['\nfoo '] },
       { id: 'base', title: 'base', type: 'base', items: ['cat'] },
-      { id: 'ly', title: 'ly', type: 'lyrics', items: ['la'] }
+      { id: 'ly', title: 'ly', type: 'lyrics', items: ['la'] },
+      { id: 'ord', title: 'ord', type: 'order', items: [0] }
     ]
   };
 }

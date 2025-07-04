@@ -1,6 +1,7 @@
 (function (global) {
   const utils = global.promptUtils || (typeof require !== 'undefined' && require('./promptUtils'));
   const lists = global.listManager || (typeof require !== 'undefined' && require('./listManager'));
+  const state = global.stateManager || (typeof require !== 'undefined' && require('./stateManager'));
 
   function applyPreset(selectEl, inputEl, presetsOrType) {
     let presets = presetsOrType;
@@ -53,6 +54,9 @@
     const negStackSize = parseInt(document.getElementById('neg-stack-size')?.value || '1', 10);
     const dividerMods = utils.parseDividerInput(document.getElementById('divider-input')?.value || '');
     const shuffleDividers = document.getElementById('divider-shuffle')?.checked;
+    const orderList = utils.parseOrderInput(document.getElementById('order-input')?.value || '');
+    const insertDepths = utils.parseOrderInput(document.getElementById('insert-input')?.value || '');
+    const insertMode = document.querySelector('input[name="insert-mode"]:checked')?.id || 'insert-prepend';
     const lengthSelect = document.getElementById('length-select');
     const lengthInput = document.getElementById('length-input');
     let limit = parseInt(lengthInput.value, 10);
@@ -75,7 +79,10 @@
       limit,
       includePosForNeg,
       dividerMods,
-      shuffleDividers
+      shuffleDividers,
+      orderList,
+      insertDepths,
+      insertMode
     };
   }
 
@@ -99,7 +106,10 @@
       limit,
       includePosForNeg,
       dividerMods,
-      shuffleDividers
+      shuffleDividers,
+      orderList,
+      insertDepths,
+      insertMode
     } = collectInputs();
     if (!baseItems.length) {
       alert('Please enter at least one base prompt item.');
@@ -118,7 +128,10 @@
       dividers,
       shuffleDividers,
       posStackOn ? posStackSize : 1,
-      negStackOn ? negStackSize : 1
+      negStackOn ? negStackSize : 1,
+      orderList,
+      insertDepths,
+      insertMode
     );
     displayOutput(result);
 
@@ -272,6 +285,17 @@
     });
   }
 
+  function generateDepthList(mode) {
+    const base = utils.parseInput(document.getElementById('base-input').value);
+    const vals = base.map(item => {
+      const count = item.split(/\s+/).filter(Boolean).length;
+      if (mode === 'append') return count;
+      if (mode === 'random') return Math.floor(Math.random() * (count + 1));
+      return 0;
+    });
+    document.getElementById('insert-input').value = vals.join(', ');
+  }
+
   function initializeUI() {
     lists.loadLists();
     applyPreset(document.getElementById('neg-select'), document.getElementById('neg-input'), 'negative');
@@ -280,6 +304,9 @@
     applyPreset(document.getElementById('divider-select'), document.getElementById('divider-input'), 'divider');
     applyPreset(document.getElementById('base-select'), document.getElementById('base-input'), 'base');
     applyPreset(document.getElementById('lyrics-select'), document.getElementById('lyrics-input'), 'lyrics');
+    applyPreset(document.getElementById('order-select'), document.getElementById('order-input'), 'order');
+    applyPreset(document.getElementById('insert-select'), document.getElementById('insert-input'), 'order');
+    generateDepthList('prepend');
 
     setupPresetListener('neg-select', 'neg-input', 'negative');
     setupPresetListener('pos-select', 'pos-input', 'positive');
@@ -287,6 +314,8 @@
     setupPresetListener('divider-select', 'divider-input', 'divider');
     setupPresetListener('base-select', 'base-input', 'base');
     setupPresetListener('lyrics-select', 'lyrics-input', 'lyrics');
+    setupPresetListener('order-select', 'order-input', 'order');
+    setupPresetListener('insert-select', 'insert-input', 'order');
     document.getElementById('generate').addEventListener('click', generate);
 
     setupToggleButtons();
@@ -346,6 +375,63 @@
     if (divSave) divSave.addEventListener('click', () => lists.saveList('divider'));
     const lyricsSave = document.getElementById('lyrics-save');
     if (lyricsSave) lyricsSave.addEventListener('click', () => lists.saveList('lyrics'));
+    const orderSave = document.getElementById('order-save');
+    if (orderSave) orderSave.addEventListener('click', () => lists.saveList('order'));
+    const insertSave = document.getElementById('insert-save');
+    if (insertSave) insertSave.addEventListener('click', () => lists.saveList('order'));
+
+    const modes = {
+      'insert-prepend': 'prepend',
+      'insert-append': 'append',
+      'insert-random': 'random'
+    };
+    Object.keys(modes).forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', () => {
+          if (el.checked) generateDepthList(modes[id]);
+        });
+      }
+    });
+
+    const saveStateBtn = document.getElementById('save-state');
+    const loadStateBtn = document.getElementById('load-state');
+    const stateFile = document.getElementById('state-file');
+    if (saveStateBtn) {
+      saveStateBtn.addEventListener('click', () => {
+        state.loadFromDOM();
+        const blob = new Blob([state.exportState()], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'state.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+    }
+    if (loadStateBtn && stateFile) {
+      loadStateBtn.addEventListener('click', () => {
+        stateFile.click();
+      });
+      stateFile.addEventListener('change', e => {
+        const f = e.target.files[0];
+        if (f) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const data = JSON.parse(reader.result);
+              state.importState(data);
+            } catch (err) {
+              alert('Invalid state file');
+            }
+          };
+          reader.readAsText(f);
+        }
+        stateFile.value = '';
+      });
+    }
   }
 
   const api = {

@@ -49,6 +49,7 @@ entry in `ALL_LISTS.presets` has the shape:
 { id: 'example', title: 'Some title', type: 'negative', items: ['item1', 'item2'] }
 ```
 
-`type` can be `negative`, `positive` or `length` (length lists contain a single
-numeric value). The file is large but purely data driven, so you rarely need to
-inspect it when working on functionality.
+`type` can be `negative`, `positive`, `length`, or `order` (numeric arrays used
+for reordering and insertion). Length lists contain a single numeric value. The
+file is large but purely data driven, so you rarely need to inspect it when
+working on functionality.

@@ -61,6 +61,20 @@ describe('Utility functions', () => {
     expect(parseDividerInput(raw)).toEqual(['foo ', 'bar  ']);
   });
 
+  test('parseOrderInput parses numbers', () => {
+    expect(utils.parseOrderInput('1, 2,3')).toEqual([1, 2, 3]);
+  });
+
+  test('applyOrder reorders items', () => {
+    const out = utils.applyOrder(['a', 'b', 'c'], [2, 0]);
+    expect(out).toEqual(['c', 'a']);
+  });
+
+  test('insertAtDepth inserts term correctly', () => {
+    const out = utils.insertAtDepth('a b c', 'X', 1);
+    expect(out).toBe('a X b c');
+  });
+
   test('shuffle retains all items', () => {
     const arr = [1, 2, 3, 4];
     const result = shuffle(arr.slice());

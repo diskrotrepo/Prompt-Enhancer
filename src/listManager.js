@@ -6,6 +6,7 @@
   let DIVIDER_PRESETS = {};
   let BASE_PRESETS = {};
   let LYRICS_PRESETS = {};
+  let ORDER_PRESETS = {};
 
   let LISTS;
   if (typeof ALL_LISTS !== 'undefined' && Array.isArray(ALL_LISTS.presets)) {
@@ -55,6 +56,7 @@
     const divs = [];
     const base = [];
     const lyrics = [];
+    const orders = [];
     if (LISTS.presets && Array.isArray(LISTS.presets)) {
       LISTS.presets.forEach(p => {
         if (p.type === 'negative') {
@@ -75,6 +77,9 @@
         } else if (p.type === 'lyrics') {
           LYRICS_PRESETS[p.id] = p.items || [];
           lyrics.push(p);
+        } else if (p.type === 'order') {
+          ORDER_PRESETS[p.id] = p.items || [];
+          orders.push(p);
         }
       });
     }
@@ -90,6 +95,8 @@
     if (baseSelect) populateSelect(baseSelect, base);
     const lyricsSelect = document.getElementById('lyrics-select');
     if (lyricsSelect) populateSelect(lyricsSelect, lyrics);
+    const orderSelect = document.getElementById('order-select');
+    if (orderSelect) populateSelect(orderSelect, orders);
   }
 
   function exportLists() {
@@ -162,7 +169,8 @@
       positive: { select: 'pos-select', input: 'pos-input', store: POS_PRESETS },
       length: { select: 'length-select', input: 'length-input', store: LENGTH_PRESETS },
       divider: { select: 'divider-select', input: 'divider-input', store: DIVIDER_PRESETS },
-      lyrics: { select: 'lyrics-select', input: 'lyrics-input', store: LYRICS_PRESETS }
+      lyrics: { select: 'lyrics-select', input: 'lyrics-input', store: LYRICS_PRESETS },
+      order: { select: 'order-select', input: 'order-input', store: ORDER_PRESETS }
     };
     const cfg = map[type];
     if (!cfg) return;
@@ -176,6 +184,8 @@
       items = utils ? utils.parseDividerInput(inp.value) : [];
     } else if (type === 'lyrics') {
       items = [inp.value];
+    } else if (type === 'order') {
+      items = utils ? utils.parseOrderInput(inp.value) : [];
     } else {
       items = utils ? utils.parseInput(inp.value) : [];
     }
@@ -201,6 +211,7 @@
     get DIVIDER_PRESETS() { return DIVIDER_PRESETS; },
     get BASE_PRESETS() { return BASE_PRESETS; },
     get LYRICS_PRESETS() { return LYRICS_PRESETS; },
+    get ORDER_PRESETS() { return ORDER_PRESETS; },
     loadLists,
     exportLists,
     importLists,

@@ -39,6 +39,9 @@
             <button type="button" id="load-lists">Load</button>
             <button type="button" id="additive-load">Additive Load</button>
             <button type="button" id="download-lists">Save</button>
+            <input type="file" id="state-file" accept="application/json" style="display:none">
+            <button type="button" id="load-state">Load State</button>
+            <button type="button" id="save-state">Save State</button>
           </div>
         </div>
         <!-- Hide all toggle -->
@@ -84,6 +87,46 @@
           <select id="base-select"></select>
           <div class="input-row">
             <textarea id="base-input" rows="4" placeholder="Enter comma, semicolon, or newline separated items"></textarea>
+          </div>
+        </div>
+        <!-- Order list section -->
+        <div class="input-group">
+          <div class="label-row">
+            <label for="order-input">Order List</label>
+            <div class="button-col">
+              <button type="button" id="order-save" class="save-button icon-button" title="Save">&#128190;</button>
+              <button type="button" class="copy-button icon-button" data-target="order-input" title="Copy">&#128203;</button>
+              <input type="checkbox" id="order-hide" data-targets="order-input" hidden>
+              <button type="button" class="toggle-button icon-button hide-button" data-target="order-hide" data-on="☰" data-off="✖">☰</button>
+            </div>
+          </div>
+          <select id="order-select"></select>
+          <div class="input-row">
+            <textarea id="order-input" rows="2" placeholder="Numeric order list"></textarea>
+          </div>
+        </div>
+        <!-- Insertion depth section -->
+        <div class="input-group">
+          <div class="label-row">
+            <label for="insert-input">Insertion Depths</label>
+            <div class="button-col">
+              <button type="button" id="insert-save" class="save-button icon-button" title="Save">&#128190;</button>
+              <button type="button" class="copy-button icon-button" data-target="insert-input" title="Copy">&#128203;</button>
+              <input type="checkbox" id="insert-hide" data-targets="insert-input,insert-prepend,insert-append,insert-random" hidden>
+              <button type="button" class="toggle-button icon-button hide-button" data-target="insert-hide" data-on="☰" data-off="✖">☰</button>
+            </div>
+          </div>
+          <select id="insert-select"></select>
+          <div class="input-row">
+            <textarea id="insert-input" rows="2" placeholder="Insertion depths"></textarea>
+          </div>
+          <div class="label-row">
+            <input type="radio" name="insert-mode" id="insert-prepend" checked>
+            <label for="insert-prepend">Prepend</label>
+            <input type="radio" name="insert-mode" id="insert-append">
+            <label for="insert-append">Append</label>
+            <input type="radio" name="insert-mode" id="insert-random">
+            <label for="insert-random">Random Depth</label>
           </div>
         </div>
         <!-- Positive modifier selection section -->

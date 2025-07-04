@@ -708,6 +708,16 @@ const ALL_LISTS = {
         "Let me put it this way. "
       ],
       "type": "divider"
+    },
+    {
+      "id": "order-sample",
+      "title": "Sample Order",
+      "items": [
+        0,
+        1,
+        2
+      ],
+      "type": "order"
     }
   ]
 };
