@@ -488,4 +488,20 @@ describe('List persistence', () => {
       applyPreset(divSelect, divInput, 'divider');
     expect(divInput.value).toBe('foo');
   });
+
+  test('importLists combine without overwrite', () => {
+    importLists({ presets: [{ id: 'a', title: 'a', type: 'positive', items: ['x'] }] });
+    importLists({ presets: [{ id: 'a', title: 'a', type: 'positive', items: ['y'] }] }, true, false);
+    const data = JSON.parse(exportLists());
+    const preset = data.presets.find(p => p.id === 'a' && p.type === 'positive');
+    expect(preset.items).toEqual(['x']);
+  });
+
+  test('importLists combine with overwrite', () => {
+    importLists({ presets: [{ id: 'b', title: 'b', type: 'positive', items: ['x'] }] });
+    importLists({ presets: [{ id: 'b', title: 'b', type: 'positive', items: ['y'] }] }, true, true);
+    const data = JSON.parse(exportLists());
+    const preset = data.presets.find(p => p.id === 'b' && p.type === 'positive');
+    expect(preset.items).toEqual(['y']);
+  });
 });

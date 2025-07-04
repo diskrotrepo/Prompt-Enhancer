@@ -820,16 +820,38 @@ function exportLists() {
 }
 
 // Replace LISTS with the provided object and reload presets
-function importLists(obj) {
+function importLists(obj, combine = false, overwrite = true) {
   if (!obj || typeof obj !== 'object' || !Array.isArray(obj.presets)) return;
-  LISTS = {
-    presets: obj.presets.map(p => ({
-      id: p.id,
-      title: p.title,
-      type: p.type,
-      items: Array.isArray(p.items) ? p.items : []
-    }))
-  };
+  if (!combine) {
+    LISTS = {
+      presets: obj.presets.map(p => ({
+        id: p.id,
+        title: p.title,
+        type: p.type,
+        items: Array.isArray(p.items) ? p.items : []
+      }))
+    };
+  } else {
+    const existing = {};
+    LISTS.presets.forEach(p => {
+      existing[`${p.type}:${p.id}`] = p;
+    });
+    obj.presets.forEach(p => {
+      const key = `${p.type}:${p.id}`;
+      if (existing[key]) {
+        if (overwrite) {
+          existing[key].items = Array.isArray(p.items) ? p.items : [];
+        }
+      } else {
+        LISTS.presets.push({
+          id: p.id,
+          title: p.title,
+          type: p.type,
+          items: Array.isArray(p.items) ? p.items : []
+        });
+      }
+    });
+  }
   loadLists();
 }
 
@@ -839,7 +861,11 @@ function loadListsFromFile(file) {
   reader.onload = () => {
     try {
       const data = JSON.parse(reader.result);
-      importLists(data);
+      const combineCb = document.getElementById('combine-lists');
+      const overwriteCb = document.getElementById('overwrite-lists');
+      const combine = combineCb ? combineCb.checked : false;
+      const overwrite = overwriteCb ? overwriteCb.checked : true;
+      importLists(data, combine, overwrite);
     } catch (err) {
       alert('Invalid lists file');
     }
@@ -939,6 +965,16 @@ function initializeUI() {
   setupStackControls();
   setupShuffleAll();
   const hideCheckboxes = setupHideToggles();
+
+  const combineCb = document.getElementById('combine-lists');
+  const overWrap = document.getElementById('overwrite-wrapper');
+  if (combineCb && overWrap) {
+    const update = () => {
+      overWrap.style.display = combineCb.checked ? '' : 'none';
+    };
+    combineCb.addEventListener('change', update);
+    update();
+  }
 
   const allHide = document.getElementById('all-hide');
   if (allHide) {
