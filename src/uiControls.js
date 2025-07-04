@@ -1,6 +1,7 @@
 (function (global) {
   const utils = global.promptUtils || (typeof require !== 'undefined' && require('./promptUtils'));
   const lists = global.listManager || (typeof require !== 'undefined' && require('./listManager'));
+  const state = global.stateManager || (typeof require !== "undefined" && require("./state"));
 
   function applyPreset(selectEl, inputEl, presetsOrType) {
     let presets = presetsOrType;
@@ -40,26 +41,28 @@
   }
 
   function collectInputs() {
-    const baseItems = utils.parseInput(document.getElementById('base-input').value, true);
-    const negMods = utils.parseInput(document.getElementById('neg-input').value);
-    const posMods = utils.parseInput(document.getElementById('pos-input').value);
-    const shuffleBase = document.getElementById('base-shuffle').checked;
-    const shufflePos = document.getElementById('pos-shuffle').checked;
-    const posStackOn = document.getElementById('pos-stack').checked;
-    const posStackSize = parseInt(document.getElementById('pos-stack-size')?.value || '1', 10);
-    const includePosForNeg = document.getElementById('neg-include-pos').checked;
-    const shuffleNeg = document.getElementById('neg-shuffle').checked;
-    const negStackOn = document.getElementById('neg-stack').checked;
-    const negStackSize = parseInt(document.getElementById('neg-stack-size')?.value || '1', 10);
-    const dividerMods = utils.parseDividerInput(document.getElementById('divider-input')?.value || '');
-    const shuffleDividers = document.getElementById('divider-shuffle')?.checked;
-    const lengthSelect = document.getElementById('length-select');
-    const lengthInput = document.getElementById('length-input');
-    let limit = parseInt(lengthInput.value, 10);
+    const s = state.getState();
+    const baseItems = utils.parseInput(s.text.base, true);
+    const negMods = utils.parseInput(s.text.negative);
+    const posMods = utils.parseInput(s.text.positive);
+    const shuffleBase = s.shuffle.base;
+    const shufflePos = s.shuffle.positive;
+    const posStackOn = s.stack.posOn;
+    const posStackSize = parseInt(s.stack.posSize || "1", 10);
+    const includePosForNeg = s.includePosForNeg;
+    const shuffleNeg = s.shuffle.negative;
+    const negStackOn = s.stack.negOn;
+    const negStackSize = parseInt(s.stack.negSize || "1", 10);
+    const dividerMods = utils.parseDividerInput(s.text.dividers || "");
+    const shuffleDividers = s.shuffle.dividers;
+    let limit = parseInt(s.limit, 10);
     if (isNaN(limit) || limit <= 0) {
-      const preset = lists.LENGTH_PRESETS[lengthSelect.value];
+      const preset = lists.LENGTH_PRESETS[s.presets.length];
       limit = preset ? parseInt(preset[0], 10) : 1000;
-      lengthInput.value = limit;
+      if (typeof document !== "undefined") {
+        const lenInput = document.getElementById("length-input");
+        if (lenInput) lenInput.value = limit;
+      }
     }
     return {
       baseItems,
@@ -346,6 +349,20 @@
     if (divSave) divSave.addEventListener('click', () => lists.saveList('divider'));
     const lyricsSave = document.getElementById('lyrics-save');
     if (lyricsSave) lyricsSave.addEventListener('click', () => lists.saveList('lyrics'));
+    const stateLoad = document.getElementById("load-state");
+    const stateSave = document.getElementById("save-state");
+    const stateFile = document.getElementById("state-file");
+    if (stateLoad && stateFile) {
+      stateLoad.addEventListener("click", () => stateFile.click());
+    }
+    if (stateFile) {
+      stateFile.addEventListener("change", e => {
+        const f = e.target.files[0];
+        if (f) state.loadState(f);
+        stateFile.value = "";
+      });
+    }
+    if (stateSave) stateSave.addEventListener("click", state.saveState);
   }
 
   const api = {
