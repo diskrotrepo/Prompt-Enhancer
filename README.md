@@ -29,6 +29,8 @@ The Prompt Enhancer helps you create more effective prompts by:
 - **Deterministic Ordering**: Canonical or randomized lists control item ordering
 - **Divider Ordering**: Control divider list order with canonical or random presets
 - **Quick Actions**: One toggle sets all list ordering menus to canonical or randomized
+- **Reroll Buttons**: Dice icons reroll random orders or switch the mode to random
+- **Reroll on Generate**: Quick action toggle controls whether random lists reroll each time
 
 ## How to Use
 

@@ -1,6 +1,10 @@
 (function (global) {
-  const utils = global.promptUtils || (typeof require !== 'undefined' && require('./promptUtils'));
-  const lists = global.listManager || (typeof require !== 'undefined' && require('./listManager'));
+  const utils =
+    global.promptUtils || (typeof require !== 'undefined' && require('./promptUtils'));
+  const lists =
+    global.listManager || (typeof require !== 'undefined' && require('./listManager'));
+  const state =
+    global.stateManager || (typeof require !== 'undefined' && require('./stateManager'));
 
   function applyPreset(selectEl, inputEl, presetsOrType) {
     let presets = presetsOrType;
@@ -95,6 +99,7 @@
   }
 
   function generate() {
+    rerollRandomOrders();
     const {
       baseItems,
       negMods,
@@ -382,6 +387,35 @@
     select.dispatchEvent(new Event('change'));
   }
 
+  function setupRerollButton(btnId, selectId) {
+    const btn = document.getElementById(btnId);
+    const select = document.getElementById(selectId);
+    if (!btn || !select) return;
+    const reroll = () => {
+      if (select.value !== 'random') {
+        select.value = 'random';
+      }
+      select.dispatchEvent(new Event('change'));
+    };
+    btn.addEventListener('click', reroll);
+    const update = () => {
+      btn.classList.toggle('active', select.value === 'random');
+    };
+    select.addEventListener('change', update);
+    update();
+  }
+
+  function rerollRandomOrders() {
+    const toggle = document.getElementById('reroll-on-gen');
+    if (!toggle || !toggle.checked) return;
+    ['base-order-select', 'pos-order-select', 'neg-order-select', 'divider-order-select', 'insert-select'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (sel && sel.value === 'random') {
+        sel.dispatchEvent(new Event('change'));
+      }
+    });
+  }
+
   function setupStateButtons() {
     const saveBtn = document.getElementById('save-state');
     const loadBtn = document.getElementById('load-state');
@@ -452,6 +486,11 @@
     setupOrderControl('divider-order-select', 'divider-order-input', () =>
       utils.parseDividerInput(document.getElementById('divider-input').value || '')
     );
+    setupRerollButton('base-reroll', 'base-order-select');
+    setupRerollButton('pos-reroll', 'pos-order-select');
+    setupRerollButton('neg-reroll', 'neg-order-select');
+    setupRerollButton('divider-reroll', 'divider-order-select');
+    setupRerollButton('insert-reroll', 'insert-select');
     document.getElementById('generate').addEventListener('click', generate);
 
     setupToggleButtons();
@@ -531,6 +570,9 @@
     setupCopyButtons,
     setupDepthControls,
     setupStateButtons,
+    setupOrderControl,
+    rerollRandomOrders,
+    setupRerollButton,
     initializeUI
   };
 

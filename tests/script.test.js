@@ -24,7 +24,15 @@ const {
 
 const { exportLists, importLists, saveList } = lists;
 
-const { setupShuffleAll, setupStackControls, setupHideToggles, applyPreset } = ui;
+const {
+  setupShuffleAll,
+  setupStackControls,
+  setupHideToggles,
+  applyPreset,
+  setupOrderControl,
+  setupRerollButton,
+  rerollRandomOrders
+} = ui;
 
 describe('Utility functions', () => {
   test('parseInput splits and trims correctly', () => {
@@ -348,6 +356,54 @@ describe('UI interactions', () => {
     cb.checked = false;
     cb.dispatchEvent(new Event('change'));
     expect(txt.style.display).toBe('');
+  });
+
+  test('reroll button switches select to random and shuffles', () => {
+    document.body.innerHTML = `
+      <select id="base-order-select">
+        <option value="canonical">c</option>
+        <option value="random">r</option>
+      </select>
+      <textarea id="base-order-input"></textarea>
+      <button id="base-reroll" class="toggle-button random-button" data-select="base-order-select"></button>
+    `;
+    const orig = utils.shuffle;
+    utils.shuffle = jest.fn(arr => {
+      arr.reverse();
+      return arr;
+    });
+    setupOrderControl('base-order-select', 'base-order-input', () => ['a', 'b', 'c']);
+    setupRerollButton('base-reroll', 'base-order-select');
+    document.getElementById('base-reroll').click();
+    utils.shuffle = orig;
+    expect(document.getElementById('base-order-select').value).toBe('random');
+    expect(document.getElementById('base-order-input').value).toBe('2, 1, 0');
+  });
+
+  test('rerollRandomOrders updates random selects when enabled', () => {
+    document.body.innerHTML = `
+      <select id="base-order-select">
+        <option value="canonical">c</option>
+        <option value="random">r</option>
+      </select>
+      <textarea id="base-order-input"></textarea>
+      <input type="checkbox" id="reroll-on-gen" checked>
+    `;
+    const orig = utils.shuffle;
+    utils.shuffle = jest
+      .fn()
+      .mockImplementationOnce(arr => {
+        arr.reverse();
+        return arr;
+      })
+      .mockImplementationOnce(arr => arr);
+    setupOrderControl('base-order-select', 'base-order-input', () => ['a', 'b']);
+    document.getElementById('base-order-select').value = 'random';
+    document.getElementById('base-order-select').dispatchEvent(new Event('change'));
+    const before = document.getElementById('base-order-input').value;
+    rerollRandomOrders();
+    utils.shuffle = orig;
+    expect(document.getElementById('base-order-input').value).not.toBe(before);
   });
 });
 

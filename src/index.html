@@ -52,6 +52,8 @@
             <button type="button" class="toggle-button" data-target="all-hide" data-on="All hidden" data-off="All visible">All visible</button>
             <input type="checkbox" id="all-random" hidden>
             <button type="button" class="toggle-button" data-target="all-random" data-on="Randomized" data-off="Canonical">Canonical</button>
+            <input type="checkbox" id="reroll-on-gen" checked hidden>
+            <button type="button" class="toggle-button" data-target="reroll-on-gen" data-on="Reroll On Gen" data-off="Static">Reroll On Gen</button>
           </div>
         </div>
         <div class="input-group">
@@ -60,6 +62,7 @@
             <div class="button-col">
               <input type="checkbox" id="divider-shuffle" hidden>
               <button type="button" id="divider-save" class="save-button icon-button" title="Save">&#128190;</button>
+              <button type="button" id="divider-reroll" class="toggle-button icon-button random-button" title="Reroll">&#127922;</button>
               <button type="button" class="copy-button icon-button" data-target="divider-input" title="Copy">&#128203;</button>
               <input type="checkbox" id="divider-hide" data-targets="divider-input,divider-order-input" hidden>
               <button type="button" class="toggle-button icon-button hide-button" data-target="divider-hide" data-on="☰" data-off="✖">☰</button>
@@ -81,6 +84,7 @@
             <div class="button-col">
               <input type="checkbox" id="base-shuffle" hidden>
               <button type="button" id="base-save" class="save-button icon-button" title="Save">&#128190;</button>
+              <button type="button" id="base-reroll" class="toggle-button icon-button random-button" title="Reroll">&#127922;</button>
               <button type="button" class="copy-button icon-button" data-target="base-input" title="Copy">&#128203;</button>
               <input type="checkbox" id="base-hide" data-targets="base-input,base-order-input" hidden>
               <button type="button" class="toggle-button icon-button hide-button" data-target="base-hide" data-on="☰" data-off="✖">☰</button>
@@ -104,6 +108,7 @@
               <div class="button-col">
                 <input type="checkbox" id="pos-shuffle" hidden>
                 <button type="button" id="pos-save" class="save-button icon-button" title="Save">&#128190;</button>
+                <button type="button" id="pos-reroll" class="toggle-button icon-button random-button" title="Reroll">&#127922;</button>
                 <button type="button" class="copy-button icon-button" data-target="pos-input" title="Copy">&#128203;</button>
                 <input type="checkbox" id="pos-hide" data-targets="pos-input,pos-order-input" hidden>
                 <button type="button" class="toggle-button icon-button hide-button" data-target="pos-hide" data-on="☰" data-off="✖">☰</button>
@@ -136,6 +141,7 @@
               <div class="button-col">
                 <input type="checkbox" id="neg-shuffle" hidden>
                 <button type="button" id="neg-save" class="save-button icon-button" title="Save">&#128190;</button>
+                <button type="button" id="neg-reroll" class="toggle-button icon-button random-button" title="Reroll">&#127922;</button>
                 <button type="button" class="copy-button icon-button" data-target="neg-input" title="Copy">&#128203;</button>
                 <input type="checkbox" id="neg-hide" data-targets="neg-input,neg-order-input" hidden>
                 <button type="button" class="toggle-button icon-button hide-button" data-target="neg-hide" data-on="☰" data-off="✖">☰</button>
@@ -180,6 +186,7 @@
         <label for="insert-input">Insertion Depths</label>
         <div class="button-col">
           <button type="button" id="insert-save" class="save-button icon-button" title="Save">&#128190;</button>
+          <button type="button" id="insert-reroll" class="toggle-button icon-button random-button" title="Reroll">&#127922;</button>
           <button type="button" class="copy-button icon-button" data-target="insert-input" title="Copy">&#128203;</button>
           <input type="checkbox" id="insert-hide" data-targets="insert-input" hidden>
           <button type="button" class="toggle-button icon-button hide-button" data-target="insert-hide" data-on="☰" data-off="✖">☰</button>

@@ -38,6 +38,7 @@ function setupDOM() {
     <textarea id="insert-input"></textarea>
     <select id="length-select"></select>
     <input id="length-input">
+    <input type="checkbox" id="reroll-on-gen">
     <select id="lyrics-select"></select>
     <textarea id="lyrics-input"></textarea>
     <select id="lyrics-space"><option value="1">1</option><option value="2">2</option></select>

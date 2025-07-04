@@ -51,7 +51,8 @@
     'neg-order-input',
     'neg-order-select',
     'divider-order-input',
-    'divider-order-select'
+    'divider-order-select',
+    'reroll-on-gen'
   ];
 
   function loadFromDOM() {
