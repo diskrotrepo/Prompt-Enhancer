@@ -554,3 +554,22 @@ describe('List persistence', () => {
     expect(lists.length).toBe(2);
   });
 });
+
+const stateModule = require('../src/state');
+const { state, exportState, importState } = stateModule;
+
+describe('State persistence', () => {
+  test('exportState and importState round trip', () => {
+    state.presets.positive = { a: ['1'] };
+    state.shuffleFlags.base = true;
+    state.seed = 42;
+    const json = exportState();
+    state.presets.positive = {};
+    state.shuffleFlags.base = false;
+    state.seed = null;
+    importState(JSON.parse(json));
+    expect(state.presets.positive).toEqual({ a: ['1'] });
+    expect(state.shuffleFlags.base).toBe(true);
+    expect(state.seed).toBe(42);
+  });
+});
