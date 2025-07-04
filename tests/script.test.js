@@ -7,6 +7,7 @@ if (typeof window !== 'undefined') {
 
 const utils = require('../src/promptUtils');
 const lists = require('../src/listManager');
+const stateModule = require('../src/state');
 const ui = require('../src/uiControls');
 
 const {
@@ -20,6 +21,7 @@ const {
 } = utils;
 
 const { exportLists, importLists, saveList } = lists;
+const { state, exportState, importState } = stateModule;
 
 const { setupShuffleAll, setupStackControls, setupHideToggles, applyPreset } = ui;
 
@@ -552,5 +554,27 @@ describe('List persistence', () => {
     const data = JSON.parse(exportLists());
     const lists = data.presets.filter(p => p.id === 'a' && p.type === 'positive');
     expect(lists.length).toBe(2);
+  });
+
+  test('exportState and importState round trip', () => {
+    state.shuffle.base = true;
+    state.shuffle.positive = true;
+    state.seed = 42;
+    state.presets.negative.test = ['x'];
+    const json = exportState();
+    state.shuffle.base = false;
+    state.shuffle.positive = false;
+    state.seed = null;
+    state.presets.negative = {};
+    importState(JSON.parse(json));
+    expect(exportState()).toBe(json);
+  });
+
+  test('importLists populates state presets and options', () => {
+    document.body.innerHTML = '<select id="pos-select"></select>';
+    importLists({ presets: [{ id: 'p1', title: 'p1', type: 'positive', items: ['a'] }] });
+    expect(state.presets.positive.p1).toEqual(['a']);
+    const opt = document.querySelector('#pos-select option[value="p1"]');
+    expect(opt).not.toBeNull();
   });
 });
