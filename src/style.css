@@ -440,6 +440,7 @@ button {
   column-gap: 0.25rem;
   align-items: center;
   margin-left: 0.25rem;
+  vertical-align: middle;
 }
 .button-col .icon-button {
   width: 1.8rem;
@@ -449,6 +450,7 @@ button {
   align-items: center;
   padding: 0;
   margin: 0;
+  vertical-align: middle;
 }
 .button-col .random-button { grid-column: 1; }
 .button-col .save-button { grid-column: 2; }
