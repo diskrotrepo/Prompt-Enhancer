@@ -10,17 +10,21 @@ const {
   shuffle,
   equalizeLength,
   buildPrefixedList,
+  applyModifierStack,
+  applyNegativeOnPositive,
   buildVersions,
   processLyrics,
+  parseDividerInput,
+} = require('../src/promptUtils');
+
+const {
   setupShuffleAll,
   setupStackControls,
   setupHideToggles,
   applyPreset,
-  parseDividerInput,
-  exportLists,
-  importLists,
-  saveList,
-} = require('../src/script');
+} = require('../src/uiControls');
+
+const { exportLists, importLists, saveList } = require('../src/listManager');
 
 describe('Utility functions', () => {
   test('parseInput splits and trims correctly', () => {
