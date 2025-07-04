@@ -20,28 +20,32 @@
   const FIELD_IDS = [
     'base-input',
     'base-select',
-    'base-shuffle',
+    'base-order-input',
+    'base-order-select',
     'pos-input',
     'pos-select',
-    'pos-shuffle',
+    'pos-order-input',
+    'pos-order-select',
     'pos-stack',
     'pos-stack-size',
     'neg-input',
     'neg-select',
-    'neg-shuffle',
+    'neg-order-input',
+    'neg-order-select',
     'neg-stack',
     'neg-stack-size',
     'neg-include-pos',
     'divider-input',
     'divider-select',
-    'divider-shuffle',
     'length-input',
     'length-select',
     'lyrics-input',
     'lyrics-select',
     'lyrics-space',
     'lyrics-remove-parens',
-    'lyrics-remove-brackets'
+    'lyrics-remove-brackets',
+    'insert-input',
+    'insert-select'
   ];
 
   function loadFromDOM() {

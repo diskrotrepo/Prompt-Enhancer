@@ -6,6 +6,7 @@
   let DIVIDER_PRESETS = {};
   let BASE_PRESETS = {};
   let LYRICS_PRESETS = {};
+  let ORDER_PRESETS = {};
 
   let LISTS;
   if (typeof ALL_LISTS !== 'undefined' && Array.isArray(ALL_LISTS.presets)) {
@@ -42,6 +43,16 @@
     });
   }
 
+  function populateOrderSelect(selectEl, presets) {
+    if (!selectEl) return;
+    const list = [
+      { id: 'canonical', title: 'Canonical' },
+      { id: 'random', title: 'Randomized' },
+      ...presets
+    ];
+    populateSelect(selectEl, list);
+  }
+
   function loadLists() {
     NEG_PRESETS = {};
     POS_PRESETS = {};
@@ -55,6 +66,7 @@
     const divs = [];
     const base = [];
     const lyrics = [];
+    const order = [];
     if (LISTS.presets && Array.isArray(LISTS.presets)) {
       LISTS.presets.forEach(p => {
         if (p.type === 'negative') {
@@ -75,6 +87,9 @@
         } else if (p.type === 'lyrics') {
           LYRICS_PRESETS[p.id] = p.items || [];
           lyrics.push(p);
+        } else if (p.type === 'order') {
+          ORDER_PRESETS[p.id] = p.items || [];
+          order.push(p);
         }
       });
     }
@@ -90,6 +105,14 @@
     if (baseSelect) populateSelect(baseSelect, base);
     const lyricsSelect = document.getElementById('lyrics-select');
     if (lyricsSelect) populateSelect(lyricsSelect, lyrics);
+    const orderSelect = document.getElementById('insert-select');
+    if (orderSelect) populateOrderSelect(orderSelect, order);
+    const baseOrderSelect = document.getElementById('base-order-select');
+    if (baseOrderSelect) populateOrderSelect(baseOrderSelect, order);
+    const posOrderSelect = document.getElementById('pos-order-select');
+    if (posOrderSelect) populateOrderSelect(posOrderSelect, order);
+    const negOrderSelect = document.getElementById('neg-order-select');
+    if (negOrderSelect) populateOrderSelect(negOrderSelect, order);
   }
 
   function exportLists() {
@@ -162,7 +185,11 @@
       positive: { select: 'pos-select', input: 'pos-input', store: POS_PRESETS },
       length: { select: 'length-select', input: 'length-input', store: LENGTH_PRESETS },
       divider: { select: 'divider-select', input: 'divider-input', store: DIVIDER_PRESETS },
-      lyrics: { select: 'lyrics-select', input: 'lyrics-input', store: LYRICS_PRESETS }
+      lyrics: { select: 'lyrics-select', input: 'lyrics-input', store: LYRICS_PRESETS },
+      order: { select: 'insert-select', input: 'insert-input', store: ORDER_PRESETS },
+      'base-order': { select: 'base-order-select', input: 'base-order-input', store: ORDER_PRESETS },
+      'pos-order': { select: 'pos-order-select', input: 'pos-order-input', store: ORDER_PRESETS },
+      'neg-order': { select: 'neg-order-select', input: 'neg-order-input', store: ORDER_PRESETS }
     };
     const cfg = map[type];
     if (!cfg) return;
@@ -201,6 +228,7 @@
     get DIVIDER_PRESETS() { return DIVIDER_PRESETS; },
     get BASE_PRESETS() { return BASE_PRESETS; },
     get LYRICS_PRESETS() { return LYRICS_PRESETS; },
+    get ORDER_PRESETS() { return ORDER_PRESETS; },
     loadLists,
     exportLists,
     importLists,

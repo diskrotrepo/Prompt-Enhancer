@@ -18,12 +18,14 @@ The Prompt Enhancer helps you create more effective prompts by:
   - Image positive lists (quality enhancers)
 - **Custom Lists**: Full support for user-defined modifier lists
 - **Smart Cycling**: Automatically cycles through base prompts and modifiers
-- **Randomization Options**: Optional shuffling for each list independently
+- **Order Lists**: Canonical or randomized numeric sequences for deterministic modifier ordering
 - **Divider Lists**: Choose between simple or natural newline phrases and create your own
 - **Character Limits**: Configurable output length limits (presets for Suno and Riffusion)
 - **No Dependencies**: Pure vanilla JavaScript, works completely offline
 - **Dark Theme**: Eye-friendly interface inspired by Diskrot
 - **Quick Copy Buttons**: Every textbox has a copy icon that briefly turns blue with a check mark when clicked
+- **Insertion Depths**: Specify numeric lists for modifier insertion positions
+- **State Saving**: Export and reload all current inputs for repeatable output
 
 ## How to Use
 

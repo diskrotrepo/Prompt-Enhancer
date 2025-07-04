@@ -17,6 +17,9 @@ const {
   buildVersions,
   processLyrics,
   parseDividerInput,
+  parseOrderInput,
+  applyOrder,
+  insertAtDepth,
 } = utils;
 
 const { exportLists, importLists, saveList } = lists;
@@ -71,6 +74,19 @@ describe('Utility functions', () => {
     const [a, b] = equalizeLength([1, 2, 3], ['x']);
     expect(a).toEqual([1]);
     expect(b).toEqual(['x']);
+  });
+
+  test('parseOrderInput converts to numbers', () => {
+    expect(parseOrderInput('1, 2 3')).toEqual([1, 2, 3]);
+  });
+
+  test('applyOrder reorders list cycling values', () => {
+    const out = applyOrder(['a', 'b', 'c'], [2, 0]);
+    expect(out).toEqual(['c', 'a', 'c']);
+  });
+
+  test('insertAtDepth inserts term at depth', () => {
+    expect(insertAtDepth('a b c', 'x', 1)).toBe('a x b c');
   });
 });
 
@@ -308,39 +324,6 @@ describe('Lyrics processing', () => {
 });
 
 describe('UI interactions', () => {
-  test('shuffle all respects stack lock', () => {
-    document.body.innerHTML = `
-      <input type="checkbox" id="pos-stack">
-      <select id="pos-stack-size"></select>
-      <input type="checkbox" id="pos-shuffle">
-      <button class="toggle-button" data-target="pos-shuffle"></button>
-      <input type="checkbox" id="neg-stack">
-      <select id="neg-stack-size"></select>
-      <input type="checkbox" id="neg-shuffle">
-      <button class="toggle-button" data-target="neg-shuffle"></button>
-      <input type="checkbox" id="all-random">
-      <button class="toggle-button" data-target="all-random"></button>
-    `;
-    setupStackControls();
-    setupShuffleAll();
-    const posShuffle = document.getElementById('pos-shuffle');
-    const posBtn = document.querySelector('[data-target="pos-shuffle"]');
-    const posStack = document.getElementById('pos-stack');
-    posStack.checked = true;
-    posStack.dispatchEvent(new Event('change'));
-    expect(posShuffle.checked).toBe(true);
-    expect(posBtn.classList.contains('disabled')).toBe(true);
-    const allRandom = document.getElementById('all-random');
-    allRandom.checked = false;
-    allRandom.dispatchEvent(new Event('change'));
-    expect(posShuffle.checked).toBe(true);
-    expect(posBtn.classList.contains('disabled')).toBe(true);
-    posStack.checked = false;
-    posStack.dispatchEvent(new Event('change'));
-    expect(posShuffle.checked).toBe(false);
-    expect(posBtn.classList.contains('disabled')).toBe(false);
-  });
-
   test('hide toggle does not hide sibling buttons', () => {
     document.body.innerHTML = `
       <div class="input-row">
