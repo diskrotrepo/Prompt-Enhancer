@@ -5,6 +5,10 @@ if (typeof window !== 'undefined') {
   window.__TEST__ = true;
 }
 
+const utils = require('../src/promptUtils');
+const lists = require('../src/listManager');
+const ui = require('../src/uiControls');
+
 const {
   parseInput,
   shuffle,
@@ -12,15 +16,12 @@ const {
   buildPrefixedList,
   buildVersions,
   processLyrics,
-  setupShuffleAll,
-  setupStackControls,
-  setupHideToggles,
-  applyPreset,
   parseDividerInput,
-  exportLists,
-  importLists,
-  saveList,
-} = require('../src/script');
+} = utils;
+
+const { exportLists, importLists, saveList } = lists;
+
+const { setupShuffleAll, setupStackControls, setupHideToggles, applyPreset } = ui;
 
 describe('Utility functions', () => {
   test('parseInput splits and trims correctly', () => {
