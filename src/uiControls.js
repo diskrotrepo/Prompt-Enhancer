@@ -1,6 +1,10 @@
 (function (global) {
-  const utils = global.promptUtils || (typeof require !== 'undefined' && require('./promptUtils'));
-  const lists = global.listManager || (typeof require !== 'undefined' && require('./listManager'));
+  const utils =
+    global.promptUtils || (typeof require !== 'undefined' && require('./promptUtils'));
+  const lists =
+    global.listManager || (typeof require !== 'undefined' && require('./listManager'));
+  const stateUtil =
+    global.stateUtils || (typeof require !== 'undefined' && require('./state'));
 
   function applyPreset(selectEl, inputEl, presetsOrType) {
     let presets = presetsOrType;
@@ -49,10 +53,15 @@
     const posStackSize = parseInt(document.getElementById('pos-stack-size')?.value || '1', 10);
     const includePosForNeg = document.getElementById('neg-include-pos').checked;
     const shuffleNeg = document.getElementById('neg-shuffle').checked;
+
+    stateUtil.state.shuffleFlags.base = shuffleBase;
+    stateUtil.state.shuffleFlags.positive = shufflePos;
+    stateUtil.state.shuffleFlags.negative = shuffleNeg;
     const negStackOn = document.getElementById('neg-stack').checked;
     const negStackSize = parseInt(document.getElementById('neg-stack-size')?.value || '1', 10);
     const dividerMods = utils.parseDividerInput(document.getElementById('divider-input')?.value || '');
     const shuffleDividers = document.getElementById('divider-shuffle')?.checked;
+    stateUtil.state.shuffleFlags.divider = shuffleDividers;
     const lengthSelect = document.getElementById('length-select');
     const lengthInput = document.getElementById('length-input');
     let limit = parseInt(lengthInput.value, 10);

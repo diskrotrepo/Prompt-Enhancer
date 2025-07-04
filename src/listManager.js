@@ -1,11 +1,9 @@
 (function (global) {
-  const utils = global.promptUtils || (typeof require !== 'undefined' && require('./promptUtils'));
-  let NEG_PRESETS = {};
-  let POS_PRESETS = {};
-  let LENGTH_PRESETS = {};
-  let DIVIDER_PRESETS = {};
-  let BASE_PRESETS = {};
-  let LYRICS_PRESETS = {};
+  const utils =
+    global.promptUtils || (typeof require !== 'undefined' && require('./promptUtils'));
+  const stateUtil =
+    global.stateUtils || (typeof require !== 'undefined' && require('./state'));
+  const state = stateUtil.state;
 
   let LISTS;
   if (typeof ALL_LISTS !== 'undefined' && Array.isArray(ALL_LISTS.presets)) {
@@ -43,12 +41,12 @@
   }
 
   function loadLists() {
-    NEG_PRESETS = {};
-    POS_PRESETS = {};
-    LENGTH_PRESETS = {};
-    DIVIDER_PRESETS = {};
-    BASE_PRESETS = {};
-    LYRICS_PRESETS = {};
+    state.presets.negative = {};
+    state.presets.positive = {};
+    state.presets.length = {};
+    state.presets.divider = {};
+    state.presets.base = {};
+    state.presets.lyrics = {};
     const neg = [];
     const pos = [];
     const len = [];
@@ -58,22 +56,22 @@
     if (LISTS.presets && Array.isArray(LISTS.presets)) {
       LISTS.presets.forEach(p => {
         if (p.type === 'negative') {
-          NEG_PRESETS[p.id] = p.items || [];
+          state.presets.negative[p.id] = p.items || [];
           neg.push(p);
         } else if (p.type === 'positive') {
-          POS_PRESETS[p.id] = p.items || [];
+          state.presets.positive[p.id] = p.items || [];
           pos.push(p);
         } else if (p.type === 'length') {
-          LENGTH_PRESETS[p.id] = p.items || [];
+          state.presets.length[p.id] = p.items || [];
           len.push(p);
         } else if (p.type === 'divider') {
-          DIVIDER_PRESETS[p.id] = p.items || [];
+          state.presets.divider[p.id] = p.items || [];
           divs.push(p);
         } else if (p.type === 'base') {
-          BASE_PRESETS[p.id] = p.items || [];
+          state.presets.base[p.id] = p.items || [];
           base.push(p);
         } else if (p.type === 'lyrics') {
-          LYRICS_PRESETS[p.id] = p.items || [];
+          state.presets.lyrics[p.id] = p.items || [];
           lyrics.push(p);
         }
       });
@@ -157,12 +155,36 @@
 
   function saveList(type) {
     const map = {
-      base: { select: 'base-select', input: 'base-input', store: BASE_PRESETS },
-      negative: { select: 'neg-select', input: 'neg-input', store: NEG_PRESETS },
-      positive: { select: 'pos-select', input: 'pos-input', store: POS_PRESETS },
-      length: { select: 'length-select', input: 'length-input', store: LENGTH_PRESETS },
-      divider: { select: 'divider-select', input: 'divider-input', store: DIVIDER_PRESETS },
-      lyrics: { select: 'lyrics-select', input: 'lyrics-input', store: LYRICS_PRESETS }
+      base: {
+        select: 'base-select',
+        input: 'base-input',
+        store: state.presets.base
+      },
+      negative: {
+        select: 'neg-select',
+        input: 'neg-input',
+        store: state.presets.negative
+      },
+      positive: {
+        select: 'pos-select',
+        input: 'pos-input',
+        store: state.presets.positive
+      },
+      length: {
+        select: 'length-select',
+        input: 'length-input',
+        store: state.presets.length
+      },
+      divider: {
+        select: 'divider-select',
+        input: 'divider-input',
+        store: state.presets.divider
+      },
+      lyrics: {
+        select: 'lyrics-select',
+        input: 'lyrics-input',
+        store: state.presets.lyrics
+      }
     };
     const cfg = map[type];
     if (!cfg) return;
@@ -195,12 +217,24 @@
   }
 
   const api = {
-    get NEG_PRESETS() { return NEG_PRESETS; },
-    get POS_PRESETS() { return POS_PRESETS; },
-    get LENGTH_PRESETS() { return LENGTH_PRESETS; },
-    get DIVIDER_PRESETS() { return DIVIDER_PRESETS; },
-    get BASE_PRESETS() { return BASE_PRESETS; },
-    get LYRICS_PRESETS() { return LYRICS_PRESETS; },
+    get NEG_PRESETS() {
+      return state.presets.negative;
+    },
+    get POS_PRESETS() {
+      return state.presets.positive;
+    },
+    get LENGTH_PRESETS() {
+      return state.presets.length;
+    },
+    get DIVIDER_PRESETS() {
+      return state.presets.divider;
+    },
+    get BASE_PRESETS() {
+      return state.presets.base;
+    },
+    get LYRICS_PRESETS() {
+      return state.presets.lyrics;
+    },
     loadLists,
     exportLists,
     importLists,
