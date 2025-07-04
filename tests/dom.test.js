@@ -1,10 +1,13 @@
-const fs = require('fs');
-const path = require('path');
-const { JSDOM } = require('jsdom');
+import fs from 'fs';
+import path from 'path';
+import { JSDOM } from 'jsdom';
 
 describe('Button layout', () => {
   test('random button precedes copy button in all button columns', () => {
-    const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'index.html'), 'utf8');
+    const html = fs.readFileSync(
+      path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'src', 'index.html'),
+      'utf8'
+    );
     const dom = new JSDOM(html);
     const cols = dom.window.document.querySelectorAll('.button-col');
     cols.forEach(col => {
@@ -18,7 +21,10 @@ describe('Button layout', () => {
   });
 
   test('save button precedes copy button in all button columns', () => {
-    const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'index.html'), 'utf8');
+    const html = fs.readFileSync(
+      path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'src', 'index.html'),
+      'utf8'
+    );
     const dom = new JSDOM(html);
     const cols = dom.window.document.querySelectorAll('.button-col');
     cols.forEach(col => {

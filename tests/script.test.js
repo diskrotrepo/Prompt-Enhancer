@@ -5,10 +5,12 @@ if (typeof window !== 'undefined') {
   window.__TEST__ = true;
 }
 
-const {
-  parseInput,
+import { jest } from '@jest/globals';
+
+let parseInput,
   shuffle,
   equalizeLength,
+  parseDividerInput,
   buildPrefixedList,
   buildVersions,
   processLyrics,
@@ -16,11 +18,16 @@ const {
   setupStackControls,
   setupHideToggles,
   applyPreset,
-  parseDividerInput,
   exportLists,
   importLists,
-  saveList,
-} = require('../src/script');
+  saveList;
+
+beforeAll(async () => {
+  ({ parseInput, shuffle, equalizeLength, parseDividerInput } = await import('../src/utils.js'));
+  ({ buildPrefixedList, buildVersions, processLyrics } = await import('../src/generator.js'));
+  ({ setupShuffleAll, setupStackControls, setupHideToggles, applyPreset } = await import('../src/ui.js'));
+  ({ exportLists, importLists, saveList } = await import('../src/listManager.js'));
+});
 
 describe('Utility functions', () => {
   test('parseInput splits and trims correctly', () => {
