@@ -183,8 +183,7 @@ function parseDividerInput(raw) {
   if (!raw) return [];
   return raw
     .split(/\r?\n/)
-    .map(s => s.trim())
-    .filter(Boolean);
+    .filter(line => line !== '');
 }
 
 /**

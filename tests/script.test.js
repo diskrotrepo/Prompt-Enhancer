@@ -55,6 +55,11 @@ describe('Utility functions', () => {
     expect(parseDividerInput(raw)).toEqual(['one', 'two']);
   });
 
+  test('parseDividerInput preserves trailing spaces', () => {
+    const raw = 'foo \nbar  ';
+    expect(parseDividerInput(raw)).toEqual(['foo ', 'bar  ']);
+  });
+
   test('shuffle retains all items', () => {
     const arr = [1, 2, 3, 4];
     const result = shuffle(arr.slice());
@@ -140,6 +145,22 @@ describe('Prompt building', () => {
     );
     expect(out.positive.includes('i.e.,')).toBe(true);
     expect(out.positive.startsWith('a, b, \ni.e., ')).toBe(true);
+  });
+
+  test('buildVersions keeps spaces from parsed divider list', () => {
+    const divs = parseDividerInput('foo ');
+    const out = buildVersions(
+      ['a', 'b'],
+      [],
+      [],
+      false,
+      false,
+      false,
+      50,
+      false,
+      divs
+    );
+    expect(out.positive.startsWith('a, b, \nfoo ')).toBe(true);
   });
 
   test('buildVersions reuses divider order for negatives', () => {
