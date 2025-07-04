@@ -14,6 +14,7 @@
 let NEG_PRESETS = {};
 let POS_PRESETS = {};
 let LENGTH_PRESETS = {};
+let DIVIDER_PRESETS = {};
 
 // Combined lists object used for import/export operations
 let LISTS;
@@ -43,22 +44,6 @@ if (typeof ALL_LISTS !== 'undefined' && Array.isArray(ALL_LISTS.presets)) {
 } else {
   LISTS = { presets: [] };
 }
-const NATURAL_DIVIDERS = [
-  '\nIn other words, ',
-  '\ni.e., ',
-  '\nPut another way, ',
-  '\nRestated, ',
-  '\nWhich is to say, ',
-  '\nTo be precise, ',
-  '\nIn essence, ',
-  '\nPut differently, ',
-  '\nTo put it another way, ',
-  '\nThat is to say, ',
-  '\nNamely, ',
-  '\nRephrased, ',
-  '\nTo say it another way, ',
-  '\nLet me put it this way. '
-];
 
 /**
  * Populates a select element with options from preset data
@@ -91,9 +76,11 @@ function loadLists() {
   NEG_PRESETS = {};
   POS_PRESETS = {};
   LENGTH_PRESETS = {};
+  DIVIDER_PRESETS = {};
   const neg = [];
   const pos = [];
   const len = [];
+  const divs = [];
 
   if (LISTS.presets && Array.isArray(LISTS.presets)) {
     LISTS.presets.forEach(p => {
@@ -106,6 +93,9 @@ function loadLists() {
       } else if (p.type === 'length') {
         LENGTH_PRESETS[p.id] = p.items || [];
         len.push(p);
+      } else if (p.type === 'divider') {
+        DIVIDER_PRESETS[p.id] = p.items || [];
+        divs.push(p);
       }
     });
   }
@@ -118,6 +108,9 @@ function loadLists() {
 
   const lengthSelect = document.getElementById('length-select');
   if (lengthSelect) populateSelect(lengthSelect, len);
+
+  const dividerSelect = document.getElementById('divider-select');
+  if (dividerSelect) populateSelect(dividerSelect, divs);
 
   // Uncomment the following lines for a quick summary when debugging
   // console.log('Lists loaded:', {
@@ -183,6 +176,14 @@ function parseInput(raw, keepDelim = false) {
   }
 
   return items.filter(Boolean);
+}
+
+// Parse divider list where each line represents a divider phrase
+function parseDividerInput(raw) {
+  if (!raw) return [];
+  return raw
+    .split(/\r?\n/)
+    .filter(line => line !== '');
 }
 
 /**
@@ -398,6 +399,7 @@ function buildVersions(
   limit,
   includePosForNeg = false,
   dividers = [],
+  shuffleDividers = true,
   posStackSize = 1,
   negStackSize = 1
 ) {
@@ -409,8 +411,8 @@ function buildVersions(
 
   const delimited = /[,.!:;?\n]\s*$/.test(items[0]);
 
-  const dividerPool = dividers.slice();
-  if (dividerPool.length) shuffle(dividerPool);
+  const dividerPool = dividers.map(d => (d.startsWith('\n') ? d : '\n' + d));
+  if (dividerPool.length && shuffleDividers) shuffle(dividerPool);
 
   const posTerms = applyModifierStack(
     items,
@@ -508,6 +510,8 @@ function applyPreset(selectEl, inputEl, presetsOrType) {
       presets = POS_PRESETS;
     } else if (presetsOrType === 'length') {
       presets = LENGTH_PRESETS;
+    } else if (presetsOrType === 'divider') {
+      presets = DIVIDER_PRESETS;
     } else {
       presets = {};
     }
@@ -515,7 +519,8 @@ function applyPreset(selectEl, inputEl, presetsOrType) {
   const key = selectEl.value;
   const list = presets[key] || [];
   if (inputEl.tagName === 'TEXTAREA') {
-    inputEl.value = list.join(', ');
+    const sep = presetsOrType === 'divider' || presets === DIVIDER_PRESETS ? '\n' : ', ';
+    inputEl.value = list.join(sep);
   } else {
     inputEl.value = list[0] || '';
   }
@@ -556,7 +561,10 @@ function collectInputs() {
     document.getElementById('neg-stack-size')?.value || '1',
     10
   );
-  const useNaturalDivider = document.getElementById('nl-divider')?.checked;
+  const dividerMods = parseDividerInput(
+    document.getElementById('divider-input')?.value || ''
+  );
+  const shuffleDividers = document.getElementById('divider-shuffle')?.checked;
   const lengthSelect = document.getElementById('length-select');
   const lengthInput = document.getElementById('length-input');
 
@@ -581,7 +589,8 @@ function collectInputs() {
     negStackSize,
     limit,
     includePosForNeg,
-    useNaturalDivider
+    dividerMods,
+    shuffleDividers
   };
 }
 
@@ -612,13 +621,14 @@ function generate() {
     negStackSize,
     limit,
     includePosForNeg,
-    useNaturalDivider
+    dividerMods,
+    shuffleDividers
   } = collectInputs();
   if (!baseItems.length) {
     alert('Please enter at least one base prompt item.');
     return;
   }
-  const dividers = useNaturalDivider ? NATURAL_DIVIDERS : [];
+  const dividers = dividerMods.length ? dividerMods : [];
   const result = buildVersions(
     baseItems,
     negMods,
@@ -629,6 +639,7 @@ function generate() {
     limit,
     includePosForNeg,
     dividers,
+    shuffleDividers,
     posStackOn ? posStackSize : 1,
     negStackOn ? negStackSize : 1
   );
@@ -843,7 +854,8 @@ function saveList(type) {
   const map = {
     negative: { select: 'neg-select', input: 'neg-input', store: NEG_PRESETS },
     positive: { select: 'pos-select', input: 'pos-input', store: POS_PRESETS },
-    length: { select: 'length-select', input: 'length-input', store: LENGTH_PRESETS }
+    length: { select: 'length-select', input: 'length-input', store: LENGTH_PRESETS },
+    divider: { select: 'divider-select', input: 'divider-input', store: DIVIDER_PRESETS }
   };
   const cfg = map[type];
   if (!cfg) return;
@@ -852,7 +864,7 @@ function saveList(type) {
   if (!sel || !inp) return;
   const name = prompt('Enter list name', sel.value);
   if (!name) return;
-  const items = parseInput(inp.value);
+  const items = type === 'divider' ? parseDividerInput(inp.value) : parseInput(inp.value);
   let preset = LISTS.presets.find(p => p.id === name && p.type === type);
   if (!preset) {
     preset = { id: name, title: name, type, items };
@@ -893,10 +905,16 @@ function initializeUI() {
     document.getElementById('length-input'),
     'length'
   );
+  applyPreset(
+    document.getElementById('divider-select'),
+    document.getElementById('divider-input'),
+    'divider'
+  );
 
   setupPresetListener('neg-select', 'neg-input', 'negative');
   setupPresetListener('pos-select', 'pos-input', 'positive');
   setupPresetListener('length-select', 'length-input', 'length');
+  setupPresetListener('divider-select', 'divider-input', 'divider');
   document.getElementById('generate').addEventListener('click', generate);
 
   setupToggleButtons();
@@ -938,6 +956,8 @@ function initializeUI() {
   if (negSave) negSave.addEventListener('click', () => saveList('negative'));
   const lenSave = document.getElementById('length-save');
   if (lenSave) lenSave.addEventListener('click', () => saveList('length'));
+  const divSave = document.getElementById('divider-save');
+  if (divSave) divSave.addEventListener('click', () => saveList('divider'));
 }
 
 // Initialize UI when DOM is ready
@@ -965,6 +985,7 @@ if (typeof module !== 'undefined') {
     setupStackControls,
     setupHideToggles,
     applyPreset,
+    parseDividerInput,
     exportLists,
     importLists,
     saveList,

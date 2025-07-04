@@ -43,9 +43,19 @@
         </div>
         <div class="input-group">
           <div class="label-row">
-            <label>Natural Divider</label>
-            <input type="checkbox" id="nl-divider" hidden>
-            <button type="button" class="toggle-button" data-target="nl-divider" data-on="Natural" data-off="Simple">Simple</button>
+            <label for="divider-input">Divider List</label>
+            <div class="button-col">
+              <button type="button" class="copy-button icon-button" data-target="divider-input" title="Copy">&#128203;</button>
+              <button type="button" id="divider-save" class="save-button icon-button" title="Save">&#128190;</button>
+              <input type="checkbox" id="divider-shuffle" hidden>
+              <button type="button" class="toggle-button icon-button random-button" data-target="divider-shuffle" data-on="🎲" data-off="🎲">&#127922;</button>
+              <input type="checkbox" id="divider-hide" data-targets="divider-input" hidden>
+              <button type="button" class="toggle-button icon-button hide-button" data-target="divider-hide" data-on="☰" data-off="✖">☰</button>
+            </div>
+          </div>
+          <select id="divider-select"></select>
+          <div class="input-row">
+            <textarea id="divider-input" rows="2" placeholder="Divider phrases"></textarea>
           </div>
         </div>
         <div class="input-group">

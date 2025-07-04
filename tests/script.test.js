@@ -16,6 +16,7 @@ const {
   setupStackControls,
   setupHideToggles,
   applyPreset,
+  parseDividerInput,
   exportLists,
   importLists,
   saveList,
@@ -47,6 +48,16 @@ describe('Utility functions', () => {
 
   test('parseInput preserves consecutive newlines', () => {
     expect(parseInput('a\n\nb', true)).toEqual(['a\n\n', 'b. ']);
+  });
+
+  test('parseDividerInput splits by line', () => {
+    const raw = 'one\ntwo';
+    expect(parseDividerInput(raw)).toEqual(['one', 'two']);
+  });
+
+  test('parseDividerInput preserves trailing spaces', () => {
+    const raw = 'foo \nbar  ';
+    expect(parseDividerInput(raw)).toEqual(['foo ', 'bar  ']);
   });
 
   test('shuffle retains all items', () => {
@@ -129,10 +140,27 @@ describe('Prompt building', () => {
       false,
       50,
       false,
-      ['i.e., ']
+      ['i.e., '],
+      true
     );
     expect(out.positive.includes('i.e.,')).toBe(true);
-    expect(out.positive.startsWith('a, b, i.e., ')).toBe(true);
+    expect(out.positive.startsWith('a, b, \ni.e., ')).toBe(true);
+  });
+
+  test('buildVersions keeps spaces from parsed divider list', () => {
+    const divs = parseDividerInput('foo ');
+    const out = buildVersions(
+      ['a', 'b'],
+      [],
+      [],
+      false,
+      false,
+      false,
+      50,
+      false,
+      divs
+    );
+    expect(out.positive.startsWith('a, b, \nfoo ')).toBe(true);
   });
 
   test('buildVersions reuses divider order for negatives', () => {
@@ -185,6 +213,7 @@ describe('Prompt building', () => {
       10,
       false,
       [],
+      true,
       2,
       2
     );
@@ -360,6 +389,21 @@ describe('List persistence', () => {
     expect(opt).not.toBeNull();
   });
 
+  test('saveList works for dividers', () => {
+    document.body.innerHTML = `
+      <select id="divider-select"></select>
+      <textarea id="divider-input">foo\nbar</textarea>
+    `;
+    importLists({ presets: [] });
+    global.prompt = jest.fn().mockReturnValue('div1');
+    saveList('divider');
+    const data = JSON.parse(exportLists());
+    const preset = data.presets.find(p => p.id === 'div1' && p.type === 'divider');
+    expect(preset.items).toEqual(['foo', 'bar']);
+    const opt = document.querySelector('#divider-select option[value="div1"]');
+    expect(opt).not.toBeNull();
+  });
+
   test('sequential save and reload', () => {
     document.body.innerHTML = `
       <select id="pos-select"></select>
@@ -368,9 +412,11 @@ describe('List persistence', () => {
       <textarea id="neg-input"></textarea>
       <select id="length-select"></select>
       <input id="length-input">
+      <select id="divider-select"></select>
+      <textarea id="divider-input"></textarea>
     `;
     importLists({ presets: [] });
-    let names = ['p1', 'p2', 'n1', 'l1'];
+    let names = ['p1', 'p2', 'n1', 'l1', 'd1'];
     global.prompt = jest.fn(() => names.shift());
     document.getElementById('pos-input').value = 'x';
     saveList('positive');
@@ -380,9 +426,11 @@ describe('List persistence', () => {
     saveList('negative');
     document.getElementById('length-input').value = '5';
     saveList('length');
+    document.getElementById('divider-input').value = 'foo';
+    saveList('divider');
 
     const exported = JSON.parse(exportLists());
-    expect(exported.presets.length).toBe(4);
+    expect(exported.presets.length).toBe(5);
 
     document.body.innerHTML = `
       <select id="pos-select"></select>
@@ -391,6 +439,8 @@ describe('List persistence', () => {
       <textarea id="neg-input"></textarea>
       <select id="length-select"></select>
       <input id="length-input">
+      <select id="divider-select"></select>
+      <textarea id="divider-input"></textarea>
     `;
     importLists(exported);
     const posSelVals = Array.from(document.querySelectorAll('#pos-select option')).map(o => o.value);
@@ -406,5 +456,10 @@ describe('List persistence', () => {
     posSelect.value = 'p1';
     applyPreset(posSelect, posInput, 'positive');
     expect(posInput.value).toBe('x');
+    const divSelect = document.getElementById('divider-select');
+    const divInput = document.getElementById('divider-input');
+    divSelect.value = 'd1';
+    applyPreset(divSelect, divInput, 'divider');
+    expect(divInput.value).toBe('foo');
   });
 });
