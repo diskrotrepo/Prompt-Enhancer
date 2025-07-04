@@ -435,10 +435,15 @@ button {
 }
 
 .button-col {
-  display: inline-flex;
-  flex-direction: row;
+  display: inline-grid;
+  grid-template-columns: repeat(4, 1.8rem);
+  grid-auto-columns: 1.8rem;
+  column-gap: 0.25rem;
+  justify-items: center;
   align-items: center;
   margin-left: 0.25rem;
+  vertical-align: middle;
+  height: 1.8rem;
 }
 .button-col .icon-button {
   width: 1.8rem;
@@ -447,12 +452,14 @@ button {
   justify-content: center;
   align-items: center;
   padding: 0;
-  margin-left: 0;
-  margin-right: 0.25rem;
+  margin: 0;
+  line-height: 1;
+  vertical-align: middle;
 }
-.button-col .icon-button:last-child {
-  margin-right: 0;
-}
+.button-col .random-button { grid-column: 1; }
+.button-col .save-button { grid-column: 2; }
+.button-col .copy-button { grid-column: 3; }
+.button-col .hide-button { grid-column: 4; }
 
 .toggle-button.icon-button {
   background: transparent;
