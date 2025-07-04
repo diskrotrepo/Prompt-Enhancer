@@ -26,6 +26,8 @@ function setupDOM() {
     <select id="divider-select"></select>
     <textarea id="divider-input"></textarea>
     <input type="checkbox" id="divider-shuffle">
+    <select id="insert-select"></select>
+    <textarea id="insert-input"></textarea>
     <select id="length-select"></select>
     <input id="length-input">
     <select id="lyrics-select"></select>
@@ -48,7 +50,8 @@ function sampleLists() {
       { id: 'len', title: 'len', type: 'length', items: ['20'] },
       { id: 'div', title: 'div', type: 'divider', items: ['\nfoo '] },
       { id: 'base', title: 'base', type: 'base', items: ['cat'] },
-      { id: 'ly', title: 'ly', type: 'lyrics', items: ['la'] }
+      { id: 'ly', title: 'ly', type: 'lyrics', items: ['la'] },
+      { id: 'ord', title: 'ord', type: 'order', items: ['0'] }
     ]
   };
 }

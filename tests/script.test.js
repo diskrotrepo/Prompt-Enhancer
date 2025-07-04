@@ -17,6 +17,9 @@ const {
   buildVersions,
   processLyrics,
   parseDividerInput,
+  parseOrderInput,
+  applyOrder,
+  insertAtDepth,
 } = utils;
 
 const { exportLists, importLists, saveList } = lists;
@@ -71,6 +74,19 @@ describe('Utility functions', () => {
     const [a, b] = equalizeLength([1, 2, 3], ['x']);
     expect(a).toEqual([1]);
     expect(b).toEqual(['x']);
+  });
+
+  test('parseOrderInput converts to numbers', () => {
+    expect(parseOrderInput('1, 2 3')).toEqual([1, 2, 3]);
+  });
+
+  test('applyOrder reorders list cycling values', () => {
+    const out = applyOrder(['a', 'b', 'c'], [2, 0]);
+    expect(out).toEqual(['c', 'a', 'c']);
+  });
+
+  test('insertAtDepth inserts term at depth', () => {
+    expect(insertAtDepth('a b c', 'x', 1)).toBe('a x b c');
   });
 });
 

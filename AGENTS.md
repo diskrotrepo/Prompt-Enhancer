@@ -52,3 +52,6 @@ entry in `ALL_LISTS.presets` has the shape:
 `type` can be `negative`, `positive` or `length` (length lists contain a single
 numeric value). The file is large but purely data driven, so you rarely need to
 inspect it when working on functionality.
+
+An additional preset type `order` contains numeric sequences used for insertion
+depths or item reorderings.

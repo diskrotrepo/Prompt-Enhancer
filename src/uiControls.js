@@ -61,6 +61,7 @@
       limit = preset ? parseInt(preset[0], 10) : 1000;
       lengthInput.value = limit;
     }
+    const insertDepths = utils.parseOrderInput(document.getElementById('insert-input')?.value || '');
     return {
       baseItems,
       negMods,
@@ -75,7 +76,8 @@
       limit,
       includePosForNeg,
       dividerMods,
-      shuffleDividers
+      shuffleDividers,
+      insertDepths
     };
   }
 
@@ -99,7 +101,8 @@
       limit,
       includePosForNeg,
       dividerMods,
-      shuffleDividers
+      shuffleDividers,
+      insertDepths
     } = collectInputs();
     if (!baseItems.length) {
       alert('Please enter at least one base prompt item.');
@@ -118,7 +121,8 @@
       dividers,
       shuffleDividers,
       posStackOn ? posStackSize : 1,
-      negStackOn ? negStackSize : 1
+      negStackOn ? negStackSize : 1,
+      insertDepths
     );
     displayOutput(result);
 
@@ -272,6 +276,78 @@
     });
   }
 
+  function setupDepthControls() {
+    const prepend = document.getElementById('depth-prepend');
+    const append = document.getElementById('depth-append');
+    const random = document.getElementById('depth-random');
+    const input = document.getElementById('insert-input');
+    const baseInput = document.getElementById('base-input');
+    function countWords(str) {
+      const cleaned = str.trim().replace(/[,.!:;?]$/, '');
+      if (!cleaned) return 0;
+      return cleaned.split(/\s+/).length;
+    }
+    function build(mode) {
+      const bases = utils.parseInput(baseInput.value, true);
+      if (!bases.length) {
+        input.value = mode === 'prepend' ? '0' : '';
+        return;
+      }
+      if (mode === 'prepend') {
+        input.value = '0';
+        return;
+      }
+      const counts = bases.map(b => countWords(b));
+      if (mode === 'append') {
+        input.value = counts.join(', ');
+        return;
+      }
+      const vals = counts.map(c => Math.floor(Math.random() * (c + 1)));
+      input.value = vals.join(', ');
+    }
+    if (prepend) prepend.addEventListener('change', () => prepend.checked && build('prepend'));
+    if (append) append.addEventListener('change', () => append.checked && build('append'));
+    if (random) random.addEventListener('change', () => random.checked && build('random'));
+  }
+
+  function setupStateButtons() {
+    const saveBtn = document.getElementById('save-state');
+    const loadBtn = document.getElementById('load-state');
+    const fileInput = document.getElementById('state-file');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        state.loadFromDOM();
+        const blob = new Blob([state.exportState()], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'state.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+    }
+    if (loadBtn && fileInput) {
+      loadBtn.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', e => {
+        const f = e.target.files[0];
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(reader.result);
+            state.importState(data);
+          } catch (err) {
+            alert('Invalid state file');
+          }
+        };
+        reader.readAsText(f);
+        fileInput.value = '';
+      });
+    }
+  }
+
   function initializeUI() {
     lists.loadLists();
     applyPreset(document.getElementById('neg-select'), document.getElementById('neg-input'), 'negative');
@@ -309,6 +385,8 @@
     }
 
     setupCopyButtons();
+    setupDepthControls();
+    setupStateButtons();
 
     const loadBtn = document.getElementById('load-lists');
     const additiveBtn = document.getElementById('additive-load');
@@ -346,6 +424,8 @@
     if (divSave) divSave.addEventListener('click', () => lists.saveList('divider'));
     const lyricsSave = document.getElementById('lyrics-save');
     if (lyricsSave) lyricsSave.addEventListener('click', () => lists.saveList('lyrics'));
+    const insertSave = document.getElementById('insert-save');
+    if (insertSave) insertSave.addEventListener('click', () => lists.saveList('order'));
   }
 
   const api = {
@@ -360,6 +440,8 @@
     setupStackControls,
     setupHideToggles,
     setupCopyButtons,
+    setupDepthControls,
+    setupStateButtons,
     initializeUI
   };
 

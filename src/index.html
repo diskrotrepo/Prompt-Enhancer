@@ -39,6 +39,9 @@
             <button type="button" id="load-lists">Load</button>
             <button type="button" id="additive-load">Additive Load</button>
             <button type="button" id="download-lists">Save</button>
+            <input type="file" id="state-file" accept="application/json" style="display:none">
+            <button type="button" id="load-state">Load State</button>
+            <button type="button" id="save-state">Save State</button>
           </div>
         </div>
         <!-- Hide all toggle -->
@@ -156,11 +159,31 @@
         <select id="length-select">
           <!-- Options will be populated dynamically from LENGTH_LISTS -->
         </select>
-        <div class="input-row">
-          <input type="number" id="length-input" value="1000" min="1">
+      <div class="input-row">
+        <input type="number" id="length-input" value="1000" min="1">
+      </div>
+    </div>
+    <div class="input-group">
+      <div class="label-row">
+        <label for="insert-input">Insertion Depths</label>
+        <div class="button-col">
+          <button type="button" id="insert-save" class="save-button icon-button" title="Save">&#128190;</button>
+          <button type="button" class="copy-button icon-button" data-target="insert-input" title="Copy">&#128203;</button>
+          <input type="checkbox" id="insert-hide" data-targets="insert-input,depth-prepend,depth-append,depth-random,insert-select" hidden>
+          <button type="button" class="toggle-button icon-button hide-button" data-target="insert-hide" data-on="☰" data-off="✖">☰</button>
         </div>
       </div>
-      <!-- Lyrics processing input -->
+      <select id="insert-select"></select>
+      <div class="input-row">
+        <textarea id="insert-input" rows="2" placeholder="0,1,2"></textarea>
+      </div>
+      <div class="label-row">
+        <label><input type="radio" name="depth-mode" id="depth-prepend"> Prepend</label>
+        <label><input type="radio" name="depth-mode" id="depth-append"> Append</label>
+        <label><input type="radio" name="depth-mode" id="depth-random"> Random Depth</label>
+      </div>
+    </div>
+    <!-- Lyrics processing input -->
       <div class="input-group">
         <div class="label-row">
           <label for="lyrics-input">Lyrics</label>

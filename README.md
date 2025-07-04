@@ -24,6 +24,8 @@ The Prompt Enhancer helps you create more effective prompts by:
 - **No Dependencies**: Pure vanilla JavaScript, works completely offline
 - **Dark Theme**: Eye-friendly interface inspired by Diskrot
 - **Quick Copy Buttons**: Every textbox has a copy icon that briefly turns blue with a check mark when clicked
+- **Insertion Depths**: Specify numeric lists for modifier insertion positions
+- **State Saving**: Export and reload all current inputs for repeatable output
 
 ## How to Use
 
