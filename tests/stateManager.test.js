@@ -12,6 +12,8 @@ function setupDOM() {
     <select id="base-select"></select>
     <textarea id="base-input"></textarea>
     <input type="checkbox" id="base-shuffle">
+    <select id="base-order-select"></select>
+    <textarea id="base-order-input"></textarea>
     <select id="pos-select"></select>
     <textarea id="pos-input"></textarea>
     <input type="checkbox" id="pos-shuffle">
@@ -23,11 +25,20 @@ function setupDOM() {
     <input type="checkbox" id="neg-stack">
     <select id="neg-stack-size"><option value="2">2</option></select>
     <input type="checkbox" id="neg-include-pos">
+    <select id="pos-order-select"></select>
+    <textarea id="pos-order-input"></textarea>
+    <select id="neg-order-select"></select>
+    <textarea id="neg-order-input"></textarea>
     <select id="divider-select"></select>
     <textarea id="divider-input"></textarea>
     <input type="checkbox" id="divider-shuffle">
+    <select id="divider-order-select"></select>
+    <textarea id="divider-order-input"></textarea>
+    <select id="insert-select"></select>
+    <textarea id="insert-input"></textarea>
     <select id="length-select"></select>
     <input id="length-input">
+    <input type="checkbox" id="reroll-on-gen">
     <select id="lyrics-select"></select>
     <textarea id="lyrics-input"></textarea>
     <select id="lyrics-space"><option value="1">1</option><option value="2">2</option></select>
@@ -48,7 +59,8 @@ function sampleLists() {
       { id: 'len', title: 'len', type: 'length', items: ['20'] },
       { id: 'div', title: 'div', type: 'divider', items: ['\nfoo '] },
       { id: 'base', title: 'base', type: 'base', items: ['cat'] },
-      { id: 'ly', title: 'ly', type: 'lyrics', items: ['la'] }
+      { id: 'ly', title: 'ly', type: 'lyrics', items: ['la'] },
+      { id: 'ord', title: 'ord', type: 'order', items: ['0'] }
     ]
   };
 }

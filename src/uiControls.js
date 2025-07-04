@@ -1,6 +1,10 @@
 (function (global) {
-  const utils = global.promptUtils || (typeof require !== 'undefined' && require('./promptUtils'));
-  const lists = global.listManager || (typeof require !== 'undefined' && require('./listManager'));
+  const utils =
+    global.promptUtils || (typeof require !== 'undefined' && require('./promptUtils'));
+  const lists =
+    global.listManager || (typeof require !== 'undefined' && require('./listManager'));
+  const state =
+    global.stateManager || (typeof require !== 'undefined' && require('./stateManager'));
 
   function applyPreset(selectEl, inputEl, presetsOrType) {
     let presets = presetsOrType;
@@ -61,6 +65,11 @@
       limit = preset ? parseInt(preset[0], 10) : 1000;
       lengthInput.value = limit;
     }
+    const insertDepths = utils.parseOrderInput(document.getElementById('insert-input')?.value || '');
+    const baseOrder = utils.parseOrderInput(document.getElementById('base-order-input')?.value || '');
+    const posOrder = utils.parseOrderInput(document.getElementById('pos-order-input')?.value || '');
+    const negOrder = utils.parseOrderInput(document.getElementById('neg-order-input')?.value || '');
+    const dividerOrder = utils.parseOrderInput(document.getElementById('divider-order-input')?.value || '');
     return {
       baseItems,
       negMods,
@@ -75,7 +84,12 @@
       limit,
       includePosForNeg,
       dividerMods,
-      shuffleDividers
+      shuffleDividers,
+      dividerOrder,
+      insertDepths,
+      baseOrder,
+      posOrder,
+      negOrder
     };
   }
 
@@ -85,6 +99,7 @@
   }
 
   function generate() {
+    rerollRandomOrders();
     const {
       baseItems,
       negMods,
@@ -99,7 +114,12 @@
       limit,
       includePosForNeg,
       dividerMods,
-      shuffleDividers
+      shuffleDividers,
+      dividerOrder,
+      insertDepths,
+      baseOrder,
+      posOrder,
+      negOrder
     } = collectInputs();
     if (!baseItems.length) {
       alert('Please enter at least one base prompt item.');
@@ -110,15 +130,17 @@
       baseItems,
       negMods,
       posMods,
-      shuffleBase,
-      negStackOn ? true : shuffleNeg,
-      posStackOn ? true : shufflePos,
       limit,
       includePosForNeg,
       dividers,
       shuffleDividers,
       posStackOn ? posStackSize : 1,
-      negStackOn ? negStackSize : 1
+      negStackOn ? negStackSize : 1,
+      insertDepths,
+      baseOrder,
+      posOrder,
+      negOrder,
+      dividerOrder
     );
     displayOutput(result);
 
@@ -165,23 +187,22 @@
   function setupShuffleAll() {
     const allRandom = document.getElementById('all-random');
     if (!allRandom) return;
-    const shuffleCheckboxes = [
-      document.getElementById('base-shuffle'),
-      document.getElementById('pos-shuffle'),
-      document.getElementById('neg-shuffle')
+    const selects = [
+      document.getElementById('base-order-select'),
+      document.getElementById('pos-order-select'),
+      document.getElementById('neg-order-select'),
+      document.getElementById('divider-order-select')
     ].filter(Boolean);
-    allRandom.addEventListener('change', () => {
-      shuffleCheckboxes.forEach(cb => {
-        const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
-        if (btn && btn.classList.contains('disabled')) {
-          return;
-        }
-        cb.checked = allRandom.checked;
-        if (btn) updateButtonState(btn, cb);
+    const updateAll = () => {
+      selects.forEach(sel => {
+        sel.value = allRandom.checked ? 'random' : 'canonical';
+        sel.dispatchEvent(new Event('change'));
       });
-      const allBtn = document.querySelector('.toggle-button[data-target="all-random"]');
-      if (allBtn) updateButtonState(allBtn, allRandom);
-    });
+      const btn = document.querySelector('.toggle-button[data-target="all-random"]');
+      if (btn) updateButtonState(btn, allRandom);
+    };
+    allRandom.addEventListener('change', updateAll);
+    updateAll();
   }
 
   function setupStackControls() {
@@ -272,6 +293,167 @@
     });
   }
 
+  function populateOrderOptions(select) {
+    if (!select) return;
+    select.innerHTML = '';
+    const opts = [
+      { id: 'canonical', title: 'Canonical' },
+      { id: 'random', title: 'Randomized' }
+    ];
+    Object.keys(lists.ORDER_PRESETS).forEach(id => {
+      opts.push({ id, title: lists.ORDER_PRESETS[id].title || id });
+    });
+    opts.forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o.id;
+      opt.textContent = o.title;
+      select.appendChild(opt);
+    });
+  }
+
+  function setupOrderControl(selectId, inputId, getItems) {
+    const select = document.getElementById(selectId);
+    const input = document.getElementById(inputId);
+    if (!select || !input) return;
+    const update = () => {
+      const items = getItems();
+      if (select.value === 'canonical') {
+        input.value = items.map((_, i) => i).join(', ');
+      } else if (select.value === 'random') {
+        const arr = items.map((_, i) => i);
+        utils.shuffle(arr);
+        input.value = arr.join(', ');
+      } else if (lists.ORDER_PRESETS[select.value]) {
+        input.value = lists.ORDER_PRESETS[select.value].join(', ');
+      }
+    };
+    select.addEventListener('change', update);
+    update();
+  }
+
+  function setupDepthControls() {
+    const select = document.getElementById('insert-select');
+    const input = document.getElementById('insert-input');
+    const baseInput = document.getElementById('base-input');
+    if (select) {
+      select.innerHTML = '';
+      const opts = [
+        { id: 'prepend', title: 'Prepend' },
+        { id: 'append', title: 'Append' },
+        { id: 'random', title: 'Random Depth' }
+      ];
+      Object.keys(lists.ORDER_PRESETS).forEach(id => {
+        opts.push({ id, title: lists.ORDER_PRESETS[id].title || id });
+      });
+      opts.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.id;
+        opt.textContent = o.title;
+        select.appendChild(opt);
+      });
+    }
+    function countWords(str) {
+      const cleaned = str.trim().replace(/[,.!:;?]$/, '');
+      if (!cleaned) return 0;
+      return cleaned.split(/\s+/).length;
+    }
+    function build(mode) {
+      const bases = utils.parseInput(baseInput.value, true);
+      if (!bases.length) {
+        input.value = mode === 'prepend' ? '0' : '';
+        return;
+      }
+      if (mode === 'prepend') {
+        input.value = '0';
+        return;
+      }
+      const counts = bases.map(b => countWords(b));
+      if (mode === 'append') {
+        input.value = counts.join(', ');
+        return;
+      }
+      const vals = counts.map(c => Math.floor(Math.random() * (c + 1)));
+      input.value = vals.join(', ');
+    }
+    if (!select) return;
+    select.addEventListener('change', () => {
+      const val = select.value;
+      if (val === 'prepend' || val === 'append' || val === 'random') {
+        build(val);
+      } else if (lists.ORDER_PRESETS[val]) {
+        input.value = lists.ORDER_PRESETS[val].join(', ');
+      }
+    });
+    select.dispatchEvent(new Event('change'));
+  }
+
+  function setupRerollButton(btnId, selectId) {
+    const btn = document.getElementById(btnId);
+    const select = document.getElementById(selectId);
+    if (!btn || !select) return;
+    const reroll = () => {
+      if (select.value !== 'random') {
+        select.value = 'random';
+      }
+      select.dispatchEvent(new Event('change'));
+    };
+    btn.addEventListener('click', reroll);
+    const update = () => {
+      btn.classList.toggle('active', select.value === 'random');
+    };
+    select.addEventListener('change', update);
+    update();
+  }
+
+  function rerollRandomOrders() {
+    const toggle = document.getElementById('reroll-on-gen');
+    if (!toggle || !toggle.checked) return;
+    ['base-order-select', 'pos-order-select', 'neg-order-select', 'divider-order-select', 'insert-select'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (sel && sel.value === 'random') {
+        sel.dispatchEvent(new Event('change'));
+      }
+    });
+  }
+
+  function setupStateButtons() {
+    const saveBtn = document.getElementById('save-state');
+    const loadBtn = document.getElementById('load-state');
+    const fileInput = document.getElementById('state-file');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        state.loadFromDOM();
+        const blob = new Blob([state.exportState()], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'state.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+    }
+    if (loadBtn && fileInput) {
+      loadBtn.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', e => {
+        const f = e.target.files[0];
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(reader.result);
+            state.importState(data);
+          } catch (err) {
+            alert('Invalid state file');
+          }
+        };
+        reader.readAsText(f);
+        fileInput.value = '';
+      });
+    }
+  }
+
   function initializeUI() {
     lists.loadLists();
     applyPreset(document.getElementById('neg-select'), document.getElementById('neg-input'), 'negative');
@@ -287,6 +469,28 @@
     setupPresetListener('divider-select', 'divider-input', 'divider');
     setupPresetListener('base-select', 'base-input', 'base');
     setupPresetListener('lyrics-select', 'lyrics-input', 'lyrics');
+    populateOrderOptions(document.getElementById('base-order-select'));
+    populateOrderOptions(document.getElementById('pos-order-select'));
+    populateOrderOptions(document.getElementById('neg-order-select'));
+    populateOrderOptions(document.getElementById('divider-order-select'));
+
+    setupOrderControl('base-order-select', 'base-order-input', () =>
+      utils.parseInput(document.getElementById('base-input').value, true)
+    );
+    setupOrderControl('pos-order-select', 'pos-order-input', () =>
+      utils.parseInput(document.getElementById('pos-input').value)
+    );
+    setupOrderControl('neg-order-select', 'neg-order-input', () =>
+      utils.parseInput(document.getElementById('neg-input').value)
+    );
+    setupOrderControl('divider-order-select', 'divider-order-input', () =>
+      utils.parseDividerInput(document.getElementById('divider-input').value || '')
+    );
+    setupRerollButton('base-reroll', 'base-order-select');
+    setupRerollButton('pos-reroll', 'pos-order-select');
+    setupRerollButton('neg-reroll', 'neg-order-select');
+    setupRerollButton('divider-reroll', 'divider-order-select');
+    setupRerollButton('insert-reroll', 'insert-select');
     document.getElementById('generate').addEventListener('click', generate);
 
     setupToggleButtons();
@@ -309,6 +513,8 @@
     }
 
     setupCopyButtons();
+    setupDepthControls();
+    setupStateButtons();
 
     const loadBtn = document.getElementById('load-lists');
     const additiveBtn = document.getElementById('additive-load');
@@ -346,6 +552,8 @@
     if (divSave) divSave.addEventListener('click', () => lists.saveList('divider'));
     const lyricsSave = document.getElementById('lyrics-save');
     if (lyricsSave) lyricsSave.addEventListener('click', () => lists.saveList('lyrics'));
+    const insertSave = document.getElementById('insert-save');
+    if (insertSave) insertSave.addEventListener('click', () => lists.saveList('order'));
   }
 
   const api = {
@@ -360,6 +568,11 @@
     setupStackControls,
     setupHideToggles,
     setupCopyButtons,
+    setupDepthControls,
+    setupStateButtons,
+    setupOrderControl,
+    rerollRandomOrders,
+    setupRerollButton,
     initializeUI
   };
 

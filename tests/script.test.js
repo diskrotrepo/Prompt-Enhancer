@@ -17,11 +17,22 @@ const {
   buildVersions,
   processLyrics,
   parseDividerInput,
+  parseOrderInput,
+  applyOrder,
+  insertAtDepth,
 } = utils;
 
 const { exportLists, importLists, saveList } = lists;
 
-const { setupShuffleAll, setupStackControls, setupHideToggles, applyPreset } = ui;
+const {
+  setupShuffleAll,
+  setupStackControls,
+  setupHideToggles,
+  applyPreset,
+  setupOrderControl,
+  setupRerollButton,
+  rerollRandomOrders
+} = ui;
 
 describe('Utility functions', () => {
   test('parseInput splits and trims correctly', () => {
@@ -72,6 +83,19 @@ describe('Utility functions', () => {
     expect(a).toEqual([1]);
     expect(b).toEqual(['x']);
   });
+
+  test('parseOrderInput converts to numbers', () => {
+    expect(parseOrderInput('1, 2 3')).toEqual([1, 2, 3]);
+  });
+
+  test('applyOrder reorders list cycling values', () => {
+    const out = applyOrder(['a', 'b', 'c'], [2, 0]);
+    expect(out).toEqual(['c', 'a', 'c']);
+  });
+
+  test('insertAtDepth inserts term at depth', () => {
+    expect(insertAtDepth('a b c', 'x', 1)).toBe('a x b c');
+  });
 });
 
 describe('Prompt building', () => {
@@ -104,27 +128,27 @@ describe('Prompt building', () => {
   });
 
   test('buildVersions builds positive and negative prompts', () => {
-    const out = buildVersions(['cat'], ['bad'], ['good'], false, false, false, 20);
+    const out = buildVersions(['cat'], ['bad'], ['good'], 20);
     expect(out).toEqual({ positive: 'good cat, good cat', negative: 'bad cat, bad cat' });
   });
 
   test('buildVersions can include positive terms for negatives', () => {
-    const out = buildVersions(['cat'], ['bad'], ['good'], false, false, false, 20, true);
+    const out = buildVersions(['cat'], ['bad'], ['good'], 20, true);
     expect(out).toEqual({ positive: 'good cat', negative: 'bad good cat' });
   });
 
   test('buildVersions returns empty strings when items list is empty', () => {
-    const out = buildVersions([], ['n'], ['p'], false, false, false, 10);
+    const out = buildVersions([], ['n'], ['p'], 10);
     expect(out).toEqual({ positive: '', negative: '' });
   });
 
   test('buildVersions respects very small limits', () => {
-    const out = buildVersions(['hello'], ['n'], ['p'], false, false, false, 2);
+    const out = buildVersions(['hello'], ['n'], ['p'], 2);
     expect(out).toEqual({ positive: '', negative: '' });
   });
 
   test('buildVersions joins items without commas when delimited', () => {
-    const out = buildVersions(['a.\n', 'b.\n'], ['n'], ['p'], false, false, false, 30);
+    const out = buildVersions(['a.\n', 'b.\n'], ['n'], ['p'], 30);
     expect(out.positive.includes(',')).toBe(false);
     expect(out.negative.includes(',')).toBe(false);
     expect(out.positive.startsWith('p a.\n')).toBe(true);
@@ -136,9 +160,6 @@ describe('Prompt building', () => {
       ['a', 'b'],
       [],
       [],
-      false,
-      false,
-      false,
       50,
       false,
       ['i.e., '],
@@ -154,9 +175,6 @@ describe('Prompt building', () => {
       ['a', 'b'],
       [],
       [],
-      false,
-      false,
-      false,
       50,
       false,
       divs
@@ -171,9 +189,6 @@ describe('Prompt building', () => {
       ['a', 'b'],
       [],
       [],
-      false,
-      false,
-      false,
       50,
       false,
       ['x ', 'y ']
@@ -190,9 +205,6 @@ describe('Prompt building', () => {
       ['a', 'b'],
       [],
       [],
-      false,
-      false,
-      false,
       50,
       false,
       ['\nfoo ']
@@ -208,9 +220,6 @@ describe('Prompt building', () => {
       ['x'],
       ['n1', 'n2'],
       ['p1', 'p2'],
-      false,
-      false,
-      false,
       10,
       false,
       [],
@@ -227,9 +236,6 @@ describe('Prompt building', () => {
       ['a', 'b'],
       ['n1'],
       ['p1'],
-      false,
-      false,
-      false,
       100,
       false,
       ['\nfoo '],
@@ -247,9 +253,6 @@ describe('Prompt building', () => {
       ['cat'],
       ['bad'],
       ['good'],
-      false,
-      false,
-      false,
       50,
       true,
       ['\nfoo ']
@@ -308,37 +311,27 @@ describe('Lyrics processing', () => {
 });
 
 describe('UI interactions', () => {
-  test('shuffle all respects stack lock', () => {
+  test('order all toggles dropdown values', () => {
     document.body.innerHTML = `
-      <input type="checkbox" id="pos-stack">
-      <select id="pos-stack-size"></select>
-      <input type="checkbox" id="pos-shuffle">
-      <button class="toggle-button" data-target="pos-shuffle"></button>
-      <input type="checkbox" id="neg-stack">
-      <select id="neg-stack-size"></select>
-      <input type="checkbox" id="neg-shuffle">
-      <button class="toggle-button" data-target="neg-shuffle"></button>
+      <select id="base-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="neg-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="divider-order-select"><option value="canonical">c</option><option value="random">r</option></select>
       <input type="checkbox" id="all-random">
       <button class="toggle-button" data-target="all-random"></button>
     `;
-    setupStackControls();
     setupShuffleAll();
-    const posShuffle = document.getElementById('pos-shuffle');
-    const posBtn = document.querySelector('[data-target="pos-shuffle"]');
-    const posStack = document.getElementById('pos-stack');
-    posStack.checked = true;
-    posStack.dispatchEvent(new Event('change'));
-    expect(posShuffle.checked).toBe(true);
-    expect(posBtn.classList.contains('disabled')).toBe(true);
-    const allRandom = document.getElementById('all-random');
-    allRandom.checked = false;
-    allRandom.dispatchEvent(new Event('change'));
-    expect(posShuffle.checked).toBe(true);
-    expect(posBtn.classList.contains('disabled')).toBe(true);
-    posStack.checked = false;
-    posStack.dispatchEvent(new Event('change'));
-    expect(posShuffle.checked).toBe(false);
-    expect(posBtn.classList.contains('disabled')).toBe(false);
+    const cb = document.getElementById('all-random');
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+    expect(document.getElementById('base-order-select').value).toBe('random');
+    expect(document.getElementById('pos-order-select').value).toBe('random');
+    expect(document.getElementById('neg-order-select').value).toBe('random');
+    expect(document.getElementById('divider-order-select').value).toBe('random');
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change'));
+    expect(document.getElementById('base-order-select').value).toBe('canonical');
+    expect(document.getElementById('divider-order-select').value).toBe('canonical');
   });
 
   test('hide toggle does not hide sibling buttons', () => {
@@ -363,6 +356,54 @@ describe('UI interactions', () => {
     cb.checked = false;
     cb.dispatchEvent(new Event('change'));
     expect(txt.style.display).toBe('');
+  });
+
+  test('reroll button switches select to random and shuffles', () => {
+    document.body.innerHTML = `
+      <select id="base-order-select">
+        <option value="canonical">c</option>
+        <option value="random">r</option>
+      </select>
+      <textarea id="base-order-input"></textarea>
+      <button id="base-reroll" class="toggle-button random-button" data-select="base-order-select"></button>
+    `;
+    const orig = utils.shuffle;
+    utils.shuffle = jest.fn(arr => {
+      arr.reverse();
+      return arr;
+    });
+    setupOrderControl('base-order-select', 'base-order-input', () => ['a', 'b', 'c']);
+    setupRerollButton('base-reroll', 'base-order-select');
+    document.getElementById('base-reroll').click();
+    utils.shuffle = orig;
+    expect(document.getElementById('base-order-select').value).toBe('random');
+    expect(document.getElementById('base-order-input').value).toBe('2, 1, 0');
+  });
+
+  test('rerollRandomOrders updates random selects when enabled', () => {
+    document.body.innerHTML = `
+      <select id="base-order-select">
+        <option value="canonical">c</option>
+        <option value="random">r</option>
+      </select>
+      <textarea id="base-order-input"></textarea>
+      <input type="checkbox" id="reroll-on-gen" checked>
+    `;
+    const orig = utils.shuffle;
+    utils.shuffle = jest
+      .fn()
+      .mockImplementationOnce(arr => {
+        arr.reverse();
+        return arr;
+      })
+      .mockImplementationOnce(arr => arr);
+    setupOrderControl('base-order-select', 'base-order-input', () => ['a', 'b']);
+    document.getElementById('base-order-select').value = 'random';
+    document.getElementById('base-order-select').dispatchEvent(new Event('change'));
+    const before = document.getElementById('base-order-input').value;
+    rerollRandomOrders();
+    utils.shuffle = orig;
+    expect(document.getElementById('base-order-input').value).not.toBe(before);
   });
 });
 
