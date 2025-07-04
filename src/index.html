@@ -31,6 +31,19 @@
       <!-- Tool content section -->
       <div id="tool" class="content">
         <h1>Prompt Enhancer</h1>
+        <!-- Lists manager moved to top -->
+        <div class="input-group">
+          <div class="label-row">
+            <label>Lists Manager</label>
+            <input type="checkbox" id="combine-lists" hidden>
+            <button type="button" class="toggle-button" data-target="combine-lists" data-on="Combine On" data-off="Combine Off">Combine Off</button>
+            <input type="checkbox" id="overwrite-lists" hidden>
+            <button type="button" class="toggle-button" data-target="overwrite-lists" data-on="Overwrites On" data-off="Overwrites Off" style="display:none">Overwrites Off</button>
+            <input type="file" id="lists-file" accept="application/json" style="display:none">
+            <button type="button" id="load-lists">Load Lists</button>
+            <button type="button" id="download-lists">Download Lists</button>
+          </div>
+        </div>
         <!-- Hide all toggle -->
         <div class="input-group">
           <div class="label-row">
@@ -58,28 +71,22 @@
             <textarea id="divider-input" rows="2" placeholder="Divider phrases"></textarea>
           </div>
         </div>
-        <div class="input-group">
-          <div class="label-row">
-            <label>Lists Manager</label>
-            <input type="file" id="lists-file" accept="application/json" style="display:none">
-            <button type="button" id="load-lists">Load Lists</button>
-            <button type="button" id="download-lists">Download Lists</button>
-          </div>
-        </div>
         <!-- Base prompt input section -->
         <div class="input-group">
           <div class="label-row">
             <label for="base-input">Base Prompt List</label>
             <div class="button-col">
+              <button type="button" class="copy-button icon-button" data-target="base-input" title="Copy">&#128203;</button>
+              <button type="button" id="base-save" class="save-button icon-button" title="Save">&#128190;</button>
               <input type="checkbox" id="base-shuffle" hidden>
               <button type="button" class="toggle-button icon-button random-button" data-target="base-shuffle" data-on="🎲" data-off="🎲">&#127922;</button>
               <input type="checkbox" id="base-hide" data-targets="base-input" hidden>
               <button type="button" class="toggle-button icon-button hide-button" data-target="base-hide" data-on="☰" data-off="✖">☰</button>
             </div>
           </div>
+          <select id="base-select"></select>
           <div class="input-row">
-            <textarea id="base-input" rows="4"
-              placeholder="Enter comma, semicolon, or newline separated items"></textarea>
+            <textarea id="base-input" rows="4" placeholder="Enter comma, semicolon, or newline separated items"></textarea>
           </div>
         </div>
         <!-- Positive modifier selection section -->

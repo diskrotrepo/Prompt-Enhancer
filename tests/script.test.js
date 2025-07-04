@@ -404,10 +404,27 @@ describe('List persistence', () => {
     expect(opt).not.toBeNull();
   });
 
+  test('saveList works for base', () => {
+    document.body.innerHTML = `
+      <select id="base-select"></select>
+      <textarea id="base-input">foo,bar</textarea>
+    `;
+    importLists({ presets: [] });
+    global.prompt = jest.fn().mockReturnValue('b1');
+    saveList('base');
+    const data = JSON.parse(exportLists());
+    const preset = data.presets.find(p => p.id === 'b1' && p.type === 'base');
+    expect(preset.items).toEqual(['foo', 'bar']);
+    const opt = document.querySelector('#base-select option[value="b1"]');
+    expect(opt).not.toBeNull();
+  });
+
   test('sequential save and reload', () => {
     document.body.innerHTML = `
       <select id="pos-select"></select>
       <textarea id="pos-input"></textarea>
+      <select id="base-select"></select>
+      <textarea id="base-input"></textarea>
       <select id="neg-select"></select>
       <textarea id="neg-input"></textarea>
       <select id="length-select"></select>
@@ -416,12 +433,14 @@ describe('List persistence', () => {
       <textarea id="divider-input"></textarea>
     `;
     importLists({ presets: [] });
-    let names = ['p1', 'p2', 'n1', 'l1', 'd1'];
+    let names = ['p1', 'p2', 'b1', 'n1', 'l1', 'd1'];
     global.prompt = jest.fn(() => names.shift());
     document.getElementById('pos-input').value = 'x';
     saveList('positive');
     document.getElementById('pos-input').value = 'z';
     saveList('positive');
+    document.getElementById('base-input').value = 'base';
+    saveList('base');
     document.getElementById('neg-input').value = 'y';
     saveList('negative');
     document.getElementById('length-input').value = '5';
@@ -430,11 +449,13 @@ describe('List persistence', () => {
     saveList('divider');
 
     const exported = JSON.parse(exportLists());
-    expect(exported.presets.length).toBe(5);
+    expect(exported.presets.length).toBe(6);
 
     document.body.innerHTML = `
       <select id="pos-select"></select>
       <textarea id="pos-input"></textarea>
+      <select id="base-select"></select>
+      <textarea id="base-input"></textarea>
       <select id="neg-select"></select>
       <textarea id="neg-input"></textarea>
       <select id="length-select"></select>
@@ -445,21 +466,65 @@ describe('List persistence', () => {
     importLists(exported);
     const posSelVals = Array.from(document.querySelectorAll('#pos-select option')).map(o => o.value);
     expect(posSelVals).toEqual(expect.arrayContaining(['p1','p2']));
-    const posSelect = document.getElementById('pos-select');
-    const posInput = document.getElementById('pos-input');
-    posSelect.value = 'p1';
-    applyPreset(posSelect, posInput, 'positive');
-    expect(posInput.value).toBe('x');
-    posSelect.value = 'p2';
-    applyPreset(posSelect, posInput, 'positive');
-    expect(posInput.value).toBe('z');
-    posSelect.value = 'p1';
-    applyPreset(posSelect, posInput, 'positive');
-    expect(posInput.value).toBe('x');
-    const divSelect = document.getElementById('divider-select');
-    const divInput = document.getElementById('divider-input');
-    divSelect.value = 'd1';
-    applyPreset(divSelect, divInput, 'divider');
+      const posSelect = document.getElementById('pos-select');
+      const posInput = document.getElementById('pos-input');
+      posSelect.value = 'p1';
+      applyPreset(posSelect, posInput, 'positive');
+      expect(posInput.value).toBe('x');
+      posSelect.value = 'p2';
+      applyPreset(posSelect, posInput, 'positive');
+      expect(posInput.value).toBe('z');
+      posSelect.value = 'p1';
+      applyPreset(posSelect, posInput, 'positive');
+      expect(posInput.value).toBe('x');
+      const baseSelect = document.getElementById('base-select');
+      const baseInput = document.getElementById('base-input');
+      baseSelect.value = 'b1';
+      applyPreset(baseSelect, baseInput, 'base');
+      expect(baseInput.value).toBe('base');
+      const divSelect = document.getElementById('divider-select');
+      const divInput = document.getElementById('divider-input');
+      divSelect.value = 'd1';
+      applyPreset(divSelect, divInput, 'divider');
     expect(divInput.value).toBe('foo');
+  });
+
+  test('importLists combine without overwrite', () => {
+    importLists({
+      presets: [
+        { id: 'a', title: 'a', type: 'positive', items: ['1'] },
+        { id: 'b', title: 'b', type: 'negative', items: ['x'] }
+      ]
+    });
+    importLists(
+      {
+        presets: [
+          { id: 'b', title: 'b', type: 'negative', items: ['y'] },
+          { id: 'c', title: 'c', type: 'positive', items: ['2'] }
+        ]
+      },
+      true,
+      false
+    );
+    const data = JSON.parse(exportLists());
+    const neg = data.presets.filter(p => p.id === 'b' && p.type === 'negative');
+    expect(neg.length).toBe(1);
+    expect(neg[0].items).toEqual(['x']);
+    expect(
+      data.presets.some(p => p.id === 'c' && p.type === 'positive')
+    ).toBe(true);
+  });
+
+  test('importLists combine with overwrite', () => {
+    importLists({ presets: [] });
+    importLists({ presets: [{ id: 'a', title: 'a', type: 'positive', items: ['1'] }] });
+    importLists(
+      { presets: [{ id: 'a', title: 'a', type: 'positive', items: ['2'] }] },
+      true,
+      true
+    );
+    const data = JSON.parse(exportLists());
+    const pos = data.presets.find(p => p.id === 'a' && p.type === 'positive');
+    expect(pos.items).toEqual(['2']);
   });
 });
