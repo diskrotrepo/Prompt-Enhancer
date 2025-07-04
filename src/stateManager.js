@@ -41,7 +41,15 @@
     'lyrics-select',
     'lyrics-space',
     'lyrics-remove-parens',
-    'lyrics-remove-brackets'
+    'lyrics-remove-brackets',
+    'insert-input',
+    'insert-select',
+    'base-order-input',
+    'base-order-select',
+    'pos-order-input',
+    'pos-order-select',
+    'neg-order-input',
+    'neg-order-select'
   ];
 
   function loadFromDOM() {

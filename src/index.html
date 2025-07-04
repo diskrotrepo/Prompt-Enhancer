@@ -39,14 +39,15 @@
             <button type="button" id="load-lists">Load</button>
             <button type="button" id="additive-load">Additive Load</button>
             <button type="button" id="download-lists">Save</button>
+            <input type="file" id="state-file" accept="application/json" style="display:none">
+            <button type="button" id="load-state">Load State</button>
+            <button type="button" id="save-state">Save State</button>
           </div>
         </div>
         <!-- Hide all toggle -->
         <div class="input-group">
           <div class="label-row">
             <label>Quick Actions</label>
-            <input type="checkbox" id="all-random" hidden>
-            <button type="button" class="toggle-button" data-target="all-random" data-on="All randomized" data-off="All Canonical">All Canonical</button>
             <input type="checkbox" id="all-hide" hidden>
             <button type="button" class="toggle-button" data-target="all-hide" data-on="All hidden" data-off="All visible">All visible</button>
           </div>
@@ -56,7 +57,6 @@
             <label for="divider-input">Divider List</label>
             <div class="button-col">
               <input type="checkbox" id="divider-shuffle" hidden>
-              <button type="button" class="toggle-button icon-button random-button" data-target="divider-shuffle" data-on="🎲" data-off="🎲">&#127922;</button>
               <button type="button" id="divider-save" class="save-button icon-button" title="Save">&#128190;</button>
               <button type="button" class="copy-button icon-button" data-target="divider-input" title="Copy">&#128203;</button>
               <input type="checkbox" id="divider-hide" data-targets="divider-input" hidden>
@@ -74,7 +74,6 @@
             <label for="base-input">Base Prompt List</label>
             <div class="button-col">
               <input type="checkbox" id="base-shuffle" hidden>
-              <button type="button" class="toggle-button icon-button random-button" data-target="base-shuffle" data-on="🎲" data-off="🎲">&#127922;</button>
               <button type="button" id="base-save" class="save-button icon-button" title="Save">&#128190;</button>
               <button type="button" class="copy-button icon-button" data-target="base-input" title="Copy">&#128203;</button>
               <input type="checkbox" id="base-hide" data-targets="base-input" hidden>
@@ -85,6 +84,10 @@
           <div class="input-row">
             <textarea id="base-input" rows="4" placeholder="Enter comma, semicolon, or newline separated items"></textarea>
           </div>
+          <select id="base-order-select"></select>
+          <div class="input-row">
+            <textarea id="base-order-input" rows="1" placeholder="0,1,2"></textarea>
+          </div>
         </div>
         <!-- Positive modifier selection section -->
         <div class="input-group">
@@ -94,7 +97,6 @@
             <button type="button" class="toggle-button" data-target="pos-stack" data-on="Stack On" data-off="Stack Off">Stack Off</button>
               <div class="button-col">
                 <input type="checkbox" id="pos-shuffle" hidden>
-                <button type="button" class="toggle-button icon-button random-button" data-target="pos-shuffle" data-on="🎲" data-off="🎲">&#127922;</button>
                 <button type="button" id="pos-save" class="save-button icon-button" title="Save">&#128190;</button>
                 <button type="button" class="copy-button icon-button" data-target="pos-input" title="Copy">&#128203;</button>
                 <input type="checkbox" id="pos-hide" data-targets="pos-input" hidden>
@@ -112,6 +114,10 @@
           <div class="input-row">
             <textarea id="pos-input" rows="2" placeholder="Positive modifiers"></textarea>
           </div>
+          <select id="pos-order-select"></select>
+          <div class="input-row">
+            <textarea id="pos-order-input" rows="1" placeholder="0,1,2"></textarea>
+          </div>
         </div>
         <!-- Negative modifier selection section -->
         <div class="input-group">
@@ -123,7 +129,6 @@
             <button type="button" class="toggle-button" data-target="neg-stack" data-on="Stack On" data-off="Stack Off">Stack Off</button>
               <div class="button-col">
                 <input type="checkbox" id="neg-shuffle" hidden>
-                <button type="button" class="toggle-button icon-button random-button" data-target="neg-shuffle" data-on="🎲" data-off="🎲">&#127922;</button>
                 <button type="button" id="neg-save" class="save-button icon-button" title="Save">&#128190;</button>
                 <button type="button" class="copy-button icon-button" data-target="neg-input" title="Copy">&#128203;</button>
                 <input type="checkbox" id="neg-hide" data-targets="neg-input" hidden>
@@ -141,6 +146,10 @@
           <div class="input-row">
             <textarea id="neg-input" rows="3" placeholder="Negative modifiers"></textarea>
           </div>
+          <select id="neg-order-select"></select>
+          <div class="input-row">
+            <textarea id="neg-order-input" rows="1" placeholder="0,1,2"></textarea>
+          </div>
         </div>
         <!-- Character length limit selection -->
         <div class="input-group">
@@ -156,11 +165,26 @@
         <select id="length-select">
           <!-- Options will be populated dynamically from LENGTH_LISTS -->
         </select>
-        <div class="input-row">
-          <input type="number" id="length-input" value="1000" min="1">
+      <div class="input-row">
+        <input type="number" id="length-input" value="1000" min="1">
+      </div>
+    </div>
+    <div class="input-group">
+      <div class="label-row">
+        <label for="insert-input">Insertion Depths</label>
+        <div class="button-col">
+          <button type="button" id="insert-save" class="save-button icon-button" title="Save">&#128190;</button>
+          <button type="button" class="copy-button icon-button" data-target="insert-input" title="Copy">&#128203;</button>
+          <input type="checkbox" id="insert-hide" data-targets="insert-input,insert-select" hidden>
+          <button type="button" class="toggle-button icon-button hide-button" data-target="insert-hide" data-on="☰" data-off="✖">☰</button>
         </div>
       </div>
-      <!-- Lyrics processing input -->
+      <select id="insert-select"></select>
+      <div class="input-row">
+        <textarea id="insert-input" rows="2" placeholder="0,1,2"></textarea>
+      </div>
+    </div>
+    <!-- Lyrics processing input -->
       <div class="input-group">
         <div class="label-row">
           <label for="lyrics-input">Lyrics</label>

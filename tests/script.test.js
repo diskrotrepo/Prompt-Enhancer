@@ -17,6 +17,9 @@ const {
   buildVersions,
   processLyrics,
   parseDividerInput,
+  parseOrderInput,
+  applyOrder,
+  insertAtDepth,
 } = utils;
 
 const { exportLists, importLists, saveList } = lists;
@@ -72,6 +75,19 @@ describe('Utility functions', () => {
     expect(a).toEqual([1]);
     expect(b).toEqual(['x']);
   });
+
+  test('parseOrderInput converts to numbers', () => {
+    expect(parseOrderInput('1, 2 3')).toEqual([1, 2, 3]);
+  });
+
+  test('applyOrder reorders list cycling values', () => {
+    const out = applyOrder(['a', 'b', 'c'], [2, 0]);
+    expect(out).toEqual(['c', 'a', 'c']);
+  });
+
+  test('insertAtDepth inserts term at depth', () => {
+    expect(insertAtDepth('a b c', 'x', 1)).toBe('a x b c');
+  });
 });
 
 describe('Prompt building', () => {
@@ -104,27 +120,27 @@ describe('Prompt building', () => {
   });
 
   test('buildVersions builds positive and negative prompts', () => {
-    const out = buildVersions(['cat'], ['bad'], ['good'], false, false, false, 20);
+    const out = buildVersions(['cat'], ['bad'], ['good'], 20);
     expect(out).toEqual({ positive: 'good cat, good cat', negative: 'bad cat, bad cat' });
   });
 
   test('buildVersions can include positive terms for negatives', () => {
-    const out = buildVersions(['cat'], ['bad'], ['good'], false, false, false, 20, true);
+    const out = buildVersions(['cat'], ['bad'], ['good'], 20, true);
     expect(out).toEqual({ positive: 'good cat', negative: 'bad good cat' });
   });
 
   test('buildVersions returns empty strings when items list is empty', () => {
-    const out = buildVersions([], ['n'], ['p'], false, false, false, 10);
+    const out = buildVersions([], ['n'], ['p'], 10);
     expect(out).toEqual({ positive: '', negative: '' });
   });
 
   test('buildVersions respects very small limits', () => {
-    const out = buildVersions(['hello'], ['n'], ['p'], false, false, false, 2);
+    const out = buildVersions(['hello'], ['n'], ['p'], 2);
     expect(out).toEqual({ positive: '', negative: '' });
   });
 
   test('buildVersions joins items without commas when delimited', () => {
-    const out = buildVersions(['a.\n', 'b.\n'], ['n'], ['p'], false, false, false, 30);
+    const out = buildVersions(['a.\n', 'b.\n'], ['n'], ['p'], 30);
     expect(out.positive.includes(',')).toBe(false);
     expect(out.negative.includes(',')).toBe(false);
     expect(out.positive.startsWith('p a.\n')).toBe(true);
@@ -136,9 +152,6 @@ describe('Prompt building', () => {
       ['a', 'b'],
       [],
       [],
-      false,
-      false,
-      false,
       50,
       false,
       ['i.e., '],
@@ -154,9 +167,6 @@ describe('Prompt building', () => {
       ['a', 'b'],
       [],
       [],
-      false,
-      false,
-      false,
       50,
       false,
       divs
@@ -171,9 +181,6 @@ describe('Prompt building', () => {
       ['a', 'b'],
       [],
       [],
-      false,
-      false,
-      false,
       50,
       false,
       ['x ', 'y ']
@@ -190,9 +197,6 @@ describe('Prompt building', () => {
       ['a', 'b'],
       [],
       [],
-      false,
-      false,
-      false,
       50,
       false,
       ['\nfoo ']
@@ -208,9 +212,6 @@ describe('Prompt building', () => {
       ['x'],
       ['n1', 'n2'],
       ['p1', 'p2'],
-      false,
-      false,
-      false,
       10,
       false,
       [],
@@ -227,9 +228,6 @@ describe('Prompt building', () => {
       ['a', 'b'],
       ['n1'],
       ['p1'],
-      false,
-      false,
-      false,
       100,
       false,
       ['\nfoo '],
@@ -247,9 +245,6 @@ describe('Prompt building', () => {
       ['cat'],
       ['bad'],
       ['good'],
-      false,
-      false,
-      false,
       50,
       true,
       ['\nfoo ']
