@@ -5,6 +5,9 @@ if (typeof window !== 'undefined') {
   window.__TEST__ = true;
 }
 
+const fs = require('fs');
+const path = require('path');
+
 const {
   parseInput,
   shuffle,
@@ -362,6 +365,24 @@ describe('UI interactions', () => {
     cb.checked = false;
     cb.dispatchEvent(new Event('change'));
     expect(txt.style.display).toBe('');
+  });
+
+  test('button order maintains vertical alignment', () => {
+    const html = fs.readFileSync(path.join(__dirname, '../src/index.html'), 'utf8');
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const groups = ['divider', 'base', 'pos', 'neg'];
+    groups.forEach(prefix => {
+      const saveBtn = doc.getElementById(`${prefix}-save`);
+      if (!saveBtn) return;
+      const col = saveBtn.parentElement;
+      const buttons = Array.from(col.querySelectorAll('button.icon-button'));
+      const randomIndex = buttons.findIndex(b => b.classList.contains('random-button'));
+      const copyIndex = buttons.findIndex(b => b.classList.contains('copy-button'));
+      expect(randomIndex).toBeGreaterThan(-1);
+      expect(copyIndex).toBeGreaterThan(-1);
+      expect(randomIndex).toBeLessThan(copyIndex);
+    });
   });
 });
 
