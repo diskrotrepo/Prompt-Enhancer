@@ -739,6 +739,33 @@ const ALL_LISTS = {
         "10000"
       ],
       "type": "length"
+    },
+    {
+      "id": "divider-simple",
+      "title": "Simple",
+      "items": [],
+      "type": "divider"
+    },
+    {
+      "id": "divider-natural",
+      "title": "Natural",
+      "items": [
+        "In other words, ",
+        "i.e., ",
+        "Put another way, ",
+        "Restated, ",
+        "Which is to say, ",
+        "To be precise, ",
+        "In essence, ",
+        "Put differently, ",
+        "To put it another way, ",
+        "That is to say, ",
+        "Namely, ",
+        "Rephrased, ",
+        "To say it another way, ",
+        "Let me put it this way. "
+      ],
+      "type": "divider"
     }
   ]
 };

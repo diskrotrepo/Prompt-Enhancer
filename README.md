@@ -19,7 +19,7 @@ The Prompt Enhancer helps you create more effective prompts by:
 - **Custom Lists**: Full support for user-defined modifier lists
 - **Smart Cycling**: Automatically cycles through base prompts and modifiers
 - **Randomization Options**: Optional shuffling for each list independently
-- **Natural Dividers**: Repeats are separated by newlines with randomized connecting phrases reused for both versions
+- **Divider Lists**: Choose between simple or natural newline phrases and create your own
 - **Character Limits**: Configurable output length limits (presets for Suno and Riffusion)
 - **No Dependencies**: Pure vanilla JavaScript, works completely offline
 - **Dark Theme**: Eye-friendly interface inspired by Diskrot
