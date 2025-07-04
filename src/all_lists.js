@@ -677,6 +677,12 @@ const ALL_LISTS = {
       "type": "base"
     },
     {
+      "id": "lyrics-sample",
+      "title": "Empty Lyrics",
+      "items": [],
+      "type": "lyrics"
+    },
+    {
       "id": "divider-simple",
       "title": "Simple",
       "items": [],
