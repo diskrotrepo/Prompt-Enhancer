@@ -5,6 +5,9 @@ if (typeof window !== 'undefined') {
   window.__TEST__ = true;
 }
 
+const fs = require('fs');
+const path = require('path');
+
 const {
   parseInput,
   shuffle,
@@ -362,6 +365,16 @@ describe('UI interactions', () => {
     cb.checked = false;
     cb.dispatchEvent(new Event('change'));
     expect(txt.style.display).toBe('');
+  });
+
+  test('button columns are vertical', () => {
+    document.body.innerHTML = '<div class="button-col"><button></button><button></button></div>';
+    const style = document.createElement('style');
+    style.textContent = fs.readFileSync(path.join(__dirname, '../src/style.css'), 'utf8');
+    document.head.appendChild(style);
+    const col = document.querySelector('.button-col');
+    const computed = window.getComputedStyle(col);
+    expect(computed.flexDirection).toBe('column');
   });
 });
 
