@@ -1,6 +1,7 @@
 (function (global) {
   const utils = global.promptUtils || (typeof require !== 'undefined' && require('./promptUtils'));
   const lists = global.listManager || (typeof require !== 'undefined' && require('./listManager'));
+  const state = global.stateManager || (typeof require !== 'undefined' && require('./state'));
 
   function applyPreset(selectEl, inputEl, presetsOrType) {
     let presets = presetsOrType;
@@ -85,6 +86,7 @@
   }
 
   function generate() {
+    const currentState = state.collectState();
     const {
       baseItems,
       negMods,
@@ -121,6 +123,9 @@
       negStackOn ? negStackSize : 1
     );
     displayOutput(result);
+
+    currentState.shuffleOrders = {};
+    state.applyState(currentState);
 
     const lyricsInput = document.getElementById('lyrics-input');
     if (lyricsInput && lyricsInput.value.trim()) {
@@ -346,6 +351,21 @@
     if (divSave) divSave.addEventListener('click', () => lists.saveList('divider'));
     const lyricsSave = document.getElementById('lyrics-save');
     if (lyricsSave) lyricsSave.addEventListener('click', () => lists.saveList('lyrics'));
+
+    const saveStateBtn = document.getElementById('save-state');
+    if (saveStateBtn) saveStateBtn.addEventListener('click', state.downloadState);
+    const loadStateBtn = document.getElementById('load-state');
+    const stateFile = document.getElementById('state-file');
+    if (loadStateBtn && stateFile) {
+      loadStateBtn.addEventListener('click', () => stateFile.click());
+    }
+    if (stateFile) {
+      stateFile.addEventListener('change', e => {
+        const f = e.target.files[0];
+        if (f) state.loadStateFromFile(f);
+        stateFile.value = '';
+      });
+    }
   }
 
   const api = {

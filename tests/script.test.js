@@ -554,3 +554,79 @@ describe('List persistence', () => {
     expect(lists.length).toBe(2);
   });
 });
+
+describe('State persistence', () => {
+  const stateMod = require('../src/state');
+
+  test('saved state restores output with same seed', () => {
+    document.body.innerHTML = `
+      <textarea id="base-input"></textarea>
+      <textarea id="neg-input"></textarea>
+      <textarea id="pos-input"></textarea>
+      <textarea id="divider-input"></textarea>
+      <textarea id="lyrics-input"></textarea>
+      <input id="length-input">
+      <select id="length-select"></select>
+      <input type="checkbox" id="base-shuffle">
+      <input type="checkbox" id="pos-shuffle">
+      <input type="checkbox" id="neg-shuffle">
+      <input type="checkbox" id="pos-stack">
+      <select id="pos-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="neg-stack">
+      <select id="neg-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="neg-include-pos">
+      <input type="checkbox" id="divider-shuffle">
+      <pre id="positive-output"></pre>
+      <pre id="negative-output"></pre>
+      <pre id="lyrics-output"></pre>
+    `;
+
+    importLists({ presets: [] });
+    document.getElementById('base-input').value = 'a,b';
+    document.getElementById('pos-input').value = 'p1,p2';
+    document.getElementById('neg-input').value = 'n1';
+    document.getElementById('length-input').value = '50';
+
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0.5);
+    ui.generate();
+    const pos1 = document.getElementById('positive-output').textContent;
+    const neg1 = document.getElementById('negative-output').textContent;
+    Math.random = orig;
+
+    const saved = stateMod.exportState();
+
+    document.body.innerHTML = `
+      <textarea id="base-input"></textarea>
+      <textarea id="neg-input"></textarea>
+      <textarea id="pos-input"></textarea>
+      <textarea id="divider-input"></textarea>
+      <textarea id="lyrics-input"></textarea>
+      <input id="length-input">
+      <select id="length-select"></select>
+      <input type="checkbox" id="base-shuffle">
+      <input type="checkbox" id="pos-shuffle">
+      <input type="checkbox" id="neg-shuffle">
+      <input type="checkbox" id="pos-stack">
+      <select id="pos-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="neg-stack">
+      <select id="neg-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="neg-include-pos">
+      <input type="checkbox" id="divider-shuffle">
+      <pre id="positive-output"></pre>
+      <pre id="negative-output"></pre>
+      <pre id="lyrics-output"></pre>
+    `;
+
+    importLists({ presets: [] });
+    stateMod.importState(JSON.parse(saved));
+    Math.random = jest.fn().mockReturnValue(0.5);
+    ui.generate();
+    const pos2 = document.getElementById('positive-output').textContent;
+    const neg2 = document.getElementById('negative-output').textContent;
+    Math.random = orig;
+
+    expect(pos2).toBe(pos1);
+    expect(neg2).toBe(neg1);
+  });
+});
