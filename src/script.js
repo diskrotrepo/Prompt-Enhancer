@@ -16,6 +16,7 @@ let POS_PRESETS = {};
 let LENGTH_PRESETS = {};
 let DIVIDER_PRESETS = {};
 let BASE_PRESETS = {};
+let LYRICS_PRESETS = {};
 
 // Combined lists object used for import/export operations
 let LISTS;
@@ -79,11 +80,13 @@ function loadLists() {
   LENGTH_PRESETS = {};
   DIVIDER_PRESETS = {};
   BASE_PRESETS = {};
+  LYRICS_PRESETS = {};
   const neg = [];
   const pos = [];
   const len = [];
   const divs = [];
   const base = [];
+  const lyrics = [];
 
   if (LISTS.presets && Array.isArray(LISTS.presets)) {
     LISTS.presets.forEach(p => {
@@ -102,6 +105,9 @@ function loadLists() {
       } else if (p.type === 'base') {
         BASE_PRESETS[p.id] = p.items || [];
         base.push(p);
+      } else if (p.type === 'lyrics') {
+        LYRICS_PRESETS[p.id] = p.items || [];
+        lyrics.push(p);
       }
     });
   }
@@ -120,6 +126,9 @@ function loadLists() {
 
   const baseSelect = document.getElementById('base-select');
   if (baseSelect) populateSelect(baseSelect, base);
+
+  const lyricsSelect = document.getElementById('lyrics-select');
+  if (lyricsSelect) populateSelect(lyricsSelect, lyrics);
 
   // Uncomment the following lines for a quick summary when debugging
   // console.log('Lists loaded:', {
@@ -523,6 +532,8 @@ function applyPreset(selectEl, inputEl, presetsOrType) {
       presets = DIVIDER_PRESETS;
     } else if (presetsOrType === 'base') {
       presets = BASE_PRESETS;
+    } else if (presetsOrType === 'lyrics') {
+      presets = LYRICS_PRESETS;
     } else {
       presets = {};
     }
@@ -889,7 +900,8 @@ function saveList(type) {
     negative: { select: 'neg-select', input: 'neg-input', store: NEG_PRESETS },
     positive: { select: 'pos-select', input: 'pos-input', store: POS_PRESETS },
     length: { select: 'length-select', input: 'length-input', store: LENGTH_PRESETS },
-    divider: { select: 'divider-select', input: 'divider-input', store: DIVIDER_PRESETS }
+    divider: { select: 'divider-select', input: 'divider-input', store: DIVIDER_PRESETS },
+    lyrics: { select: 'lyrics-select', input: 'lyrics-input', store: LYRICS_PRESETS }
   };
   const cfg = map[type];
   if (!cfg) return;
@@ -898,7 +910,14 @@ function saveList(type) {
   if (!sel || !inp) return;
   const name = prompt('Enter list name', sel.value);
   if (!name) return;
-  const items = type === 'divider' ? parseDividerInput(inp.value) : parseInput(inp.value);
+  let items;
+  if (type === 'divider') {
+    items = parseDividerInput(inp.value);
+  } else if (type === 'lyrics') {
+    items = [inp.value];
+  } else {
+    items = parseInput(inp.value);
+  }
   let preset = LISTS.presets.find(p => p.id === name && p.type === type);
   if (!preset) {
     preset = { id: name, title: name, type, items };
@@ -949,12 +968,18 @@ function initializeUI() {
     document.getElementById('base-input'),
     'base'
   );
+  applyPreset(
+    document.getElementById('lyrics-select'),
+    document.getElementById('lyrics-input'),
+    'lyrics'
+  );
 
   setupPresetListener('neg-select', 'neg-input', 'negative');
   setupPresetListener('pos-select', 'pos-input', 'positive');
   setupPresetListener('length-select', 'length-input', 'length');
   setupPresetListener('divider-select', 'divider-input', 'divider');
   setupPresetListener('base-select', 'base-input', 'base');
+  setupPresetListener('lyrics-select', 'lyrics-input', 'lyrics');
   document.getElementById('generate').addEventListener('click', generate);
 
   setupToggleButtons();
@@ -1012,6 +1037,8 @@ function initializeUI() {
   if (lenSave) lenSave.addEventListener('click', () => saveList('length'));
   const divSave = document.getElementById('divider-save');
   if (divSave) divSave.addEventListener('click', () => saveList('divider'));
+  const lyricsSave = document.getElementById('lyrics-save');
+  if (lyricsSave) lyricsSave.addEventListener('click', () => saveList('lyrics'));
 }
 
 // Initialize UI when DOM is ready

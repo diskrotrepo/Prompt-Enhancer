@@ -169,11 +169,13 @@
           <input type="checkbox" id="lyrics-remove-brackets" hidden>
           <button type="button" class="toggle-button" data-target="lyrics-remove-brackets" data-on="Brackets Removed" data-off="Brackets Kept">Brackets Kept</button>
           <div class="button-col">
+            <button type="button" id="lyrics-save" class="save-button icon-button" title="Save">&#128190;</button>
             <button type="button" class="copy-button icon-button" data-target="lyrics-input" title="Copy">&#128203;</button>
             <input type="checkbox" id="lyrics-hide" data-targets="lyrics-input,lyrics-space,lyrics-remove-parens,lyrics-remove-brackets" hidden>
             <button type="button" class="toggle-button icon-button hide-button" data-target="lyrics-hide" data-on="☰" data-off="✖">☰</button>
           </div>
         </div>
+        <select id="lyrics-select"></select>
         <div class="input-row">
           <textarea id="lyrics-input" rows="4" placeholder="Enter lyrics"></textarea>
         </div>

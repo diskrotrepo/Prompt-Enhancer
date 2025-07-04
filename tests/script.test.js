@@ -419,6 +419,21 @@ describe('List persistence', () => {
     expect(opt).not.toBeNull();
   });
 
+  test('saveList works for lyrics', () => {
+    document.body.innerHTML = `
+      <select id="lyrics-select"></select>
+      <textarea id="lyrics-input">line1\nline2</textarea>
+    `;
+    importLists({ presets: [] });
+    global.prompt = jest.fn().mockReturnValue('ly1');
+    saveList('lyrics');
+    const data = JSON.parse(exportLists());
+    const preset = data.presets.find(p => p.id === 'ly1' && p.type === 'lyrics');
+    expect(preset.items).toEqual(['line1\nline2']);
+    const opt = document.querySelector('#lyrics-select option[value="ly1"]');
+    expect(opt).not.toBeNull();
+  });
+
   test('sequential save and reload', () => {
     document.body.innerHTML = `
       <select id="pos-select"></select>
@@ -431,9 +446,11 @@ describe('List persistence', () => {
       <input id="length-input">
       <select id="divider-select"></select>
       <textarea id="divider-input"></textarea>
+      <select id="lyrics-select"></select>
+      <textarea id="lyrics-input"></textarea>
     `;
     importLists({ presets: [] });
-    let names = ['p1', 'p2', 'b1', 'n1', 'l1', 'd1'];
+    let names = ['p1', 'p2', 'b1', 'n1', 'l1', 'd1', 'ly1'];
     global.prompt = jest.fn(() => names.shift());
     document.getElementById('pos-input').value = 'x';
     saveList('positive');
@@ -447,9 +464,11 @@ describe('List persistence', () => {
     saveList('length');
     document.getElementById('divider-input').value = 'foo';
     saveList('divider');
+    document.getElementById('lyrics-input').value = 'lyric';
+    saveList('lyrics');
 
     const exported = JSON.parse(exportLists());
-    expect(exported.presets.length).toBe(6);
+    expect(exported.presets.length).toBe(7);
 
     document.body.innerHTML = `
       <select id="pos-select"></select>
@@ -462,6 +481,8 @@ describe('List persistence', () => {
       <input id="length-input">
       <select id="divider-select"></select>
       <textarea id="divider-input"></textarea>
+      <select id="lyrics-select"></select>
+      <textarea id="lyrics-input"></textarea>
     `;
     importLists(exported);
     const posSelVals = Array.from(document.querySelectorAll('#pos-select option')).map(o => o.value);
@@ -486,7 +507,12 @@ describe('List persistence', () => {
       const divInput = document.getElementById('divider-input');
       divSelect.value = 'd1';
       applyPreset(divSelect, divInput, 'divider');
-    expect(divInput.value).toBe('foo');
+      expect(divInput.value).toBe('foo');
+      const lyrSelect = document.getElementById('lyrics-select');
+      const lyrInput = document.getElementById('lyrics-input');
+      lyrSelect.value = 'ly1';
+      applyPreset(lyrSelect, lyrInput, 'lyrics');
+      expect(lyrInput.value).toBe('lyric');
   });
 
   test('importLists additive merges lists', () => {
