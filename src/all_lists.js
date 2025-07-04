@@ -741,6 +741,15 @@ const ALL_LISTS = {
       "type": "length"
     },
     {
+      "id": "base-sample",
+      "title": "Sample Base Prompts",
+      "items": [
+        "sunset landscape",
+        "city skyline"
+      ],
+      "type": "base"
+    },
+    {
       "id": "divider-simple",
       "title": "Simple",
       "items": [],

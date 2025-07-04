@@ -15,6 +15,7 @@ let NEG_PRESETS = {};
 let POS_PRESETS = {};
 let LENGTH_PRESETS = {};
 let DIVIDER_PRESETS = {};
+let BASE_PRESETS = {};
 
 // Combined lists object used for import/export operations
 let LISTS;
@@ -77,10 +78,12 @@ function loadLists() {
   POS_PRESETS = {};
   LENGTH_PRESETS = {};
   DIVIDER_PRESETS = {};
+  BASE_PRESETS = {};
   const neg = [];
   const pos = [];
   const len = [];
   const divs = [];
+  const base = [];
 
   if (LISTS.presets && Array.isArray(LISTS.presets)) {
     LISTS.presets.forEach(p => {
@@ -96,6 +99,9 @@ function loadLists() {
       } else if (p.type === 'divider') {
         DIVIDER_PRESETS[p.id] = p.items || [];
         divs.push(p);
+      } else if (p.type === 'base') {
+        BASE_PRESETS[p.id] = p.items || [];
+        base.push(p);
       }
     });
   }
@@ -111,6 +117,9 @@ function loadLists() {
 
   const dividerSelect = document.getElementById('divider-select');
   if (dividerSelect) populateSelect(dividerSelect, divs);
+
+  const baseSelect = document.getElementById('base-select');
+  if (baseSelect) populateSelect(baseSelect, base);
 
   // Uncomment the following lines for a quick summary when debugging
   // console.log('Lists loaded:', {
@@ -512,6 +521,8 @@ function applyPreset(selectEl, inputEl, presetsOrType) {
       presets = LENGTH_PRESETS;
     } else if (presetsOrType === 'divider') {
       presets = DIVIDER_PRESETS;
+    } else if (presetsOrType === 'base') {
+      presets = BASE_PRESETS;
     } else {
       presets = {};
     }
@@ -852,6 +863,7 @@ function downloadLists() {
 // Save the current textarea values back into LISTS
 function saveList(type) {
   const map = {
+    base: { select: 'base-select', input: 'base-input', store: BASE_PRESETS },
     negative: { select: 'neg-select', input: 'neg-input', store: NEG_PRESETS },
     positive: { select: 'pos-select', input: 'pos-input', store: POS_PRESETS },
     length: { select: 'length-select', input: 'length-input', store: LENGTH_PRESETS },
@@ -910,11 +922,17 @@ function initializeUI() {
     document.getElementById('divider-input'),
     'divider'
   );
+  applyPreset(
+    document.getElementById('base-select'),
+    document.getElementById('base-input'),
+    'base'
+  );
 
   setupPresetListener('neg-select', 'neg-input', 'negative');
   setupPresetListener('pos-select', 'pos-input', 'positive');
   setupPresetListener('length-select', 'length-input', 'length');
   setupPresetListener('divider-select', 'divider-input', 'divider');
+  setupPresetListener('base-select', 'base-input', 'base');
   document.getElementById('generate').addEventListener('click', generate);
 
   setupToggleButtons();
@@ -950,6 +968,8 @@ function initializeUI() {
   }
   const dlBtn = document.getElementById('download-lists');
   if (dlBtn) dlBtn.addEventListener('click', downloadLists);
+  const baseSave = document.getElementById('base-save');
+  if (baseSave) baseSave.addEventListener('click', () => saveList('base'));
   const posSave = document.getElementById('pos-save');
   if (posSave) posSave.addEventListener('click', () => saveList('positive'));
   const negSave = document.getElementById('neg-save');
