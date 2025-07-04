@@ -27,6 +27,8 @@ The Prompt Enhancer helps you create more effective prompts by:
 - **Insertion Depths**: Specify numeric lists for modifier insertion positions
 - **State Saving**: Export and reload all current inputs for repeatable output
 - **Deterministic Ordering**: Canonical or randomized lists control item ordering
+- **Divider Ordering**: Control divider list order with canonical or random presets
+- **Quick Actions**: One toggle sets all list ordering menus to canonical or randomized
 
 ## How to Use
 

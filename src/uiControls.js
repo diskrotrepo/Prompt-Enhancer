@@ -65,6 +65,7 @@
     const baseOrder = utils.parseOrderInput(document.getElementById('base-order-input')?.value || '');
     const posOrder = utils.parseOrderInput(document.getElementById('pos-order-input')?.value || '');
     const negOrder = utils.parseOrderInput(document.getElementById('neg-order-input')?.value || '');
+    const dividerOrder = utils.parseOrderInput(document.getElementById('divider-order-input')?.value || '');
     return {
       baseItems,
       negMods,
@@ -80,6 +81,7 @@
       includePosForNeg,
       dividerMods,
       shuffleDividers,
+      dividerOrder,
       insertDepths,
       baseOrder,
       posOrder,
@@ -108,6 +110,7 @@
       includePosForNeg,
       dividerMods,
       shuffleDividers,
+      dividerOrder,
       insertDepths,
       baseOrder,
       posOrder,
@@ -131,7 +134,8 @@
       insertDepths,
       baseOrder,
       posOrder,
-      negOrder
+      negOrder,
+      dividerOrder
     );
     displayOutput(result);
 
@@ -178,23 +182,22 @@
   function setupShuffleAll() {
     const allRandom = document.getElementById('all-random');
     if (!allRandom) return;
-    const shuffleCheckboxes = [
-      document.getElementById('base-shuffle'),
-      document.getElementById('pos-shuffle'),
-      document.getElementById('neg-shuffle')
+    const selects = [
+      document.getElementById('base-order-select'),
+      document.getElementById('pos-order-select'),
+      document.getElementById('neg-order-select'),
+      document.getElementById('divider-order-select')
     ].filter(Boolean);
-    allRandom.addEventListener('change', () => {
-      shuffleCheckboxes.forEach(cb => {
-        const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
-        if (btn && btn.classList.contains('disabled')) {
-          return;
-        }
-        cb.checked = allRandom.checked;
-        if (btn) updateButtonState(btn, cb);
+    const updateAll = () => {
+      selects.forEach(sel => {
+        sel.value = allRandom.checked ? 'random' : 'canonical';
+        sel.dispatchEvent(new Event('change'));
       });
-      const allBtn = document.querySelector('.toggle-button[data-target="all-random"]');
-      if (allBtn) updateButtonState(allBtn, allRandom);
-    });
+      const btn = document.querySelector('.toggle-button[data-target="all-random"]');
+      if (btn) updateButtonState(btn, allRandom);
+    };
+    allRandom.addEventListener('change', updateAll);
+    updateAll();
   }
 
   function setupStackControls() {
@@ -435,6 +438,7 @@
     populateOrderOptions(document.getElementById('base-order-select'));
     populateOrderOptions(document.getElementById('pos-order-select'));
     populateOrderOptions(document.getElementById('neg-order-select'));
+    populateOrderOptions(document.getElementById('divider-order-select'));
 
     setupOrderControl('base-order-select', 'base-order-input', () =>
       utils.parseInput(document.getElementById('base-input').value, true)
@@ -444,6 +448,9 @@
     );
     setupOrderControl('neg-order-select', 'neg-order-input', () =>
       utils.parseInput(document.getElementById('neg-input').value)
+    );
+    setupOrderControl('divider-order-select', 'divider-order-input', () =>
+      utils.parseDividerInput(document.getElementById('divider-input').value || '')
     );
     document.getElementById('generate').addEventListener('click', generate);
 

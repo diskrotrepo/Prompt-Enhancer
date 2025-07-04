@@ -243,15 +243,17 @@
     depths = null,
     baseOrder = null,
     posOrder = null,
-    negOrder = null
+    negOrder = null,
+    dividerOrder = null
   ) {
     if (!items.length) {
       return { positive: '', negative: '' };
     }
     if (Array.isArray(baseOrder)) items = applyOrder(items, baseOrder);
     const delimited = /[,.!:;?\n]\s*$/.test(items[0]);
-    const dividerPool = dividers.map(d => (d.startsWith('\n') ? d : '\n' + d));
-    if (dividerPool.length && shuffleDividers) shuffle(dividerPool);
+    let dividerPool = dividers.map(d => (d.startsWith('\n') ? d : '\n' + d));
+    if (Array.isArray(dividerOrder)) dividerPool = applyOrder(dividerPool, dividerOrder);
+    if (dividerPool.length && shuffleDividers && !dividerOrder) shuffle(dividerPool);
     const posTerms = applyModifierStack(
       items,
       posMods,

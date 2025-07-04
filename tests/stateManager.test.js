@@ -32,6 +32,8 @@ function setupDOM() {
     <select id="divider-select"></select>
     <textarea id="divider-input"></textarea>
     <input type="checkbox" id="divider-shuffle">
+    <select id="divider-order-select"></select>
+    <textarea id="divider-order-input"></textarea>
     <select id="insert-select"></select>
     <textarea id="insert-input"></textarea>
     <select id="length-select"></select>

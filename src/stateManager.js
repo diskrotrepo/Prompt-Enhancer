@@ -49,7 +49,9 @@
     'pos-order-input',
     'pos-order-select',
     'neg-order-input',
-    'neg-order-select'
+    'neg-order-select',
+    'divider-order-input',
+    'divider-order-select'
   ];
 
   function loadFromDOM() {

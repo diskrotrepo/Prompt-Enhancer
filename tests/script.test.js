@@ -303,37 +303,27 @@ describe('Lyrics processing', () => {
 });
 
 describe('UI interactions', () => {
-  test('shuffle all respects stack lock', () => {
+  test('order all toggles dropdown values', () => {
     document.body.innerHTML = `
-      <input type="checkbox" id="pos-stack">
-      <select id="pos-stack-size"></select>
-      <input type="checkbox" id="pos-shuffle">
-      <button class="toggle-button" data-target="pos-shuffle"></button>
-      <input type="checkbox" id="neg-stack">
-      <select id="neg-stack-size"></select>
-      <input type="checkbox" id="neg-shuffle">
-      <button class="toggle-button" data-target="neg-shuffle"></button>
+      <select id="base-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="neg-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="divider-order-select"><option value="canonical">c</option><option value="random">r</option></select>
       <input type="checkbox" id="all-random">
       <button class="toggle-button" data-target="all-random"></button>
     `;
-    setupStackControls();
     setupShuffleAll();
-    const posShuffle = document.getElementById('pos-shuffle');
-    const posBtn = document.querySelector('[data-target="pos-shuffle"]');
-    const posStack = document.getElementById('pos-stack');
-    posStack.checked = true;
-    posStack.dispatchEvent(new Event('change'));
-    expect(posShuffle.checked).toBe(true);
-    expect(posBtn.classList.contains('disabled')).toBe(true);
-    const allRandom = document.getElementById('all-random');
-    allRandom.checked = false;
-    allRandom.dispatchEvent(new Event('change'));
-    expect(posShuffle.checked).toBe(true);
-    expect(posBtn.classList.contains('disabled')).toBe(true);
-    posStack.checked = false;
-    posStack.dispatchEvent(new Event('change'));
-    expect(posShuffle.checked).toBe(false);
-    expect(posBtn.classList.contains('disabled')).toBe(false);
+    const cb = document.getElementById('all-random');
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+    expect(document.getElementById('base-order-select').value).toBe('random');
+    expect(document.getElementById('pos-order-select').value).toBe('random');
+    expect(document.getElementById('neg-order-select').value).toBe('random');
+    expect(document.getElementById('divider-order-select').value).toBe('random');
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change'));
+    expect(document.getElementById('base-order-select').value).toBe('canonical');
+    expect(document.getElementById('divider-order-select').value).toBe('canonical');
   });
 
   test('hide toggle does not hide sibling buttons', () => {
