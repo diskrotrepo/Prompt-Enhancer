@@ -2,6 +2,27 @@
   const lists = global.listManager || (typeof require !== 'undefined' && require('./listManager'));
   const state = global.stateManager || (typeof require !== 'undefined' && require('./stateManager'));
 
+  const KEY = 'promptEnhancerData';
+
+  function saveLocal(data) {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.setItem(KEY, JSON.stringify(data));
+    } catch (err) {
+      /* ignore */
+    }
+  }
+
+  function loadLocal() {
+    if (typeof localStorage === 'undefined') return null;
+    try {
+      const json = localStorage.getItem(KEY);
+      return json ? JSON.parse(json) : null;
+    } catch (err) {
+      return null;
+    }
+  }
+
   function exportData() {
     const listData = JSON.parse(lists.exportLists());
     state.loadFromDOM();
@@ -22,9 +43,26 @@
     if (typeof data !== 'object') return;
     if (data.lists) lists.importLists(data.lists);
     if (data.state) state.importState(data.state);
+    saveLocal(data);
   }
 
-  const api = { exportData, importData };
+  function persist() {
+    const json = exportData();
+    saveLocal(JSON.parse(json));
+  }
+
+  function loadPersisted() {
+    const stored = loadLocal();
+    if (stored) {
+      importData(stored);
+      return;
+    }
+    if (typeof DEFAULT_DATA !== 'undefined') {
+      importData(DEFAULT_DATA);
+    }
+  }
+
+  const api = { exportData, importData, persist, loadPersisted };
 
   if (typeof module !== 'undefined') {
     module.exports = api;
