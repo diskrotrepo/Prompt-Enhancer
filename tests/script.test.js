@@ -513,7 +513,7 @@ describe('UI interactions', () => {
     expect(select.style.display).toBe('');
     expect(taRow.style.display).toBe('');
     expect(cont.style.display).toBe('');
-    expect(btn.style.display).toBe('none');
+    expect(btn.style.display).toBe('');
 
     cb.checked = false;
     cb.dispatchEvent(new Event('change'));
@@ -609,6 +609,64 @@ describe('UI interactions', () => {
     document.getElementById('neg-reroll').click();
     expect(document.getElementById('neg-order-select').value).toBe('random');
     expect(document.getElementById('neg-order-select-2').value).toBe('random');
+  });
+
+  test('reroll button updates when other selects change', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <div id="pos-order-container">
+        <select id="pos-order-select">
+          <option value="canonical">c</option>
+          <option value="random">r</option>
+        </select>
+        <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+        <select id="pos-order-select-2">
+          <option value="canonical">c</option>
+          <option value="random">r</option>
+        </select>
+        <div class="input-row"><textarea id="pos-order-input-2"></textarea></div>
+      </div>
+      <button id="pos-reroll" class="random-button"></button>
+    `;
+    setupOrderControl('pos-order-select', 'pos-order-input', () => []);
+    setupOrderControl('pos-order-select-2', 'pos-order-input-2', () => []);
+    setupRerollButton('pos-reroll', 'pos-order-select');
+    setupAdvancedToggle();
+    const cb = document.getElementById('advanced-mode');
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change'));
+    const btn = document.getElementById('pos-reroll');
+    expect(btn.classList.contains('active')).toBe(false);
+    document.getElementById('pos-order-select-2').value = 'random';
+    document.getElementById('pos-order-select-2').dispatchEvent(new Event('change'));
+    expect(btn.classList.contains('indeterminate')).toBe(true);
+  });
+
+  test('randomize all updates reroll buttons', () => {
+    document.body.innerHTML = `
+      <select id="base-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <textarea id="base-order-input"></textarea>
+      <button id="base-reroll" class="random-button toggle-button"></button>
+      <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <textarea id="pos-order-input"></textarea>
+      <button id="pos-reroll" class="random-button toggle-button"></button>
+      <input type="checkbox" id="all-random">
+      <button class="toggle-button" data-target="all-random"></button>
+    `;
+    setupOrderControl('base-order-select', 'base-order-input', () => []);
+    setupOrderControl('pos-order-select', 'pos-order-input', () => []);
+    setupRerollButton('base-reroll', 'base-order-select');
+    setupRerollButton('pos-reroll', 'pos-order-select');
+    setupShuffleAll();
+    const cb = document.getElementById('all-random');
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+    expect(document.getElementById('base-reroll').classList.contains('active')).toBe(true);
+    expect(document.getElementById('pos-reroll').classList.contains('active')).toBe(true);
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change'));
+    expect(document.getElementById('base-reroll').classList.contains('active')).toBe(false);
+    expect(document.getElementById('pos-reroll').classList.contains('active')).toBe(false);
   });
 });
 

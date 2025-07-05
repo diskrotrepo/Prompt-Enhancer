@@ -230,6 +230,7 @@
       });
       const btn = document.querySelector('.toggle-button[data-target="all-random"]');
       if (btn) updateButtonState(btn, allRandom);
+      Object.values(rerollUpdaters).forEach(fn => fn());
     };
     allRandom.addEventListener('change', updateAll);
     updateAll();
@@ -295,12 +296,6 @@
       'neg-depth-input'
     ];
     const containerIds = ['pos-order-container', 'neg-order-container', 'pos-depth-container', 'neg-depth-container'];
-    const rerollIds = [
-      'base-reroll',
-      'pos-reroll',
-      'neg-reroll',
-      'divider-reroll'
-    ];
     const setDisplay = (el, show) => {
       if (!el) return;
       el.style.display = show ? '' : 'none';
@@ -320,7 +315,6 @@
       containerIds.forEach(id => {
         document.querySelectorAll(`[id^="${id}"]`).forEach(el => setDisplay(el, adv));
       });
-      rerollIds.forEach(id => setDisplay(document.getElementById(id), !adv));
       Object.values(rerollUpdaters).forEach(fn => fn());
     };
     cb.addEventListener('change', update);
@@ -447,6 +441,8 @@
       } else if (lists.ORDER_PRESETS[select.value]) {
         input.value = lists.ORDER_PRESETS[select.value].join(', ');
       }
+      const m = select.id.match(/^([a-z]+)-order-select/);
+      if (m && rerollUpdaters[m[1]]) rerollUpdaters[m[1]]();
     };
     select.addEventListener('change', update);
     update();
@@ -506,6 +502,8 @@
       } else if (lists.ORDER_PRESETS[val]) {
         input.value = lists.ORDER_PRESETS[val].join(', ');
       }
+      const m = select.id.match(/^([a-z]+)-depth-select/);
+      if (m && rerollUpdaters[m[1]]) rerollUpdaters[m[1]]();
     });
     select.dispatchEvent(new Event('change'));
   }
