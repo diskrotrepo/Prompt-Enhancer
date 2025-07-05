@@ -138,6 +138,79 @@ describe('Prompt building', () => {
     expect(out).toEqual({ positive: 'good cat', negative: 'bad good cat' });
   });
 
+  test('buildVersions offsets depth for negatives when positives included', () => {
+    const out = buildVersions(['cat'], ['bad'], ['good'], 20, true, [], true, 1, 1, [1], [1]);
+    expect(out).toEqual({ positive: 'cat good', negative: 'cat good bad' });
+  });
+
+  test('buildVersions respects depth arrays per stack', () => {
+    const out = buildVersions(
+      ['a b c'],
+      ['n'],
+      [['x'], ['y']],
+      15,
+      false,
+      [],
+      true,
+      2,
+      1,
+      [[1], [2]],
+      [1]
+    );
+    expect(out).toEqual({ positive: 'a x b y c', negative: 'a n b c' });
+  });
+
+  test('negative depth offset accounts for stacked positives', () => {
+    const out = buildVersions(
+      ['foo bar baz'],
+      ['bad'],
+      [['good'], ['great']],
+      40,
+      true,
+      [],
+      true,
+      2,
+      1,
+      [1],
+      [1]
+    );
+    expect(out).toEqual({ positive: 'foo good great bar baz', negative: 'foo good great bad bar baz' });
+  });
+
+  test('negative depth uses independent values', () => {
+    const out = buildVersions(
+      ['a b'],
+      ['neg'],
+      ['pos'],
+      20,
+      true,
+      [],
+      true,
+      1,
+      1,
+      [0],
+      [2]
+    );
+    expect(out).toEqual({ positive: 'pos a b', negative: 'pos a b neg' });
+  });
+
+  test('stacked modifiers handle prepend and append depths', () => {
+    const out = buildVersions(
+      ['foo bar'],
+      ['n'],
+      [['pre'], ['post']],
+      50,
+      false,
+      [],
+      true,
+      2,
+      1,
+      [[0], [2]],
+      [0]
+    );
+    expect(out).toEqual({ positive: 'pre foo bar post, pre foo bar post', negative: 'n foo bar, n foo bar' });
+  });
+
   test('buildVersions returns empty strings when items list is empty', () => {
     const out = buildVersions([], ['n'], ['p'], 10);
     expect(out).toEqual({ positive: '', negative: '' });
@@ -245,11 +318,12 @@ describe('Prompt building', () => {
       2,
       null,
       null,
+      null,
       [[0, 1], [1, 0]],
       [[1, 0], [0, 1]]
     );
-    expect(out.positive).toBe('p2 p1 x, p1 p2 x');
-    expect(out.negative).toBe('n1 n2 x, n2 n1 x');
+    expect(out.positive).toBe('p1 p2 x, p2 p1 x');
+    expect(out.negative).toBe('n2 n1 x, n1 n2 x');
   });
 
   test('buildVersions accepts different lists per stack', () => {
@@ -264,8 +338,8 @@ describe('Prompt building', () => {
       2,
       2
     );
-    expect(out.positive).toBe('p2 p1 x, p2 p1 x');
-    expect(out.negative).toBe('n2 n1 x, n2 n1 x');
+    expect(out.positive).toBe('p1 p2 x, p1 p2 x');
+    expect(out.negative).toBe('n1 n2 x, n1 n2 x');
   });
 
   test('stacking works with natural dividers', () => {
@@ -309,6 +383,8 @@ describe('Prompt building', () => {
       true,
       1,
       1,
+      null,
+      null,
       null,
       [1, 0]
     );
@@ -505,6 +581,24 @@ describe('UI interactions', () => {
     utils.shuffle = orig;
     expect(document.getElementById('pos-order-input').value).toBe('1, 0');
     expect(document.getElementById('pos-order-input-2').value).toBe('1, 0');
+  });
+
+  test('rerollRandomOrders randomizes depth for each stack', () => {
+    document.body.innerHTML = `
+      <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+      <textarea id="pos-depth-input"></textarea>
+      <select id="pos-depth-select-2"><option value="prepend">p</option><option value="random">r</option></select>
+      <textarea id="pos-depth-input-2"></textarea>
+      <textarea id="base-input">foo bar</textarea>
+    `;
+    document.getElementById('pos-depth-select').value = 'random';
+    document.getElementById('pos-depth-select-2').value = 'random';
+    rerollRandomOrders();
+    const d1 = document.getElementById('pos-depth-input').value;
+    const d2 = document.getElementById('pos-depth-input-2').value;
+    expect(d1).not.toBe('');
+    expect(d2).not.toBe('');
+    expect(d1).not.toBe(d2);
   });
 
   test('advanced toggle shows and hides controls', () => {

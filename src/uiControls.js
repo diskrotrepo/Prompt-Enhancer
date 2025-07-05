@@ -92,7 +92,10 @@
       return result;
     }
 
-    const insertDepths = collectDepths('pos', posStackOn ? posStackSize : 1);
+    const rawPosDepths = collectDepths('pos', posStackOn ? posStackSize : 1);
+    const posDepths = posStackOn ? rawPosDepths : rawPosDepths[0];
+    const rawNegDepths = collectDepths('neg', negStackOn ? negStackSize : 1);
+    const negDepths = negStackOn ? rawNegDepths : rawNegDepths[0];
     const baseOrder = utils.parseOrderInput(document.getElementById('base-order-input')?.value || '');
     function collectOrders(prefix, count) {
       const result = [];
@@ -123,7 +126,8 @@
       dividerMods,
       shuffleDividers,
       dividerOrder,
-      insertDepths,
+      posDepths,
+      negDepths,
       baseOrder,
       posOrder,
       negOrder
@@ -153,7 +157,8 @@
       dividerMods,
       shuffleDividers,
       dividerOrder,
-      insertDepths,
+      posDepths,
+      negDepths,
       baseOrder,
       posOrder,
       negOrder
@@ -173,7 +178,8 @@
       shuffleDividers,
       posStackOn ? posStackSize : 1,
       negStackOn ? negStackSize : 1,
-      insertDepths,
+      posDepths,
+      negDepths,
       baseOrder,
       posOrder,
       negOrder,
@@ -746,16 +752,24 @@
       cfg.input.value = arr.join(', ');
     });
 
-    const depthConfigs = [
-      {
-        select: document.getElementById('pos-depth-select'),
-        input: document.getElementById('pos-depth-input')
-      },
-      {
-        select: document.getElementById('neg-depth-select'),
-        input: document.getElementById('neg-depth-input')
+    function gatherDepth(prefix) {
+      const arr = [];
+      let idx = 1;
+      while (true) {
+        const sel = document.getElementById(
+          `${prefix}-depth-select${idx === 1 ? '' : '-' + idx}`
+        );
+        const inp = document.getElementById(
+          `${prefix}-depth-input${idx === 1 ? '' : '-' + idx}`
+        );
+        if (!sel || !inp) break;
+        arr.push({ select: sel, input: inp });
+        idx++;
       }
-    ];
+      return arr;
+    }
+
+    const depthConfigs = [...gatherDepth('pos'), ...gatherDepth('neg')];
     depthConfigs.forEach(cfg => {
       if (!cfg.select || !cfg.input || cfg.select.value !== 'random') return;
       const countWords = str => {
