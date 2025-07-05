@@ -197,16 +197,13 @@
   function setupShuffleAll() {
     const allRandom = document.getElementById('all-random');
     if (!allRandom) return;
-    const selects = [
-      document.getElementById('base-order-select'),
-      document.getElementById('pos-order-select'),
-      document.getElementById('neg-order-select'),
-      document.getElementById('divider-order-select')
-    ].filter(Boolean);
+    const prefixes = ['base', 'pos', 'neg', 'divider'];
     const updateAll = () => {
-      selects.forEach(sel => {
-        sel.value = allRandom.checked ? 'random' : 'canonical';
-        sel.dispatchEvent(new Event('change'));
+      prefixes.forEach(prefix => {
+        forEachOrderControl(prefix, sel => {
+          sel.value = allRandom.checked ? 'random' : 'canonical';
+          sel.dispatchEvent(new Event('change'));
+        });
       });
       const btn = document.querySelector('.toggle-button[data-target="all-random"]');
       if (btn) updateButtonState(btn, allRandom);
@@ -356,6 +353,19 @@
     }
   }
 
+  function forEachOrderControl(prefix, cb) {
+    for (let i = 1; ; i++) {
+      const sel = document.getElementById(
+        `${prefix}-order-select${i === 1 ? '' : '-' + i}`
+      );
+      const inp = document.getElementById(
+        `${prefix}-order-input${i === 1 ? '' : '-' + i}`
+      );
+      if (!sel && !inp) break;
+      cb(sel, inp, i);
+    }
+  }
+
   function setupOrderControl(selectId, inputId, getItems) {
     const select = document.getElementById(selectId);
     const input = document.getElementById(inputId);
@@ -459,21 +469,17 @@
       document.getElementById('divider-input')?.value || ''
     );
 
-    const configs = [
-      { sel: 'base-order-select', inp: 'base-order-input', items: baseItems },
-      { sel: 'pos-order-select', inp: 'pos-order-input', items: posItems },
-      { sel: 'neg-order-select', inp: 'neg-order-input', items: negItems },
-      { sel: 'divider-order-select', inp: 'divider-order-input', items: divItems }
-    ];
-
-    configs.forEach(cfg => {
-      const select = document.getElementById(cfg.sel);
-      const input = document.getElementById(cfg.inp);
-      if (!select || !input || select.value !== 'random') return;
-      const arr = cfg.items.map((_, i) => i);
+    const applyRandom = (sel, inp, items) => {
+      if (sel.value !== 'random') return;
+      const arr = items.map((_, i) => i);
       utils.shuffle(arr);
-      input.value = arr.join(', ');
-    });
+      inp.value = arr.join(', ');
+    };
+
+    forEachOrderControl('base', (sel, inp) => applyRandom(sel, inp, baseItems));
+    forEachOrderControl('pos', (sel, inp) => applyRandom(sel, inp, posItems));
+    forEachOrderControl('neg', (sel, inp) => applyRandom(sel, inp, negItems));
+    forEachOrderControl('divider', (sel, inp) => applyRandom(sel, inp, divItems));
 
     const insertSel = document.getElementById('insert-select');
     const insertInp = document.getElementById('insert-input');

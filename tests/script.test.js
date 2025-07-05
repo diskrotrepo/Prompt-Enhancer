@@ -419,6 +419,39 @@ describe('UI interactions', () => {
     utils.shuffle = orig;
     expect(document.getElementById('base-order-input').value).toBe('1, 0');
   });
+
+  test('rerollRandomOrders handles stacked order inputs', () => {
+    document.body.innerHTML = `
+      <textarea id="base-input"></textarea>
+      <textarea id="pos-input">a,b</textarea>
+      <textarea id="neg-input"></textarea>
+      <textarea id="divider-input"></textarea>
+      <select id="pos-order-select">
+        <option value="canonical">c</option>
+        <option value="random">r</option>
+      </select>
+      <textarea id="pos-order-input"></textarea>
+      <select id="pos-order-select-2">
+        <option value="canonical">c</option>
+        <option value="random">r</option>
+      </select>
+      <textarea id="pos-order-input-2"></textarea>
+    `;
+    const orig = utils.shuffle;
+    utils.shuffle = jest.fn(arr => arr.reverse());
+    setupOrderControl('pos-order-select', 'pos-order-input', () => ['a', 'b']);
+    setupOrderControl('pos-order-select-2', 'pos-order-input-2', () => ['a', 'b']);
+    document.getElementById('pos-order-select').value = 'random';
+    document.getElementById('pos-order-select').dispatchEvent(new Event('change'));
+    document.getElementById('pos-order-select-2').value = 'random';
+    document
+      .getElementById('pos-order-select-2')
+      .dispatchEvent(new Event('change'));
+    rerollRandomOrders();
+    utils.shuffle = orig;
+    expect(document.getElementById('pos-order-input').value).toBe('1, 0');
+    expect(document.getElementById('pos-order-input-2').value).toBe('1, 0');
+  });
 });
 
 describe('List persistence', () => {
