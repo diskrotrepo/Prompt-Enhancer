@@ -252,6 +252,22 @@ describe('Prompt building', () => {
     expect(out.negative).toBe('n1 n2 x, n2 n1 x');
   });
 
+  test('buildVersions accepts different lists per stack', () => {
+    const out = buildVersions(
+      ['x'],
+      [['n1'], ['n2']],
+      [['p1'], ['p2']],
+      20,
+      false,
+      [],
+      true,
+      2,
+      2
+    );
+    expect(out.positive).toBe('p2 p1 x, p2 p1 x');
+    expect(out.negative).toBe('n2 n1 x, n2 n1 x');
+  });
+
   test('stacking works with natural dividers', () => {
     const out = buildVersions(
       ['a', 'b'],
@@ -513,15 +529,19 @@ describe('UI interactions', () => {
       <input type="checkbox" id="pos-stack">
       <select id="pos-stack-size"><option value="2">2</option></select>
       <input type="checkbox" id="pos-shuffle">
-      <div id="pos-order-container">
-        <select id="pos-order-select">
-          <option value="canonical">c</option>
-          <option value="random">r</option>
-        </select>
-        <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+      <div id="pos-stack-container">
+        <div class="stack-block" id="pos-stack-1">
+          <div id="pos-order-container">
+            <select id="pos-order-select">
+              <option value="canonical">c</option>
+              <option value="random">r</option>
+            </select>
+            <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+          </div>
+          <textarea id="pos-input">a,b</textarea>
+        </div>
       </div>
       <button id="pos-reroll"></button>
-      <textarea id="pos-input">a,b</textarea>
     `;
     setupOrderControl('pos-order-select', 'pos-order-input', () => ['a', 'b']);
     setupRerollButton('pos-reroll', 'pos-order-select');
