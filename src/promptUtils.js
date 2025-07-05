@@ -143,15 +143,23 @@
     modifiers,
     limit,
     stackSize = 1,
-    modOrder = null,
+    modOrders = null,
     delimited = false,
     dividers = [],
     itemOrder = null,
     depths = null
   ) {
     const count = stackSize > 0 ? stackSize : 1;
-    const orderedMods = modOrder ? applyOrder(modifiers, modOrder) : modifiers.slice();
-    const orders = Array(count).fill(orderedMods);
+    const orders = [];
+    if (Array.isArray(modOrders) && Array.isArray(modOrders[0])) {
+      for (let i = 0; i < count; i++) {
+        const ord = modOrders[i % modOrders.length];
+        orders.push(ord ? applyOrder(modifiers, ord) : modifiers.slice());
+      }
+    } else {
+      const orderedMods = modOrders ? applyOrder(modifiers, modOrders) : modifiers.slice();
+      for (let i = 0; i < count; i++) orders.push(orderedMods);
+    }
     const dividerPool = dividers.slice();
     let items = baseItems.slice();
     if (itemOrder) items = applyOrder(items, itemOrder);
@@ -189,15 +197,23 @@
     negMods,
     limit,
     stackSize = 1,
-    modOrder = null,
+    modOrders = null,
     delimited = false,
     dividers = [],
     itemOrder = null,
     depths = null
   ) {
     const count = stackSize > 0 ? stackSize : 1;
-    const orderedMods = modOrder ? applyOrder(negMods, modOrder) : negMods.slice();
-    const orders = Array(count).fill(orderedMods);
+    const orders = [];
+    if (Array.isArray(modOrders) && Array.isArray(modOrders[0])) {
+      for (let i = 0; i < count; i++) {
+        const ord = modOrders[i % modOrders.length];
+        orders.push(ord ? applyOrder(negMods, ord) : negMods.slice());
+      }
+    } else {
+      const orderedMods = modOrders ? applyOrder(negMods, modOrders) : negMods.slice();
+      for (let i = 0; i < count; i++) orders.push(orderedMods);
+    }
     const dividerSet = new Set(dividers);
     const result = [];
     let modIdx = 0;

@@ -231,6 +231,26 @@ describe('Prompt building', () => {
     expect(out).toEqual({ positive: 'p1 p1 x', negative: 'n1 n1 x' });
   });
 
+  test('buildVersions applies separate orders per stack', () => {
+    const out = buildVersions(
+      ['x'],
+      ['n1', 'n2'],
+      ['p1', 'p2'],
+      20,
+      false,
+      [],
+      true,
+      2,
+      2,
+      null,
+      null,
+      [[0, 1], [1, 0]],
+      [[1, 0], [0, 1]]
+    );
+    expect(out.positive).toBe('p2 p1 x, p1 p2 x');
+    expect(out.negative).toBe('n1 n2 x, n2 n1 x');
+  });
+
   test('stacking works with natural dividers', () => {
     const out = buildVersions(
       ['a', 'b'],
