@@ -156,31 +156,6 @@
     loadLists();
   }
 
-  function loadListsFromFile(file, additive = false) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const data = JSON.parse(reader.result);
-        importLists(data, additive);
-      } catch (err) {
-        alert('Invalid lists file');
-      }
-    };
-    reader.readAsText(file);
-  }
-
-  function downloadLists() {
-    const blob = new Blob([exportLists()], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'lists.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
   function saveList(type) {
     const map = {
       base: { select: 'base-select', input: 'base-input', store: BASE_PRESETS },
@@ -232,9 +207,7 @@
     loadLists,
     exportLists,
     importLists,
-    saveList,
-    loadListsFromFile,
-    downloadLists
+    saveList
   };
 
   if (typeof module !== 'undefined') {
