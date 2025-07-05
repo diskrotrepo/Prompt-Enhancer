@@ -291,6 +291,10 @@
       baseOrder,
       depths
     );
+    let negDepths = depths;
+    if (includePosForNeg && Array.isArray(depths) && posStackSize > 0) {
+      negDepths = depths.map(d => (d > 0 ? d + posStackSize : d));
+    }
     const negTerms = includePosForNeg
       ? applyNegativeOnPositive(
           posTerms,
@@ -301,7 +305,7 @@
           delimited,
           dividerPool,
           null,
-          depths
+          negDepths
         )
       : applyModifierStack(
           items,

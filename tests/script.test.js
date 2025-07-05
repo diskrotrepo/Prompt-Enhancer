@@ -138,6 +138,11 @@ describe('Prompt building', () => {
     expect(out).toEqual({ positive: 'good cat', negative: 'bad good cat' });
   });
 
+  test('buildVersions offsets depth for negatives when positives included', () => {
+    const out = buildVersions(['cat'], ['bad'], ['good'], 20, true, [], true, 1, 1, [1]);
+    expect(out).toEqual({ positive: 'cat good', negative: 'cat good bad' });
+  });
+
   test('buildVersions returns empty strings when items list is empty', () => {
     const out = buildVersions([], ['n'], ['p'], 10);
     expect(out).toEqual({ positive: '', negative: '' });
