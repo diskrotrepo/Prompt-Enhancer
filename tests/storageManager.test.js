@@ -60,4 +60,34 @@ describe('Storage manager', () => {
       expect.arrayContaining(['prepend', 'append', 'random', 'ord'])
     );
   });
+
+  test('loadPersisted prefers localStorage data', () => {
+    const saved = {
+      lists: { presets: [{ id: 'b', title: 'b', type: 'base', items: ['y'] }] },
+      state: { 'base-input': 'y', 'base-select': 'b' }
+    };
+    localStorage.setItem('promptEnhancerData', JSON.stringify(saved));
+    document.body.innerHTML = `
+      <select id="base-select"></select>
+      <textarea id="base-input"></textarea>
+    `;
+    storage.loadPersisted();
+    const txt = document.getElementById('base-input').value;
+    expect(txt).toBe('y');
+  });
+
+  test('loadPersisted falls back to DEFAULT_DATA', () => {
+    localStorage.removeItem('promptEnhancerData');
+    global.DEFAULT_DATA = {
+      lists: { presets: [{ id: 'b', title: 'b', type: 'base', items: ['z'] }] },
+      state: { 'base-input': 'z', 'base-select': 'b' }
+    };
+    document.body.innerHTML = `
+      <select id="base-select"></select>
+      <textarea id="base-input"></textarea>
+    `;
+    storage.loadPersisted();
+    const txt = document.getElementById('base-input').value;
+    expect(txt).toBe('z');
+  });
 });

@@ -821,7 +821,7 @@
   }
 
   function initializeUI() {
-    lists.loadLists();
+    storage.loadPersisted();
     applyPreset(document.getElementById('neg-select'), document.getElementById('neg-input'), 'negative');
     applyPreset(document.getElementById('pos-select'), document.getElementById('pos-input'), 'positive');
     applyPreset(document.getElementById('length-select'), document.getElementById('length-input'), 'length');
@@ -899,6 +899,9 @@
     if (divSave) divSave.addEventListener('click', () => lists.saveList('divider'));
     const lyricsSave = document.getElementById('lyrics-save');
     if (lyricsSave) lyricsSave.addEventListener('click', () => lists.saveList('lyrics'));
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', () => storage.persist());
+    }
   }
 
   const api = {
