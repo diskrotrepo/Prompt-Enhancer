@@ -593,7 +593,11 @@ describe('UI interactions', () => {
     `;
     document.getElementById('pos-depth-select').value = 'random';
     document.getElementById('pos-depth-select-2').value = 'random';
+    const origRand = Math.random;
+    let idx = 0;
+    Math.random = () => (idx++ % 2 ? 0.9 : 0.1);
     rerollRandomOrders();
+    Math.random = origRand;
     const d1 = document.getElementById('pos-depth-input').value;
     const d2 = document.getElementById('pos-depth-input-2').value;
     expect(d1).not.toBe('');

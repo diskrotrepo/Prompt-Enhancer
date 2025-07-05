@@ -5,11 +5,11 @@
   const state = global.stateManager || (typeof require !== 'undefined' && require('./stateManager'));
 
   if (typeof document !== 'undefined' && !(typeof window !== 'undefined' && window.__TEST__)) {
-    const init = ui.initializeUI;
+    const start = () => lists.loadPresets().then(ui.initializeUI);
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init);
+      document.addEventListener('DOMContentLoaded', start);
     } else {
-      init();
+      start();
     }
   }
 

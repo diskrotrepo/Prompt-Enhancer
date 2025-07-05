@@ -86,7 +86,7 @@ src/
 ├── style.css           # Dark theme styling
 ├── assets/
 │   └── logo.png        # Diskrot logo
-└── default_list.js        # Modifier presets
+└── default_list.json        # Modifier presets
 ```
 
 ### Key Files
@@ -94,26 +94,26 @@ src/
 - **index.html**: Contains the user interface with dynamically populated dropdown menus
 - **script.js**: Implements the prompt generation algorithm with comprehensive comments
 - **style.css**: Provides responsive dark theme styling with gradient backgrounds
-- **default_list.js**: Contains curated modifier lists in a structured format
+- **default_list.json**: Contains curated modifier lists in a structured format
 
 ## Customization
 
 ### Adding New Preset Lists
 
-Edit the preset file `src/default_list.js`:
+Edit the preset file `src/default_list.json`:
 
-```javascript
-const DEFAULT_LIST = {
-  presets: [
+```json
+{
+  "presets": [
     {
-      id: 'your-list-id',
-      title: 'Your List Title',
-      type: 'negative',
-      items: ['item1', 'item2', 'item3']
+      "id": "your-list-id",
+      "title": "Your List Title",
+      "type": "negative",
+      "items": ["item1", "item2", "item3"]
     }
     // ... more presets
   ]
-};
+}
 ```
 
 Each preset includes a `type` of `negative`, `positive` or `length`. Length presets use a single numeric value in `items`.
@@ -147,6 +147,9 @@ Simply edit the `items` array in any preset. The changes will be reflected immed
    ```
 
 Tests live in the `tests/` directory and use the [Jest](https://jestjs.io/) framework.
+When adding features that run in both Node and the browser, include tests for
+each environment. Also add failure-path tests when loading external resources
+so the UI still works offline.
 
 ## Use Cases
 

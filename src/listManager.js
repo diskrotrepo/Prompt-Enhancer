@@ -8,26 +8,34 @@
   let LYRICS_PRESETS = {};
   let ORDER_PRESETS = {};
 
-  let LISTS;
-  if (typeof DEFAULT_LIST !== 'undefined' && Array.isArray(DEFAULT_LIST.presets)) {
-    LISTS = JSON.parse(JSON.stringify(DEFAULT_LIST));
-  } else if (
-    typeof NEGATIVE_LISTS !== 'undefined' ||
-    typeof POSITIVE_LISTS !== 'undefined' ||
-    typeof LENGTH_LISTS !== 'undefined'
-  ) {
-    LISTS = { presets: [] };
-    if (typeof NEGATIVE_LISTS !== 'undefined') {
-      NEGATIVE_LISTS.presets.forEach(p => LISTS.presets.push({ ...p, type: 'negative' }));
+  let LISTS = { presets: [] };
+
+  async function loadPresets(path = 'default_list.json') {
+    try {
+      let data;
+      const isNode =
+        typeof module !== 'undefined' && module.exports && !global.__TEST_BROWSER__;
+      if (isNode) {
+        const fs = require('fs');
+        const p = require('path');
+        const loc = p.isAbsolute(path) ? path : p.join(__dirname, path);
+        data = JSON.parse(fs.readFileSync(loc, 'utf8'));
+      } else {
+        try {
+          const res = await fetch(path);
+          data = await res.json();
+        } catch (_) {
+          const req = new XMLHttpRequest();
+          req.open('GET', path, false);
+          req.send(null);
+          data = JSON.parse(req.responseText);
+        }
+      }
+      LISTS = data;
+      loadLists();
+    } catch (err) {
+      LISTS = { presets: [] };
     }
-    if (typeof POSITIVE_LISTS !== 'undefined') {
-      POSITIVE_LISTS.presets.forEach(p => LISTS.presets.push({ ...p, type: 'positive' }));
-    }
-    if (typeof LENGTH_LISTS !== 'undefined') {
-      LENGTH_LISTS.presets.forEach(p => LISTS.presets.push({ ...p, type: 'length' }));
-    }
-  } else {
-    LISTS = { presets: [] };
   }
 
   function populateSelect(selectEl, presets) {
@@ -212,6 +220,7 @@
     get BASE_PRESETS() { return BASE_PRESETS; },
     get LYRICS_PRESETS() { return LYRICS_PRESETS; },
     get ORDER_PRESETS() { return ORDER_PRESETS; },
+    loadPresets,
     loadLists,
     exportLists,
     importLists,
