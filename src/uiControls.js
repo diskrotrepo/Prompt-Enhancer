@@ -3,8 +3,6 @@
     global.promptUtils || (typeof require !== 'undefined' && require('./lib/promptUtils'));
   const lists =
     global.listManager || (typeof require !== 'undefined' && require('./listManager'));
-  const state =
-    global.stateManager || (typeof require !== 'undefined' && require('./stateManager'));
   const storage = global.storageManager || (typeof require !== "undefined" && require("./storageManager"));
 
   function guessPrefix(id) {
@@ -68,10 +66,7 @@
 
     const posMods = posStackOn ? collectLists('pos', posStackSize) : utils.parseInput(document.getElementById('pos-input').value);
     const negMods = negStackOn ? collectLists('neg', negStackSize) : utils.parseInput(document.getElementById('neg-input').value);
-    const shuffleBase = document.getElementById('base-shuffle').checked;
-    const shufflePos = document.getElementById('pos-shuffle').checked;
     const includePosForNeg = document.getElementById('neg-include-pos').checked;
-    const shuffleNeg = document.getElementById('neg-shuffle').checked;
     const dividerMods = utils.parseDividerInput(document.getElementById('divider-input')?.value || '');
     const shuffleDividers = document.getElementById('divider-shuffle')?.checked;
     const lengthSelect = document.getElementById('length-select');
@@ -114,9 +109,6 @@
       baseItems,
       negMods,
       posMods,
-      shuffleBase,
-      shuffleNeg,
-      shufflePos,
       posStackOn,
       posStackSize,
       negStackOn,
@@ -145,9 +137,6 @@
       baseItems,
       negMods,
       posMods,
-      shuffleBase,
-      shuffleNeg,
-      shufflePos,
       posStackOn,
       posStackSize,
       negStackOn,
@@ -402,43 +391,6 @@
     });
   }
 
-  function updateOrderContainers(prefix, count) {
-    const container = document.getElementById(`${prefix}-order-container`);
-    const baseId = `${prefix}-order`;
-    const getItems = () =>
-      utils.parseInput(document.getElementById(`${prefix}-input`).value);
-    const adv = document.getElementById('advanced-mode');
-    const baseSel = document.getElementById(`${baseId}-select`);
-    const defaultVal =
-      !adv || !adv.checked ? baseSel?.value || 'canonical' : undefined;
-    if (!container) return;
-    const current = container.querySelectorAll('select').length;
-    for (let i = current; i < count; i++) {
-      const idx = i + 1;
-      const sel = document.createElement('select');
-      sel.id = `${baseId}-select-${idx}`;
-      populateOrderOptions(sel);
-      if (defaultVal) sel.value = defaultVal;
-      container.appendChild(sel);
-      const div = document.createElement('div');
-      div.className = 'input-row';
-      const ta = document.createElement('textarea');
-      ta.id = `${baseId}-input-${idx}`;
-      ta.rows = 1;
-      ta.placeholder = '0,1,2';
-      div.appendChild(ta);
-      container.appendChild(div);
-      setupOrderControl(sel.id, ta.id, getItems);
-    }
-    for (let i = current; i > count; i--) {
-      const idx = i;
-      const sel = document.getElementById(`${baseId}-select-${idx}`);
-      const ta = document.getElementById(`${baseId}-input-${idx}`);
-      if (sel) sel.remove();
-      if (ta && ta.parentElement) ta.parentElement.remove();
-    }
-    if (rerollUpdaters[prefix]) rerollUpdaters[prefix]();
-  }
 
   function setupOrderControl(selectId, inputId, getItems) {
     const select = document.getElementById(selectId);
