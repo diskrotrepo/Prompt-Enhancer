@@ -378,14 +378,13 @@ describe('UI interactions', () => {
     utils.shuffle = orig;
   });
 
-  test('rerollRandomOrders updates random selects when enabled', () => {
+  test('rerollRandomOrders updates random selects', () => {
     document.body.innerHTML = `
       <select id="base-order-select">
         <option value="canonical">c</option>
         <option value="random">r</option>
       </select>
       <textarea id="base-order-input"></textarea>
-      <input type="checkbox" id="reroll-on-gen" checked>
       <textarea id="base-input">a,b</textarea>
     `;
     const orig = utils.shuffle;

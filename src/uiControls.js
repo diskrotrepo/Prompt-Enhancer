@@ -403,8 +403,6 @@
   }
 
   function rerollRandomOrders() {
-    const toggle = document.getElementById('reroll-on-gen');
-    const allow = !toggle || toggle.checked;
 
     const baseItems = utils.parseInput(
       document.getElementById('base-input')?.value || '',
@@ -427,11 +425,9 @@
       const select = document.getElementById(cfg.sel);
       const input = document.getElementById(cfg.inp);
       if (!select || !input || select.value !== 'random') return;
-      if (allow || !input.value.trim()) {
-        const arr = cfg.items.map((_, i) => i);
-        utils.shuffle(arr);
-        input.value = arr.join(', ');
-      }
+      const arr = cfg.items.map((_, i) => i);
+      utils.shuffle(arr);
+      input.value = arr.join(', ');
     });
 
     const insertSel = document.getElementById('insert-select');
@@ -442,11 +438,9 @@
         if (!cleaned) return 0;
         return cleaned.split(/\s+/).length;
       };
-      if (allow || !insertInp.value.trim()) {
-        const counts = baseItems.map(b => countWords(b));
-        const vals = counts.map(c => Math.floor(Math.random() * (c + 1)));
-        insertInp.value = vals.join(', ');
-      }
+      const counts = baseItems.map(b => countWords(b));
+      const vals = counts.map(c => Math.floor(Math.random() * (c + 1)));
+      insertInp.value = vals.join(', ');
     }
   }
 
