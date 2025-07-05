@@ -13,7 +13,6 @@ const {
   parseInput,
   shuffle,
   equalizeLength,
-  buildPrefixedList,
   buildVersions,
   processLyrics,
   parseDividerInput,
@@ -106,34 +105,6 @@ describe('Utility functions', () => {
 });
 
 describe('Prompt building', () => {
-  test('buildPrefixedList respects limit', () => {
-    const result = buildPrefixedList(['a', 'b'], ['x'], 5);
-    expect(result).toEqual(['x a']);
-  });
-
-  test('buildPrefixedList returns empty when limit too small', () => {
-    expect(buildPrefixedList(['a'], ['x'], 2)).toEqual([]);
-  });
-
-  test('buildPrefixedList falls back to items when prefixes empty', () => {
-    const result = buildPrefixedList(['a', 'b'], [], 10);
-    expect(result).toEqual(['a', 'b', 'a', 'b']);
-  });
-
-  test('buildPrefixedList handles empty items', () => {
-    expect(buildPrefixedList([], ['x'], 10)).toEqual([]);
-  });
-
-  test('buildPrefixedList inserts dividers on repeat', () => {
-    const result = buildPrefixedList(['a', 'b'], [], 20, false, false, ['i.e., ']);
-    expect(result).toEqual(['a', 'b', 'i.e., ', 'a', 'b']);
-  });
-
-  test('buildPrefixedList omits divider when limit lacks room for item', () => {
-    const result = buildPrefixedList(['a', 'b'], [], 12, false, false, ['i.e., ']);
-    expect(result).toEqual(['a', 'b']);
-  });
-
   test('buildVersions builds positive and negative prompts', () => {
     const out = buildVersions(['cat'], ['bad'], ['good'], 20);
     expect(out).toEqual({ positive: 'good cat, good cat', negative: 'bad cat, bad cat' });

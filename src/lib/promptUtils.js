@@ -102,59 +102,6 @@
     return [a.slice(0, len), b.slice(0, len)];
   }
 
-  function buildPrefixedList(
-    orderedItems,
-    prefixes,
-    limit,
-    prefixOrder = null,
-    delimited = false,
-    dividers = [],
-    itemOrder = null,
-    depths = null
-  ) {
-    if (!Array.isArray(orderedItems) || orderedItems.length === 0) return [];
-    let items = orderedItems.slice();
-    if (itemOrder) items = applyOrder(items, itemOrder);
-    const prefixPool = prefixOrder ? applyOrder(prefixes, prefixOrder) : prefixes.slice();
-    const dividerPool = dividers.slice();
-    let depthPool = null;
-    if (Array.isArray(depths)) {
-      depthPool = Array.isArray(depths[0]) ? depths.map(d => d.slice()) : depths.slice();
-    }
-    const result = [];
-    let idx = 0;
-    let divIdx = 0;
-    while (true) {
-      const needDivider = idx > 0 && idx % items.length === 0 && dividerPool.length;
-      const prefix = prefixPool.length ? prefixPool[idx % prefixPool.length] : '';
-      const item = items[idx % items.length];
-      let depth = 0;
-      if (depthPool) {
-        if (Array.isArray(depthPool[0])) {
-          const arr = depthPool[0];
-          depth = arr[idx % arr.length] || 0;
-        } else {
-          depth = depthPool[idx % depthPool.length] || 0;
-        }
-      }
-      const term = prefix ? insertAtDepth(item, prefix, depth) : item;
-      const pieces = [];
-      if (needDivider) pieces.push(dividerPool[divIdx % dividerPool.length]);
-      pieces.push(term);
-      const candidate =
-        (result.length ? result.join(delimited ? '' : ', ') + (delimited ? '' : ', ') : '') +
-        pieces.join(delimited ? '' : ', ');
-      if (candidate.length > limit) break;
-      if (needDivider) {
-        result.push(dividerPool[divIdx % dividerPool.length]);
-        divIdx++;
-      }
-      result.push(term);
-      idx++;
-    }
-    return result;
-  }
-
   function applyModifierStack(
     baseItems,
     modifiers,
@@ -416,7 +363,6 @@
     insertAtDepth,
     shuffle,
     equalizeLength,
-    buildPrefixedList,
     applyModifierStack,
     applyNegativeOnPositive,
     buildVersions,
