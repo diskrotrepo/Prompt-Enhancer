@@ -10,6 +10,17 @@
 
   let LISTS = { presets: [] };
 
+  function getScriptDir() {
+    if (typeof document !== 'undefined' && document.currentScript) {
+      const url = new URL(document.currentScript.src, document.baseURI);
+      return url.href.replace(/[^/]*$/, '');
+    }
+    if (typeof __dirname !== 'undefined') {
+      return __dirname + '/';
+    }
+    return '';
+  }
+
   async function loadDefaultLists() {
     if (typeof global.DEFAULT_LIST !== 'undefined' && Array.isArray(global.DEFAULT_LIST.presets)) {
       LISTS = JSON.parse(JSON.stringify(global.DEFAULT_LIST));
@@ -34,7 +45,11 @@
     }
     if (typeof fetch === 'function') {
       try {
-        const res = await fetch('default_list.json');
+        const url = getScriptDir() + 'default_list.json';
+        let res = await fetch(url);
+        if (!res.ok) {
+          res = await fetch('default_list.json');
+        }
         if (res.ok) {
           LISTS = await res.json();
         }
