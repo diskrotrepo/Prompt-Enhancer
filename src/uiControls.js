@@ -65,7 +65,7 @@
       limit = preset ? parseInt(preset[0], 10) : 1000;
       lengthInput.value = limit;
     }
-    const insertDepths = utils.parseOrderInput(document.getElementById('insert-input')?.value || '');
+    const insertDepths = utils.parseOrderInput(document.getElementById('base-depth-input')?.value || '');
     const baseOrder = utils.parseOrderInput(document.getElementById('base-order-input')?.value || '');
     function collectOrders(prefix, count) {
       const result = [];
@@ -265,20 +265,25 @@
       'pos-order-select',
       'neg-order-select',
       'divider-order-select',
-      'insert-select'
+      'base-depth-select',
+      'pos-depth-select',
+      'neg-depth-select',
+      'divider-depth-select'
     ];
     const textIds = [
       'base-order-input',
       'divider-order-input',
-      'insert-input'
+      'base-depth-input',
+      'pos-depth-input',
+      'neg-depth-input',
+      'divider-depth-input'
     ];
     const containerIds = ['pos-order-container', 'neg-order-container'];
     const rerollIds = [
       'base-reroll',
       'pos-reroll',
       'neg-reroll',
-      'divider-reroll',
-      'insert-reroll'
+      'divider-reroll'
     ];
     const setDisplay = (el, show) => {
       if (!el) return;
@@ -380,7 +385,7 @@
     const defaultVal =
       !adv || !adv.checked ? baseSel?.value || 'canonical' : undefined;
     if (!container) return;
-    const current = container.querySelectorAll('select').length;
+    const current = container.querySelectorAll(`select[id^="${baseId}-select"]`).length;
     for (let i = current; i < count; i++) {
       const idx = i + 1;
       const sel = document.createElement('select');
@@ -396,14 +401,30 @@
       ta.placeholder = '0,1,2';
       div.appendChild(ta);
       container.appendChild(div);
+      const dsel = document.createElement('select');
+      dsel.id = `${prefix}-depth-select-${idx}`;
+      container.appendChild(dsel);
+      const ddiv = document.createElement('div');
+      ddiv.className = 'input-row';
+      const dta = document.createElement('textarea');
+      dta.id = `${prefix}-depth-input-${idx}`;
+      dta.rows = 1;
+      dta.placeholder = '0,1,2';
+      ddiv.appendChild(dta);
+      container.appendChild(ddiv);
       setupOrderControl(sel.id, ta.id, getItems);
+      setupDepthControl(dsel.id, dta.id);
     }
     for (let i = current; i > count; i--) {
       const idx = i;
       const sel = document.getElementById(`${baseId}-select-${idx}`);
       const ta = document.getElementById(`${baseId}-input-${idx}`);
+      const ds = document.getElementById(`${prefix}-depth-select-${idx}`);
+      const di = document.getElementById(`${prefix}-depth-input-${idx}`);
       if (sel) sel.remove();
       if (ta && ta.parentElement) ta.parentElement.remove();
+      if (ds) ds.remove();
+      if (di && di.parentElement) di.parentElement.remove();
     }
     if (rerollUpdaters[prefix]) rerollUpdaters[prefix]();
   }
@@ -426,9 +447,9 @@
     update();
   }
 
-  function setupDepthControls() {
-    const select = document.getElementById('insert-select');
-    const input = document.getElementById('insert-input');
+  function setupDepthControl(selectId, inputId) {
+    const select = document.getElementById(selectId);
+    const input = document.getElementById(inputId);
     const baseInput = document.getElementById('base-input');
     if (select) {
       select.innerHTML = '';
@@ -453,7 +474,8 @@
       return cleaned.split(/\s+/).length;
     }
     function build(mode) {
-      const bases = utils.parseInput(baseInput.value, true);
+      if (!input) return;
+      const bases = utils.parseInput(baseInput ? baseInput.value : '', true);
       if (!bases.length) {
         input.value = mode === 'prepend' ? '0' : '';
         return;
@@ -495,14 +517,22 @@
       const arr = [];
       let idx = 1;
       while (true) {
-        const sid =
-          prefix === 'insert'
-            ? 'insert-select'
-            : `${prefix}-order-select${idx === 1 ? '' : '-' + idx}`;
+        const sid = `${prefix}-order-select${idx === 1 ? '' : '-' + idx}`;
         const sel = document.getElementById(sid);
         if (!sel) break;
         arr.push(sel);
-        if (prefix === 'insert') break;
+        idx++;
+      }
+      return arr;
+    };
+    const gatherDepth = () => {
+      const arr = [];
+      let idx = 1;
+      while (true) {
+        const sid = `${prefix}-depth-select${idx === 1 ? '' : '-' + idx}`;
+        const sel = document.getElementById(sid);
+        if (!sel) break;
+        arr.push(sel);
         idx++;
       }
       return arr;
@@ -522,18 +552,28 @@
     const reroll = () => {
       const advanced = adv && adv.checked;
       const sels = gather();
+      const depths = gatherDepth();
       if (advanced) {
         if (sels[0] && sels[0].value !== 'random') {
           sels[0].value = 'random';
           sels[0].dispatchEvent(new Event('change'));
+          if (depths[0]) {
+            depths[0].value = 'random';
+            depths[0].dispatchEvent(new Event('change'));
+          }
         }
         return;
       }
       const allRand = sels.every(s => s.value === 'random');
       const target = allRand ? 'canonical' : 'random';
+      const targetDepth = allRand ? 'prepend' : 'random';
       sels.forEach(s => {
         s.value = target;
         s.dispatchEvent(new Event('change'));
+      });
+      depths.forEach(d => {
+        d.value = targetDepth;
+        d.dispatchEvent(new Event('change'));
       });
       updateState();
     };
@@ -587,8 +627,8 @@
       cfg.input.value = arr.join(', ');
     });
 
-    const insertSel = document.getElementById('insert-select');
-    const insertInp = document.getElementById('insert-input');
+    const insertSel = document.getElementById('base-depth-select');
+    const insertInp = document.getElementById('base-depth-input');
     if (insertSel && insertInp && insertSel.value === 'random') {
       const countWords = str => {
         const cleaned = str.trim().replace(/[,.!:;?]$/, '');
@@ -675,7 +715,6 @@
     setupRerollButton('pos-reroll', 'pos-order-select');
     setupRerollButton('neg-reroll', 'neg-order-select');
     setupRerollButton('divider-reroll', 'divider-order-select');
-    setupRerollButton('insert-reroll', 'insert-select');
     setupAdvancedToggle();
     document.getElementById('generate').addEventListener('click', generate);
 
@@ -699,7 +738,10 @@
     }
 
     setupCopyButtons();
-    setupDepthControls();
+    setupDepthControl('base-depth-select', 'base-depth-input');
+    setupDepthControl('pos-depth-select', 'pos-depth-input');
+    setupDepthControl('neg-depth-select', 'neg-depth-input');
+    setupDepthControl('divider-depth-select', 'divider-depth-input');
     setupStateButtons();
 
     const loadBtn = document.getElementById('load-lists');
@@ -738,8 +780,6 @@
     if (divSave) divSave.addEventListener('click', () => lists.saveList('divider'));
     const lyricsSave = document.getElementById('lyrics-save');
     if (lyricsSave) lyricsSave.addEventListener('click', () => lists.saveList('lyrics'));
-    const insertSave = document.getElementById('insert-save');
-    if (insertSave) insertSave.addEventListener('click', () => lists.saveList('order'));
   }
 
   const api = {
@@ -754,7 +794,7 @@
     setupStackControls,
     setupHideToggles,
     setupCopyButtons,
-    setupDepthControls,
+    setupDepthControl,
     setupStateButtons,
     setupOrderControl,
     setupAdvancedToggle,

@@ -95,8 +95,13 @@
     if (baseSelect) populateSelect(baseSelect, base);
     const lyricsSelect = document.getElementById('lyrics-select');
     if (lyricsSelect) populateSelect(lyricsSelect, lyrics);
-    const orderSelect = document.getElementById('insert-select');
-    if (orderSelect) populateSelect(orderSelect, order);
+    const depthSelects = [
+      document.getElementById('base-depth-select'),
+      document.getElementById('pos-depth-select'),
+      document.getElementById('neg-depth-select'),
+      document.getElementById('divider-depth-select')
+    ].filter(Boolean);
+    depthSelects.forEach(sel => populateSelect(sel, order));
   }
 
   function exportLists() {
@@ -169,8 +174,7 @@
       positive: { select: 'pos-select', input: 'pos-input', store: POS_PRESETS },
       length: { select: 'length-select', input: 'length-input', store: LENGTH_PRESETS },
       divider: { select: 'divider-select', input: 'divider-input', store: DIVIDER_PRESETS },
-      lyrics: { select: 'lyrics-select', input: 'lyrics-input', store: LYRICS_PRESETS },
-      order: { select: 'insert-select', input: 'insert-input', store: ORDER_PRESETS }
+      lyrics: { select: 'lyrics-select', input: 'lyrics-input', store: LYRICS_PRESETS }
     };
     const cfg = map[type];
     if (!cfg) return;

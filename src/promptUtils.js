@@ -163,16 +163,23 @@
     const dividerPool = dividers.slice();
     let items = baseItems.slice();
     if (itemOrder) items = applyOrder(items, itemOrder);
-    const depthPool = Array.isArray(depths) ? depths.slice() : null;
+    let depthPools;
+    if (Array.isArray(depths) && Array.isArray(depths[0])) {
+      depthPools = depths.map(d => (Array.isArray(d) ? d.slice() : []));
+    } else {
+      const dp = Array.isArray(depths) ? depths.slice() : null;
+      depthPools = orders.map(() => dp);
+    }
     const result = [];
     let idx = 0;
     let divIdx = 0;
     while (true) {
       const needDivider = idx > 0 && idx % items.length === 0 && dividerPool.length;
       let term = items[idx % items.length];
-      orders.forEach(mods => {
+      orders.forEach((mods, si) => {
         const mod = mods[idx % mods.length];
-        const depth = depthPool ? depthPool[idx % depthPool.length] : 0;
+        const pool = depthPools[si];
+        const depth = pool ? pool[idx % pool.length] : 0;
         term = mod ? insertAtDepth(term, mod, depth) : term;
       });
       const pieces = [];
@@ -219,7 +226,13 @@
     let modIdx = 0;
     let items = posTerms.slice();
     if (itemOrder) items = applyOrder(items, itemOrder);
-    const depthPool = Array.isArray(depths) ? depths.slice() : null;
+    let depthPools;
+    if (Array.isArray(depths) && Array.isArray(depths[0])) {
+      depthPools = depths.map(d => (Array.isArray(d) ? d.slice() : []));
+    } else {
+      const dp = Array.isArray(depths) ? depths.slice() : null;
+      depthPools = orders.map(() => dp);
+    }
     for (let i = 0; i < items.length; i++) {
       const base = items[i];
       if (dividerSet.has(base)) {
@@ -231,9 +244,10 @@
         continue;
       }
       let term = base;
-      orders.forEach(mods => {
+      orders.forEach((mods, si) => {
         const mod = mods[modIdx % mods.length];
-        const depth = depthPool ? depthPool[modIdx % depthPool.length] : 0;
+        const pool = depthPools[si];
+        const depth = pool ? pool[modIdx % pool.length] : 0;
         term = mod ? insertAtDepth(term, mod, depth) : term;
       });
       const candidate =
