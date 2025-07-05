@@ -168,16 +168,25 @@
     const dividerPool = dividers.slice();
     let items = baseItems.slice();
     if (itemOrder) items = applyOrder(items, itemOrder);
-    const depthPool = Array.isArray(depths) ? depths.slice() : null;
+    let depthLists;
+    if (Array.isArray(depths)) {
+      if (Array.isArray(depths[0])) {
+        depthLists = depths.map(d => (Array.isArray(d) ? d.slice() : []));
+      } else {
+        depthLists = Array(count).fill(depths.slice());
+      }
+    }
+    if (!depthLists) depthLists = Array(count).fill(null);
     const result = [];
     let idx = 0;
     let divIdx = 0;
     while (true) {
       const needDivider = idx > 0 && idx % items.length === 0 && dividerPool.length;
       let term = items[idx % items.length];
-      orders.forEach(mods => {
+      orders.forEach((mods, mi) => {
         const mod = mods[idx % mods.length];
-        const depth = depthPool ? depthPool[idx % depthPool.length] : 0;
+        const dList = depthLists[mi % depthLists.length];
+        const depth = Array.isArray(dList) && dList.length ? dList[idx % dList.length] : 0;
         term = mod ? insertAtDepth(term, mod, depth) : term;
       });
       const pieces = [];
@@ -229,7 +238,15 @@
     let modIdx = 0;
     let items = posTerms.slice();
     if (itemOrder) items = applyOrder(items, itemOrder);
-    const depthPool = Array.isArray(depths) ? depths.slice() : null;
+    let depthLists;
+    if (Array.isArray(depths)) {
+      if (Array.isArray(depths[0])) {
+        depthLists = depths.map(d => (Array.isArray(d) ? d.slice() : []));
+      } else {
+        depthLists = Array(count).fill(depths.slice());
+      }
+    }
+    if (!depthLists) depthLists = Array(count).fill(null);
     for (let i = 0; i < items.length; i++) {
       const base = items[i];
       if (dividerSet.has(base)) {
@@ -241,9 +258,10 @@
         continue;
       }
       let term = base;
-      orders.forEach(mods => {
+      orders.forEach((mods, mi) => {
         const mod = mods[modIdx % mods.length];
-        const depth = depthPool ? depthPool[modIdx % depthPool.length] : 0;
+        const dList = depthLists[mi % depthLists.length];
+        const depth = Array.isArray(dList) && dList.length ? dList[modIdx % dList.length] : 0;
         term = mod ? insertAtDepth(term, mod, depth) : term;
       });
       const candidate =
@@ -293,7 +311,11 @@
     );
     let negDepths = depths;
     if (includePosForNeg && Array.isArray(depths) && posStackSize > 0) {
-      negDepths = depths.map(d => (d > 0 ? d + posStackSize : d));
+      const offset = val => {
+        if (Array.isArray(val)) return val.map(offset);
+        return val > 0 ? val + posStackSize : val;
+      };
+      negDepths = offset(depths);
     }
     const negTerms = includePosForNeg
       ? applyNegativeOnPositive(
