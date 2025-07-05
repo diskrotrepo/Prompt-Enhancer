@@ -8,26 +8,64 @@
   let LYRICS_PRESETS = {};
   let ORDER_PRESETS = {};
 
-  let LISTS;
-  if (typeof DEFAULT_LIST !== 'undefined' && Array.isArray(DEFAULT_LIST.presets)) {
-    LISTS = JSON.parse(JSON.stringify(DEFAULT_LIST));
-  } else if (
-    typeof NEGATIVE_LISTS !== 'undefined' ||
-    typeof POSITIVE_LISTS !== 'undefined' ||
-    typeof LENGTH_LISTS !== 'undefined'
-  ) {
-    LISTS = { presets: [] };
-    if (typeof NEGATIVE_LISTS !== 'undefined') {
-      NEGATIVE_LISTS.presets.forEach(p => LISTS.presets.push({ ...p, type: 'negative' }));
+  let LISTS = { presets: [] };
+
+  function getScriptDir() {
+    if (typeof document !== 'undefined' && document.currentScript) {
+      const url = new URL(document.currentScript.src, document.baseURI);
+      return url.href.replace(/[^/]*$/, '');
     }
-    if (typeof POSITIVE_LISTS !== 'undefined') {
-      POSITIVE_LISTS.presets.forEach(p => LISTS.presets.push({ ...p, type: 'positive' }));
+    if (typeof __dirname !== 'undefined') {
+      return __dirname + '/';
     }
-    if (typeof LENGTH_LISTS !== 'undefined') {
-      LENGTH_LISTS.presets.forEach(p => LISTS.presets.push({ ...p, type: 'length' }));
+    return '';
+  }
+
+  async function loadDefaultLists() {
+    if (typeof global.DEFAULT_LIST !== 'undefined' && Array.isArray(global.DEFAULT_LIST.presets)) {
+      LISTS = JSON.parse(JSON.stringify(global.DEFAULT_LIST));
+      return;
     }
-  } else {
-    LISTS = { presets: [] };
+    if (
+      typeof global.NEGATIVE_LISTS !== 'undefined' ||
+      typeof global.POSITIVE_LISTS !== 'undefined' ||
+      typeof global.LENGTH_LISTS !== 'undefined'
+    ) {
+      LISTS = { presets: [] };
+      if (typeof global.NEGATIVE_LISTS !== 'undefined') {
+        global.NEGATIVE_LISTS.presets.forEach(p => LISTS.presets.push({ ...p, type: 'negative' }));
+      }
+      if (typeof global.POSITIVE_LISTS !== 'undefined') {
+        global.POSITIVE_LISTS.presets.forEach(p => LISTS.presets.push({ ...p, type: 'positive' }));
+      }
+      if (typeof global.LENGTH_LISTS !== 'undefined') {
+        global.LENGTH_LISTS.presets.forEach(p => LISTS.presets.push({ ...p, type: 'length' }));
+      }
+      return;
+    }
+    if (typeof fetch === 'function') {
+      try {
+        const url = getScriptDir() + 'default_list.json';
+        let res = await fetch(url);
+        if (!res.ok) {
+          res = await fetch('default_list.json');
+        }
+        if (res.ok) {
+          LISTS = await res.json();
+        }
+      } catch (err) {
+        LISTS = { presets: [] };
+      }
+    } else if (typeof require !== 'undefined') {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const data = fs.readFileSync(path.join(__dirname, 'default_list.json'), 'utf8');
+        LISTS = JSON.parse(data);
+      } catch (err) {
+        LISTS = { presets: [] };
+      }
+    }
   }
 
   function populateSelect(selectEl, presets) {
@@ -212,6 +250,7 @@
     get BASE_PRESETS() { return BASE_PRESETS; },
     get LYRICS_PRESETS() { return LYRICS_PRESETS; },
     get ORDER_PRESETS() { return ORDER_PRESETS; },
+    loadDefaultLists,
     loadLists,
     exportLists,
     importLists,

@@ -1,4 +1,4 @@
-const DEFAULT_LIST = {
+{
   "presets": [
     {
       "id": "empty",
@@ -705,9 +705,9 @@ const DEFAULT_LIST = {
         "Namely, ",
         "Rephrased, ",
         "To say it another way, ",
-    "Let me put it this way. "
+        "Let me put it this way."
   ],
   "type": "divider"
     }
   ]
-};
+}
