@@ -368,16 +368,14 @@ describe('UI interactions', () => {
       <button id="base-reroll" class="toggle-button random-button" data-select="base-order-select"></button>
     `;
     const orig = utils.shuffle;
-    utils.shuffle = jest.fn(arr => {
-      arr.reverse();
-      return arr;
-    });
+    utils.shuffle = jest.fn();
     setupOrderControl('base-order-select', 'base-order-input', () => ['a', 'b', 'c']);
     setupRerollButton('base-reroll', 'base-order-select');
     document.getElementById('base-reroll').click();
-    utils.shuffle = orig;
     expect(document.getElementById('base-order-select').value).toBe('random');
-    expect(document.getElementById('base-order-input').value).toBe('2, 1, 0');
+    expect(document.getElementById('base-order-input').value).toBe('');
+    expect(utils.shuffle).not.toHaveBeenCalled();
+    utils.shuffle = orig;
   });
 
   test('rerollRandomOrders updates random selects when enabled', () => {
@@ -388,22 +386,19 @@ describe('UI interactions', () => {
       </select>
       <textarea id="base-order-input"></textarea>
       <input type="checkbox" id="reroll-on-gen" checked>
+      <textarea id="base-input">a,b</textarea>
     `;
     const orig = utils.shuffle;
-    utils.shuffle = jest
-      .fn()
-      .mockImplementationOnce(arr => {
-        arr.reverse();
-        return arr;
-      })
-      .mockImplementationOnce(arr => arr);
+    utils.shuffle = jest.fn(arr => {
+      arr.reverse();
+      return arr;
+    });
     setupOrderControl('base-order-select', 'base-order-input', () => ['a', 'b']);
     document.getElementById('base-order-select').value = 'random';
     document.getElementById('base-order-select').dispatchEvent(new Event('change'));
-    const before = document.getElementById('base-order-input').value;
     rerollRandomOrders();
     utils.shuffle = orig;
-    expect(document.getElementById('base-order-input').value).not.toBe(before);
+    expect(document.getElementById('base-order-input').value).toBe('1, 0');
   });
 });
 
