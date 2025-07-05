@@ -138,6 +138,59 @@ describe('Prompt building', () => {
     expect(out).toEqual({ positive: 'good cat', negative: 'bad good cat' });
   });
 
+  test('buildVersions offsets depth for negatives when positives included', () => {
+    const out = buildVersions(['cat'], ['bad'], ['good'], 20, true, [], true, 1, 1, [1]);
+    expect(out).toEqual({ positive: 'cat good', negative: 'cat good bad' });
+  });
+
+  test('buildVersions respects depth arrays per stack', () => {
+    const out = buildVersions(
+      ['a b c'],
+      ['n'],
+      [['x'], ['y']],
+      15,
+      false,
+      [],
+      true,
+      2,
+      1,
+      [[1], [2]]
+    );
+    expect(out).toEqual({ positive: 'a x b y c', negative: 'a n b c' });
+  });
+
+  test('negative depth offset accounts for stacked positives', () => {
+    const out = buildVersions(
+      ['foo bar baz'],
+      ['bad'],
+      [['good'], ['great']],
+      40,
+      true,
+      [],
+      true,
+      2,
+      1,
+      [1]
+    );
+    expect(out).toEqual({ positive: 'foo good great bar baz', negative: 'foo good great bad bar baz' });
+  });
+
+  test('stacked modifiers handle prepend and append depths', () => {
+    const out = buildVersions(
+      ['foo bar'],
+      ['n'],
+      [['pre'], ['post']],
+      50,
+      false,
+      [],
+      true,
+      2,
+      1,
+      [[0], [2]]
+    );
+    expect(out).toEqual({ positive: 'pre foo bar post, pre foo bar post', negative: 'n foo bar, n foo bar' });
+  });
+
   test('buildVersions returns empty strings when items list is empty', () => {
     const out = buildVersions([], ['n'], ['p'], 10);
     expect(out).toEqual({ positive: '', negative: '' });
@@ -248,8 +301,8 @@ describe('Prompt building', () => {
       [[0, 1], [1, 0]],
       [[1, 0], [0, 1]]
     );
-    expect(out.positive).toBe('p2 p1 x, p1 p2 x');
-    expect(out.negative).toBe('n1 n2 x, n2 n1 x');
+    expect(out.positive).toBe('p1 p2 x, p2 p1 x');
+    expect(out.negative).toBe('n2 n1 x, n1 n2 x');
   });
 
   test('buildVersions accepts different lists per stack', () => {
@@ -264,8 +317,8 @@ describe('Prompt building', () => {
       2,
       2
     );
-    expect(out.positive).toBe('p2 p1 x, p2 p1 x');
-    expect(out.negative).toBe('n2 n1 x, n2 n1 x');
+    expect(out.positive).toBe('p1 p2 x, p1 p2 x');
+    expect(out.negative).toBe('n1 n2 x, n1 n2 x');
   });
 
   test('stacking works with natural dividers', () => {

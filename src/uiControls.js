@@ -92,7 +92,8 @@
       return result;
     }
 
-    const insertDepths = collectDepths('pos', posStackOn ? posStackSize : 1);
+    const rawDepths = collectDepths('pos', posStackOn ? posStackSize : 1);
+    const insertDepths = posStackOn ? rawDepths : rawDepths[0];
     const baseOrder = utils.parseOrderInput(document.getElementById('base-order-input')?.value || '');
     function collectOrders(prefix, count) {
       const result = [];
