@@ -43,11 +43,17 @@
     'lyrics-remove-parens',
     'lyrics-remove-brackets',
     'pos-depth-select',
+    'pos-depth-input',
     'neg-depth-select',
+    'neg-depth-input',
     'base-order-select',
+    'base-order-input',
     'pos-order-select',
+    'pos-order-input',
     'neg-order-select',
-    'divider-order-select'
+    'neg-order-input',
+    'divider-order-select',
+    'divider-order-input'
   ];
 
   function loadFromDOM() {

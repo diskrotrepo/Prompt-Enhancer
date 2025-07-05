@@ -8,6 +8,8 @@ function setupDOM() {
   document.body.innerHTML = `
     <select id="base-select"></select>
     <textarea id="base-input"></textarea>
+    <select id="pos-depth-select"></select>
+    <textarea id="pos-depth-input"></textarea>
   `;
 }
 
@@ -25,5 +27,37 @@ describe('Storage manager', () => {
     storage.importData(json);
     const after = storage.exportData();
     expect(after).toBe(json);
+  });
+
+  test('depth input preserved through exportData/importData', () => {
+    document.getElementById('pos-depth-input').value = '4';
+    const json = storage.exportData();
+    document.getElementById('pos-depth-input').value = '';
+    storage.importData(json);
+    expect(document.getElementById('pos-depth-input').value).toBe('4');
+  });
+
+  test('importData keeps builtin depth options', () => {
+    lists.importLists({
+      presets: [
+        { id: 'ord', title: 'ord', type: 'order', items: ['0'] },
+        { id: 'b', title: 'b', type: 'base', items: ['x'] }
+      ]
+    });
+    const json = storage.exportData();
+    document.body.innerHTML = `
+      <select id="base-select"></select>
+      <textarea id="base-input"></textarea>
+      <select id="pos-depth-select"></select>
+      <textarea id="pos-depth-input"></textarea>
+    `;
+    lists.importLists({ presets: [] });
+    storage.importData(json);
+    const opts = Array.from(
+      document.querySelectorAll('#pos-depth-select option')
+    ).map(o => o.value);
+    expect(opts).toEqual(
+      expect.arrayContaining(['prepend', 'append', 'random', 'ord'])
+    );
   });
 });

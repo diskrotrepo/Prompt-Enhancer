@@ -43,6 +43,23 @@
     });
   }
 
+  function populateDepthSelect(selectEl, presets) {
+    if (!selectEl) return;
+    selectEl.innerHTML = '';
+    const opts = [
+      { id: 'prepend', title: 'Prepend' },
+      { id: 'append', title: 'Append' },
+      { id: 'random', title: 'Random Depth' }
+    ];
+    presets.forEach(p => opts.push({ id: p.id, title: p.title }));
+    opts.forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o.id;
+      opt.textContent = o.title;
+      selectEl.appendChild(opt);
+    });
+  }
+
   function loadLists() {
     NEG_PRESETS = {};
     POS_PRESETS = {};
@@ -96,9 +113,9 @@
     const lyricsSelect = document.getElementById('lyrics-select');
     if (lyricsSelect) populateSelect(lyricsSelect, lyrics);
     const posDepthSelect = document.getElementById('pos-depth-select');
-    if (posDepthSelect) populateSelect(posDepthSelect, order);
+    if (posDepthSelect) populateDepthSelect(posDepthSelect, order);
     const negDepthSelect = document.getElementById('neg-depth-select');
-    if (negDepthSelect) populateSelect(negDepthSelect, order);
+    if (negDepthSelect) populateDepthSelect(negDepthSelect, order);
   }
 
   function exportLists() {
