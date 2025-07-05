@@ -67,8 +67,18 @@
     }
     const insertDepths = utils.parseOrderInput(document.getElementById('insert-input')?.value || '');
     const baseOrder = utils.parseOrderInput(document.getElementById('base-order-input')?.value || '');
-    const posOrder = utils.parseOrderInput(document.getElementById('pos-order-input')?.value || '');
-    const negOrder = utils.parseOrderInput(document.getElementById('neg-order-input')?.value || '');
+    function collectOrders(prefix, count) {
+      const result = [];
+      for (let i = 1; i <= count; i++) {
+        const id = `${prefix}-order-input${i === 1 ? '' : '-' + i}`;
+        const el = document.getElementById(id);
+        result.push(utils.parseOrderInput(el?.value || ''));
+      }
+      return result;
+    }
+
+    const posOrder = collectOrders('pos', posStackOn ? posStackSize : 1);
+    const negOrder = collectOrders('neg', negStackOn ? negStackSize : 1);
     const dividerOrder = utils.parseOrderInput(document.getElementById('divider-order-input')?.value || '');
     return {
       baseItems,
@@ -207,8 +217,8 @@
 
   function setupStackControls() {
     const configs = [
-      { stack: 'pos-stack', size: 'pos-stack-size', shuffle: 'pos-shuffle' },
-      { stack: 'neg-stack', size: 'neg-stack-size', shuffle: 'neg-shuffle' }
+      { prefix: 'pos', stack: 'pos-stack', size: 'pos-stack-size', shuffle: 'pos-shuffle' },
+      { prefix: 'neg', stack: 'neg-stack', size: 'neg-stack-size', shuffle: 'neg-shuffle' }
     ];
     configs.forEach(cfg => {
       const stackCb = document.getElementById(cfg.stack);
@@ -236,8 +246,11 @@
           shuffleCb.checked = prev;
           sizeEl.style.display = 'none';
         }
+        const count = stackCb.checked ? parseInt(sizeEl.value, 10) || 1 : 1;
+        updateOrderContainers(cfg.prefix, count);
       };
       stackCb.addEventListener('change', update);
+      sizeEl.addEventListener('change', update);
       update();
     });
   }
@@ -309,6 +322,38 @@
       opt.textContent = o.title;
       select.appendChild(opt);
     });
+  }
+
+  function updateOrderContainers(prefix, count) {
+    const container = document.getElementById(`${prefix}-order-container`);
+    const baseId = `${prefix}-order`;
+    const getItems = () =>
+      utils.parseInput(document.getElementById(`${prefix}-input`).value);
+    if (!container) return;
+    const current = container.querySelectorAll('select').length;
+    for (let i = current; i < count; i++) {
+      const idx = i + 1;
+      const sel = document.createElement('select');
+      sel.id = `${baseId}-select-${idx}`;
+      populateOrderOptions(sel);
+      container.appendChild(sel);
+      const div = document.createElement('div');
+      div.className = 'input-row';
+      const ta = document.createElement('textarea');
+      ta.id = `${baseId}-input-${idx}`;
+      ta.rows = 1;
+      ta.placeholder = '0,1,2';
+      div.appendChild(ta);
+      container.appendChild(div);
+      setupOrderControl(sel.id, ta.id, getItems);
+    }
+    for (let i = current; i > count; i--) {
+      const idx = i;
+      const sel = document.getElementById(`${baseId}-select-${idx}`);
+      const ta = document.getElementById(`${baseId}-input-${idx}`);
+      if (sel) sel.remove();
+      if (ta && ta.parentElement) ta.parentElement.remove();
+    }
   }
 
   function setupOrderControl(selectId, inputId, getItems) {
@@ -414,20 +459,35 @@
       document.getElementById('divider-input')?.value || ''
     );
 
+    function gather(prefix, items) {
+      const arr = [];
+      let idx = 1;
+      while (true) {
+        const sel = document.getElementById(
+          `${prefix}-order-select${idx === 1 ? '' : '-' + idx}`
+        );
+        const inp = document.getElementById(
+          `${prefix}-order-input${idx === 1 ? '' : '-' + idx}`
+        );
+        if (!sel || !inp) break;
+        arr.push({ select: sel, input: inp, items });
+        idx++;
+      }
+      return arr;
+    }
+
     const configs = [
-      { sel: 'base-order-select', inp: 'base-order-input', items: baseItems },
-      { sel: 'pos-order-select', inp: 'pos-order-input', items: posItems },
-      { sel: 'neg-order-select', inp: 'neg-order-input', items: negItems },
-      { sel: 'divider-order-select', inp: 'divider-order-input', items: divItems }
+      ...gather('base', baseItems),
+      ...gather('pos', posItems),
+      ...gather('neg', negItems),
+      ...gather('divider', divItems)
     ];
 
     configs.forEach(cfg => {
-      const select = document.getElementById(cfg.sel);
-      const input = document.getElementById(cfg.inp);
-      if (!select || !input || select.value !== 'random') return;
+      if (cfg.select.value !== 'random') return;
       const arr = cfg.items.map((_, i) => i);
       utils.shuffle(arr);
-      input.value = arr.join(', ');
+      cfg.input.value = arr.join(', ');
     });
 
     const insertSel = document.getElementById('insert-select');

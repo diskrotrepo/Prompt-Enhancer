@@ -231,6 +231,26 @@ describe('Prompt building', () => {
     expect(out).toEqual({ positive: 'p1 p1 x', negative: 'n1 n1 x' });
   });
 
+  test('buildVersions applies separate orders per stack', () => {
+    const out = buildVersions(
+      ['x'],
+      ['n1', 'n2'],
+      ['p1', 'p2'],
+      20,
+      false,
+      [],
+      true,
+      2,
+      2,
+      null,
+      null,
+      [[0, 1], [1, 0]],
+      [[1, 0], [0, 1]]
+    );
+    expect(out.positive).toBe('p2 p1 x, p1 p2 x');
+    expect(out.negative).toBe('n1 n2 x, n2 n1 x');
+  });
+
   test('stacking works with natural dividers', () => {
     const out = buildVersions(
       ['a', 'b'],
@@ -259,6 +279,24 @@ describe('Prompt building', () => {
     );
     expect(out.positive).toBe('good cat, \nfoo , good cat, \nfoo ');
     expect(out.negative).toBe('bad good cat, \nfoo , bad good cat, \nfoo ');
+  });
+
+  test('random base order keeps negatives aligned', () => {
+    const out = buildVersions(
+      ['a', 'b'],
+      ['n'],
+      ['p'],
+      50,
+      true,
+      ['\nfoo '],
+      true,
+      1,
+      1,
+      null,
+      [1, 0]
+    );
+    const expectedNeg = out.positive.replace(/\bp /g, 'n p ');
+    expect(out.negative).toBe(expectedNeg);
   });
 });
 
@@ -398,6 +436,33 @@ describe('UI interactions', () => {
     rerollRandomOrders();
     utils.shuffle = orig;
     expect(document.getElementById('base-order-input').value).toBe('1, 0');
+  });
+
+  test('rerollRandomOrders handles multiple order controls', () => {
+    document.body.innerHTML = `
+      <select id="pos-order-select">
+        <option value="canonical">c</option>
+        <option value="random">r</option>
+      </select>
+      <textarea id="pos-order-input"></textarea>
+      <select id="pos-order-select-2">
+        <option value="canonical">c</option>
+        <option value="random">r</option>
+      </select>
+      <textarea id="pos-order-input-2"></textarea>
+      <textarea id="pos-input">a,b</textarea>
+    `;
+    const orig = utils.shuffle;
+    utils.shuffle = jest.fn(arr => {
+      arr.reverse();
+      return arr;
+    });
+    document.getElementById('pos-order-select').value = 'random';
+    document.getElementById('pos-order-select-2').value = 'random';
+    rerollRandomOrders();
+    utils.shuffle = orig;
+    expect(document.getElementById('pos-order-input').value).toBe('1, 0');
+    expect(document.getElementById('pos-order-input-2').value).toBe('1, 0');
   });
 });
 
