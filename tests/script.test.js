@@ -31,7 +31,8 @@ const {
   applyPreset,
   setupOrderControl,
   setupRerollButton,
-  rerollRandomOrders
+  rerollRandomOrders,
+  setupAdvancedToggle
 } = ui;
 
 describe('Utility functions', () => {
@@ -463,6 +464,70 @@ describe('UI interactions', () => {
     utils.shuffle = orig;
     expect(document.getElementById('pos-order-input').value).toBe('1, 0');
     expect(document.getElementById('pos-order-input-2').value).toBe('1, 0');
+  });
+
+  test('advanced toggle shows and hides controls', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <select id="base-order-select"></select>
+      <div class="input-row"><textarea id="base-order-input"></textarea></div>
+      <div id="pos-order-container">
+        <select id="pos-order-select"></select>
+        <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+        <select id="pos-order-select-2"></select>
+        <div class="input-row"><textarea id="pos-order-input-2"></textarea></div>
+      </div>
+      <button id="base-reroll"></button>
+    `;
+    setupAdvancedToggle();
+    const cb = document.getElementById('advanced-mode');
+    const select = document.getElementById('base-order-select');
+    const taRow = document.getElementById('base-order-input').parentElement;
+    const cont = document.getElementById('pos-order-container');
+    const btn = document.getElementById('base-reroll');
+
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+    expect(select.style.display).toBe('');
+    expect(taRow.style.display).toBe('');
+    expect(cont.style.display).toBe('');
+    expect(btn.style.display).toBe('none');
+
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change'));
+    expect(select.style.display).toBe('none');
+    expect(taRow.style.display).toBe('none');
+    expect(cont.style.display).toBe('none');
+    expect(btn.style.display).toBe('');
+  });
+
+  test('new stack order uses reroll state in simple mode', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <input type="checkbox" id="pos-stack">
+      <select id="pos-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="pos-shuffle">
+      <div id="pos-order-container">
+        <select id="pos-order-select">
+          <option value="canonical">c</option>
+          <option value="random">r</option>
+        </select>
+        <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+      </div>
+      <button id="pos-reroll"></button>
+      <textarea id="pos-input">a,b</textarea>
+    `;
+    setupOrderControl('pos-order-select', 'pos-order-input', () => ['a', 'b']);
+    setupRerollButton('pos-reroll', 'pos-order-select');
+    setupStackControls();
+    document.getElementById('pos-reroll').click();
+    const stackCb = document.getElementById('pos-stack');
+    stackCb.checked = true;
+    stackCb.dispatchEvent(new Event('change'));
+    const sel2 = document.getElementById('pos-order-select-2');
+    const ta2 = document.getElementById('pos-order-input-2');
+    expect(sel2.value).toBe('random');
+    expect(ta2.value).toBe('');
   });
 });
 
