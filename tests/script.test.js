@@ -610,6 +610,45 @@ describe('UI interactions', () => {
     expect(document.getElementById('neg-order-select').value).toBe('random');
     expect(document.getElementById('neg-order-select-2').value).toBe('random');
   });
+
+  test('stack blocks added in simple mode hide advanced controls', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <input type="checkbox" id="pos-stack">
+      <select id="pos-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="pos-shuffle">
+      <div id="pos-stack-container">
+        <div class="stack-block" id="pos-stack-1">
+          <select id="pos-select"></select>
+          <div class="input-row"><textarea id="pos-input"></textarea></div>
+          <div id="pos-order-container">
+            <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+            <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+          </div>
+          <div id="pos-depth-container">
+            <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+            <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
+          </div>
+        </div>
+      </div>
+    `;
+    setupAdvancedToggle();
+    setupStackControls();
+    const adv = document.getElementById('advanced-mode');
+    adv.checked = false;
+    adv.dispatchEvent(new Event('change'));
+    const cb = document.getElementById('pos-stack');
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+    const orderSel = document.getElementById('pos-order-select-2');
+    const orderCont = document.getElementById('pos-order-container-2');
+    const depthSel = document.getElementById('pos-depth-select-2');
+    const depthCont = document.getElementById('pos-depth-container-2');
+    expect(orderSel.style.display).toBe('none');
+    expect(orderCont.style.display).toBe('none');
+    expect(depthSel.style.display).toBe('none');
+    expect(depthCont.style.display).toBe('none');
+  });
 });
 
 describe('List persistence', () => {

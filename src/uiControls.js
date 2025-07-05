@@ -632,6 +632,8 @@
       const block = document.getElementById(`${prefix}-stack-${i}`);
       if (block) block.remove();
     }
+    const adv = document.getElementById('advanced-mode');
+    if (adv && !adv.checked) adv.dispatchEvent(new Event('change'));
   }
 
   function setupRerollButton(btnId, selectId) {
