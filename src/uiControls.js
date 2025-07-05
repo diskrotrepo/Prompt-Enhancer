@@ -6,6 +6,8 @@
   const state =
     global.stateManager || (typeof require !== 'undefined' && require('./stateManager'));
 
+  const rerollUpdaters = [];
+
   function applyPreset(selectEl, inputEl, presetsOrType) {
     let presets = presetsOrType;
     if (typeof presetsOrType === 'string') {
@@ -293,6 +295,7 @@
       });
       containerIds.forEach(id => setDisplay(document.getElementById(id), adv));
       rerollIds.forEach(id => setDisplay(document.getElementById(id), !adv));
+      rerollUpdaters.forEach(fn => fn());
     };
     cb.addEventListener('change', update);
     update();
@@ -477,32 +480,68 @@
     select.dispatchEvent(new Event('change'));
   }
 
-  function setupRerollButton(btnId, selectId) {
+  function setupRerollButton(btnId, selectId, prefix) {
     const btn = document.getElementById(btnId);
-    const select = document.getElementById(selectId);
+    const first = document.getElementById(selectId);
     const adv = document.getElementById('advanced-mode');
-    if (!btn || !select) return;
+    if (!btn || !first) return;
+
+    const gather = () => {
+      if (!prefix) return [first];
+      const arr = [];
+      let idx = 1;
+      while (true) {
+        const sel = document.getElementById(
+          `${prefix}-order-select${idx === 1 ? '' : '-' + idx}`
+        );
+        if (!sel) break;
+        arr.push(sel);
+        idx++;
+      }
+      return arr;
+    };
+
+    const setAll = val => {
+      gather().forEach(sel => {
+        sel.value = val;
+        sel.dispatchEvent(new Event('change'));
+      });
+    };
+
     const reroll = () => {
       const advanced = adv && adv.checked;
       if (advanced) {
-        if (select.value !== 'random') {
-          select.value = 'random';
-        }
+        gather().forEach(sel => {
+          if (sel.value !== 'random') {
+            sel.value = 'random';
+            sel.dispatchEvent(new Event('change'));
+          }
+        });
       } else {
-        select.value = select.value === 'random' ? 'canonical' : 'random';
+        const sels = gather();
+        const allRandom = sels.every(s => s.value === 'random');
+        setAll(allRandom ? 'canonical' : 'random');
       }
-      select.dispatchEvent(new Event('change'));
     };
-    btn.addEventListener('click', reroll);
+
     const update = () => {
-      btn.classList.toggle('active', select.value === 'random');
+      const sels = gather();
+      const allRandom = sels.every(s => s.value === 'random');
+      const allCanonical = sels.every(s => s.value === 'canonical');
+      btn.classList.toggle('active', allRandom);
+      btn.classList.toggle('partial', !allRandom && !allCanonical);
       if (adv && adv.checked) {
         btn.classList.remove('active');
+        btn.classList.remove('partial');
       }
     };
-    select.addEventListener('change', update);
+
+    btn.addEventListener('click', reroll);
+    gather().forEach(sel => sel.addEventListener('change', update));
     if (adv) adv.addEventListener('change', update);
     update();
+    rerollUpdaters.push(update);
+    return { update };
   }
 
   function rerollRandomOrders() {
@@ -632,11 +671,11 @@
     setupOrderControl('divider-order-select', 'divider-order-input', () =>
       utils.parseDividerInput(document.getElementById('divider-input').value || '')
     );
-    setupRerollButton('base-reroll', 'base-order-select');
-    setupRerollButton('pos-reroll', 'pos-order-select');
-    setupRerollButton('neg-reroll', 'neg-order-select');
-    setupRerollButton('divider-reroll', 'divider-order-select');
-    setupRerollButton('insert-reroll', 'insert-select');
+    setupRerollButton('base-reroll', 'base-order-select', 'base');
+    setupRerollButton('pos-reroll', 'pos-order-select', 'pos');
+    setupRerollButton('neg-reroll', 'neg-order-select', 'neg');
+    setupRerollButton('divider-reroll', 'divider-order-select', 'divider');
+    setupRerollButton('insert-reroll', 'insert-select', 'insert');
     setupAdvancedToggle();
     document.getElementById('generate').addEventListener('click', generate);
 

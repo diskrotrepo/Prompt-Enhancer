@@ -518,7 +518,7 @@ describe('UI interactions', () => {
       <textarea id="pos-input">a,b</textarea>
     `;
     setupOrderControl('pos-order-select', 'pos-order-input', () => ['a', 'b']);
-    setupRerollButton('pos-reroll', 'pos-order-select');
+    setupRerollButton('pos-reroll', 'pos-order-select', 'pos');
     setupStackControls();
     document.getElementById('pos-reroll').click();
     const stackCb = document.getElementById('pos-stack');
@@ -528,6 +528,40 @@ describe('UI interactions', () => {
     const ta2 = document.getElementById('pos-order-input-2');
     expect(sel2.value).toBe('random');
     expect(ta2.value).toBe('');
+  });
+
+  test('reroll button reflects mixed states when switching modes', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <div id="pos-order-container">
+        <select id="pos-order-select">
+          <option value="canonical">c</option>
+          <option value="random">r</option>
+        </select>
+        <select id="pos-order-select-2">
+          <option value="canonical">c</option>
+          <option value="random">r</option>
+        </select>
+      </div>
+      <button id="pos-reroll" class="random-button"></button>
+    `;
+    setupRerollButton('pos-reroll', 'pos-order-select', 'pos');
+    setupAdvancedToggle();
+    const cb = document.getElementById('advanced-mode');
+    const btn = document.getElementById('pos-reroll');
+    const sel1 = document.getElementById('pos-order-select');
+    const sel2 = document.getElementById('pos-order-select-2');
+    sel1.value = 'random';
+    sel2.value = 'canonical';
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change'));
+    expect(btn.classList.contains('partial')).toBe(true);
+    sel2.value = 'random';
+    cb.dispatchEvent(new Event('change'));
+    expect(btn.classList.contains('active')).toBe(true);
+    btn.click();
+    expect(sel1.value).toBe('canonical');
+    expect(sel2.value).toBe('canonical');
   });
 });
 
