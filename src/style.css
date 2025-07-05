@@ -334,6 +334,15 @@ textarea {
     min-height: 10vh;
 }
 
+textarea[id^="base-order-input"],
+textarea[id^="pos-order-input"],
+textarea[id^="neg-order-input"],
+textarea[id^="divider-order-input"],
+textarea[id^="pos-depth-input"],
+textarea[id^="neg-depth-input"] {
+    min-height: 2em;
+}
+
 /* Select dropdown styling */
 select {
     width: 100%;
