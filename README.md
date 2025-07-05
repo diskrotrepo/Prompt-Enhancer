@@ -86,7 +86,7 @@ src/
 ├── style.css           # Dark theme styling
 ├── assets/
 │   └── logo.png        # Diskrot logo
-└── all_lists.js        # Modifier presets
+└── default_list.js        # Modifier presets
 ```
 
 ### Key Files
@@ -94,16 +94,16 @@ src/
 - **index.html**: Contains the user interface with dynamically populated dropdown menus
 - **script.js**: Implements the prompt generation algorithm with comprehensive comments
 - **style.css**: Provides responsive dark theme styling with gradient backgrounds
-- **all_lists.js**: Contains curated modifier lists in a structured format
+- **default_list.js**: Contains curated modifier lists in a structured format
 
 ## Customization
 
 ### Adding New Preset Lists
 
-Edit the preset file `src/all_lists.js`:
+Edit the preset file `src/default_list.js`:
 
 ```javascript
-const ALL_LISTS = {
+const DEFAULT_LIST = {
   presets: [
     {
       id: 'your-list-id',

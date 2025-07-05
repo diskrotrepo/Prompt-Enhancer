@@ -5,7 +5,7 @@ if (typeof window !== 'undefined') {
   window.__TEST__ = true;
 }
 
-const utils = require('../src/promptUtils');
+const utils = require('../src/lib/promptUtils');
 const lists = require('../src/listManager');
 const ui = require('../src/uiControls');
 

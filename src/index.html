@@ -32,18 +32,14 @@
       <div id="tool" class="content">
         <h1>Prompt Enhancer</h1>
         <!-- Lists manager moved to top -->
-        <div class="input-group">
-          <div class="label-row">
-            <label>Lists Manager</label>
-            <input type="file" id="lists-file" accept="application/json" style="display:none">
-            <button type="button" id="load-lists">Load</button>
-            <button type="button" id="additive-load">Additive Load</button>
-            <button type="button" id="download-lists">Save</button>
-            <input type="file" id="state-file" accept="application/json" style="display:none">
-            <button type="button" id="load-state">Load State</button>
-            <button type="button" id="save-state">Save State</button>
+          <div class="input-group">
+            <div class="label-row">
+              <label>Data</label>
+              <input type="file" id="data-file" accept="application/json" style="display:none">
+              <button type="button" id="load-data">Load</button>
+              <button type="button" id="save-data">Save</button>
+            </div>
           </div>
-        </div>
         <!-- Hide all toggle -->
         <div class="input-group">
           <div class="label-row">
@@ -295,11 +291,12 @@
 
   <!-- External script loading order is important -->
   <!-- Load list data files first -->
-  <script src="all_lists.js"></script>
+  <script src="default_list.js"></script>
   <!-- Load submodules before main script -->
-  <script src="promptUtils.js"></script>
+  <script src="lib/promptUtils.js"></script>
   <script src="listManager.js"></script>
   <script src="stateManager.js"></script>
+  <script src="storageManager.js"></script>
   <script src="uiControls.js"></script>
   <!-- Then load main application logic -->
   <script src="script.js"></script>
