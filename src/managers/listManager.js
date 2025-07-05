@@ -1,5 +1,7 @@
 (function (global) {
-  const utils = global.promptUtils || (typeof require !== 'undefined' && require('./promptUtils'));
+  const utils =
+    global.promptUtils ||
+    (typeof require !== 'undefined' && require('../utils/promptUtils'));
   let NEG_PRESETS = {};
   let POS_PRESETS = {};
   let LENGTH_PRESETS = {};
@@ -9,8 +11,8 @@
   let ORDER_PRESETS = {};
 
   let LISTS;
-  if (typeof ALL_LISTS !== 'undefined' && Array.isArray(ALL_LISTS.presets)) {
-    LISTS = JSON.parse(JSON.stringify(ALL_LISTS));
+  if (typeof DEFAULT_LIST !== 'undefined' && Array.isArray(DEFAULT_LIST.presets)) {
+    LISTS = JSON.parse(JSON.stringify(DEFAULT_LIST));
   } else if (
     typeof NEGATIVE_LISTS !== 'undefined' ||
     typeof POSITIVE_LISTS !== 'undefined' ||

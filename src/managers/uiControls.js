@@ -1,10 +1,13 @@
 (function (global) {
   const utils =
-    global.promptUtils || (typeof require !== 'undefined' && require('./promptUtils'));
+    global.promptUtils ||
+    (typeof require !== 'undefined' && require('../utils/promptUtils'));
   const lists =
-    global.listManager || (typeof require !== 'undefined' && require('./listManager'));
+    global.listManager ||
+    (typeof require !== 'undefined' && require('./listManager'));
   const state =
-    global.stateManager || (typeof require !== 'undefined' && require('./stateManager'));
+    global.stateManager ||
+    (typeof require !== 'undefined' && require('./stateManager'));
 
   function applyPreset(selectEl, inputEl, presetsOrType) {
     let presets = presetsOrType;
@@ -786,7 +789,9 @@
     if (saveBtn) {
       saveBtn.addEventListener('click', () => {
         state.loadFromDOM();
-        const blob = new Blob([state.exportState()], { type: 'application/json' });
+        const blob = new Blob([state.exportData()], {
+          type: 'application/json'
+        });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -806,7 +811,7 @@
         reader.onload = () => {
           try {
             const data = JSON.parse(reader.result);
-            state.importState(data);
+            state.importData(data);
           } catch (err) {
             alert('Invalid state file');
           }

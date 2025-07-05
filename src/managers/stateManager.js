@@ -1,4 +1,7 @@
 (function (global) {
+  const lists =
+    global.listManager ||
+    (typeof require !== 'undefined' && require('./listManager'));
   const State = {};
 
   function getVal(el) {
@@ -41,19 +44,7 @@
     'lyrics-select',
     'lyrics-space',
     'lyrics-remove-parens',
-    'lyrics-remove-brackets',
-    'pos-depth-input',
-    'pos-depth-select',
-    'neg-depth-input',
-    'neg-depth-select',
-    'base-order-input',
-    'base-order-select',
-    'pos-order-input',
-    'pos-order-select',
-    'neg-order-input',
-    'neg-order-select',
-    'divider-order-input',
-    'divider-order-select'
+    'lyrics-remove-brackets'
   ];
 
   function loadFromDOM() {
@@ -97,7 +88,51 @@
     applyToDOM(data);
   }
 
-  const api = { State, loadFromDOM, applyToDOM, exportState, importState };
+  function exportData() {
+    const presets = JSON.parse(lists.exportLists()).presets || [];
+    const stateObj = loadFromDOM();
+    const stateLists = Object.keys(stateObj).map(id => ({
+      id,
+      title: id,
+      type: 'state',
+      items: [stateObj[id]]
+    }));
+    return JSON.stringify({ presets: presets.concat(stateLists) }, null, 2);
+  }
+
+  function importData(obj, additive = false) {
+    if (!obj) return;
+    let data = obj;
+    if (typeof obj === 'string') {
+      try {
+        data = JSON.parse(obj);
+      } catch (err) {
+        return;
+      }
+    }
+    if (!data || !Array.isArray(data.presets)) return;
+    const statePresets = data.presets.filter(p => p.type === 'state');
+    const listPresets = data.presets.filter(p => p.type !== 'state');
+    lists.importLists({ presets: listPresets }, additive);
+    const stateObj = {};
+    statePresets.forEach(p => {
+      let val = p.items && p.items.length ? p.items[0] : '';
+      if (val === 'true') val = true;
+      else if (val === 'false') val = false;
+      stateObj[p.id] = val;
+    });
+    applyToDOM(stateObj);
+  }
+
+  const api = {
+    State,
+    loadFromDOM,
+    applyToDOM,
+    exportState,
+    importState,
+    exportData,
+    importData
+  };
 
   if (typeof module !== 'undefined') {
     module.exports = api;

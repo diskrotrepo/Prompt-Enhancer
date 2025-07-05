@@ -3,9 +3,9 @@
 global.__TEST__ = true;
 if (typeof window !== 'undefined') window.__TEST__ = true;
 
-const lists = require('../src/listManager');
-const ui = require('../src/uiControls');
-const state = require('../src/stateManager');
+const lists = require('../src/managers/listManager');
+const ui = require('../src/managers/uiControls');
+const state = require('../src/managers/stateManager');
 
 function setupDOM() {
   document.body.innerHTML = `
@@ -80,18 +80,18 @@ describe('State manager integration', () => {
     const firstNeg = document.getElementById('negative-output').textContent;
 
     state.loadFromDOM();
-    const json = state.exportState();
+    const json = state.exportData();
 
     document.getElementById('base-input').value = 'dog';
     ui.generate();
     expect(document.getElementById('positive-output').textContent).not.toBe(firstPos);
 
-    state.importState(JSON.parse(json));
+    state.importData(JSON.parse(json));
     ui.generate();
     expect(document.getElementById('positive-output').textContent).toBe(firstPos);
     expect(document.getElementById('negative-output').textContent).toBe(firstNeg);
 
-    const again = state.exportState();
+    const again = state.exportData();
     expect(again).toBe(json);
   });
 });

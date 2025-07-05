@@ -1,4 +1,4 @@
-const ALL_LISTS = {
+const DEFAULT_LIST = {
   "presets": [
     {
       "id": "empty",

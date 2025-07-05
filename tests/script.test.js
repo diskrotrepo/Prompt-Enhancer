@@ -5,9 +5,9 @@ if (typeof window !== 'undefined') {
   window.__TEST__ = true;
 }
 
-const utils = require('../src/promptUtils');
-const lists = require('../src/listManager');
-const ui = require('../src/uiControls');
+const utils = require('../src/utils/promptUtils');
+const lists = require('../src/managers/listManager');
+const ui = require('../src/managers/uiControls');
 
 const {
   parseInput,
