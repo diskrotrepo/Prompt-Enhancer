@@ -223,7 +223,7 @@
       sel.id.includes('-depth-select') ? 'prepend' : 'canonical';
     const updateAll = () => {
       const selects = Array.from(
-        document.querySelectorAll('[id$="-order-select"], [id$="-depth-select"]')
+        document.querySelectorAll('[id*="-order-select"], [id*="-depth-select"]')
       );
       selects.forEach(sel => {
         sel.value = allRandom.checked ? 'random' : canonicalFor(sel);

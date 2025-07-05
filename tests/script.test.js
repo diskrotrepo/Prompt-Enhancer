@@ -389,6 +389,31 @@ describe('UI interactions', () => {
     expect(document.getElementById('divider-order-select').value).toBe('canonical');
   });
 
+  test('order all also affects stacked dropdowns', () => {
+    document.body.innerHTML = `
+      <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="pos-order-select-2"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="neg-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+      <select id="neg-depth-select-2"><option value="prepend">p</option><option value="random">r</option></select>
+      <input type="checkbox" id="all-random">
+      <button class="toggle-button" data-target="all-random"></button>
+    `;
+    setupShuffleAll();
+    const cb = document.getElementById('all-random');
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+    expect(document.getElementById('pos-order-select').value).toBe('random');
+    expect(document.getElementById('pos-order-select-2').value).toBe('random');
+    expect(document.getElementById('neg-depth-select').value).toBe('random');
+    expect(document.getElementById('neg-depth-select-2').value).toBe('random');
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change'));
+    expect(document.getElementById('pos-order-select').value).toBe('canonical');
+    expect(document.getElementById('pos-order-select-2').value).toBe('canonical');
+    expect(document.getElementById('neg-depth-select').value).toBe('prepend');
+    expect(document.getElementById('neg-depth-select-2').value).toBe('prepend');
+  });
+
   test('hide toggle does not hide sibling buttons', () => {
     document.body.innerHTML = `
       <div class="input-row">
