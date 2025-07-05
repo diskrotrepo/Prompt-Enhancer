@@ -85,8 +85,14 @@
     }
     const negSelect = document.getElementById('neg-select');
     if (negSelect) populateSelect(negSelect, neg);
+    document
+      .querySelectorAll('select[id^="neg-select-"]')
+      .forEach(sel => populateSelect(sel, neg));
     const posSelect = document.getElementById('pos-select');
     if (posSelect) populateSelect(posSelect, pos);
+    document
+      .querySelectorAll('select[id^="pos-select-"]')
+      .forEach(sel => populateSelect(sel, pos));
     const lengthSelect = document.getElementById('length-select');
     if (lengthSelect) populateSelect(lengthSelect, len);
     const dividerSelect = document.getElementById('divider-select');

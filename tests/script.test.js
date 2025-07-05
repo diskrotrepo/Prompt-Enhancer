@@ -232,6 +232,11 @@ describe('Prompt building', () => {
     expect(out).toEqual({ positive: 'p1 p1 x', negative: 'n1 n1 x' });
   });
 
+  test('buildVersions handles different lists per stack', () => {
+    const out = buildVersions(['x'], [], [['a'], ['b']], 50, false, [], true, 2, 1);
+    expect(out.positive.startsWith('b a x')).toBe(true);
+  });
+
   test('buildVersions applies separate orders per stack', () => {
     const out = buildVersions(
       ['x'],

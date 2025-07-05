@@ -149,9 +149,21 @@
     itemOrder = null,
     depths = null
   ) {
-    const count = stackSize > 0 ? stackSize : 1;
+    const usingStacks = Array.isArray(modifiers[0]);
+    const count = usingStacks ? modifiers.length : stackSize > 0 ? stackSize : 1;
     const orders = [];
-    if (Array.isArray(modOrders) && Array.isArray(modOrders[0])) {
+    if (usingStacks) {
+      for (let i = 0; i < count; i++) {
+        const mods = modifiers[i % modifiers.length] || [];
+        let ord = null;
+        if (Array.isArray(modOrders) && Array.isArray(modOrders[0])) {
+          ord = modOrders[i % modOrders.length];
+        } else {
+          ord = modOrders;
+        }
+        orders.push(ord ? applyOrder(mods, ord) : mods.slice());
+      }
+    } else if (Array.isArray(modOrders) && Array.isArray(modOrders[0])) {
       for (let i = 0; i < count; i++) {
         const ord = modOrders[i % modOrders.length];
         orders.push(ord ? applyOrder(modifiers, ord) : modifiers.slice());
@@ -203,9 +215,21 @@
     itemOrder = null,
     depths = null
   ) {
-    const count = stackSize > 0 ? stackSize : 1;
+    const usingStacks = Array.isArray(negMods[0]);
+    const count = usingStacks ? negMods.length : stackSize > 0 ? stackSize : 1;
     const orders = [];
-    if (Array.isArray(modOrders) && Array.isArray(modOrders[0])) {
+    if (usingStacks) {
+      for (let i = 0; i < count; i++) {
+        const mods = negMods[i % negMods.length] || [];
+        let ord = null;
+        if (Array.isArray(modOrders) && Array.isArray(modOrders[0])) {
+          ord = modOrders[i % modOrders.length];
+        } else {
+          ord = modOrders;
+        }
+        orders.push(ord ? applyOrder(mods, ord) : mods.slice());
+      }
+    } else if (Array.isArray(modOrders) && Array.isArray(modOrders[0])) {
       for (let i = 0; i < count; i++) {
         const ord = modOrders[i % modOrders.length];
         orders.push(ord ? applyOrder(negMods, ord) : negMods.slice());
@@ -274,7 +298,7 @@
       items,
       posMods,
       limit,
-      posStackSize,
+      Array.isArray(posMods[0]) ? posMods.length : posStackSize,
       posOrder,
       delimited,
       dividerPool,
@@ -286,7 +310,7 @@
           posTerms,
           negMods,
           limit,
-          negStackSize,
+          Array.isArray(negMods[0]) ? negMods.length : negStackSize,
           negOrder,
           delimited,
           dividerPool,
@@ -297,7 +321,7 @@
           items,
           negMods,
           limit,
-          negStackSize,
+          Array.isArray(negMods[0]) ? negMods.length : negStackSize,
           negOrder,
           delimited,
           dividerPool,

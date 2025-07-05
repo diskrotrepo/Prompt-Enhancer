@@ -45,16 +45,29 @@
 
   function collectInputs() {
     const baseItems = utils.parseInput(document.getElementById('base-input').value, true);
-    const negMods = utils.parseInput(document.getElementById('neg-input').value);
-    const posMods = utils.parseInput(document.getElementById('pos-input').value);
-    const shuffleBase = document.getElementById('base-shuffle').checked;
-    const shufflePos = document.getElementById('pos-shuffle').checked;
+    const parseMods = (prefix, stackOn, size, presets, inputId) => {
+      const first = utils.parseInput(document.getElementById(inputId).value);
+      if (!stackOn) return first;
+      const arr = [first];
+      for (let i = 2; i <= size; i++) {
+        const sel = document.getElementById(`${prefix}-select-${i}`);
+        const preset = presets[sel?.value] || [];
+        arr.push(preset.slice());
+      }
+      return arr;
+    };
+
     const posStackOn = document.getElementById('pos-stack').checked;
     const posStackSize = parseInt(document.getElementById('pos-stack-size')?.value || '1', 10);
-    const includePosForNeg = document.getElementById('neg-include-pos').checked;
-    const shuffleNeg = document.getElementById('neg-shuffle').checked;
     const negStackOn = document.getElementById('neg-stack').checked;
     const negStackSize = parseInt(document.getElementById('neg-stack-size')?.value || '1', 10);
+
+    const negMods = parseMods('neg', negStackOn, negStackSize, lists.NEG_PRESETS, 'neg-input');
+    const posMods = parseMods('pos', posStackOn, posStackSize, lists.POS_PRESETS, 'pos-input');
+    const shuffleBase = document.getElementById('base-shuffle').checked;
+    const shufflePos = document.getElementById('pos-shuffle').checked;
+    const includePosForNeg = document.getElementById('neg-include-pos').checked;
+    const shuffleNeg = document.getElementById('neg-shuffle').checked;
     const dividerMods = utils.parseDividerInput(document.getElementById('divider-input')?.value || '');
     const shuffleDividers = document.getElementById('divider-shuffle')?.checked;
     const lengthSelect = document.getElementById('length-select');
@@ -248,6 +261,7 @@
         const count = stackCb.checked ? parseInt(sizeEl.value, 10) || 1 : 1;
         updateOrderContainers(cfg.prefix, count);
         updateDepthContainers(cfg.prefix, count);
+        updateListSelectors(cfg.prefix, count);
       };
       stackCb.addEventListener('change', update);
       sizeEl.addEventListener('change', update);
@@ -516,6 +530,24 @@
       const ta = document.getElementById(`${baseId}-input-${idx}`);
       if (sel) sel.remove();
       if (ta && ta.parentElement) ta.parentElement.remove();
+    }
+  }
+
+  function updateListSelectors(prefix, count) {
+    const base = document.getElementById(`${prefix}-select`);
+    if (!base) return;
+    const container = base.parentElement;
+    const existing = container.querySelectorAll(`select[id^="${prefix}-select-"]`).length + 1;
+    for (let i = existing; i < count; i++) {
+      const idx = i + 1;
+      const sel = base.cloneNode(true);
+      sel.id = `${prefix}-select-${idx}`;
+      container.appendChild(sel);
+    }
+    for (let i = existing; i > count; i--) {
+      const idx = i;
+      const sel = document.getElementById(`${prefix}-select-${idx}`);
+      if (sel) sel.remove();
     }
   }
 
