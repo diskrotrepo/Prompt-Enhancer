@@ -31,7 +31,10 @@ const {
   applyPreset,
   setupOrderControl,
   setupRerollButton,
-  rerollRandomOrders
+  rerollRandomOrders,
+  setupAdvancedToggle,
+  populateOrderOptions,
+  updateOrderContainers
 } = ui;
 
 describe('Utility functions', () => {
@@ -463,6 +466,78 @@ describe('UI interactions', () => {
     utils.shuffle = orig;
     expect(document.getElementById('pos-order-input').value).toBe('1, 0');
     expect(document.getElementById('pos-order-input-2').value).toBe('1, 0');
+  });
+
+  test('advanced toggle shows and hides controls', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <select id="base-order-select"></select>
+      <div class="input-row"><textarea id="base-order-input"></textarea></div>
+      <div id="pos-order-container">
+        <select id="pos-order-select"></select>
+        <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+        <select id="pos-order-select-2"></select>
+        <div class="input-row"><textarea id="pos-order-input-2"></textarea></div>
+      </div>
+      <button id="base-reroll"></button>
+    `;
+    setupAdvancedToggle();
+    const cb = document.getElementById('advanced-mode');
+    const select = document.getElementById('base-order-select');
+    const taRow = document.getElementById('base-order-input').parentElement;
+    const cont = document.getElementById('pos-order-container');
+    const btn = document.getElementById('base-reroll');
+
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+    expect(select.style.display).toBe('');
+    expect(taRow.style.display).toBe('');
+    expect(cont.style.display).toBe('');
+    expect(btn.style.display).toBe('none');
+
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change'));
+    expect(select.style.display).toBe('none');
+    expect(taRow.style.display).toBe('none');
+    expect(cont.style.display).toBe('none');
+    expect(btn.style.display).toBe('');
+  });
+
+  test('simple mode adds random orderings when dice active', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <div id="pos-order-container">
+        <select id="pos-order-select"></select>
+        <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+      </div>
+      <textarea id="pos-input">a,b</textarea>
+    `;
+    populateOrderOptions(document.getElementById('pos-order-select'));
+    setupOrderControl('pos-order-select', 'pos-order-input', () => ['a', 'b']);
+    document.getElementById('pos-order-select').value = 'random';
+    document.getElementById('pos-order-select').dispatchEvent(new Event('change'));
+    updateOrderContainers('pos', 2);
+    const sel2 = document.getElementById('pos-order-select-2');
+    const inp2 = document.getElementById('pos-order-input-2');
+    expect(sel2.value).toBe('random');
+    expect(inp2.value).toBe('');
+  });
+
+  test('advanced mode new orderings default to canonical', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <div id="pos-order-container">
+        <select id="pos-order-select"></select>
+        <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+      </div>
+      <textarea id="pos-input">a,b</textarea>
+    `;
+    populateOrderOptions(document.getElementById('pos-order-select'));
+    setupOrderControl('pos-order-select', 'pos-order-input', () => ['a', 'b']);
+    const adv = document.getElementById('advanced-mode');
+    adv.checked = true;
+    updateOrderContainers('pos', 2);
+    expect(document.getElementById('pos-order-select-2').value).toBe('canonical');
   });
 });
 
