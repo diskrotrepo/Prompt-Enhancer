@@ -18,7 +18,7 @@
   </script>
 </head>
 
-<body onload="showContent('tool')">
+<body>
 
   <!-- Top navigation bar with logo -->
   <div class="top-nav">
@@ -281,13 +281,7 @@
       </div>
     </div>
   </div>
-  <!-- Inline script for content display management -->
-  <script>
-    function showContent(id) {
-      document.querySelectorAll('.content').forEach(div => div.style.display = 'none');
-      document.getElementById(id).style.display = 'block';
-    }
-  </script>
+
 
   <!-- External script loading order is important -->
   <!-- Load list data files first -->
