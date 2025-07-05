@@ -45,16 +45,27 @@
 
   function collectInputs() {
     const baseItems = utils.parseInput(document.getElementById('base-input').value, true);
-    const negMods = utils.parseInput(document.getElementById('neg-input').value);
-    const posMods = utils.parseInput(document.getElementById('pos-input').value);
-    const shuffleBase = document.getElementById('base-shuffle').checked;
-    const shufflePos = document.getElementById('pos-shuffle').checked;
+    function collectLists(prefix, count) {
+      const result = [];
+      for (let i = 1; i <= count; i++) {
+        const id = `${prefix}-input${i === 1 ? '' : '-' + i}`;
+        const el = document.getElementById(id);
+        result.push(utils.parseInput(el?.value || ''));
+      }
+      return result;
+    }
+
     const posStackOn = document.getElementById('pos-stack').checked;
     const posStackSize = parseInt(document.getElementById('pos-stack-size')?.value || '1', 10);
-    const includePosForNeg = document.getElementById('neg-include-pos').checked;
-    const shuffleNeg = document.getElementById('neg-shuffle').checked;
     const negStackOn = document.getElementById('neg-stack').checked;
     const negStackSize = parseInt(document.getElementById('neg-stack-size')?.value || '1', 10);
+
+    const posMods = posStackOn ? collectLists('pos', posStackSize) : utils.parseInput(document.getElementById('pos-input').value);
+    const negMods = negStackOn ? collectLists('neg', negStackSize) : utils.parseInput(document.getElementById('neg-input').value);
+    const shuffleBase = document.getElementById('base-shuffle').checked;
+    const shufflePos = document.getElementById('pos-shuffle').checked;
+    const includePosForNeg = document.getElementById('neg-include-pos').checked;
+    const shuffleNeg = document.getElementById('neg-shuffle').checked;
     const dividerMods = utils.parseDividerInput(document.getElementById('divider-input')?.value || '');
     const shuffleDividers = document.getElementById('divider-shuffle')?.checked;
     const lengthSelect = document.getElementById('length-select');
@@ -65,7 +76,17 @@
       limit = preset ? parseInt(preset[0], 10) : 1000;
       lengthInput.value = limit;
     }
-    const insertDepths = utils.parseOrderInput(document.getElementById('pos-depth-input')?.value || '');
+    function collectDepths(prefix, count) {
+      const result = [];
+      for (let i = 1; i <= count; i++) {
+        const id = `${prefix}-depth-input${i === 1 ? '' : '-' + i}`;
+        const el = document.getElementById(id);
+        result.push(utils.parseOrderInput(el?.value || ''));
+      }
+      return result;
+    }
+
+    const insertDepths = collectDepths('pos', posStackOn ? posStackSize : 1);
     const baseOrder = utils.parseOrderInput(document.getElementById('base-order-input')?.value || '');
     function collectOrders(prefix, count) {
       const result = [];
@@ -246,8 +267,7 @@
           sizeEl.style.display = 'none';
         }
         const count = stackCb.checked ? parseInt(sizeEl.value, 10) || 1 : 1;
-        updateOrderContainers(cfg.prefix, count);
-        updateDepthContainers(cfg.prefix, count);
+        updateStackBlocks(cfg.prefix, count);
       };
       stackCb.addEventListener('change', update);
       sizeEl.addEventListener('change', update);
@@ -287,14 +307,19 @@
     };
     const update = () => {
       const adv = cb.checked;
-      selectIds.forEach(id => setDisplay(document.getElementById(id), adv));
-      textIds.forEach(id => {
-        const el = document.getElementById(id);
-        if (el && el.parentElement && el.parentElement.classList.contains('input-row')) {
-          setDisplay(el.parentElement, adv);
-        }
+      selectIds.forEach(id => {
+        document.querySelectorAll(`[id^="${id}"]`).forEach(el => setDisplay(el, adv));
       });
-      containerIds.forEach(id => setDisplay(document.getElementById(id), adv));
+      textIds.forEach(id => {
+        document.querySelectorAll(`[id^="${id}"]`).forEach(el => {
+          if (el.parentElement && el.parentElement.classList.contains('input-row')) {
+            setDisplay(el.parentElement, adv);
+          }
+        });
+      });
+      containerIds.forEach(id => {
+        document.querySelectorAll(`[id^="${id}"]`).forEach(el => setDisplay(el, adv));
+      });
       rerollIds.forEach(id => setDisplay(document.getElementById(id), !adv));
       Object.values(rerollUpdaters).forEach(fn => fn());
     };
@@ -519,6 +544,95 @@
     }
   }
 
+  function updateStackBlocks(prefix, count) {
+    const container = document.getElementById(`${prefix}-stack-container`);
+    if (!container) return;
+    const current = container.querySelectorAll('.stack-block').length;
+    const type = prefix === 'neg' ? 'negative' : 'positive';
+    const rows = prefix === 'neg' ? 3 : 2;
+    for (let i = current; i < count; i++) {
+      const idx = i + 1;
+      const block = document.createElement('div');
+      block.className = 'stack-block';
+      block.id = `${prefix}-stack-${idx}`;
+
+      const sel = document.createElement('select');
+      sel.id = `${prefix}-select-${idx}`;
+      const baseSel = document.getElementById(`${prefix}-select`);
+      if (baseSel) sel.innerHTML = baseSel.innerHTML;
+      block.appendChild(sel);
+
+      const row = document.createElement('div');
+      row.className = 'input-row';
+      const ta = document.createElement('textarea');
+      ta.id = `${prefix}-input-${idx}`;
+      ta.rows = rows;
+      ta.placeholder = type.charAt(0).toUpperCase() + type.slice(1) + ' modifiers';
+      row.appendChild(ta);
+      block.appendChild(row);
+
+      const orderCont = document.createElement('div');
+      orderCont.id = `${prefix}-order-container-${idx}`;
+      const oLabelRow = document.createElement('div');
+      oLabelRow.className = 'label-row';
+      const oLbl = document.createElement('label');
+      oLbl.textContent = type.charAt(0).toUpperCase() + type.slice(1) + ' Ordering';
+      oLbl.setAttribute('for', `${prefix}-order-input-${idx}`);
+      oLabelRow.appendChild(oLbl);
+      orderCont.appendChild(oLabelRow);
+      const orderSel = document.createElement('select');
+      orderSel.id = `${prefix}-order-select-${idx}`;
+      populateOrderOptions(orderSel);
+      const baseOrderSel = document.getElementById(`${prefix}-order-select`);
+      if (baseOrderSel) orderSel.value = baseOrderSel.value;
+      orderCont.appendChild(orderSel);
+      const oRow = document.createElement('div');
+      oRow.className = 'input-row';
+      const oTa = document.createElement('textarea');
+      oTa.id = `${prefix}-order-input-${idx}`;
+      oTa.rows = 1;
+      oTa.placeholder = '0,1,2';
+      oRow.appendChild(oTa);
+      orderCont.appendChild(oRow);
+      block.appendChild(orderCont);
+
+      const depthCont = document.createElement('div');
+      depthCont.id = `${prefix}-depth-container-${idx}`;
+      const dLabelRow = document.createElement('div');
+      dLabelRow.className = 'label-row';
+      const dLbl = document.createElement('label');
+      dLbl.textContent = type.charAt(0).toUpperCase() + type.slice(1) + ' Depth';
+      dLbl.setAttribute('for', `${prefix}-depth-input-${idx}`);
+      dLabelRow.appendChild(dLbl);
+      depthCont.appendChild(dLabelRow);
+      const depthSel = document.createElement('select');
+      depthSel.id = `${prefix}-depth-select-${idx}`;
+      populateDepthOptions(depthSel);
+      const baseDepthSel = document.getElementById(`${prefix}-depth-select`);
+      if (baseDepthSel) depthSel.value = baseDepthSel.value;
+      depthCont.appendChild(depthSel);
+      const dRow = document.createElement('div');
+      dRow.className = 'input-row';
+      const dTa = document.createElement('textarea');
+      dTa.id = `${prefix}-depth-input-${idx}`;
+      dTa.rows = 1;
+      dTa.placeholder = '0,1,2';
+      dRow.appendChild(dTa);
+      depthCont.appendChild(dRow);
+      block.appendChild(depthCont);
+
+      container.appendChild(block);
+      setupPresetListener(sel.id, ta.id, type);
+      applyPreset(sel, ta, type);
+      setupOrderControl(orderSel.id, oTa.id, () => utils.parseInput(ta.value));
+      setupDepthControl(depthSel.id, dTa.id);
+    }
+    for (let i = current; i > count; i--) {
+      const block = document.getElementById(`${prefix}-stack-${i}`);
+      if (block) block.remove();
+    }
+  }
+
   function setupRerollButton(btnId, selectId) {
     const btn = document.getElementById(btnId);
     const select = document.getElementById(selectId);
@@ -591,8 +705,21 @@
       document.getElementById('base-input')?.value || '',
       true
     );
-    const posItems = utils.parseInput(document.getElementById('pos-input')?.value || '');
-    const negItems = utils.parseInput(document.getElementById('neg-input')?.value || '');
+    const gatherItems = prefix => {
+      const arr = [];
+      let idx = 1;
+      while (true) {
+        const el = document.getElementById(`${prefix}-input${idx === 1 ? '' : '-' + idx}`);
+        if (!el) break;
+        arr.push(utils.parseInput(el.value || ''));
+        idx++;
+      }
+      if (arr.length === 1) return arr[0];
+      return arr;
+    };
+
+    const posItems = gatherItems('pos');
+    const negItems = gatherItems('neg');
     const divItems = utils.parseDividerInput(
       document.getElementById('divider-input')?.value || ''
     );
@@ -608,7 +735,8 @@
           `${prefix}-order-input${idx === 1 ? '' : '-' + idx}`
         );
         if (!sel || !inp) break;
-        arr.push({ select: sel, input: inp, items });
+        const it = Array.isArray(items[0]) ? items[idx - 1] || items[0] : items;
+        arr.push({ select: sel, input: inp, items: it });
         idx++;
       }
       return arr;

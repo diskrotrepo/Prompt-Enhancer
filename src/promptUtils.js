@@ -150,15 +150,20 @@
     depths = null
   ) {
     const count = stackSize > 0 ? stackSize : 1;
+    const modLists = Array.isArray(modifiers[0]) ? modifiers : Array(count).fill(modifiers);
     const orders = [];
     if (Array.isArray(modOrders) && Array.isArray(modOrders[0])) {
       for (let i = 0; i < count; i++) {
+        const mods = modLists[i % modLists.length];
         const ord = modOrders[i % modOrders.length];
-        orders.push(ord ? applyOrder(modifiers, ord) : modifiers.slice());
+        orders.push(ord ? applyOrder(mods, ord) : mods.slice());
       }
     } else {
-      const orderedMods = modOrders ? applyOrder(modifiers, modOrders) : modifiers.slice();
-      for (let i = 0; i < count; i++) orders.push(orderedMods);
+      for (let i = 0; i < count; i++) {
+        const mods = modLists[i % modLists.length];
+        const orderedMods = modOrders ? applyOrder(mods, modOrders) : mods.slice();
+        orders.push(orderedMods);
+      }
     }
     const dividerPool = dividers.slice();
     let items = baseItems.slice();
@@ -204,15 +209,20 @@
     depths = null
   ) {
     const count = stackSize > 0 ? stackSize : 1;
+    const modLists = Array.isArray(negMods[0]) ? negMods : Array(count).fill(negMods);
     const orders = [];
     if (Array.isArray(modOrders) && Array.isArray(modOrders[0])) {
       for (let i = 0; i < count; i++) {
+        const mods = modLists[i % modLists.length];
         const ord = modOrders[i % modOrders.length];
-        orders.push(ord ? applyOrder(negMods, ord) : negMods.slice());
+        orders.push(ord ? applyOrder(mods, ord) : mods.slice());
       }
     } else {
-      const orderedMods = modOrders ? applyOrder(negMods, modOrders) : negMods.slice();
-      for (let i = 0; i < count; i++) orders.push(orderedMods);
+      for (let i = 0; i < count; i++) {
+        const mods = modLists[i % modLists.length];
+        const orderedMods = modOrders ? applyOrder(mods, modOrders) : mods.slice();
+        orders.push(orderedMods);
+      }
     }
     const dividerSet = new Set(dividers);
     const result = [];

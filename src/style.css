@@ -530,3 +530,7 @@ button {
     font-family: inherit;
     margin-bottom: 1rem;
 }
+
+.stack-block {
+  margin-bottom: 1rem;
+}
