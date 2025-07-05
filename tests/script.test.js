@@ -389,6 +389,27 @@ describe('UI interactions', () => {
     expect(document.getElementById('divider-order-select').value).toBe('canonical');
   });
 
+  test('order all also updates depth and stacks', () => {
+    document.body.innerHTML = `
+      <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="pos-order-select-2"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+      <select id="pos-depth-select-2"><option value="prepend">p</option><option value="random">r</option></select>
+      <input type="checkbox" id="all-random">
+      <button class="toggle-button" data-target="all-random"></button>
+    `;
+    setupShuffleAll();
+    const cb = document.getElementById('all-random');
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+    expect(document.getElementById('pos-order-select').value).toBe('random');
+    expect(document.getElementById('pos-depth-select').value).toBe('random');
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change'));
+    expect(document.getElementById('pos-order-select-2').value).toBe('canonical');
+    expect(document.getElementById('pos-depth-select-2').value).toBe('prepend');
+  });
+
   test('hide toggle does not hide sibling buttons', () => {
     document.body.innerHTML = `
       <div class="input-row">
@@ -513,7 +534,7 @@ describe('UI interactions', () => {
     expect(select.style.display).toBe('');
     expect(taRow.style.display).toBe('');
     expect(cont.style.display).toBe('');
-    expect(btn.style.display).toBe('none');
+    expect(btn.style.display).toBe('');
 
     cb.checked = false;
     cb.dispatchEvent(new Event('change'));
@@ -609,6 +630,68 @@ describe('UI interactions', () => {
     document.getElementById('neg-reroll').click();
     expect(document.getElementById('neg-order-select').value).toBe('random');
     expect(document.getElementById('neg-order-select-2').value).toBe('random');
+  });
+
+  test('reroll button reacts to select changes', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <div id="pos-order-container">
+        <select id="pos-order-select">
+          <option value="canonical">c</option>
+          <option value="random">r</option>
+        </select>
+        <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+        <select id="pos-order-select-2">
+          <option value="canonical">c</option>
+          <option value="random">r</option>
+        </select>
+        <div class="input-row"><textarea id="pos-order-input-2"></textarea></div>
+      </div>
+      <button id="pos-reroll" class="random-button"></button>
+    `;
+    setupRerollButton('pos-reroll', 'pos-order-select');
+    setupAdvancedToggle();
+    const cb = document.getElementById('advanced-mode');
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change'));
+    const btn = document.getElementById('pos-reroll');
+    expect(btn.classList.contains('active')).toBe(false);
+    document.getElementById('pos-order-select-2').value = 'random';
+    document.getElementById('pos-order-select-2').dispatchEvent(new Event('change'));
+    expect(btn.classList.contains('indeterminate')).toBe(true);
+    document.getElementById('pos-order-select').value = 'random';
+    document.getElementById('pos-order-select').dispatchEvent(new Event('change'));
+    expect(btn.classList.contains('active')).toBe(true);
+  });
+
+  test('reroll button toggles back to canonical', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <div id="pos-order-container">
+        <select id="pos-order-select">
+          <option value="canonical">c</option>
+          <option value="random">r</option>
+        </select>
+        <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+        <select id="pos-order-select-2">
+          <option value="canonical">c</option>
+          <option value="random">r</option>
+        </select>
+        <div class="input-row"><textarea id="pos-order-input-2"></textarea></div>
+      </div>
+      <button id="pos-reroll" class="random-button"></button>
+    `;
+    setupRerollButton('pos-reroll', 'pos-order-select');
+    setupAdvancedToggle();
+    const cb = document.getElementById('advanced-mode');
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change'));
+    const btn = document.getElementById('pos-reroll');
+    btn.click();
+    expect(document.getElementById('pos-order-select').value).toBe('random');
+    btn.click();
+    expect(document.getElementById('pos-order-select').value).toBe('canonical');
+    expect(document.getElementById('pos-order-select-2').value).toBe('canonical');
   });
 });
 

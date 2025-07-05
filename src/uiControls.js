@@ -295,12 +295,6 @@
       'neg-depth-input'
     ];
     const containerIds = ['pos-order-container', 'neg-order-container', 'pos-depth-container', 'neg-depth-container'];
-    const rerollIds = [
-      'base-reroll',
-      'pos-reroll',
-      'neg-reroll',
-      'divider-reroll'
-    ];
     const setDisplay = (el, show) => {
       if (!el) return;
       el.style.display = show ? '' : 'none';
@@ -320,7 +314,6 @@
       containerIds.forEach(id => {
         document.querySelectorAll(`[id^="${id}"]`).forEach(el => setDisplay(el, adv));
       });
-      rerollIds.forEach(id => setDisplay(document.getElementById(id), !adv));
       Object.values(rerollUpdaters).forEach(fn => fn());
     };
     cb.addEventListener('change', update);
@@ -403,8 +396,10 @@
       utils.parseInput(document.getElementById(`${prefix}-input`).value);
     const adv = document.getElementById('advanced-mode');
     const baseSel = document.getElementById(`${baseId}-select`);
+    const randBtn = document.getElementById(`${prefix}-reroll`);
+    const randActive = randBtn && randBtn.classList.contains('active');
     const defaultVal =
-      !adv || !adv.checked ? baseSel?.value || 'canonical' : undefined;
+      randActive ? 'random' : !adv || !adv.checked ? baseSel?.value || 'canonical' : undefined;
     if (!container) return;
     const current = container.querySelectorAll('select').length;
     for (let i = current; i < count; i++) {
@@ -423,6 +418,7 @@
       div.appendChild(ta);
       container.appendChild(div);
       setupOrderControl(sel.id, ta.id, getItems);
+      if (rerollUpdaters[prefix]) sel.addEventListener('change', rerollUpdaters[prefix]);
     }
     for (let i = current; i > count; i--) {
       const idx = i;
@@ -515,7 +511,10 @@
     const baseId = `${prefix}-depth`;
     const adv = document.getElementById('advanced-mode');
     const baseSel = document.getElementById(`${baseId}-select`);
-    const defaultVal = !adv || !adv.checked ? baseSel?.value || 'prepend' : undefined;
+    const randBtn = document.getElementById(`${prefix}-reroll`);
+    const randActive = randBtn && randBtn.classList.contains('active');
+    const defaultVal =
+      randActive ? 'random' : !adv || !adv.checked ? baseSel?.value || 'prepend' : undefined;
     if (!container) return;
     const current = container.querySelectorAll('select').length;
     for (let i = current; i < count; i++) {
@@ -534,15 +533,17 @@
       div.appendChild(ta);
       container.appendChild(div);
       setupDepthControl(sel.id, ta.id);
+      if (rerollUpdaters[prefix]) sel.addEventListener('change', rerollUpdaters[prefix]);
     }
-    for (let i = current; i > count; i--) {
-      const idx = i;
-      const sel = document.getElementById(`${baseId}-select-${idx}`);
-      const ta = document.getElementById(`${baseId}-input-${idx}`);
-      if (sel) sel.remove();
-      if (ta && ta.parentElement) ta.parentElement.remove();
-    }
+  for (let i = current; i > count; i--) {
+    const idx = i;
+    const sel = document.getElementById(`${baseId}-select-${idx}`);
+    const ta = document.getElementById(`${baseId}-input-${idx}`);
+    if (sel) sel.remove();
+    if (ta && ta.parentElement) ta.parentElement.remove();
   }
+  if (rerollUpdaters[prefix]) rerollUpdaters[prefix]();
+}
 
   function updateStackBlocks(prefix, count) {
     const container = document.getElementById(`${prefix}-stack-container`);
@@ -584,7 +585,10 @@
       orderSel.id = `${prefix}-order-select-${idx}`;
       populateOrderOptions(orderSel);
       const baseOrderSel = document.getElementById(`${prefix}-order-select`);
-      if (baseOrderSel) orderSel.value = baseOrderSel.value;
+      const randBtn = document.getElementById(`${prefix}-reroll`);
+      const randActive = randBtn && randBtn.classList.contains('active');
+      if (randActive) orderSel.value = 'random';
+      else if (baseOrderSel) orderSel.value = baseOrderSel.value;
       orderCont.appendChild(orderSel);
       const oRow = document.createElement('div');
       oRow.className = 'input-row';
@@ -609,7 +613,8 @@
       depthSel.id = `${prefix}-depth-select-${idx}`;
       populateDepthOptions(depthSel);
       const baseDepthSel = document.getElementById(`${prefix}-depth-select`);
-      if (baseDepthSel) depthSel.value = baseDepthSel.value;
+      if (randActive) depthSel.value = 'random';
+      else if (baseDepthSel) depthSel.value = baseDepthSel.value;
       depthCont.appendChild(depthSel);
       const dRow = document.createElement('div');
       dRow.className = 'input-row';
@@ -626,11 +631,16 @@
       applyPreset(sel, ta, type);
       setupOrderControl(orderSel.id, oTa.id, () => utils.parseInput(ta.value));
       setupDepthControl(depthSel.id, dTa.id);
+      if (rerollUpdaters[prefix]) {
+        orderSel.addEventListener('change', rerollUpdaters[prefix]);
+        depthSel.addEventListener('change', rerollUpdaters[prefix]);
+      }
     }
     for (let i = current; i > count; i--) {
       const block = document.getElementById(`${prefix}-stack-${i}`);
       if (block) block.remove();
     }
+    if (rerollUpdaters[prefix]) rerollUpdaters[prefix]();
   }
 
   function setupRerollButton(btnId, selectId) {
@@ -694,6 +704,9 @@
     };
     btn.addEventListener('click', reroll);
     select.addEventListener('change', updateState);
+    gather().forEach(s => {
+      if (s !== select) s.addEventListener('change', updateState);
+    });
     if (adv) adv.addEventListener('change', updateState);
     rerollUpdaters[prefix] = updateState;
     updateState();
