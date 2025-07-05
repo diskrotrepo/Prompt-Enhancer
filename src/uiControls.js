@@ -255,6 +255,52 @@
     });
   }
 
+  const rerollUpdaters = {};
+
+  function setupAdvancedToggle() {
+    const cb = document.getElementById('advanced-mode');
+    if (!cb) return;
+    const selectIds = [
+      'base-order-select',
+      'pos-order-select',
+      'neg-order-select',
+      'divider-order-select',
+      'insert-select'
+    ];
+    const textIds = [
+      'base-order-input',
+      'divider-order-input',
+      'insert-input'
+    ];
+    const containerIds = ['pos-order-container', 'neg-order-container'];
+    const rerollIds = [
+      'base-reroll',
+      'pos-reroll',
+      'neg-reroll',
+      'divider-reroll',
+      'insert-reroll'
+    ];
+    const setDisplay = (el, show) => {
+      if (!el) return;
+      el.style.display = show ? '' : 'none';
+    };
+    const update = () => {
+      const adv = cb.checked;
+      selectIds.forEach(id => setDisplay(document.getElementById(id), adv));
+      textIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.parentElement && el.parentElement.classList.contains('input-row')) {
+          setDisplay(el.parentElement, adv);
+        }
+      });
+      containerIds.forEach(id => setDisplay(document.getElementById(id), adv));
+      rerollIds.forEach(id => setDisplay(document.getElementById(id), !adv));
+      Object.values(rerollUpdaters).forEach(fn => fn());
+    };
+    cb.addEventListener('change', update);
+    update();
+  }
+
   function setupHideToggles() {
     const hideCheckboxes = Array.from(document.querySelectorAll('input[type="checkbox"][data-targets]'));
     hideCheckboxes.forEach(cb => {
@@ -329,6 +375,10 @@
     const baseId = `${prefix}-order`;
     const getItems = () =>
       utils.parseInput(document.getElementById(`${prefix}-input`).value);
+    const adv = document.getElementById('advanced-mode');
+    const baseSel = document.getElementById(`${baseId}-select`);
+    const defaultVal =
+      !adv || !adv.checked ? baseSel?.value || 'canonical' : undefined;
     if (!container) return;
     const current = container.querySelectorAll('select').length;
     for (let i = current; i < count; i++) {
@@ -336,6 +386,7 @@
       const sel = document.createElement('select');
       sel.id = `${baseId}-select-${idx}`;
       populateOrderOptions(sel);
+      if (defaultVal) sel.value = defaultVal;
       container.appendChild(sel);
       const div = document.createElement('div');
       div.className = 'input-row';
@@ -354,6 +405,7 @@
       if (sel) sel.remove();
       if (ta && ta.parentElement) ta.parentElement.remove();
     }
+    if (rerollUpdaters[prefix]) rerollUpdaters[prefix]();
   }
 
   function setupOrderControl(selectId, inputId, getItems) {
@@ -432,19 +484,64 @@
   function setupRerollButton(btnId, selectId) {
     const btn = document.getElementById(btnId);
     const select = document.getElementById(selectId);
+    const adv = document.getElementById('advanced-mode');
     if (!btn || !select) return;
-    const reroll = () => {
-      if (select.value !== 'random') {
-        select.value = 'random';
+    const guessPrefix = id => {
+      const m = id.match(/^([a-z]+)(?:-order)?-select/);
+      return m ? m[1] : id.replace(/-select$/, '');
+    };
+    const prefix = guessPrefix(selectId);
+    const gather = () => {
+      const arr = [];
+      let idx = 1;
+      while (true) {
+        const sid =
+          prefix === 'insert'
+            ? 'insert-select'
+            : `${prefix}-order-select${idx === 1 ? '' : '-' + idx}`;
+        const sel = document.getElementById(sid);
+        if (!sel) break;
+        arr.push(sel);
+        if (prefix === 'insert') break;
+        idx++;
       }
-      select.dispatchEvent(new Event('change'));
+      return arr;
+    };
+    const updateState = () => {
+      if (adv && adv.checked) {
+        btn.classList.remove('active', 'indeterminate');
+        return;
+      }
+      const sels = gather();
+      const allRand = sels.every(s => s.value === 'random');
+      const allCan = sels.every(s => s.value === 'canonical');
+      btn.classList.remove('active', 'indeterminate');
+      if (allRand) btn.classList.add('active');
+      else if (!allCan) btn.classList.add('indeterminate');
+    };
+    const reroll = () => {
+      const advanced = adv && adv.checked;
+      const sels = gather();
+      if (advanced) {
+        if (sels[0] && sels[0].value !== 'random') {
+          sels[0].value = 'random';
+          sels[0].dispatchEvent(new Event('change'));
+        }
+        return;
+      }
+      const allRand = sels.every(s => s.value === 'random');
+      const target = allRand ? 'canonical' : 'random';
+      sels.forEach(s => {
+        s.value = target;
+        s.dispatchEvent(new Event('change'));
+      });
+      updateState();
     };
     btn.addEventListener('click', reroll);
-    const update = () => {
-      btn.classList.toggle('active', select.value === 'random');
-    };
-    select.addEventListener('change', update);
-    update();
+    select.addEventListener('change', updateState);
+    if (adv) adv.addEventListener('change', updateState);
+    rerollUpdaters[prefix] = updateState;
+    updateState();
   }
 
   function rerollRandomOrders() {
@@ -579,6 +676,7 @@
     setupRerollButton('neg-reroll', 'neg-order-select');
     setupRerollButton('divider-reroll', 'divider-order-select');
     setupRerollButton('insert-reroll', 'insert-select');
+    setupAdvancedToggle();
     document.getElementById('generate').addEventListener('click', generate);
 
     setupToggleButtons();
@@ -659,6 +757,7 @@
     setupDepthControls,
     setupStateButtons,
     setupOrderControl,
+    setupAdvancedToggle,
     rerollRandomOrders,
     setupRerollButton,
     initializeUI
