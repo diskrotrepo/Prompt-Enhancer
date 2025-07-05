@@ -320,9 +320,7 @@
       if (select.value === 'canonical') {
         input.value = items.map((_, i) => i).join(', ');
       } else if (select.value === 'random') {
-        const arr = items.map((_, i) => i);
-        utils.shuffle(arr);
-        input.value = arr.join(', ');
+        input.value = '';
       } else if (lists.ORDER_PRESETS[select.value]) {
         input.value = lists.ORDER_PRESETS[select.value].join(', ');
       }
@@ -372,8 +370,7 @@
         input.value = counts.join(', ');
         return;
       }
-      const vals = counts.map(c => Math.floor(Math.random() * (c + 1)));
-      input.value = vals.join(', ');
+      input.value = '';
     }
     if (!select) return;
     select.addEventListener('change', () => {
@@ -407,13 +404,50 @@
 
   function rerollRandomOrders() {
     const toggle = document.getElementById('reroll-on-gen');
-    if (!toggle || !toggle.checked) return;
-    ['base-order-select', 'pos-order-select', 'neg-order-select', 'divider-order-select', 'insert-select'].forEach(id => {
-      const sel = document.getElementById(id);
-      if (sel && sel.value === 'random') {
-        sel.dispatchEvent(new Event('change'));
+    const allow = !toggle || toggle.checked;
+
+    const baseItems = utils.parseInput(
+      document.getElementById('base-input')?.value || '',
+      true
+    );
+    const posItems = utils.parseInput(document.getElementById('pos-input')?.value || '');
+    const negItems = utils.parseInput(document.getElementById('neg-input')?.value || '');
+    const divItems = utils.parseDividerInput(
+      document.getElementById('divider-input')?.value || ''
+    );
+
+    const configs = [
+      { sel: 'base-order-select', inp: 'base-order-input', items: baseItems },
+      { sel: 'pos-order-select', inp: 'pos-order-input', items: posItems },
+      { sel: 'neg-order-select', inp: 'neg-order-input', items: negItems },
+      { sel: 'divider-order-select', inp: 'divider-order-input', items: divItems }
+    ];
+
+    configs.forEach(cfg => {
+      const select = document.getElementById(cfg.sel);
+      const input = document.getElementById(cfg.inp);
+      if (!select || !input || select.value !== 'random') return;
+      if (allow || !input.value.trim()) {
+        const arr = cfg.items.map((_, i) => i);
+        utils.shuffle(arr);
+        input.value = arr.join(', ');
       }
     });
+
+    const insertSel = document.getElementById('insert-select');
+    const insertInp = document.getElementById('insert-input');
+    if (insertSel && insertInp && insertSel.value === 'random') {
+      const countWords = str => {
+        const cleaned = str.trim().replace(/[,.!:;?]$/, '');
+        if (!cleaned) return 0;
+        return cleaned.split(/\s+/).length;
+      };
+      if (allow || !insertInp.value.trim()) {
+        const counts = baseItems.map(b => countWords(b));
+        const vals = counts.map(c => Math.floor(Math.random() * (c + 1)));
+        insertInp.value = vals.join(', ');
+      }
+    }
   }
 
   function setupStateButtons() {
