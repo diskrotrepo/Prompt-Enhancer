@@ -1,5 +1,5 @@
 (function (global) {
-  const utils = global.promptUtils || (typeof require !== 'undefined' && require('./promptUtils'));
+  const utils = global.promptUtils || (typeof require !== 'undefined' && require('./lib/promptUtils'));
   const lists = global.listManager || (typeof require !== 'undefined' && require('./listManager'));
   const ui = global.uiControls || (typeof require !== 'undefined' && require('./uiControls'));
   const state = global.stateManager || (typeof require !== 'undefined' && require('./stateManager'));

@@ -1,10 +1,11 @@
 (function (global) {
   const utils =
-    global.promptUtils || (typeof require !== 'undefined' && require('./promptUtils'));
+    global.promptUtils || (typeof require !== 'undefined' && require('./lib/promptUtils'));
   const lists =
     global.listManager || (typeof require !== 'undefined' && require('./listManager'));
   const state =
     global.stateManager || (typeof require !== 'undefined' && require('./stateManager'));
+  const storage = global.storageManager || (typeof require !== "undefined" && require("./storageManager"));
 
   function applyPreset(selectEl, inputEl, presetsOrType) {
     let presets = presetsOrType;
@@ -779,18 +780,17 @@
     });
   }
 
-  function setupStateButtons() {
-    const saveBtn = document.getElementById('save-state');
-    const loadBtn = document.getElementById('load-state');
-    const fileInput = document.getElementById('state-file');
+  function setupDataButtons() {
+    const saveBtn = document.getElementById('save-data');
+    const loadBtn = document.getElementById('load-data');
+    const fileInput = document.getElementById('data-file');
     if (saveBtn) {
       saveBtn.addEventListener('click', () => {
-        state.loadFromDOM();
-        const blob = new Blob([state.exportState()], { type: 'application/json' });
+        const blob = new Blob([storage.exportData()], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'state.json';
+        a.download = 'data.json';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -806,7 +806,7 @@
         reader.onload = () => {
           try {
             const data = JSON.parse(reader.result);
-            state.importState(data);
+            storage.importData(data);
           } catch (err) {
             alert('Invalid state file');
           }
@@ -882,32 +882,8 @@
     }
 
     setupCopyButtons();
-    setupStateButtons();
+    setupDataButtons();
 
-    const loadBtn = document.getElementById('load-lists');
-    const additiveBtn = document.getElementById('additive-load');
-    const fileInput = document.getElementById('lists-file');
-    if (loadBtn && fileInput) {
-      loadBtn.addEventListener('click', () => {
-        fileInput.dataset.additive = 'false';
-        fileInput.click();
-      });
-    }
-    if (additiveBtn && fileInput) {
-      additiveBtn.addEventListener('click', () => {
-        fileInput.dataset.additive = 'true';
-        fileInput.click();
-      });
-    }
-    if (fileInput) {
-      fileInput.addEventListener('change', e => {
-        const f = e.target.files[0];
-        if (f) lists.loadListsFromFile(f, fileInput.dataset.additive === 'true');
-        fileInput.value = '';
-      });
-    }
-    const dlBtn = document.getElementById('download-lists');
-    if (dlBtn) dlBtn.addEventListener('click', lists.downloadLists);
     const baseSave = document.getElementById('base-save');
     if (baseSave) baseSave.addEventListener('click', () => lists.saveList('base'));
     const posSave = document.getElementById('pos-save');
@@ -934,7 +910,7 @@
     setupStackControls,
     setupHideToggles,
     setupCopyButtons,
-    setupStateButtons,
+    setupDataButtons,
     setupOrderControl,
     setupAdvancedToggle,
     rerollRandomOrders,

@@ -42,8 +42,8 @@ focused and remove obsolete parts when revising features.
 
 ## Lists File
 
-The `src/all_lists.js` file stores all modifier presets in one object. Each
-entry in `ALL_LISTS.presets` has the shape:
+The `src/default_list.js` file stores all modifier presets in one object. Each
+entry in `DEFAULT_LIST.presets` has the shape:
 
 ```javascript
 { id: 'example', title: 'Some title', type: 'negative', items: ['item1', 'item2'] }

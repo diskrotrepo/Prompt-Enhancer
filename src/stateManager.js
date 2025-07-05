@@ -42,17 +42,11 @@
     'lyrics-space',
     'lyrics-remove-parens',
     'lyrics-remove-brackets',
-    'pos-depth-input',
     'pos-depth-select',
-    'neg-depth-input',
     'neg-depth-select',
-    'base-order-input',
     'base-order-select',
-    'pos-order-input',
     'pos-order-select',
-    'neg-order-input',
     'neg-order-select',
-    'divider-order-input',
     'divider-order-select'
   ];
 
