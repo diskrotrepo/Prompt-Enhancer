@@ -1,5 +1,4 @@
-(function (global) {
-  const State = {};
+const State = {};
 
   function getVal(el) {
     if (!el) return undefined;
@@ -93,9 +92,4 @@
 
   const api = { State, loadFromDOM, applyToDOM, exportState, importState };
 
-  if (typeof module !== 'undefined') {
-    module.exports = api;
-  } else {
-    global.stateManager = api;
-  }
-})(typeof window !== 'undefined' ? window : global);
+export default api;

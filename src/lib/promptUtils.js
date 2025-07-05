@@ -1,4 +1,4 @@
-(function (global) {
+
   function parseInput(raw, keepDelim = false) {
     if (!raw) return [];
     if (!keepDelim) {
@@ -416,9 +416,4 @@
     processLyrics
   };
 
-  if (typeof module !== 'undefined') {
-    module.exports = api;
-  } else {
-    global.promptUtils = api;
-  }
-})(typeof window !== 'undefined' ? window : global);
+export default api;

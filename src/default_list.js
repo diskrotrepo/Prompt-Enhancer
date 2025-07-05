@@ -1,4 +1,4 @@
-const DEFAULT_LIST = {
+export const DEFAULT_LIST = {
   "presets": [
     {
       "id": "empty",
