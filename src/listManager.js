@@ -95,8 +95,10 @@
     if (baseSelect) populateSelect(baseSelect, base);
     const lyricsSelect = document.getElementById('lyrics-select');
     if (lyricsSelect) populateSelect(lyricsSelect, lyrics);
-    const orderSelect = document.getElementById('insert-select');
-    if (orderSelect) populateSelect(orderSelect, order);
+    const posDepthSelect = document.getElementById('pos-depth-select');
+    if (posDepthSelect) populateSelect(posDepthSelect, order);
+    const negDepthSelect = document.getElementById('neg-depth-select');
+    if (negDepthSelect) populateSelect(negDepthSelect, order);
   }
 
   function exportLists() {
@@ -170,7 +172,7 @@
       length: { select: 'length-select', input: 'length-input', store: LENGTH_PRESETS },
       divider: { select: 'divider-select', input: 'divider-input', store: DIVIDER_PRESETS },
       lyrics: { select: 'lyrics-select', input: 'lyrics-input', store: LYRICS_PRESETS },
-      order: { select: 'insert-select', input: 'insert-input', store: ORDER_PRESETS }
+      order: { select: 'pos-depth-select', input: 'pos-depth-input', store: ORDER_PRESETS }
     };
     const cfg = map[type];
     if (!cfg) return;
