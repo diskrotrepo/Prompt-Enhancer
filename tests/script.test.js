@@ -20,6 +20,7 @@ const {
   parseOrderInput,
   applyOrder,
   insertAtDepth,
+  countWords
 } = utils;
 
 const { exportLists, importLists, saveList } = lists;
@@ -83,6 +84,11 @@ describe('Utility functions', () => {
     const [a, b] = equalizeLength([1, 2, 3], ['x']);
     expect(a).toEqual([1]);
     expect(b).toEqual(['x']);
+  });
+
+  test('countWords counts words ignoring trailing punctuation', () => {
+    expect(countWords('foo bar baz.')).toBe(3);
+    expect(countWords('   ')).toBe(0);
   });
 
   test('parseOrderInput converts to numbers', () => {

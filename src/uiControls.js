@@ -448,11 +448,6 @@
     });
   }
 
-  function countWords(str) {
-    const cleaned = str.trim().replace(/[,.!:;?]$/, '');
-    if (!cleaned) return 0;
-    return cleaned.split(/\s+/).length;
-  }
 
   function setupDepthControl(selectId, inputId) {
     const select = document.getElementById(selectId);
@@ -470,7 +465,7 @@
         input.value = '0';
         return;
       }
-      const counts = bases.map(b => countWords(b));
+      const counts = bases.map(b => utils.countWords(b));
       if (mode === 'append') {
         input.value = counts.join(', ');
         return;
@@ -708,12 +703,7 @@
     const depthConfigs = [...gatherDepth('pos'), ...gatherDepth('neg')];
     depthConfigs.forEach(cfg => {
       if (!cfg.select || !cfg.input || cfg.select.value !== 'random') return;
-      const countWords = str => {
-        const cleaned = str.trim().replace(/[,.!:;?]$/, '');
-        if (!cleaned) return 0;
-        return cleaned.split(/\s+/).length;
-      };
-      const counts = baseItems.map(b => countWords(b));
+      const counts = baseItems.map(b => utils.countWords(b));
       const vals = counts.map(c => Math.floor(Math.random() * (c + 1)));
       cfg.input.value = vals.join(', ');
     });
