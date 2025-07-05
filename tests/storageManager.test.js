@@ -8,6 +8,8 @@ function setupDOM() {
   document.body.innerHTML = `
     <select id="base-select"></select>
     <textarea id="base-input"></textarea>
+    <select id="pos-depth-select"></select>
+    <textarea id="pos-depth-input"></textarea>
   `;
 }
 
@@ -25,5 +27,13 @@ describe('Storage manager', () => {
     storage.importData(json);
     const after = storage.exportData();
     expect(after).toBe(json);
+  });
+
+  test('depth input preserved through exportData/importData', () => {
+    document.getElementById('pos-depth-input').value = '4';
+    const json = storage.exportData();
+    document.getElementById('pos-depth-input').value = '';
+    storage.importData(json);
+    expect(document.getElementById('pos-depth-input').value).toBe('4');
   });
 });

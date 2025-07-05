@@ -94,4 +94,16 @@ describe('State manager integration', () => {
     const again = state.exportState();
     expect(again).toBe(json);
   });
+
+  test('depth values persist through export and import', () => {
+    document.getElementById('pos-depth-input').value = '1,2';
+    document.getElementById('neg-depth-input').value = '3';
+    state.loadFromDOM();
+    const json = state.exportState();
+    document.getElementById('pos-depth-input').value = '';
+    document.getElementById('neg-depth-input').value = '';
+    state.importState(JSON.parse(json));
+    expect(document.getElementById('pos-depth-input').value).toBe('1,2');
+    expect(document.getElementById('neg-depth-input').value).toBe('3');
+  });
 });
