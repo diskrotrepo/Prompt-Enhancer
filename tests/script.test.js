@@ -538,7 +538,7 @@ describe('UI interactions', () => {
     expect(select.style.display).toBe('');
     expect(taRow.style.display).toBe('');
     expect(cont.style.display).toBe('');
-    expect(btn.style.display).toBe('none');
+    expect(btn.style.display).toBe('');
 
     cb.checked = false;
     cb.dispatchEvent(new Event('change'));
@@ -630,6 +630,33 @@ describe('UI interactions', () => {
     setupAdvancedToggle();
     const cb = document.getElementById('advanced-mode');
     cb.checked = false;
+    cb.dispatchEvent(new Event('change'));
+    document.getElementById('neg-reroll').click();
+    expect(document.getElementById('neg-order-select').value).toBe('random');
+    expect(document.getElementById('neg-order-select-2').value).toBe('random');
+  });
+
+  test('advanced mode reroll toggles all selects', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <div id="neg-order-container">
+        <select id="neg-order-select">
+          <option value="canonical">c</option>
+          <option value="random">r</option>
+        </select>
+        <div class="input-row"><textarea id="neg-order-input"></textarea></div>
+        <select id="neg-order-select-2">
+          <option value="canonical">c</option>
+          <option value="random">r</option>
+        </select>
+        <div class="input-row"><textarea id="neg-order-input-2"></textarea></div>
+      </div>
+      <button id="neg-reroll" class="random-button"></button>
+    `;
+    setupRerollButton('neg-reroll', 'neg-order-select');
+    setupAdvancedToggle();
+    const cb = document.getElementById('advanced-mode');
+    cb.checked = true;
     cb.dispatchEvent(new Event('change'));
     document.getElementById('neg-reroll').click();
     expect(document.getElementById('neg-order-select').value).toBe('random');

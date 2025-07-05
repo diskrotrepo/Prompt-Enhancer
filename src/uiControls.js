@@ -7,6 +7,11 @@
     global.stateManager || (typeof require !== 'undefined' && require('./stateManager'));
   const storage = global.storageManager || (typeof require !== "undefined" && require("./storageManager"));
 
+  function guessPrefix(id) {
+    const m = id.match(/^([a-z]+)(?:-(?:order|depth))?-select/);
+    return m ? m[1] : id.replace(/-select.*$/, '');
+  }
+
   function applyPreset(selectEl, inputEl, presetsOrType) {
     let presets = presetsOrType;
     if (typeof presetsOrType === 'string') {
@@ -296,12 +301,6 @@
       'neg-depth-input'
     ];
     const containerIds = ['pos-order-container', 'neg-order-container', 'pos-depth-container', 'neg-depth-container'];
-    const rerollIds = [
-      'base-reroll',
-      'pos-reroll',
-      'neg-reroll',
-      'divider-reroll'
-    ];
     const setDisplay = (el, show) => {
       if (!el) return;
       el.style.display = show ? '' : 'none';
@@ -321,7 +320,7 @@
       containerIds.forEach(id => {
         document.querySelectorAll(`[id^="${id}"]`).forEach(el => setDisplay(el, adv));
       });
-      rerollIds.forEach(id => setDisplay(document.getElementById(id), !adv));
+      // Dice buttons remain visible in both modes
       Object.values(rerollUpdaters).forEach(fn => fn());
     };
     cb.addEventListener('change', update);
@@ -439,6 +438,7 @@
     const select = document.getElementById(selectId);
     const input = document.getElementById(inputId);
     if (!select || !input) return;
+    const prefix = guessPrefix(selectId);
     const update = () => {
       const items = getItems();
       if (select.value === 'canonical') {
@@ -448,6 +448,7 @@
       } else if (lists.ORDER_PRESETS[select.value]) {
         input.value = lists.ORDER_PRESETS[select.value].join(', ');
       }
+      if (rerollUpdaters[prefix]) rerollUpdaters[prefix]();
     };
     select.addEventListener('change', update);
     update();
@@ -483,6 +484,7 @@
     const input = document.getElementById(inputId);
     const baseInput = document.getElementById('base-input');
     if (!select || !input || !baseInput) return;
+    const prefix = guessPrefix(selectId);
     const build = mode => {
       const bases = utils.parseInput(baseInput.value, true);
       if (!bases.length) {
@@ -507,6 +509,7 @@
       } else if (lists.ORDER_PRESETS[val]) {
         input.value = lists.ORDER_PRESETS[val].join(', ');
       }
+      if (rerollUpdaters[prefix]) rerollUpdaters[prefix]();
     });
     select.dispatchEvent(new Event('change'));
   }
@@ -641,10 +644,6 @@
     const select = document.getElementById(selectId);
     const adv = document.getElementById('advanced-mode');
     if (!btn || !select) return;
-    const guessPrefix = id => {
-      const m = id.match(/^([a-z]+)(?:-order)?-select/);
-      return m ? m[1] : id.replace(/-select$/, '');
-    };
     const prefix = guessPrefix(selectId);
     const gather = () => {
       const arr = [];
@@ -664,10 +663,6 @@
       return arr;
     };
     const updateState = () => {
-      if (adv && adv.checked) {
-        btn.classList.remove('active', 'indeterminate');
-        return;
-      }
       const sels = gather();
       const canonicalFor = s => (s.id.includes('-depth-select') ? 'prepend' : 'canonical');
       const allRand = sels.every(s => s.value === 'random');
@@ -677,15 +672,7 @@
       else if (!allCan) btn.classList.add('indeterminate');
     };
     const reroll = () => {
-      const advanced = adv && adv.checked;
       const sels = gather();
-      if (advanced) {
-        if (sels[0] && sels[0].value !== 'random') {
-          sels[0].value = 'random';
-          sels[0].dispatchEvent(new Event('change'));
-        }
-        return;
-      }
       const canonicalFor = s => (s.id.includes('-depth-select') ? 'prepend' : 'canonical');
       const allRand = sels.every(s => s.value === 'random');
       sels.forEach(s => {
