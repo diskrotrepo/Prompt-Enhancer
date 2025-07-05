@@ -45,8 +45,18 @@
 
   function collectInputs() {
     const baseItems = utils.parseInput(document.getElementById('base-input').value, true);
-    const negMods = utils.parseInput(document.getElementById('neg-input').value);
-    const posMods = utils.parseInput(document.getElementById('pos-input').value);
+    const posMods = [utils.parseInput(document.getElementById('pos-input').value)];
+    const negMods = [utils.parseInput(document.getElementById('neg-input').value)];
+    for (let i = 2; ; i++) {
+      const p = document.getElementById(`pos-input-${i}`);
+      if (!p) break;
+      posMods.push(utils.parseInput(p.value));
+    }
+    for (let i = 2; ; i++) {
+      const n = document.getElementById(`neg-input-${i}`);
+      if (!n) break;
+      negMods.push(utils.parseInput(n.value));
+    }
     const shuffleBase = document.getElementById('base-shuffle').checked;
     const shufflePos = document.getElementById('pos-shuffle').checked;
     const posStackOn = document.getElementById('pos-stack').checked;
@@ -67,8 +77,18 @@
     }
     const insertDepths = utils.parseOrderInput(document.getElementById('insert-input')?.value || '');
     const baseOrder = utils.parseOrderInput(document.getElementById('base-order-input')?.value || '');
-    const posOrder = utils.parseOrderInput(document.getElementById('pos-order-input')?.value || '');
-    const negOrder = utils.parseOrderInput(document.getElementById('neg-order-input')?.value || '');
+    const posOrder = [utils.parseOrderInput(document.getElementById('pos-order-input')?.value || '')];
+    const negOrder = [utils.parseOrderInput(document.getElementById('neg-order-input')?.value || '')];
+    for (let i = 2; ; i++) {
+      const po = document.getElementById(`pos-order-input-${i}`);
+      if (!po) break;
+      posOrder.push(utils.parseOrderInput(po.value));
+    }
+    for (let i = 2; ; i++) {
+      const no = document.getElementById(`neg-order-input-${i}`);
+      if (!no) break;
+      negOrder.push(utils.parseOrderInput(no.value));
+    }
     const dividerOrder = utils.parseOrderInput(document.getElementById('divider-order-input')?.value || '');
     return {
       baseItems,
@@ -205,6 +225,43 @@
     updateAll();
   }
 
+  function updateStackInputs(prefix) {
+    const extra = document.getElementById(`${prefix}-extra`);
+    const stackCb = document.getElementById(`${prefix}-stack`);
+    const sizeEl = document.getElementById(`${prefix}-stack-size`);
+    if (!extra || !stackCb || !sizeEl) return;
+    const count = stackCb.checked ? parseInt(sizeEl.value, 10) || 1 : 1;
+    while (extra.childElementCount > (count - 1) * 4) {
+      extra.removeChild(extra.lastChild);
+    }
+    while (extra.childElementCount < (count - 1) * 4) {
+      const idx = extra.childElementCount / 4 + 2;
+      const sel = document.createElement('select');
+      sel.id = `${prefix}-select-${idx}`;
+      extra.appendChild(sel);
+      const row = document.createElement('div');
+      row.className = 'input-row';
+      const ta = document.createElement('textarea');
+      ta.id = `${prefix}-input-${idx}`;
+      ta.rows = prefix === 'neg' ? 3 : 2;
+      ta.placeholder = prefix === 'neg' ? 'Negative modifiers' : 'Positive modifiers';
+      row.appendChild(ta);
+      extra.appendChild(row);
+      const orderSel = document.createElement('select');
+      orderSel.id = `${prefix}-order-select-${idx}`;
+      extra.appendChild(orderSel);
+      const orderRow = document.createElement('div');
+      orderRow.className = 'input-row';
+      const orderInp = document.createElement('textarea');
+      orderInp.id = `${prefix}-order-input-${idx}`;
+      orderInp.rows = 1;
+      orderInp.placeholder = '0,1,2';
+      orderRow.appendChild(orderInp);
+      extra.appendChild(orderRow);
+    }
+    if (typeof lists !== 'undefined') lists.loadLists();
+  }
+
   function setupStackControls() {
     const configs = [
       { stack: 'pos-stack', size: 'pos-stack-size', shuffle: 'pos-shuffle' },
@@ -227,6 +284,7 @@
             updateButtonState(shuffleBtn, shuffleCb);
           }
           sizeEl.style.display = '';
+          updateStackInputs(cfg.stack.startsWith('pos') ? 'pos' : 'neg');
         } else {
           if (shuffleBtn) {
             shuffleBtn.classList.remove('disabled');
@@ -235,9 +293,11 @@
           }
           shuffleCb.checked = prev;
           sizeEl.style.display = 'none';
+          updateStackInputs(cfg.stack.startsWith('pos') ? 'pos' : 'neg');
         }
       };
       stackCb.addEventListener('change', update);
+      sizeEl.addEventListener('change', update);
       update();
     });
   }

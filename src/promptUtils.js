@@ -150,8 +150,19 @@
     depths = null
   ) {
     const count = stackSize > 0 ? stackSize : 1;
-    const orderedMods = modOrder ? applyOrder(modifiers, modOrder) : modifiers.slice();
-    const orders = Array(count).fill(orderedMods);
+    let modsList = Array.isArray(modifiers[0]) ? modifiers.slice(0, count) : null;
+    if (!modsList) modsList = Array(count).fill(modifiers);
+    while (modsList.length < count) modsList.push(modifiers);
+    let orders;
+    if (Array.isArray(modOrder) && Array.isArray(modOrder[0])) {
+      orders = modsList.map((m, i) =>
+        modOrder[i] ? applyOrder(m, modOrder[i]) : m.slice()
+      );
+    } else if (Array.isArray(modOrder)) {
+      orders = modsList.map(m => applyOrder(m, modOrder));
+    } else {
+      orders = modsList.map(m => m.slice());
+    }
     const dividerPool = dividers.slice();
     let items = baseItems.slice();
     if (itemOrder) items = applyOrder(items, itemOrder);
@@ -196,8 +207,19 @@
     depths = null
   ) {
     const count = stackSize > 0 ? stackSize : 1;
-    const orderedMods = modOrder ? applyOrder(negMods, modOrder) : negMods.slice();
-    const orders = Array(count).fill(orderedMods);
+    let modsList = Array.isArray(negMods[0]) ? negMods.slice(0, count) : null;
+    if (!modsList) modsList = Array(count).fill(negMods);
+    while (modsList.length < count) modsList.push(negMods);
+    let orders;
+    if (Array.isArray(modOrder) && Array.isArray(modOrder[0])) {
+      orders = modsList.map((m, i) =>
+        modOrder[i] ? applyOrder(m, modOrder[i]) : m.slice()
+      );
+    } else if (Array.isArray(modOrder)) {
+      orders = modsList.map(m => applyOrder(m, modOrder));
+    } else {
+      orders = modsList.map(m => m.slice());
+    }
     const dividerSet = new Set(dividers);
     const result = [];
     let modIdx = 0;

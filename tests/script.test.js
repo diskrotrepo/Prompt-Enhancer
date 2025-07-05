@@ -231,6 +231,21 @@ describe('Prompt building', () => {
     expect(out).toEqual({ positive: 'p1 p1 x', negative: 'n1 n1 x' });
   });
 
+  test('stacking uses distinct modifier lists', () => {
+    const out = buildVersions(
+      ['x'],
+      [['n1'], ['n2']],
+      [['p1'], ['p2']],
+      8,
+      false,
+      [],
+      true,
+      2,
+      2
+    );
+    expect(out).toEqual({ positive: 'p2 p1 x', negative: 'n2 n1 x' });
+  });
+
   test('stacking works with natural dividers', () => {
     const out = buildVersions(
       ['a', 'b'],
