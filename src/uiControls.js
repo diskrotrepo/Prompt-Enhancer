@@ -92,8 +92,10 @@
       return result;
     }
 
-    const rawDepths = collectDepths('pos', posStackOn ? posStackSize : 1);
-    const insertDepths = posStackOn ? rawDepths : rawDepths[0];
+    const rawPosDepths = collectDepths('pos', posStackOn ? posStackSize : 1);
+    const posDepths = posStackOn ? rawPosDepths : rawPosDepths[0];
+    const rawNegDepths = collectDepths('neg', negStackOn ? negStackSize : 1);
+    const negDepths = negStackOn ? rawNegDepths : rawNegDepths[0];
     const baseOrder = utils.parseOrderInput(document.getElementById('base-order-input')?.value || '');
     function collectOrders(prefix, count) {
       const result = [];
@@ -124,7 +126,7 @@
       dividerMods,
       shuffleDividers,
       dividerOrder,
-      insertDepths,
+      insertDepths: { pos: posDepths, neg: negDepths },
       baseOrder,
       posOrder,
       negOrder

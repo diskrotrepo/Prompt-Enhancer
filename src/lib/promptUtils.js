@@ -186,6 +186,7 @@
     const result = [];
     let idx = 0;
     let divIdx = 0;
+    const depthIdx = Array(orders.length).fill(0);
     while (true) {
       const needDivider = idx > 0 && idx % items.length === 0 && dividerPool.length;
       let term = items[idx % items.length];
@@ -196,9 +197,9 @@
         if (depthPool) {
           if (Array.isArray(depthPool[sidx])) {
             const arr = depthPool[sidx];
-            depth = arr[idx % arr.length] || 0;
+            depth = arr[depthIdx[sidx] % arr.length] || 0;
           } else {
-            depth = depthPool[idx % depthPool.length] || 0;
+            depth = depthPool[depthIdx[sidx] % depthPool.length] || 0;
           }
         }
         const offset = inserted.filter(d => d <= depth).length;
@@ -207,6 +208,7 @@
           term = insertAtDepth(term, mod, adj);
           inserted.push(adj);
         }
+        depthIdx[sidx]++;
       });
       const pieces = [];
       if (needDivider) pieces.push(dividerPool[divIdx % dividerPool.length]);
@@ -261,6 +263,7 @@
     if (Array.isArray(depths)) {
       depthPool = Array.isArray(depths[0]) ? depths.map(d => d.slice()) : depths.slice();
     }
+    const depthIdx = Array(orders.length).fill(0);
     for (let i = 0; i < items.length; i++) {
       const base = items[i];
       if (dividerSet.has(base)) {
@@ -279,9 +282,9 @@
         if (depthPool) {
           if (Array.isArray(depthPool[sidx])) {
             const arr = depthPool[sidx];
-            depth = arr[modIdx % arr.length] || 0;
+            depth = arr[depthIdx[sidx] % arr.length] || 0;
           } else {
-            depth = depthPool[modIdx % depthPool.length] || 0;
+            depth = depthPool[depthIdx[sidx] % depthPool.length] || 0;
           }
         }
         const offset = inserted.filter(d => d <= depth).length;
@@ -290,6 +293,7 @@
           term = insertAtDepth(term, mod, adj);
           inserted.push(adj);
         }
+        depthIdx[sidx]++;
       });
       const candidate =
         (result.length ? result.join(delimited ? '' : ', ') + (delimited ? '' : ', ') : '') +
@@ -325,6 +329,8 @@
     let dividerPool = dividers.map(d => (d.startsWith('\n') ? d : '\n' + d));
     if (Array.isArray(dividerOrder)) dividerPool = applyOrder(dividerPool, dividerOrder);
     if (dividerPool.length && shuffleDividers && !dividerOrder) shuffle(dividerPool);
+    const posDepths = depths && depths.pos ? depths.pos : depths;
+    const negDepthsRaw = depths && depths.neg ? depths.neg : depths;
     const posTerms = applyModifierStack(
       items,
       posMods,
@@ -334,16 +340,16 @@
       delimited,
       dividerPool,
       baseOrder,
-      depths
+      posDepths
     );
-    let negDepths = depths;
-    if (includePosForNeg && Array.isArray(depths) && posStackSize > 0) {
-      if (Array.isArray(depths[0])) {
-        negDepths = depths.map(arr =>
+    let negDepths = negDepthsRaw;
+    if (includePosForNeg && Array.isArray(negDepthsRaw) && posStackSize > 0) {
+      if (Array.isArray(negDepthsRaw[0])) {
+        negDepths = negDepthsRaw.map(arr =>
           arr.map(d => (d > 0 ? d + posStackSize : d))
         );
       } else {
-        negDepths = depths.map(d => (d > 0 ? d + posStackSize : d));
+        negDepths = negDepthsRaw.map(d => (d > 0 ? d + posStackSize : d));
       }
     }
     const negTerms = includePosForNeg
@@ -367,7 +373,7 @@
           delimited,
           dividerPool,
           baseOrder,
-          depths
+          negDepthsRaw
         );
     const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
     return {

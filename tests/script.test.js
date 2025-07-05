@@ -139,7 +139,7 @@ describe('Prompt building', () => {
   });
 
   test('buildVersions offsets depth for negatives when positives included', () => {
-    const out = buildVersions(['cat'], ['bad'], ['good'], 20, true, [], true, 1, 1, [1]);
+    const out = buildVersions(['cat'], ['bad'], ['good'], 20, true, [], true, 1, 1, { pos: [1], neg: [1] });
     expect(out).toEqual({ positive: 'cat good', negative: 'cat good bad' });
   });
 
@@ -154,7 +154,7 @@ describe('Prompt building', () => {
       true,
       2,
       1,
-      [[1], [2]]
+      { pos: [[1], [2]], neg: [1] }
     );
     expect(out).toEqual({ positive: 'a x b y c', negative: 'a n b c' });
   });
@@ -170,7 +170,7 @@ describe('Prompt building', () => {
       true,
       2,
       1,
-      [1]
+      { pos: [1], neg: [1] }
     );
     expect(out).toEqual({ positive: 'foo good great bar baz', negative: 'foo good great bad bar baz' });
   });
@@ -186,7 +186,7 @@ describe('Prompt building', () => {
       true,
       2,
       1,
-      [[0], [2]]
+      { pos: [[0], [2]], neg: [0] }
     );
     expect(out).toEqual({ positive: 'pre foo bar post, pre foo bar post', negative: 'n foo bar, n foo bar' });
   });
