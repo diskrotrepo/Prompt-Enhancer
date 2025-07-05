@@ -111,7 +111,10 @@
     if (itemOrder) items = applyOrder(items, itemOrder);
     const prefixPool = prefixOrder ? applyOrder(prefixes, prefixOrder) : prefixes.slice();
     const dividerPool = dividers.slice();
-    const depthPool = Array.isArray(depths) ? depths.slice() : null;
+    let depthPool = null;
+    if (Array.isArray(depths)) {
+      depthPool = Array.isArray(depths[0]) ? depths.map(d => d.slice()) : depths.slice();
+    }
     const result = [];
     let idx = 0;
     let divIdx = 0;
@@ -119,7 +122,15 @@
       const needDivider = idx > 0 && idx % items.length === 0 && dividerPool.length;
       const prefix = prefixPool.length ? prefixPool[idx % prefixPool.length] : '';
       const item = items[idx % items.length];
-      const depth = depthPool ? depthPool[idx % depthPool.length] : 0;
+      let depth = 0;
+      if (depthPool) {
+        if (Array.isArray(depthPool[0])) {
+          const arr = depthPool[0];
+          depth = arr[idx % arr.length] || 0;
+        } else {
+          depth = depthPool[idx % depthPool.length] || 0;
+        }
+      }
       const term = prefix ? insertAtDepth(item, prefix, depth) : item;
       const pieces = [];
       if (needDivider) pieces.push(dividerPool[divIdx % dividerPool.length]);
@@ -168,16 +179,27 @@
     const dividerPool = dividers.slice();
     let items = baseItems.slice();
     if (itemOrder) items = applyOrder(items, itemOrder);
-    const depthPool = Array.isArray(depths) ? depths.slice() : null;
+    let depthPool = null;
+    if (Array.isArray(depths)) {
+      depthPool = Array.isArray(depths[0]) ? depths.map(d => d.slice()) : depths.slice();
+    }
     const result = [];
     let idx = 0;
     let divIdx = 0;
     while (true) {
       const needDivider = idx > 0 && idx % items.length === 0 && dividerPool.length;
       let term = items[idx % items.length];
-      orders.forEach(mods => {
+      orders.forEach((mods, sidx) => {
         const mod = mods[idx % mods.length];
-        const depth = depthPool ? depthPool[idx % depthPool.length] : 0;
+        let depth = 0;
+        if (depthPool) {
+          if (Array.isArray(depthPool[sidx])) {
+            const arr = depthPool[sidx];
+            depth = arr[idx % arr.length] || 0;
+          } else {
+            depth = depthPool[idx % depthPool.length] || 0;
+          }
+        }
         term = mod ? insertAtDepth(term, mod, depth) : term;
       });
       const pieces = [];
@@ -229,7 +251,10 @@
     let modIdx = 0;
     let items = posTerms.slice();
     if (itemOrder) items = applyOrder(items, itemOrder);
-    const depthPool = Array.isArray(depths) ? depths.slice() : null;
+    let depthPool = null;
+    if (Array.isArray(depths)) {
+      depthPool = Array.isArray(depths[0]) ? depths.map(d => d.slice()) : depths.slice();
+    }
     for (let i = 0; i < items.length; i++) {
       const base = items[i];
       if (dividerSet.has(base)) {
@@ -241,9 +266,17 @@
         continue;
       }
       let term = base;
-      orders.forEach(mods => {
+      orders.forEach((mods, sidx) => {
         const mod = mods[modIdx % mods.length];
-        const depth = depthPool ? depthPool[modIdx % depthPool.length] : 0;
+        let depth = 0;
+        if (depthPool) {
+          if (Array.isArray(depthPool[sidx])) {
+            const arr = depthPool[sidx];
+            depth = arr[modIdx % arr.length] || 0;
+          } else {
+            depth = depthPool[modIdx % depthPool.length] || 0;
+          }
+        }
         term = mod ? insertAtDepth(term, mod, depth) : term;
       });
       const candidate =
@@ -291,6 +324,16 @@
       baseOrder,
       depths
     );
+    let negDepths = depths;
+    if (includePosForNeg && Array.isArray(depths) && posStackSize > 0) {
+      if (Array.isArray(depths[0])) {
+        negDepths = depths.map(arr =>
+          arr.map(d => (d > 0 ? d + posStackSize : d))
+        );
+      } else {
+        negDepths = depths.map(d => (d > 0 ? d + posStackSize : d));
+      }
+    }
     const negTerms = includePosForNeg
       ? applyNegativeOnPositive(
           posTerms,
@@ -301,7 +344,7 @@
           delimited,
           dividerPool,
           null,
-          depths
+          negDepths
         )
       : applyModifierStack(
           items,

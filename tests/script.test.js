@@ -138,6 +138,43 @@ describe('Prompt building', () => {
     expect(out).toEqual({ positive: 'good cat', negative: 'bad good cat' });
   });
 
+  test('buildVersions offsets depth for negatives when positives included', () => {
+    const out = buildVersions(['cat'], ['bad'], ['good'], 20, true, [], true, 1, 1, [1]);
+    expect(out).toEqual({ positive: 'cat good', negative: 'cat good bad' });
+  });
+
+  test('buildVersions respects depth arrays per stack', () => {
+    const out = buildVersions(
+      ['a b c'],
+      ['n'],
+      [['x'], ['y']],
+      15,
+      false,
+      [],
+      true,
+      2,
+      1,
+      [[1], [2]]
+    );
+    expect(out).toEqual({ positive: 'a x y b c', negative: 'a n b c' });
+  });
+
+  test('negative depth offset accounts for stacked positives', () => {
+    const out = buildVersions(
+      ['foo bar baz'],
+      ['bad'],
+      [['good'], ['great']],
+      40,
+      true,
+      [],
+      true,
+      2,
+      1,
+      [1]
+    );
+    expect(out).toEqual({ positive: 'foo great good bar baz', negative: 'foo great good bad bar baz' });
+  });
+
   test('buildVersions returns empty strings when items list is empty', () => {
     const out = buildVersions([], ['n'], ['p'], 10);
     expect(out).toEqual({ positive: '', negative: '' });
