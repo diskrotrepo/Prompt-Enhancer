@@ -31,7 +31,9 @@ const {
   applyPreset,
   setupOrderControl,
   setupRerollButton,
-  rerollRandomOrders
+  rerollRandomOrders,
+  setupAdvancedMode,
+  applyAdvancedMode
 } = ui;
 
 describe('Utility functions', () => {
@@ -463,6 +465,59 @@ describe('UI interactions', () => {
     utils.shuffle = orig;
     expect(document.getElementById('pos-order-input').value).toBe('1, 0');
     expect(document.getElementById('pos-order-input-2').value).toBe('1, 0');
+  });
+
+  test('advanced mode toggles visibility and reroll buttons', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <select id="base-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <textarea id="base-order-input"></textarea>
+      <button id="base-reroll" class="toggle-button random-button"></button>
+    `;
+    setupOrderControl('base-order-select', 'base-order-input', () => ['a']);
+    setupRerollButton('base-reroll', 'base-order-select');
+    setupAdvancedMode();
+    const cb = document.getElementById('advanced-mode');
+    const sel = document.getElementById('base-order-select');
+    const ta = document.getElementById('base-order-input');
+    const btn = document.getElementById('base-reroll');
+    expect(sel.style.display).toBe('none');
+    expect(ta.style.display).toBe('none');
+    expect(btn.style.display).toBe('');
+    btn.click();
+    expect(sel.value).toBe('random');
+    btn.click();
+    expect(sel.value).toBe('canonical');
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+    expect(sel.style.display).toBe('');
+    expect(ta.style.display).toBe('');
+    expect(btn.style.display).toBe('none');
+  });
+
+  test('advanced mode hides multiple order controls', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <div id="pos-order-container">
+        <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+        <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+        <select id="pos-order-select-2"><option value="canonical">c</option><option value="random">r</option></select>
+        <div class="input-row"><textarea id="pos-order-input-2"></textarea></div>
+      </div>
+      <textarea id="pos-input"></textarea>
+      <button id="pos-reroll" class="toggle-button random-button"></button>
+    `;
+    setupRerollButton('pos-reroll', 'pos-order-select');
+    setupAdvancedMode();
+    const cb = document.getElementById('advanced-mode');
+    expect(document.getElementById('pos-order-select').style.display).toBe('none');
+    expect(document.getElementById('pos-order-select-2').style.display).toBe('none');
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+    expect(document.getElementById('pos-order-input-2').style.display).toBe('');
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change'));
+    expect(document.getElementById('pos-order-select').style.display).toBe('none');
   });
 });
 

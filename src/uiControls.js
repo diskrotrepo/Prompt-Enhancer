@@ -306,6 +306,83 @@
     });
   }
 
+  function applyAdvancedMode() {
+    const advCb = document.getElementById('advanced-mode');
+    const advanced = advCb && advCb.checked;
+    const gather = prefix => {
+      const arr = [];
+      let idx = 1;
+      while (true) {
+        const sel = document.getElementById(
+          `${prefix}-order-select${idx === 1 ? '' : '-' + idx}`
+        );
+        const inp = document.getElementById(
+          `${prefix}-order-input${idx === 1 ? '' : '-' + idx}`
+        );
+        if (!sel || !inp) break;
+        arr.push(sel, inp);
+        idx++;
+      }
+      return arr;
+    };
+    const elems = [
+      ...gather('base'),
+      ...gather('pos'),
+      ...gather('neg'),
+      ...gather('divider'),
+      document.getElementById('insert-select'),
+      document.getElementById('insert-input')
+    ].filter(Boolean);
+    elems.forEach(el => {
+      el.style.display = advanced ? '' : 'none';
+    });
+    const buttons = [
+      'base-reroll',
+      'pos-reroll',
+      'neg-reroll',
+      'divider-reroll',
+      'insert-reroll'
+    ];
+    buttons.forEach(id => {
+      const b = document.getElementById(id);
+      if (b) b.style.display = advanced ? 'none' : '';
+    });
+    if (!advanced) {
+      const sync = (btnId, prefix) => {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        let idx = 1;
+        const active = btn.classList.contains('active');
+        while (true) {
+          const sel = document.getElementById(
+            `${prefix}-order-select${idx === 1 ? '' : '-' + idx}`
+          );
+          if (!sel) break;
+          sel.value = active ? 'random' : 'canonical';
+          sel.dispatchEvent(new Event('change'));
+          idx++;
+        }
+      };
+      sync('base-reroll', 'base');
+      sync('pos-reroll', 'pos');
+      sync('neg-reroll', 'neg');
+      sync('divider-reroll', 'divider');
+      const insBtn = document.getElementById('insert-reroll');
+      const insSel = document.getElementById('insert-select');
+      if (insBtn && insSel) {
+        insSel.value = insBtn.classList.contains('active') ? 'random' : 'canonical';
+        insSel.dispatchEvent(new Event('change'));
+      }
+    }
+  }
+
+  function setupAdvancedMode() {
+    const cb = document.getElementById('advanced-mode');
+    if (!cb) return;
+    cb.addEventListener('change', applyAdvancedMode);
+    applyAdvancedMode();
+  }
+
   function populateOrderOptions(select) {
     if (!select) return;
     select.innerHTML = '';
@@ -354,6 +431,7 @@
       if (sel) sel.remove();
       if (ta && ta.parentElement) ta.parentElement.remove();
     }
+    applyAdvancedMode();
   }
 
   function setupOrderControl(selectId, inputId, getItems) {
@@ -434,8 +512,18 @@
     const select = document.getElementById(selectId);
     if (!btn || !select) return;
     const reroll = () => {
-      if (select.value !== 'random') {
-        select.value = 'random';
+      const adv = document.getElementById('advanced-mode');
+      const simple = !adv || !adv.checked;
+      if (simple) {
+        if (btn.classList.contains('active')) {
+          select.value = 'canonical';
+        } else {
+          select.value = 'random';
+        }
+      } else {
+        if (select.value !== 'random') {
+          select.value = 'random';
+        }
       }
       select.dispatchEvent(new Event('change'));
     };
@@ -584,6 +672,7 @@
     setupToggleButtons();
     setupStackControls();
     setupShuffleAll();
+    setupAdvancedMode();
     const hideCheckboxes = setupHideToggles();
 
     const allHide = document.getElementById('all-hide');
@@ -653,6 +742,8 @@
     updateButtonState,
     setupToggleButtons,
     setupShuffleAll,
+    setupAdvancedMode,
+    applyAdvancedMode,
     setupStackControls,
     setupHideToggles,
     setupCopyButtons,
