@@ -34,8 +34,14 @@ function setupDOM() {
     <input type="checkbox" id="divider-shuffle">
     <select id="divider-order-select"></select>
     <textarea id="divider-order-input"></textarea>
-    <select id="insert-select"></select>
-    <textarea id="insert-input"></textarea>
+    <select id="base-depth-select"></select>
+    <textarea id="base-depth-input"></textarea>
+    <select id="pos-depth-select"></select>
+    <textarea id="pos-depth-input"></textarea>
+    <select id="neg-depth-select"></select>
+    <textarea id="neg-depth-input"></textarea>
+    <select id="divider-depth-select"></select>
+    <textarea id="divider-depth-input"></textarea>
     <select id="length-select"></select>
     <input id="length-input">
     <select id="lyrics-select"></select>

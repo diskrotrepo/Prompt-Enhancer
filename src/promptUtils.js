@@ -270,6 +270,18 @@
     let dividerPool = dividers.map(d => (d.startsWith('\n') ? d : '\n' + d));
     if (Array.isArray(dividerOrder)) dividerPool = applyOrder(dividerPool, dividerOrder);
     if (dividerPool.length && shuffleDividers && !dividerOrder) shuffle(dividerPool);
+    let baseDepths, posDepths, negDepths, dividerDepths;
+    if (Array.isArray(depths)) {
+      baseDepths = posDepths = negDepths = dividerDepths = depths;
+    } else if (depths && typeof depths === 'object') {
+      baseDepths = depths.base || null;
+      posDepths = depths.pos || null;
+      negDepths = depths.neg || null;
+      dividerDepths = depths.divider || null;
+    } else {
+      baseDepths = posDepths = negDepths = dividerDepths = null;
+    }
+
     const posTerms = applyModifierStack(
       items,
       posMods,
@@ -279,7 +291,7 @@
       delimited,
       dividerPool,
       baseOrder,
-      depths
+      posDepths
     );
     const negTerms = includePosForNeg
       ? applyNegativeOnPositive(
@@ -291,7 +303,7 @@
           delimited,
           dividerPool,
           null,
-          depths
+          negDepths
         )
       : applyModifierStack(
           items,
@@ -302,7 +314,7 @@
           delimited,
           dividerPool,
           baseOrder,
-          depths
+          negDepths
         );
     const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
     return {
