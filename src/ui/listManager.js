@@ -1,5 +1,6 @@
 (function (global) {
-  const utils = global.promptUtils || (typeof require !== 'undefined' && require('./promptUtils'));
+  const utils =
+    global.promptUtils || (typeof require !== 'undefined' && require('../core/promptUtils'));
   let NEG_PRESETS = {};
   let POS_PRESETS = {};
   let LENGTH_PRESETS = {};

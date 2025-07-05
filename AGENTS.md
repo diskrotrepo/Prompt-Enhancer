@@ -55,3 +55,13 @@ inspect it when working on functionality.
 
 An additional preset type `order` contains numeric sequences used for insertion
 depths or item reorderings.
+
+## Folder structure
+
+- `src/core` contains side-effect free modules used across the project.
+- `src/ui` hosts DOM-manipulating code. Index.html loads these scripts.
+
+## Bugs and tests
+
+If a bug surfaces after merge, treat it as evidence of missing test
+coverage. Update tests to catch the issue before committing a fix.

@@ -3,9 +3,9 @@
 global.__TEST__ = true;
 if (typeof window !== 'undefined') window.__TEST__ = true;
 
-const lists = require('../src/listManager');
-const ui = require('../src/uiControls');
-const state = require('../src/stateManager');
+const lists = require('../src/ui/listManager');
+const ui = require('../src/ui/uiControls');
+const state = require('../src/ui/stateManager');
 
 function setupDOM() {
   document.body.innerHTML = `
