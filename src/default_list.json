@@ -1,4 +1,4 @@
-const DEFAULT_LIST = {
+{
   "presets": [
     {
       "id": "empty",
@@ -710,4 +710,4 @@ const DEFAULT_LIST = {
   "type": "divider"
     }
   ]
-};
+}

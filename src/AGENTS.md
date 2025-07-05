@@ -11,7 +11,7 @@ src/
   style.css         # styling
   assets/           # images and fonts
   lib/              # pure functions only
-  default_list.js   # preset data
+  default_list.json   # preset data
   stateManager.js   # state container
   listManager.js    # preset list helpers
   storageManager.js # persistence helpers
