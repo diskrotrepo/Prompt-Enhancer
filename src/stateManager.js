@@ -42,16 +42,22 @@
     'lyrics-space',
     'lyrics-remove-parens',
     'lyrics-remove-brackets',
-    'insert-input',
-    'insert-select',
+    'base-depth-input',
+    'base-depth-select',
     'base-order-input',
     'base-order-select',
     'pos-order-input',
     'pos-order-select',
     'neg-order-input',
     'neg-order-select',
+    'pos-depth-input',
+    'pos-depth-select',
+    'neg-depth-input',
+    'neg-depth-select',
     'divider-order-input',
-    'divider-order-select'
+    'divider-order-select',
+    'divider-depth-input',
+    'divider-depth-select'
   ];
 
   function loadFromDOM() {

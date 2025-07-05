@@ -256,7 +256,8 @@
     shuffleDividers = true,
     posStackSize = 1,
     negStackSize = 1,
-    depths = null,
+    posDepths = null,
+    negDepths = null,
     baseOrder = null,
     posOrder = null,
     negOrder = null,
@@ -279,7 +280,7 @@
       delimited,
       dividerPool,
       baseOrder,
-      depths
+      posDepths
     );
     const negTerms = includePosForNeg
       ? applyNegativeOnPositive(
@@ -291,7 +292,7 @@
           delimited,
           dividerPool,
           null,
-          depths
+          negDepths
         )
       : applyModifierStack(
           items,
@@ -302,7 +303,7 @@
           delimited,
           dividerPool,
           baseOrder,
-          depths
+          negDepths
         );
     const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
     return {

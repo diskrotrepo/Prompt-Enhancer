@@ -65,7 +65,7 @@
       limit = preset ? parseInt(preset[0], 10) : 1000;
       lengthInput.value = limit;
     }
-    const insertDepths = utils.parseOrderInput(document.getElementById('insert-input')?.value || '');
+    const baseDepths = utils.parseOrderInput(document.getElementById('base-depth-input')?.value || '');
     const baseOrder = utils.parseOrderInput(document.getElementById('base-order-input')?.value || '');
     function collectOrders(prefix, count) {
       const result = [];
@@ -79,6 +79,18 @@
 
     const posOrder = collectOrders('pos', posStackOn ? posStackSize : 1);
     const negOrder = collectOrders('neg', negStackOn ? negStackSize : 1);
+    function collectDepths(prefix, count) {
+      const result = [];
+      for (let i = 1; i <= count; i++) {
+        const id = `${prefix}-depth-input${i === 1 ? '' : '-' + i}`;
+        const el = document.getElementById(id);
+        result.push(utils.parseOrderInput(el?.value || ''));
+      }
+      return result;
+    }
+
+    const posDepths = collectDepths('pos', posStackOn ? posStackSize : 1);
+    const negDepths = collectDepths('neg', negStackOn ? negStackSize : 1);
     const dividerOrder = utils.parseOrderInput(document.getElementById('divider-order-input')?.value || '');
     return {
       baseItems,
@@ -96,7 +108,9 @@
       dividerMods,
       shuffleDividers,
       dividerOrder,
-      insertDepths,
+      baseDepths,
+      posDepths,
+      negDepths,
       baseOrder,
       posOrder,
       negOrder
@@ -126,7 +140,9 @@
       dividerMods,
       shuffleDividers,
       dividerOrder,
-      insertDepths,
+      baseDepths,
+      posDepths,
+      negDepths,
       baseOrder,
       posOrder,
       negOrder
@@ -146,7 +162,8 @@
       shuffleDividers,
       posStackOn ? posStackSize : 1,
       negStackOn ? negStackSize : 1,
-      insertDepths,
+      posDepths,
+      negDepths,
       baseOrder,
       posOrder,
       negOrder,
@@ -265,20 +282,25 @@
       'pos-order-select',
       'neg-order-select',
       'divider-order-select',
-      'insert-select'
+      'base-depth-select',
+      'pos-depth-select',
+      'neg-depth-select',
+      'divider-depth-select'
     ];
     const textIds = [
       'base-order-input',
       'divider-order-input',
-      'insert-input'
+      'base-depth-input',
+      'pos-depth-input',
+      'neg-depth-input',
+      'divider-depth-input'
     ];
     const containerIds = ['pos-order-container', 'neg-order-container'];
     const rerollIds = [
       'base-reroll',
       'pos-reroll',
       'neg-reroll',
-      'divider-reroll',
-      'insert-reroll'
+      'divider-reroll'
     ];
     const setDisplay = (el, show) => {
       if (!el) return;
@@ -370,6 +392,25 @@
     });
   }
 
+  function populateDepthOptions(select) {
+    if (!select) return;
+    select.innerHTML = '';
+    const opts = [
+      { id: 'prepend', title: 'Prepend' },
+      { id: 'append', title: 'Append' },
+      { id: 'random', title: 'Random Depth' }
+    ];
+    Object.keys(lists.ORDER_PRESETS).forEach(id => {
+      opts.push({ id, title: lists.ORDER_PRESETS[id].title || id });
+    });
+    opts.forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o.id;
+      opt.textContent = o.title;
+      select.appendChild(opt);
+    });
+  }
+
   function updateOrderContainers(prefix, count) {
     const container = document.getElementById(`${prefix}-order-container`);
     const baseId = `${prefix}-order`;
@@ -380,7 +421,8 @@
     const defaultVal =
       !adv || !adv.checked ? baseSel?.value || 'canonical' : undefined;
     if (!container) return;
-    const current = container.querySelectorAll('select').length;
+    let current = 0;
+    while (document.getElementById(`${baseId}-select${current === 0 ? '' : '-' + (current + 1)}`)) current++;
     for (let i = current; i < count; i++) {
       const idx = i + 1;
       const sel = document.createElement('select');
@@ -397,13 +439,31 @@
       div.appendChild(ta);
       container.appendChild(div);
       setupOrderControl(sel.id, ta.id, getItems);
+      const dsel = document.createElement('select');
+      dsel.id = `${prefix}-depth-select-${idx}`;
+      populateDepthOptions(dsel);
+      dsel.value = 'prepend';
+      container.appendChild(dsel);
+      const ddiv = document.createElement('div');
+      ddiv.className = 'input-row';
+      const dta = document.createElement('textarea');
+      dta.id = `${prefix}-depth-input-${idx}`;
+      dta.rows = 1;
+      dta.placeholder = '0';
+      ddiv.appendChild(dta);
+      container.appendChild(ddiv);
+      setupDepthControl(dsel.id, dta.id);
     }
     for (let i = current; i > count; i--) {
       const idx = i;
       const sel = document.getElementById(`${baseId}-select-${idx}`);
       const ta = document.getElementById(`${baseId}-input-${idx}`);
+      const dsel = document.getElementById(`${prefix}-depth-select-${idx}`);
+      const dta = document.getElementById(`${prefix}-depth-input-${idx}`);
       if (sel) sel.remove();
       if (ta && ta.parentElement) ta.parentElement.remove();
+      if (dsel) dsel.remove();
+      if (dta && dta.parentElement) dta.parentElement.remove();
     }
     if (rerollUpdaters[prefix]) rerollUpdaters[prefix]();
   }
@@ -426,27 +486,12 @@
     update();
   }
 
-  function setupDepthControls() {
-    const select = document.getElementById('insert-select');
-    const input = document.getElementById('insert-input');
+  function setupDepthControl(selectId, inputId) {
+    const select = document.getElementById(selectId);
+    const input = document.getElementById(inputId);
     const baseInput = document.getElementById('base-input');
-    if (select) {
-      select.innerHTML = '';
-      const opts = [
-        { id: 'prepend', title: 'Prepend' },
-        { id: 'append', title: 'Append' },
-        { id: 'random', title: 'Random Depth' }
-      ];
-      Object.keys(lists.ORDER_PRESETS).forEach(id => {
-        opts.push({ id, title: lists.ORDER_PRESETS[id].title || id });
-      });
-      opts.forEach(o => {
-        const opt = document.createElement('option');
-        opt.value = o.id;
-        opt.textContent = o.title;
-        select.appendChild(opt);
-      });
-    }
+    if (!select || !input) return;
+    populateDepthOptions(select);
     function countWords(str) {
       const cleaned = str.trim().replace(/[,.!:;?]$/, '');
       if (!cleaned) return 0;
@@ -469,7 +514,6 @@
       }
       input.value = '';
     }
-    if (!select) return;
     select.addEventListener('change', () => {
       const val = select.value;
       if (val === 'prepend' || val === 'append' || val === 'random') {
@@ -487,7 +531,7 @@
     const adv = document.getElementById('advanced-mode');
     if (!btn || !select) return;
     const guessPrefix = id => {
-      const m = id.match(/^([a-z]+)(?:-order)?-select/);
+      const m = id.match(/^([a-z]+)(?:-(?:order|depth))?-select/);
       return m ? m[1] : id.replace(/-select$/, '');
     };
     const prefix = guessPrefix(selectId);
@@ -495,14 +539,14 @@
       const arr = [];
       let idx = 1;
       while (true) {
-        const sid =
-          prefix === 'insert'
-            ? 'insert-select'
-            : `${prefix}-order-select${idx === 1 ? '' : '-' + idx}`;
-        const sel = document.getElementById(sid);
-        if (!sel) break;
-        arr.push(sel);
-        if (prefix === 'insert') break;
+        const oSel = document.getElementById(
+          `${prefix}-order-select${idx === 1 ? '' : '-' + idx}`
+        );
+        const dSel = document.getElementById(
+          `${prefix}-depth-select${idx === 1 ? '' : '-' + idx}`
+        );
+        if (!oSel || !dSel) break;
+        arr.push(oSel, dSel);
         idx++;
       }
       return arr;
@@ -514,10 +558,10 @@
       }
       const sels = gather();
       const allRand = sels.every(s => s.value === 'random');
-      const allCan = sels.every(s => s.value === 'canonical');
+      const allDef = sels.every(s => s.value === (s.options[0]?.value || 'canonical'));
       btn.classList.remove('active', 'indeterminate');
       if (allRand) btn.classList.add('active');
-      else if (!allCan) btn.classList.add('indeterminate');
+      else if (!allDef) btn.classList.add('indeterminate');
     };
     const reroll = () => {
       const advanced = adv && adv.checked;
@@ -530,9 +574,9 @@
         return;
       }
       const allRand = sels.every(s => s.value === 'random');
-      const target = allRand ? 'canonical' : 'random';
       sels.forEach(s => {
-        s.value = target;
+        const defVal = s.options[0]?.value || 'canonical';
+        s.value = allRand ? defVal : 'random';
         s.dispatchEvent(new Event('change'));
       });
       updateState();
@@ -566,8 +610,14 @@
         const inp = document.getElementById(
           `${prefix}-order-input${idx === 1 ? '' : '-' + idx}`
         );
-        if (!sel || !inp) break;
-        arr.push({ select: sel, input: inp, items });
+        const dsel = document.getElementById(
+          `${prefix}-depth-select${idx === 1 ? '' : '-' + idx}`
+        );
+        const dinp = document.getElementById(
+          `${prefix}-depth-input${idx === 1 ? '' : '-' + idx}`
+        );
+        if (!sel || !inp || !dsel || !dinp) break;
+        arr.push({ select: sel, input: inp, depthSelect: dsel, depthInput: dinp, items });
         idx++;
       }
       return arr;
@@ -581,24 +631,22 @@
     ];
 
     configs.forEach(cfg => {
-      if (cfg.select.value !== 'random') return;
-      const arr = cfg.items.map((_, i) => i);
-      utils.shuffle(arr);
-      cfg.input.value = arr.join(', ');
+      if (cfg.select.value === 'random') {
+        const arr = cfg.items.map((_, i) => i);
+        utils.shuffle(arr);
+        cfg.input.value = arr.join(', ');
+      }
+      if (cfg.depthSelect.value === 'random') {
+        const countWords = str => {
+          const cleaned = str.trim().replace(/[,.!:;?]$/, '');
+          if (!cleaned) return 0;
+          return cleaned.split(/\s+/).length;
+        };
+        const counts = baseItems.map(b => countWords(b));
+        const vals = counts.map(c => Math.floor(Math.random() * (c + 1)));
+        cfg.depthInput.value = vals.join(', ');
+      }
     });
-
-    const insertSel = document.getElementById('insert-select');
-    const insertInp = document.getElementById('insert-input');
-    if (insertSel && insertInp && insertSel.value === 'random') {
-      const countWords = str => {
-        const cleaned = str.trim().replace(/[,.!:;?]$/, '');
-        if (!cleaned) return 0;
-        return cleaned.split(/\s+/).length;
-      };
-      const counts = baseItems.map(b => countWords(b));
-      const vals = counts.map(c => Math.floor(Math.random() * (c + 1)));
-      insertInp.value = vals.join(', ');
-    }
   }
 
   function setupStateButtons() {
@@ -671,11 +719,14 @@
     setupOrderControl('divider-order-select', 'divider-order-input', () =>
       utils.parseDividerInput(document.getElementById('divider-input').value || '')
     );
+    setupDepthControl('base-depth-select', 'base-depth-input');
+    setupDepthControl('pos-depth-select', 'pos-depth-input');
+    setupDepthControl('neg-depth-select', 'neg-depth-input');
+    setupDepthControl('divider-depth-select', 'divider-depth-input');
     setupRerollButton('base-reroll', 'base-order-select');
     setupRerollButton('pos-reroll', 'pos-order-select');
     setupRerollButton('neg-reroll', 'neg-order-select');
     setupRerollButton('divider-reroll', 'divider-order-select');
-    setupRerollButton('insert-reroll', 'insert-select');
     setupAdvancedToggle();
     document.getElementById('generate').addEventListener('click', generate);
 
@@ -699,7 +750,6 @@
     }
 
     setupCopyButtons();
-    setupDepthControls();
     setupStateButtons();
 
     const loadBtn = document.getElementById('load-lists');
@@ -738,8 +788,6 @@
     if (divSave) divSave.addEventListener('click', () => lists.saveList('divider'));
     const lyricsSave = document.getElementById('lyrics-save');
     if (lyricsSave) lyricsSave.addEventListener('click', () => lists.saveList('lyrics'));
-    const insertSave = document.getElementById('insert-save');
-    if (insertSave) insertSave.addEventListener('click', () => lists.saveList('order'));
   }
 
   const api = {
@@ -754,7 +802,7 @@
     setupStackControls,
     setupHideToggles,
     setupCopyButtons,
-    setupDepthControls,
+    setupDepthControl,
     setupStateButtons,
     setupOrderControl,
     setupAdvancedToggle,

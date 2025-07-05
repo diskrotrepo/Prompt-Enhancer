@@ -245,6 +245,7 @@ describe('Prompt building', () => {
       2,
       null,
       null,
+      null,
       [[0, 1], [1, 0]],
       [[1, 0], [0, 1]]
     );
@@ -293,6 +294,7 @@ describe('Prompt building', () => {
       true,
       1,
       1,
+      null,
       null,
       [1, 0]
     );
@@ -353,9 +355,13 @@ describe('UI interactions', () => {
   test('order all toggles dropdown values', () => {
     document.body.innerHTML = `
       <select id="base-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="base-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
       <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
       <select id="neg-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="neg-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
       <select id="divider-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="divider-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
       <input type="checkbox" id="all-random">
       <button class="toggle-button" data-target="all-random"></button>
     `;
@@ -404,6 +410,8 @@ describe('UI interactions', () => {
         <option value="random">r</option>
       </select>
       <textarea id="base-order-input"></textarea>
+      <select id="base-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+      <textarea id="base-depth-input"></textarea>
       <button id="base-reroll" class="toggle-button random-button" data-select="base-order-select"></button>
     `;
     const orig = utils.shuffle;
@@ -424,6 +432,8 @@ describe('UI interactions', () => {
         <option value="random">r</option>
       </select>
       <textarea id="base-order-input"></textarea>
+      <select id="base-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+      <textarea id="base-depth-input"></textarea>
       <textarea id="base-input">a,b</textarea>
     `;
     const orig = utils.shuffle;
@@ -446,11 +456,21 @@ describe('UI interactions', () => {
         <option value="random">r</option>
       </select>
       <textarea id="pos-order-input"></textarea>
+      <select id="pos-depth-select">
+        <option value="prepend">p</option>
+        <option value="random">r</option>
+      </select>
+      <textarea id="pos-depth-input"></textarea>
       <select id="pos-order-select-2">
         <option value="canonical">c</option>
         <option value="random">r</option>
       </select>
       <textarea id="pos-order-input-2"></textarea>
+      <select id="pos-depth-select-2">
+        <option value="prepend">p</option>
+        <option value="random">r</option>
+      </select>
+      <textarea id="pos-depth-input-2"></textarea>
       <textarea id="pos-input">a,b</textarea>
     `;
     const orig = utils.shuffle;
@@ -477,11 +497,16 @@ describe('UI interactions', () => {
           <option value="random">r</option>
         </select>
         <div class="input-row"><textarea id="pos-order-input"></textarea></div>
-        <select id="pos-order-select-2">
-          <option value="canonical">c</option>
-          <option value="random">r</option>
-        </select>
-        <div class="input-row"><textarea id="pos-order-input-2"></textarea></div>
+      <select id="pos-order-select-2">
+        <option value="canonical">c</option>
+        <option value="random">r</option>
+      </select>
+      <div class="input-row"><textarea id="pos-order-input-2"></textarea></div>
+      <select id="pos-depth-select-2">
+        <option value="prepend">p</option>
+        <option value="random">r</option>
+      </select>
+      <div class="input-row"><textarea id="pos-depth-input-2"></textarea></div>
       </div>
       <button id="base-reroll"></button>
     `;
@@ -519,9 +544,15 @@ describe('UI interactions', () => {
           <option value="random">r</option>
         </select>
         <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+        <select id="pos-depth-select">
+          <option value="prepend">p</option>
+          <option value="random">r</option>
+        </select>
+        <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
       </div>
       <button id="pos-reroll"></button>
       <textarea id="pos-input">a,b</textarea>
+      <textarea id="base-input">base</textarea>
     `;
     setupOrderControl('pos-order-select', 'pos-order-input', () => ['a', 'b']);
     setupRerollButton('pos-reroll', 'pos-order-select');
@@ -545,13 +576,24 @@ describe('UI interactions', () => {
           <option value="random">r</option>
         </select>
         <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+        <select id="pos-depth-select">
+          <option value="prepend">p</option>
+          <option value="random">r</option>
+        </select>
+        <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
         <select id="pos-order-select-2">
           <option value="canonical">c</option>
           <option value="random">r</option>
         </select>
         <div class="input-row"><textarea id="pos-order-input-2"></textarea></div>
+        <select id="pos-depth-select-2">
+          <option value="prepend">p</option>
+          <option value="random">r</option>
+        </select>
+        <div class="input-row"><textarea id="pos-depth-input-2"></textarea></div>
       </div>
       <button id="pos-reroll" class="random-button"></button>
+      <textarea id="base-input">base</textarea>
     `;
     document.getElementById('pos-order-select').value = 'random';
     document.getElementById('pos-order-select-2').value = 'canonical';
@@ -573,13 +615,24 @@ describe('UI interactions', () => {
           <option value="random">r</option>
         </select>
         <div class="input-row"><textarea id="neg-order-input"></textarea></div>
+        <select id="neg-depth-select">
+          <option value="prepend">p</option>
+          <option value="random">r</option>
+        </select>
+        <div class="input-row"><textarea id="neg-depth-input"></textarea></div>
         <select id="neg-order-select-2">
           <option value="canonical">c</option>
           <option value="random">r</option>
         </select>
         <div class="input-row"><textarea id="neg-order-input-2"></textarea></div>
+        <select id="neg-depth-select-2">
+          <option value="prepend">p</option>
+          <option value="random">r</option>
+        </select>
+        <div class="input-row"><textarea id="neg-depth-input-2"></textarea></div>
       </div>
       <button id="neg-reroll" class="random-button"></button>
+      <textarea id="base-input">base</textarea>
     `;
     setupRerollButton('neg-reroll', 'neg-order-select');
     setupAdvancedToggle();
