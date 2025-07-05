@@ -1,5 +1,9 @@
 (function (global) {
-  const utils = global.promptUtils || (typeof require !== 'undefined' && require('./promptUtils'));
+  const utils =
+    global.promptUtils ||
+    (typeof require !== 'undefined' && require('../core/promptUtils'));
+  const coreLists =
+    global.coreLists || (typeof require !== 'undefined' && require('../core/lists'));
   let NEG_PRESETS = {};
   let POS_PRESETS = {};
   let LENGTH_PRESETS = {};
@@ -29,6 +33,8 @@
   } else {
     LISTS = { presets: [] };
   }
+  coreLists.importLists(LISTS);
+  LISTS = coreLists.LISTS;
 
   function populateSelect(selectEl, presets) {
     selectEl.innerHTML = '';
@@ -102,40 +108,12 @@
   }
 
   function exportLists() {
-    return JSON.stringify(LISTS, null, 2);
+    return coreLists.exportLists();
   }
 
   function importLists(obj, additive = false) {
-    if (!obj || typeof obj !== 'object' || !Array.isArray(obj.presets)) return;
-    if (!additive) {
-      LISTS = {
-        presets: obj.presets.map(p => ({
-          id: p.id,
-          title: p.title,
-          type: p.type,
-          items: Array.isArray(p.items) ? p.items : []
-        }))
-      };
-    } else {
-      const existing = LISTS.presets.slice();
-      obj.presets.forEach(p => {
-        const idx = existing.findIndex(
-          e => e.id === p.id && e.type === p.type && e.title === p.title
-        );
-        const preset = {
-          id: p.id,
-          title: p.title,
-          type: p.type,
-          items: Array.isArray(p.items) ? p.items : []
-        };
-        if (idx !== -1) {
-          existing[idx] = preset;
-        } else {
-          existing.push(preset);
-        }
-      });
-      LISTS.presets = existing;
-    }
+    coreLists.importLists(obj, additive);
+    LISTS = coreLists.LISTS;
     loadLists();
   }
 
@@ -202,6 +180,7 @@
     }
     cfg.store[name] = items;
     sel.value = name;
+    coreLists.importLists({ presets: LISTS.presets.slice() }, true);
   }
 
   const api = {

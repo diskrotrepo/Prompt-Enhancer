@@ -1,10 +1,13 @@
 (function (global) {
   const utils =
-    global.promptUtils || (typeof require !== 'undefined' && require('./promptUtils'));
+    global.promptUtils ||
+    (typeof require !== 'undefined' && require('../core/promptUtils'));
   const lists =
-    global.listManager || (typeof require !== 'undefined' && require('./listManager'));
+    global.listManager ||
+    (typeof require !== 'undefined' && require('./listManager'));
   const state =
-    global.stateManager || (typeof require !== 'undefined' && require('./stateManager'));
+    global.stateManager ||
+    (typeof require !== 'undefined' && require('./stateManager'));
 
   function applyPreset(selectEl, inputEl, presetsOrType) {
     let presets = presetsOrType;

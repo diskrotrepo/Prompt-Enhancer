@@ -1,4 +1,6 @@
 (function (global) {
+  const coreState =
+    global.stateUtils || (typeof require !== 'undefined' && require('../core/state'));
   const State = {};
 
   function getVal(el) {
@@ -80,7 +82,7 @@
   }
 
   function exportState() {
-    return JSON.stringify(State, null, 2);
+    return coreState.exportState(State);
   }
 
   function importState(obj) {
