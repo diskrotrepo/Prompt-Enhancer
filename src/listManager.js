@@ -19,14 +19,34 @@
         const loc = p.isAbsolute(path) ? path : p.join(__dirname, path);
         data = JSON.parse(fs.readFileSync(loc, 'utf8'));
       } else {
-        const res = await fetch(path);
-        data = await res.json();
+        try {
+          const res = await fetch(path);
+          if (!res.ok) throw new Error('fetch failed');
+          data = await res.json();
+        } catch (err) {
+          if (typeof XMLHttpRequest !== 'undefined') {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', path, false);
+            try {
+              xhr.send();
+              if (xhr.status >= 200 && xhr.status < 300) {
+                data = JSON.parse(xhr.responseText);
+              } else {
+                throw err;
+              }
+            } catch (_) {
+              throw err;
+            }
+          } else {
+            throw err;
+          }
+        }
       }
       LISTS = data;
-      loadLists();
     } catch (err) {
       LISTS = { presets: [] };
     }
+    loadLists();
   }
 
   function populateSelect(selectEl, presets) {
