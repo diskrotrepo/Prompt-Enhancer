@@ -31,7 +31,8 @@ const {
   applyPreset,
   setupOrderControl,
   setupRerollButton,
-  rerollRandomOrders
+  rerollRandomOrders,
+  setupAdvancedToggle
 } = ui;
 
 describe('Utility functions', () => {
@@ -463,6 +464,41 @@ describe('UI interactions', () => {
     utils.shuffle = orig;
     expect(document.getElementById('pos-order-input').value).toBe('1, 0');
     expect(document.getElementById('pos-order-input-2').value).toBe('1, 0');
+  });
+
+  test('advanced toggle shows and hides controls', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <select id="base-order-select"></select>
+      <div class="input-row"><textarea id="base-order-input"></textarea></div>
+      <div id="pos-order-container">
+        <select id="pos-order-select"></select>
+        <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+        <select id="pos-order-select-2"></select>
+        <div class="input-row"><textarea id="pos-order-input-2"></textarea></div>
+      </div>
+      <button id="base-reroll"></button>
+    `;
+    setupAdvancedToggle();
+    const cb = document.getElementById('advanced-mode');
+    const select = document.getElementById('base-order-select');
+    const taRow = document.getElementById('base-order-input').parentElement;
+    const cont = document.getElementById('pos-order-container');
+    const btn = document.getElementById('base-reroll');
+
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+    expect(select.style.display).toBe('');
+    expect(taRow.style.display).toBe('');
+    expect(cont.style.display).toBe('');
+    expect(btn.style.display).toBe('none');
+
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change'));
+    expect(select.style.display).toBe('none');
+    expect(taRow.style.display).toBe('none');
+    expect(cont.style.display).toBe('none');
+    expect(btn.style.display).toBe('');
   });
 });
 
