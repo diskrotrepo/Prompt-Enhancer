@@ -45,6 +45,12 @@
     return items.filter(Boolean);
   }
 
+  function countWords(str) {
+    const cleaned = str.trim().replace(/[,.!:;?]$/, '');
+    if (!cleaned) return 0;
+    return cleaned.split(/\s+/).length;
+  }
+
   function parseDividerInput(raw) {
     if (!raw) return [];
     return raw.split(/\r?\n/).filter(line => line !== '');
@@ -403,6 +409,7 @@
 
   const api = {
     parseInput,
+    countWords,
     parseDividerInput,
     parseOrderInput,
     applyOrder,
