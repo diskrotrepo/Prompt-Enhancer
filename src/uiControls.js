@@ -10,6 +10,23 @@
     return m ? m[1] : id.replace(/-select.*$/, '');
   }
 
+  function gatherControls(prefix, base) {
+    const results = [];
+    let idx = 1;
+    while (true) {
+      const sel = document.getElementById(
+        `${prefix}-${base}-select${idx === 1 ? '' : '-' + idx}`
+      );
+      if (!sel) break;
+      const inp = document.getElementById(
+        `${prefix}-${base}-input${idx === 1 ? '' : '-' + idx}`
+      );
+      results.push({ select: sel, input: inp });
+      idx++;
+    }
+    return results;
+  }
+
   function applyPreset(selectEl, inputEl, presetsOrType) {
     let presets = presetsOrType;
     if (typeof presetsOrType === 'string') {
@@ -603,23 +620,13 @@
     const adv = document.getElementById('advanced-mode');
     if (!btn || !select) return;
     const prefix = guessPrefix(selectId);
-    const gather = () => {
-      const arr = [];
-      let idx = 1;
-      while (true) {
-        const orderSel = document.getElementById(
-          `${prefix}-order-select${idx === 1 ? '' : '-' + idx}`
-        );
-        if (!orderSel) break;
-        arr.push(orderSel);
-        const depthSel = document.getElementById(
-          `${prefix}-depth-select${idx === 1 ? '' : '-' + idx}`
-        );
-        if (depthSel) arr.push(depthSel);
-        idx++;
-      }
-      return arr;
-    };
+    const gather = () =>
+      [
+        ...gatherControls(prefix, 'order'),
+        ...gatherControls(prefix, 'depth')
+      ]
+        .map(p => p.select)
+        .filter(Boolean);
     const updateState = () => {
       const sels = gather();
       const canonicalFor = s => (s.id.includes('-depth-select') ? 'prepend' : 'canonical');
@@ -673,21 +680,11 @@
     );
 
     function gather(prefix, items) {
-      const arr = [];
-      let idx = 1;
-      while (true) {
-        const sel = document.getElementById(
-          `${prefix}-order-select${idx === 1 ? '' : '-' + idx}`
-        );
-        const inp = document.getElementById(
-          `${prefix}-order-input${idx === 1 ? '' : '-' + idx}`
-        );
-        if (!sel || !inp) break;
-        const it = Array.isArray(items[0]) ? items[idx - 1] || items[0] : items;
-        arr.push({ select: sel, input: inp, items: it });
-        idx++;
-      }
-      return arr;
+      return gatherControls(prefix, 'order').map((pair, i) => ({
+        select: pair.select,
+        input: pair.input,
+        items: Array.isArray(items[0]) ? items[i] || items[0] : items
+      }));
     }
 
     const configs = [
@@ -705,20 +702,7 @@
     });
 
     function gatherDepth(prefix) {
-      const arr = [];
-      let idx = 1;
-      while (true) {
-        const sel = document.getElementById(
-          `${prefix}-depth-select${idx === 1 ? '' : '-' + idx}`
-        );
-        const inp = document.getElementById(
-          `${prefix}-depth-input${idx === 1 ? '' : '-' + idx}`
-        );
-        if (!sel || !inp) break;
-        arr.push({ select: sel, input: inp });
-        idx++;
-      }
-      return arr;
+      return gatherControls(prefix, 'depth');
     }
 
     const depthConfigs = [...gatherDepth('pos'), ...gatherDepth('neg')];
