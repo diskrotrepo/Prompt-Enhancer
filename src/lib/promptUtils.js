@@ -83,6 +83,26 @@
     return words.join(' ') + tail;
   }
 
+  function insertAtBaseDepth(phrase, term, baseDepth, baseLen, inserted) {
+    if (!term) return phrase;
+    const match = phrase.match(/([,.!:;?\n]\s*)$/);
+    let tail = '';
+    let body = phrase;
+    if (match) {
+      tail = match[1];
+      body = phrase.slice(0, -tail.length).trim();
+    } else {
+      body = phrase.trim();
+    }
+    const words = body ? body.split(/\s+/) : [];
+    const pos = ((baseDepth % (baseLen + 1)) + (baseLen + 1)) % (baseLen + 1);
+    const offset = inserted.filter(d => d <= pos).length;
+    const idx = Math.min(pos + offset, words.length);
+    words.splice(idx, 0, term);
+    inserted.push(pos);
+    return words.join(' ') + tail;
+  }
+
   function shuffle(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -112,7 +132,7 @@
     const prefixPool = prefixOrder ? applyOrder(prefixes, prefixOrder) : prefixes.slice();
     const dividerPool = dividers.slice();
     let depthPool = null;
-    if (Array.isArray(depths)) {
+    if (Array.isArray(depths) && depths.length) {
       depthPool = Array.isArray(depths[0]) ? depths.map(d => d.slice()) : depths.slice();
     }
     const result = [];
@@ -180,7 +200,7 @@
     let items = baseItems.slice();
     if (itemOrder) items = applyOrder(items, itemOrder);
     let depthPool = null;
-    if (Array.isArray(depths)) {
+    if (Array.isArray(depths) && depths.length) {
       depthPool = Array.isArray(depths[0]) ? depths.map(d => d.slice()) : depths.slice();
     }
     const result = [];
@@ -189,8 +209,12 @@
     while (true) {
       const needDivider = idx > 0 && idx % items.length === 0 && dividerPool.length;
       let term = items[idx % items.length];
+      const baseBody = term.replace(/([,.!:;?\n]\s*)$/, '').trim();
+      const baseLen = baseBody ? baseBody.split(/\s+/).length : 0;
+      const insertedPos = [];
       orders.forEach((mods, sidx) => {
         const mod = mods[idx % mods.length];
+        if (!mod) return;
         let depth = 0;
         if (depthPool) {
           if (Array.isArray(depthPool[sidx])) {
@@ -200,7 +224,7 @@
             depth = depthPool[idx % depthPool.length] || 0;
           }
         }
-        term = mod ? insertAtDepth(term, mod, depth) : term;
+        term = insertAtBaseDepth(term, mod, depth, baseLen, insertedPos);
       });
       const pieces = [];
       if (needDivider) pieces.push(dividerPool[divIdx % dividerPool.length]);
@@ -252,7 +276,7 @@
     let items = posTerms.slice();
     if (itemOrder) items = applyOrder(items, itemOrder);
     let depthPool = null;
-    if (Array.isArray(depths)) {
+    if (Array.isArray(depths) && depths.length) {
       depthPool = Array.isArray(depths[0]) ? depths.map(d => d.slice()) : depths.slice();
     }
     for (let i = 0; i < items.length; i++) {
@@ -266,8 +290,12 @@
         continue;
       }
       let term = base;
+      const baseBody = term.replace(/([,.!:;?\n]\s*)$/, '').trim();
+      const baseLen = baseBody ? baseBody.split(/\s+/).length : 0;
+      const insertedPos = [];
       orders.forEach((mods, sidx) => {
         const mod = mods[modIdx % mods.length];
+        if (!mod) return;
         let depth = 0;
         if (depthPool) {
           if (Array.isArray(depthPool[sidx])) {
@@ -277,7 +305,7 @@
             depth = depthPool[modIdx % depthPool.length] || 0;
           }
         }
-        term = mod ? insertAtDepth(term, mod, depth) : term;
+        term = insertAtBaseDepth(term, mod, depth, baseLen, insertedPos);
       });
       const candidate =
         (result.length ? result.join(delimited ? '' : ', ') + (delimited ? '' : ', ') : '') +

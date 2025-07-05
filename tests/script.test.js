@@ -156,7 +156,7 @@ describe('Prompt building', () => {
       1,
       [[1], [2]]
     );
-    expect(out).toEqual({ positive: 'a x y b c', negative: 'a n b c' });
+    expect(out).toEqual({ positive: 'a x b y c', negative: 'a n b c' });
   });
 
   test('negative depth offset accounts for stacked positives', () => {
@@ -172,7 +172,40 @@ describe('Prompt building', () => {
       1,
       [1]
     );
-    expect(out).toEqual({ positive: 'foo great good bar baz', negative: 'foo great good bad bar baz' });
+    expect(out).toEqual({ positive: 'foo good great bar baz', negative: 'foo good great bad bar baz' });
+  });
+
+  test('stacked modifiers support prepend then append', () => {
+    const out = buildVersions(
+      ['cat'],
+      [],
+      [['good'], ['bad']],
+      20,
+      false,
+      [],
+      true,
+      2,
+      1,
+      [[0], [1]]
+    );
+    expect(out).toEqual({ positive: 'good cat bad', negative: 'cat' });
+  });
+
+  test('prepend and append work with multi-word bases', () => {
+    const out = buildVersions(
+      ['foo bar'],
+      [],
+      [['good'], ['bad']],
+      40,
+      false,
+      [],
+      true,
+      2,
+      1,
+      [[0], [2]]
+    );
+    expect(out.positive).toBe('good foo bar bad, good foo bar bad');
+    expect(out.negative).toBe('foo bar, foo bar');
   });
 
   test('buildVersions returns empty strings when items list is empty', () => {
@@ -285,8 +318,8 @@ describe('Prompt building', () => {
       [[0, 1], [1, 0]],
       [[1, 0], [0, 1]]
     );
-    expect(out.positive).toBe('p2 p1 x, p1 p2 x');
-    expect(out.negative).toBe('n1 n2 x, n2 n1 x');
+    expect(out.positive).toBe('p1 p2 x, p2 p1 x');
+    expect(out.negative).toBe('n2 n1 x, n1 n2 x');
   });
 
   test('buildVersions accepts different lists per stack', () => {
@@ -301,8 +334,8 @@ describe('Prompt building', () => {
       2,
       2
     );
-    expect(out.positive).toBe('p2 p1 x, p2 p1 x');
-    expect(out.negative).toBe('n2 n1 x, n2 n1 x');
+    expect(out.positive).toBe('p1 p2 x, p1 p2 x');
+    expect(out.negative).toBe('n1 n2 x, n1 n2 x');
   });
 
   test('stacking works with natural dividers', () => {
