@@ -530,6 +530,47 @@
       block.className = 'stack-block';
       block.id = `${prefix}-stack-${idx}`;
 
+      if (idx > 1) {
+        const labelRow = document.createElement('div');
+        labelRow.className = 'label-row';
+        const lbl = document.createElement('label');
+        lbl.textContent = `Stack ${idx}`;
+        labelRow.appendChild(lbl);
+        const btnCol = document.createElement('div');
+        btnCol.className = 'button-col';
+        const save = document.createElement('button');
+        save.type = 'button';
+        save.id = `${prefix}-save-${idx}`;
+        save.className = 'save-button icon-button';
+        save.title = 'Save';
+        save.innerHTML = '&#128190;';
+        save.addEventListener('click', () => lists.saveList(type, idx));
+        btnCol.appendChild(save);
+        const copy = document.createElement('button');
+        copy.type = 'button';
+        copy.className = 'copy-button icon-button';
+        copy.dataset.target = `${prefix}-input-${idx}`;
+        copy.title = 'Copy';
+        copy.innerHTML = '&#128203;';
+        btnCol.appendChild(copy);
+        const hideCb = document.createElement('input');
+        hideCb.type = 'checkbox';
+        hideCb.id = `${prefix}-hide-${idx}`;
+        hideCb.dataset.targets = `${prefix}-input-${idx},${prefix}-order-input-${idx}`;
+        hideCb.hidden = true;
+        btnCol.appendChild(hideCb);
+        const hideBtn = document.createElement('button');
+        hideBtn.type = 'button';
+        hideBtn.className = 'toggle-button icon-button hide-button';
+        hideBtn.dataset.target = hideCb.id;
+        hideBtn.dataset.on = '☰';
+        hideBtn.dataset.off = '✖';
+        hideBtn.textContent = '☰';
+        btnCol.appendChild(hideBtn);
+        labelRow.appendChild(btnCol);
+        block.appendChild(labelRow);
+      }
+
       const sel = document.createElement('select');
       sel.id = `${prefix}-select-${idx}`;
       const baseSel = document.getElementById(`${prefix}-select`);
@@ -605,6 +646,8 @@
       const block = document.getElementById(`${prefix}-stack-${i}`);
       if (block) block.remove();
     }
+    setupCopyButtons();
+    setupHideToggles();
     const adv = document.getElementById('advanced-mode');
     if (adv && !adv.checked) adv.dispatchEvent(new Event('change'));
   }
@@ -845,6 +888,7 @@
     setupDataButtons,
     setupOrderControl,
     setupAdvancedToggle,
+    updateStackBlocks,
     rerollRandomOrders,
     setupRerollButton,
     initializeUI

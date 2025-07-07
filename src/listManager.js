@@ -156,7 +156,7 @@
     loadLists();
   }
 
-  function saveList(type) {
+  function saveList(type, index = 1) {
     const map = {
       base: { select: 'base-select', input: 'base-input', store: BASE_PRESETS },
       negative: { select: 'neg-select', input: 'neg-input', store: NEG_PRESETS },
@@ -168,8 +168,10 @@
     };
     const cfg = map[type];
     if (!cfg) return;
-    const sel = document.getElementById(cfg.select);
-    const inp = document.getElementById(cfg.input);
+    const selId = index === 1 ? cfg.select : `${cfg.select}-${index}`;
+    const inpId = index === 1 ? cfg.input : `${cfg.input}-${index}`;
+    const sel = document.getElementById(selId);
+    const inp = document.getElementById(inpId);
     if (!sel || !inp) return;
     const name = prompt('Enter list name', sel.value);
     if (!name) return;
@@ -188,7 +190,13 @@
       const opt = document.createElement('option');
       opt.value = name;
       opt.textContent = name;
-      sel.appendChild(opt);
+      document
+        .querySelectorAll(`select[id^="${cfg.select}"]`)
+        .forEach(s => {
+          if (!s.querySelector(`option[value="${name}"]`)) {
+            s.appendChild(opt.cloneNode(true));
+          }
+        });
     } else {
       preset.items = items;
     }

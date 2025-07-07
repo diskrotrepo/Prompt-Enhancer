@@ -32,7 +32,8 @@ const {
   setupOrderControl,
   setupRerollButton,
   rerollRandomOrders,
-  setupAdvancedToggle
+  setupAdvancedToggle,
+  updateStackBlocks
 } = ui;
 
 describe('Utility functions', () => {
@@ -960,5 +961,19 @@ describe('List persistence', () => {
     const data = JSON.parse(exportLists());
     const lists = data.presets.filter(p => p.id === 'a' && p.type === 'positive');
     expect(lists.length).toBe(2);
+  });
+
+  test('updateStackBlocks adds buttons for extra stacks', () => {
+    document.body.innerHTML = `
+      <select id="pos-select"></select>
+      <select id="pos-order-select"></select>
+      <select id="pos-depth-select"></select>
+      <div id="pos-stack-container">
+        <div class="stack-block" id="pos-stack-1"></div>
+      </div>`;
+    updateStackBlocks('pos', 2);
+    const block = document.getElementById('pos-stack-2');
+    expect(block.querySelector('.copy-button')).not.toBeNull();
+    expect(block.querySelector('.save-button')).not.toBeNull();
   });
 });
