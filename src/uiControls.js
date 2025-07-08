@@ -363,7 +363,27 @@
       cb.addEventListener('change', update);
       update();
     });
+    const allHide = document.getElementById('all-hide');
+    if (allHide && allHide.checked) applyAllHideState();
     return hideCheckboxes;
+  }
+
+  function applyAllHideState() {
+    const allHide = document.getElementById('all-hide');
+    if (!allHide) return;
+    const hideCheckboxes = Array.from(
+      document.querySelectorAll('input[type="checkbox"][data-targets]')
+    );
+    hideCheckboxes.forEach(cb => {
+      cb.checked = allHide.checked;
+      const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
+      if (btn) updateButtonState(btn, cb);
+      cb.dispatchEvent(new Event('change'));
+    });
+    const allHideBtn = document.querySelector(
+      '.toggle-button[data-target="all-hide"]'
+    );
+    if (allHideBtn) updateButtonState(allHideBtn, allHide);
   }
 
   function setupCopyButtons() {
@@ -838,20 +858,12 @@
     setupToggleButtons();
     setupStackControls();
     setupShuffleAll();
-    const hideCheckboxes = setupHideToggles();
+    setupHideToggles();
 
     const allHide = document.getElementById('all-hide');
     if (allHide) {
-      allHide.addEventListener('change', () => {
-        hideCheckboxes.forEach(cb => {
-          cb.checked = allHide.checked;
-          const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
-          if (btn) updateButtonState(btn, cb);
-          cb.dispatchEvent(new Event('change'));
-        });
-        const allHideBtn = document.querySelector('.toggle-button[data-target="all-hide"]');
-        if (allHideBtn) updateButtonState(allHideBtn, allHide);
-      });
+      allHide.addEventListener('change', applyAllHideState);
+      if (allHide.checked) applyAllHideState();
     }
 
     setupCopyButtons();
@@ -885,6 +897,7 @@
     setupShuffleAll,
     setupStackControls,
     setupHideToggles,
+    applyAllHideState,
     setupCopyButtons,
     setupDataButtons,
     setupOrderControl,

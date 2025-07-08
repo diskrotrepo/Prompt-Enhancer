@@ -28,6 +28,7 @@ const {
   setupShuffleAll,
   setupStackControls,
   setupHideToggles,
+  applyAllHideState,
   applyPreset,
   setupOrderControl,
   setupRerollButton,
@@ -975,5 +976,36 @@ describe('List persistence', () => {
     const block = document.getElementById('pos-stack-2');
     expect(block.querySelector('.copy-button')).not.toBeNull();
     expect(block.querySelector('.save-button')).not.toBeNull();
+  });
+
+  test('all-hide affects newly created stack blocks', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="all-hide">
+      <input type="checkbox" id="pos-stack">
+      <select id="pos-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="pos-shuffle">
+      <select id="pos-select"></select>
+      <select id="pos-order-select"></select>
+      <select id="pos-depth-select"></select>
+      <div id="pos-stack-container">
+        <div class="stack-block" id="pos-stack-1">
+          <div class="input-row"><textarea id="pos-input"></textarea></div>
+          <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+        </div>
+      </div>`;
+    setupStackControls();
+    setupHideToggles();
+    document.getElementById('all-hide').addEventListener('change', applyAllHideState);
+    const allHide = document.getElementById('all-hide');
+    allHide.checked = true;
+    allHide.dispatchEvent(new Event('change'));
+    const posStack = document.getElementById('pos-stack');
+    posStack.checked = true;
+    posStack.dispatchEvent(new Event('change'));
+    const posInput2 = document.getElementById('pos-input-2');
+    expect(posInput2.style.display).toBe('none');
+    allHide.checked = false;
+    allHide.dispatchEvent(new Event('change'));
+    expect(posInput2.style.display).toBe('');
   });
 });
