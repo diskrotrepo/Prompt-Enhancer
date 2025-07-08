@@ -668,6 +668,7 @@
       if (block) block.remove();
     }
     setupCopyButtons();
+    setupToggleButtons();
     setupHideToggles();
     const adv = document.getElementById('advanced-mode');
     if (adv && !adv.checked) adv.dispatchEvent(new Event('change'));
