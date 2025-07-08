@@ -1008,4 +1008,31 @@ describe('List persistence', () => {
     allHide.dispatchEvent(new Event('change'));
     expect(posInput2.style.display).toBe('');
   });
+
+  test('hide button works for new stack blocks', () => {
+    document.body.innerHTML = `
+      <select id="pos-select"></select>
+      <select id="pos-order-select"></select>
+      <select id="pos-depth-select"></select>
+      <div id="pos-stack-container">
+        <div class="stack-block" id="pos-stack-1">
+          <div class="button-col">
+            <input type="checkbox" id="pos-hide" data-targets="pos-input,pos-order-input" hidden>
+            <button class="toggle-button hide-button" data-target="pos-hide"></button>
+          </div>
+          <div class="input-row"><textarea id="pos-input"></textarea></div>
+          <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+        </div>
+      </div>`;
+    setupHideToggles();
+    updateStackBlocks('pos', 2);
+    const btn = document.querySelector('#pos-stack-2 .hide-button');
+    const input = document.getElementById('pos-input-2');
+    expect(btn).not.toBeNull();
+    expect(input).not.toBeNull();
+    btn.click();
+    expect(input.style.display).toBe('none');
+    btn.click();
+    expect(input.style.display).toBe('');
+  });
 });
