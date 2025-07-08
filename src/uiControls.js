@@ -527,7 +527,8 @@
     for (let i = current; i < count; i++) {
       const idx = i + 1;
       const block = document.createElement('div');
-      block.className = 'stack-block';
+      const sec = prefix === 'neg' ? 'negative' : 'positive';
+      block.className = `stack-block section-${sec}`;
       block.id = `${prefix}-stack-${idx}`;
 
       if (idx > 1) {

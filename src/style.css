@@ -534,3 +534,45 @@ button {
 .stack-block {
   margin-bottom: 1rem;
 }
+
+.section-data,
+.section-actions,
+.section-divider,
+.section-base,
+.section-positive,
+.section-negative,
+.section-length,
+.section-lyrics {
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #444;
+}
+
+.section-base {
+  background: linear-gradient(45deg, rgba(13, 110, 253, 0.3), rgba(102, 16, 242, 0.3));
+}
+
+.section-positive {
+  background: linear-gradient(45deg, rgba(0, 100, 0, 0.3), rgba(0, 170, 85, 0.3));
+}
+
+.section-negative {
+  background: linear-gradient(45deg, rgba(102, 18, 0, 0.3), rgba(221, 44, 0, 0.3));
+}
+
+.section-divider {
+  background: linear-gradient(45deg, rgba(138, 97, 0, 0.3), rgba(218, 165, 32, 0.3));
+}
+
+.section-length {
+  background: linear-gradient(45deg, rgba(0, 95, 115, 0.3), rgba(10, 147, 150, 0.3));
+}
+
+.section-lyrics {
+  background: linear-gradient(45deg, rgba(75, 0, 130, 0.3), rgba(138, 43, 226, 0.3));
+}
+
+.section-actions,
+.section-data {
+  background: linear-gradient(45deg, rgba(80, 80, 80, 0.3), rgba(40, 40, 40, 0.3));
+}

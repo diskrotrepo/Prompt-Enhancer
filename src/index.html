@@ -32,7 +32,7 @@
       <div id="tool" class="content">
         <h1>Prompt Enhancer</h1>
         <!-- Lists manager moved to top -->
-          <div class="input-group">
+          <div class="input-group section-data">
             <div class="label-row">
               <label>Data</label>
               <input type="file" id="data-file" accept="application/json" style="display:none">
@@ -41,7 +41,7 @@
             </div>
           </div>
         <!-- Hide all toggle -->
-        <div class="input-group">
+        <div class="input-group section-actions">
           <div class="label-row">
             <label>Quick Actions</label>
             <input type="checkbox" id="all-hide" hidden>
@@ -52,7 +52,7 @@
             <button type="button" class="toggle-button" data-target="advanced-mode" data-on="Advanced" data-off="Simple">Simple</button>
           </div>
         </div>
-        <div class="input-group">
+        <div class="input-group section-divider">
           <div class="label-row">
             <label for="divider-input">Divider List</label>
             <div class="button-col">
@@ -74,7 +74,7 @@
           </div>
         </div>
         <!-- Base prompt input section -->
-        <div class="input-group">
+        <div class="input-group section-base">
           <div class="label-row">
             <label for="base-input">Base Prompt List</label>
             <div class="button-col">
@@ -96,7 +96,7 @@
           </div>
         </div>
         <!-- Positive modifier selection section -->
-        <div class="input-group">
+        <div class="input-group section-positive">
           <div class="label-row">
             <label for="pos-input">Positive Modifier List</label>
             <input type="checkbox" id="pos-stack" hidden>
@@ -116,7 +116,7 @@
             <option value="4">4</option>
           </select>
           <div id="pos-stack-container">
-            <div class="stack-block" id="pos-stack-1">
+            <div class="stack-block section-positive" id="pos-stack-1">
               <select id="pos-select">
                 <!-- Options will be populated dynamically from POSITIVE_LISTS -->
               </select>
@@ -145,7 +145,7 @@
           </div>
         </div>
         <!-- Negative modifier selection section -->
-        <div class="input-group">
+        <div class="input-group section-negative">
           <div class="label-row">
             <label for="neg-input">Negative Modifier List</label>
             <input type="checkbox" id="neg-include-pos" hidden>
@@ -167,7 +167,7 @@
             <option value="4">4</option>
           </select>
           <div id="neg-stack-container">
-            <div class="stack-block" id="neg-stack-1">
+            <div class="stack-block section-negative" id="neg-stack-1">
               <select id="neg-select">
                 <!-- Options will be populated dynamically from NEGATIVE_LISTS -->
               </select>
@@ -196,7 +196,7 @@
           </div>
         </div>
         <!-- Character length limit selection -->
-        <div class="input-group">
+        <div class="input-group section-length">
           <div class="label-row">
             <label for="length-input">Length Limit</label>
             <div class="button-col">
@@ -214,7 +214,7 @@
       </div>
     </div>
     <!-- Lyrics processing input -->
-      <div class="input-group">
+      <div class="input-group section-lyrics">
         <div class="label-row">
           <label for="lyrics-input">Lyrics</label>
           <input type="checkbox" id="lyrics-remove-parens" hidden>
