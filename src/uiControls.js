@@ -838,11 +838,14 @@
     setupToggleButtons();
     setupStackControls();
     setupShuffleAll();
-    const hideCheckboxes = setupHideToggles();
+    setupHideToggles();
 
     const allHide = document.getElementById('all-hide');
     if (allHide) {
       allHide.addEventListener('change', () => {
+        const hideCheckboxes = Array.from(
+          document.querySelectorAll('input[type="checkbox"][data-targets]')
+        );
         hideCheckboxes.forEach(cb => {
           cb.checked = allHide.checked;
           const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);

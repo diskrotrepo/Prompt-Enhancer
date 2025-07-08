@@ -33,7 +33,8 @@ const {
   setupRerollButton,
   rerollRandomOrders,
   setupAdvancedToggle,
-  updateStackBlocks
+  updateStackBlocks,
+  updateButtonState
 } = ui;
 
 describe('Utility functions', () => {
@@ -772,6 +773,50 @@ describe('UI interactions', () => {
     expect(orderCont.style.display).toBe('none');
     expect(depthSel.style.display).toBe('none');
     expect(depthCont.style.display).toBe('none');
+  });
+
+  test('all hide toggles stacked sections', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="all-hide">
+      <button class="toggle-button" data-target="all-hide"></button>
+      <textarea id="pos-input"></textarea>
+      <input type="checkbox" id="pos-hide" data-targets="pos-input" hidden>
+      <button class="toggle-button" data-target="pos-hide"></button>
+    `;
+    setupHideToggles();
+    const allHide = document.getElementById('all-hide');
+    allHide.addEventListener('change', () => {
+      const cbs = Array.from(
+        document.querySelectorAll('input[type="checkbox"][data-targets]')
+      );
+      cbs.forEach(cb => {
+        cb.checked = allHide.checked;
+        const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
+        if (btn) updateButtonState(btn, cb);
+        cb.dispatchEvent(new Event('change'));
+      });
+    });
+
+    // dynamically added stack
+    const ta2 = document.createElement('textarea');
+    ta2.id = 'pos-input-2';
+    document.body.appendChild(ta2);
+    const hide2 = document.createElement('input');
+    hide2.type = 'checkbox';
+    hide2.id = 'pos-hide-2';
+    hide2.dataset.targets = 'pos-input-2';
+    hide2.hidden = true;
+    document.body.appendChild(hide2);
+    const btn2 = document.createElement('button');
+    btn2.className = 'toggle-button';
+    btn2.dataset.target = 'pos-hide-2';
+    document.body.appendChild(btn2);
+    setupHideToggles();
+
+    allHide.checked = true;
+    allHide.dispatchEvent(new Event('change'));
+    expect(document.getElementById('pos-input').style.display).toBe('none');
+    expect(ta2.style.display).toBe('none');
   });
 });
 
