@@ -990,6 +990,13 @@ describe('List persistence', () => {
       <select id="pos-depth-select"></select>
       <div id="pos-stack-container">
         <div class="stack-block" id="pos-stack-1">
+          <div class="label-row">
+            <label>Stack 1</label>
+            <div class="button-col">
+              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-input" hidden>
+              <button type="button" class="toggle-button hide-button" data-target="pos-hide-1" data-on="☰" data-off="✖">☰</button>
+            </div>
+          </div>
           <div class="input-row"><textarea id="pos-input"></textarea></div>
           <div class="input-row"><textarea id="pos-order-input"></textarea></div>
         </div>
@@ -1020,6 +1027,13 @@ describe('List persistence', () => {
       <select id="pos-depth-select"></select>
       <div id="pos-stack-container">
         <div class="stack-block" id="pos-stack-1">
+          <div class="label-row">
+            <label>Stack 1</label>
+            <div class="button-col">
+              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-input" hidden>
+              <button type="button" class="toggle-button hide-button" data-target="pos-hide-1" data-on="☰" data-off="✖">☰</button>
+            </div>
+          </div>
           <div class="input-row"><textarea id="pos-input"></textarea></div>
           <div class="input-row"><textarea id="pos-order-input"></textarea></div>
         </div>
@@ -1036,5 +1050,43 @@ describe('List persistence', () => {
     expect(document.getElementById('pos-input-2').style.display).toBe('none');
     hideBtn.click();
     expect(document.getElementById('pos-input-2').style.display).toBe('');
+  });
+
+  test('hide buttons still work after toggling stacks on and off', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="pos-stack">
+      <select id="pos-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="pos-shuffle">
+      <select id="pos-select"></select>
+      <select id="pos-order-select"></select>
+      <select id="pos-depth-select"></select>
+      <div id="pos-stack-container">
+        <div class="stack-block" id="pos-stack-1">
+          <div class="label-row">
+            <label>Stack 1</label>
+            <div class="button-col">
+              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-input" hidden>
+              <button type="button" class="toggle-button hide-button" data-target="pos-hide-1" data-on="☰" data-off="✖">☰</button>
+            </div>
+          </div>
+          <div class="input-row"><textarea id="pos-input"></textarea></div>
+          <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+        </div>
+      </div>`;
+    setupToggleButtons();
+    setupStackControls();
+    setupHideToggles();
+    const cb = document.getElementById('pos-stack');
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change'));
+    const hideCb = document.getElementById('pos-hide-1');
+    hideCb.checked = true;
+    hideCb.dispatchEvent(new Event('change'));
+    expect(document.getElementById('pos-input').style.display).toBe('none');
+    hideCb.checked = false;
+    hideCb.dispatchEvent(new Event('change'));
+    expect(document.getElementById('pos-input').style.display).toBe('');
   });
 });
