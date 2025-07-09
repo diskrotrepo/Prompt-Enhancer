@@ -225,11 +225,14 @@
       const checkbox = document.getElementById(target);
       if (!checkbox) return;
       updateButtonState(btn, checkbox);
-      btn.addEventListener('click', () => {
-        checkbox.checked = !checkbox.checked;
-        updateButtonState(btn, checkbox);
-        checkbox.dispatchEvent(new Event('change'));
-      });
+      if (!btn.dataset.toggleInit) {
+        btn.addEventListener('click', () => {
+          checkbox.checked = !checkbox.checked;
+          updateButtonState(btn, checkbox);
+          checkbox.dispatchEvent(new Event('change'));
+        });
+        btn.dataset.toggleInit = 'true';
+      }
     });
   }
 
@@ -551,46 +554,46 @@
       block.className = `stack-block section-${sec}`;
       block.id = `${prefix}-stack-${idx}`;
 
-      if (idx > 1) {
-        const labelRow = document.createElement('div');
-        labelRow.className = 'label-row';
+      const labelRow = document.createElement('div');
+      labelRow.className = 'label-row';
+      if (count > 1) {
         const lbl = document.createElement('label');
         lbl.textContent = `Stack ${idx}`;
         labelRow.appendChild(lbl);
-        const btnCol = document.createElement('div');
-        btnCol.className = 'button-col';
-        const save = document.createElement('button');
-        save.type = 'button';
-        save.id = `${prefix}-save-${idx}`;
-        save.className = 'save-button icon-button';
-        save.title = 'Save';
-        save.innerHTML = '&#128190;';
-        save.addEventListener('click', () => lists.saveList(type, idx));
-        btnCol.appendChild(save);
-        const copy = document.createElement('button');
-        copy.type = 'button';
-        copy.className = 'copy-button icon-button';
-        copy.dataset.target = `${prefix}-input-${idx}`;
-        copy.title = 'Copy';
-        copy.innerHTML = '&#128203;';
-        btnCol.appendChild(copy);
-        const hideCb = document.createElement('input');
-        hideCb.type = 'checkbox';
-        hideCb.id = `${prefix}-hide-${idx}`;
-        hideCb.dataset.targets = `${prefix}-input-${idx},${prefix}-order-input-${idx}`;
-        hideCb.hidden = true;
-        btnCol.appendChild(hideCb);
-        const hideBtn = document.createElement('button');
-        hideBtn.type = 'button';
-        hideBtn.className = 'toggle-button icon-button hide-button';
-        hideBtn.dataset.target = hideCb.id;
-        hideBtn.dataset.on = '☰';
-        hideBtn.dataset.off = '✖';
-        hideBtn.textContent = '☰';
-        btnCol.appendChild(hideBtn);
-        labelRow.appendChild(btnCol);
-        block.appendChild(labelRow);
       }
+      const btnCol = document.createElement('div');
+      btnCol.className = 'button-col';
+      const save = document.createElement('button');
+      save.type = 'button';
+      save.id = `${prefix}-save-${idx}`;
+      save.className = 'save-button icon-button';
+      save.title = 'Save';
+      save.innerHTML = '&#128190;';
+      save.addEventListener('click', () => lists.saveList(type, idx));
+      btnCol.appendChild(save);
+      const copy = document.createElement('button');
+      copy.type = 'button';
+      copy.className = 'copy-button icon-button';
+      copy.dataset.target = `${prefix}-input-${idx}`;
+      copy.title = 'Copy';
+      copy.innerHTML = '&#128203;';
+      btnCol.appendChild(copy);
+      const hideCb = document.createElement('input');
+      hideCb.type = 'checkbox';
+      hideCb.id = `${prefix}-hide-${idx}`;
+      hideCb.dataset.targets = `${prefix}-input-${idx},${prefix}-order-input-${idx}`;
+      hideCb.hidden = true;
+      btnCol.appendChild(hideCb);
+      const hideBtn = document.createElement('button');
+      hideBtn.type = 'button';
+      hideBtn.className = 'toggle-button icon-button hide-button';
+      hideBtn.dataset.target = hideCb.id;
+      hideBtn.dataset.on = '☰';
+      hideBtn.dataset.off = '✖';
+      hideBtn.textContent = '☰';
+      btnCol.appendChild(hideBtn);
+      labelRow.appendChild(btnCol);
+      block.appendChild(labelRow);
 
       const sel = document.createElement('select');
       sel.id = `${prefix}-select-${idx}`;
@@ -669,6 +672,7 @@
     }
     setupCopyButtons();
     setupHideToggles();
+    setupToggleButtons();
     const adv = document.getElementById('advanced-mode');
     if (adv && !adv.checked) adv.dispatchEvent(new Event('change'));
   }
@@ -871,9 +875,9 @@
 
     const baseSave = document.getElementById('base-save');
     if (baseSave) baseSave.addEventListener('click', () => lists.saveList('base'));
-    const posSave = document.getElementById('pos-save');
+    const posSave = document.getElementById('pos-save-1');
     if (posSave) posSave.addEventListener('click', () => lists.saveList('positive'));
-    const negSave = document.getElementById('neg-save');
+    const negSave = document.getElementById('neg-save-1');
     if (negSave) negSave.addEventListener('click', () => lists.saveList('negative'));
     const lenSave = document.getElementById('length-save');
     if (lenSave) lenSave.addEventListener('click', () => lists.saveList('length'));
