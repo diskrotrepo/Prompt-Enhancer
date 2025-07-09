@@ -669,6 +669,7 @@
     }
     setupCopyButtons();
     setupHideToggles();
+    setupToggleButtons();
     const adv = document.getElementById('advanced-mode');
     if (adv && !adv.checked) adv.dispatchEvent(new Event('change'));
   }
