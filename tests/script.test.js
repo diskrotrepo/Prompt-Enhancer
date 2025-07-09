@@ -28,6 +28,7 @@ const {
   setupShuffleAll,
   setupStackControls,
   setupHideToggles,
+  setupToggleButtons,
   applyAllHideState,
   applyPreset,
   setupOrderControl,
@@ -1007,5 +1008,33 @@ describe('List persistence', () => {
     allHide.checked = false;
     allHide.dispatchEvent(new Event('change'));
     expect(posInput2.style.display).toBe('');
+  });
+
+  test('hide button works for dynamically added stack blocks', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="pos-stack">
+      <select id="pos-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="pos-shuffle">
+      <select id="pos-select"></select>
+      <select id="pos-order-select"></select>
+      <select id="pos-depth-select"></select>
+      <div id="pos-stack-container">
+        <div class="stack-block" id="pos-stack-1">
+          <div class="input-row"><textarea id="pos-input"></textarea></div>
+          <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+        </div>
+      </div>`;
+    setupToggleButtons();
+    setupStackControls();
+    setupHideToggles();
+    const cb = document.getElementById('pos-stack');
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+    const hideBtn = document.querySelector('#pos-stack-2 .hide-button');
+    expect(hideBtn).not.toBeNull();
+    hideBtn.click();
+    expect(document.getElementById('pos-input-2').style.display).toBe('none');
+    hideBtn.click();
+    expect(document.getElementById('pos-input-2').style.display).toBe('');
   });
 });
