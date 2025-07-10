@@ -905,6 +905,45 @@ describe('UI interactions', () => {
     const posBtn = document.querySelector('.toggle-button[data-target="pos-advanced"]');
     expect(posBtn.classList.contains('active')).toBe(true);
   });
+
+  test('enabling negative stack keeps positive advanced state', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <input type="checkbox" id="pos-advanced">
+      <input type="checkbox" id="neg-advanced">
+      <input type="checkbox" id="neg-stack">
+      <select id="neg-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="neg-shuffle">
+      <div id="neg-stack-container">
+        <div class="stack-block" id="neg-stack-1">
+          <select id="neg-select"></select>
+          <div class="input-row"><textarea id="neg-input"></textarea></div>
+          <div id="neg-order-container">
+            <select id="neg-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+            <div class="input-row"><textarea id="neg-order-input"></textarea></div>
+          </div>
+          <div id="neg-depth-container">
+            <select id="neg-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+            <div class="input-row"><textarea id="neg-depth-input"></textarea></div>
+          </div>
+        </div>
+      </div>
+    `;
+    setupSectionAdvanced('pos');
+    setupSectionAdvanced('neg');
+    setupAdvancedToggle();
+    setupStackControls();
+    const globalAdv = document.getElementById('advanced-mode');
+    globalAdv.checked = true;
+    globalAdv.dispatchEvent(new Event('change'));
+    const posAdv = document.getElementById('pos-advanced');
+    posAdv.checked = false;
+    posAdv.dispatchEvent(new Event('change'));
+    const negStack = document.getElementById('neg-stack');
+    negStack.checked = true;
+    negStack.dispatchEvent(new Event('change'));
+    expect(posAdv.checked).toBe(false);
+  });
 });
 
 describe('List persistence', () => {
