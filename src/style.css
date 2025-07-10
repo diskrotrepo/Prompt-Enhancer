@@ -485,6 +485,17 @@ button {
   border-color: transparent;
 }
 
+.toggle-button.indeterminate:not(.hide-button) {
+  background: repeating-linear-gradient(
+    45deg,
+    #0d6efd,
+    #0d6efd 5px,
+    #6610f2 5px,
+    #6610f2 10px
+  );
+  border-color: transparent;
+}
+
 .hide-button {
   font-size: 1rem;
 }

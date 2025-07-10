@@ -35,7 +35,8 @@ const {
   setupRerollButton,
   rerollRandomOrders,
   setupAdvancedToggle,
-  updateStackBlocks
+  updateStackBlocks,
+  setupSectionOrder
 } = ui;
 
 describe('Utility functions', () => {
@@ -1179,5 +1180,51 @@ describe('List persistence', () => {
     expect(cb.checked).toBe(false);
     btn.click();
     expect(cb.checked).toBe(true);
+  });
+
+  test('global random toggle updates sections and button states', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="all-random">
+      <button type="button" class="toggle-button" data-target="all-random" data-on="Randomized" data-off="Canonical">Canonical</button>
+      <input type="checkbox" id="pos-order-random">
+      <button type="button" class="toggle-button" data-target="pos-order-random" data-on="Randomized" data-off="Canonical">Canonical</button>
+      <input type="checkbox" id="neg-order-random">
+      <button type="button" class="toggle-button" data-target="neg-order-random" data-on="Randomized" data-off="Canonical">Canonical</button>
+      <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="neg-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+      <select id="neg-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+    `;
+    setupSectionOrder('pos');
+    setupSectionOrder('neg');
+    setupShuffleAll();
+    const globalCb = document.getElementById('all-random');
+    globalCb.checked = true;
+    globalCb.dispatchEvent(new Event('change'));
+    expect(document.getElementById('pos-order-random').checked).toBe(true);
+    expect(document.getElementById('neg-order-random').checked).toBe(true);
+    const btn = document.querySelector('.toggle-button[data-target="all-random"]');
+    expect(btn.classList.contains('active')).toBe(true);
+  });
+
+  test('section random button reflects mixed state', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="pos-order-random">
+      <button type="button" class="toggle-button" data-target="pos-order-random" data-on="Randomized" data-off="Canonical">Canonical</button>
+      <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+    `;
+    setupSectionOrder('pos');
+    const sel = document.getElementById('pos-order-select');
+    sel.value = 'random';
+    sel.dispatchEvent(new Event('change'));
+    const dsel = document.getElementById('pos-depth-select');
+    dsel.value = 'random';
+    dsel.dispatchEvent(new Event('change'));
+    const btn = document.querySelector('.toggle-button[data-target="pos-order-random"]');
+    expect(btn.classList.contains('active')).toBe(true);
+    dsel.value = 'prepend';
+    dsel.dispatchEvent(new Event('change'));
+    expect(btn.classList.contains('indeterminate')).toBe(true);
   });
 });

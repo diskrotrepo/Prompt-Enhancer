@@ -241,6 +241,19 @@
     if (!allRandom) return;
     const canonicalFor = sel =>
       sel.id.includes('-depth-select') ? 'prepend' : 'canonical';
+    const reflect = () => {
+      const selects = Array.from(
+        document.querySelectorAll('[id*="-order-select"], [id*="-depth-select"]')
+      );
+      const allRand = selects.every(s => s.value === 'random');
+      const allCan = selects.every(s => s.value === canonicalFor(s));
+      const btn = document.querySelector('.toggle-button[data-target="all-random"]');
+      if (btn) {
+        btn.classList.remove('active', 'indeterminate');
+        if (allRand) btn.classList.add('active');
+        else if (!allCan) btn.classList.add('indeterminate');
+      }
+    };
     const updateAll = () => {
       const selects = Array.from(
         document.querySelectorAll('[id*="-order-select"], [id*="-depth-select"]')
@@ -249,11 +262,22 @@
         sel.value = allRandom.checked ? 'random' : canonicalFor(sel);
         sel.dispatchEvent(new Event('change'));
       });
-      const btn = document.querySelector('.toggle-button[data-target="all-random"]');
-      if (btn) updateButtonState(btn, allRandom);
+      ['pos', 'neg'].forEach(p => {
+        const cb = document.getElementById(`${p}-order-random`);
+        if (cb) {
+          cb.checked = allRandom.checked;
+          const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
+          if (btn) updateButtonState(btn, cb);
+          cb.dispatchEvent(new Event('change'));
+        }
+      });
+      reflect();
     };
     allRandom.addEventListener('change', updateAll);
-    updateAll();
+    document.querySelectorAll('[id*="-order-select"], [id*="-depth-select"]').forEach(sel => {
+      sel.addEventListener('change', reflect);
+    });
+    reflect();
   }
 
   function setupStackControls() {
@@ -296,6 +320,88 @@
     });
   }
 
+  function reflectSectionHide(prefix) {
+    const cb = document.getElementById(`${prefix}-all-hide`);
+    if (!cb) return;
+    let idx = 1;
+    let all = true;
+    let any = false;
+    while (true) {
+      const hide = document.getElementById(`${prefix}-hide-${idx}`);
+      if (!hide) break;
+      all = all && hide.checked;
+      any = any || hide.checked;
+      idx++;
+    }
+    const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
+    if (btn) {
+      btn.classList.remove('active', 'indeterminate');
+      if (all) btn.classList.add('active');
+      else if (any) btn.classList.add('indeterminate');
+    }
+  }
+
+  function reflectAllHide() {
+    const cbs = Array.from(
+      document.querySelectorAll('input[type="checkbox"][data-targets]')
+    );
+    const all = cbs.every(cb => cb.checked);
+    const any = cbs.some(cb => cb.checked);
+    const btn = document.querySelector('.toggle-button[data-target="all-hide"]');
+    if (btn) {
+      btn.classList.remove('active', 'indeterminate');
+      if (all) btn.classList.add('active');
+      else if (any) btn.classList.add('indeterminate');
+    }
+  }
+
+  function reflectAllRandom() {
+    const canonicalFor = sel =>
+      sel.id.includes('-depth-select') ? 'prepend' : 'canonical';
+    const sels = Array.from(
+      document.querySelectorAll('[id*="-order-select"], [id*="-depth-select"]')
+    );
+    const allRand = sels.every(s => s.value === 'random');
+    const allCan = sels.every(s => s.value === canonicalFor(s));
+    const btn = document.querySelector('.toggle-button[data-target="all-random"]');
+    if (btn) {
+      btn.classList.remove('active', 'indeterminate');
+      if (allRand) btn.classList.add('active');
+      else if (!allCan) btn.classList.add('indeterminate');
+    }
+  }
+
+  function reflectSectionOrder(prefix) {
+    const cb = document.getElementById(`${prefix}-order-random`);
+    if (!cb) return;
+    const canonicalFor = s => (s.id.includes('-depth-select') ? 'prepend' : 'canonical');
+    const sels = [
+      ...gatherControls(prefix, 'order'),
+      ...gatherControls(prefix, 'depth')
+    ].map(p => p.select).filter(Boolean);
+    const allRand = sels.every(s => s.value === 'random');
+    const allCan = sels.every(s => s.value === canonicalFor(s));
+    const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
+    if (btn) {
+      btn.classList.remove('active', 'indeterminate');
+      if (allRand) btn.classList.add('active');
+      else if (!allCan) btn.classList.add('indeterminate');
+    }
+  }
+
+  function reflectGlobalAdvanced() {
+    const secs = Array.from(document.querySelectorAll('[id$="-advanced"]'));
+    if (!secs.length) return;
+    const allOn = secs.every(cb => cb.checked);
+    const allOff = secs.every(cb => !cb.checked);
+    const btn = document.querySelector('.toggle-button[data-target="advanced-mode"]');
+    if (btn) {
+      btn.classList.remove('active', 'indeterminate');
+      if (allOn) btn.classList.add('active');
+      else if (!allOff) btn.classList.add('indeterminate');
+    }
+  }
+
   function setupSectionHide(prefix) {
     const cb = document.getElementById(`${prefix}-all-hide`);
     if (!cb) return;
@@ -310,11 +416,17 @@
         hide.dispatchEvent(new Event('change'));
         idx++;
       }
-      const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
-      if (btn) updateButtonState(btn, cb);
+      reflectSectionHide(prefix);
     };
     cb.addEventListener('change', update);
-    update();
+    let i = 1;
+    while (true) {
+      const hide = document.getElementById(`${prefix}-hide-${i}`);
+      if (!hide) break;
+      hide.addEventListener('change', () => reflectSectionHide(prefix));
+      i++;
+    }
+    reflectSectionHide(prefix);
   }
 
   function setupSectionOrder(prefix) {
@@ -330,11 +442,20 @@
         s.value = cb.checked ? 'random' : canonicalFor(s);
         s.dispatchEvent(new Event('change'));
       });
-      const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
-      if (btn) updateButtonState(btn, cb);
+      reflectSectionOrder(prefix);
+      reflectAllRandom();
     };
     cb.addEventListener('change', update);
-    update();
+    let i = 1;
+    while (true) {
+      const sel = document.getElementById(`${prefix}-order-select${i === 1 ? '' : '-' + i}`);
+      if (!sel) break;
+      sel.addEventListener('change', () => { reflectSectionOrder(prefix); reflectAllRandom(); });
+      const dep = document.getElementById(`${prefix}-depth-select${i === 1 ? '' : '-' + i}`);
+      if (dep) dep.addEventListener('change', () => { reflectSectionOrder(prefix); reflectAllRandom(); });
+      i++;
+    }
+    reflectSectionOrder(prefix);
   }
 
   function setupSectionAdvanced(prefix) {
@@ -360,12 +481,14 @@
     cb.addEventListener('change', () => {
       cb.dataset.userSet = 'true';
       update();
+      reflectGlobalAdvanced();
     });
     if (!cb.dataset.userSet) {
       const globalAdv = document.getElementById('advanced-mode');
       cb.checked = !!(globalAdv && globalAdv.checked);
     }
     update();
+    reflectGlobalAdvanced();
   }
 
   const rerollUpdaters = {};
@@ -417,6 +540,7 @@
       });
       // Dice buttons remain visible in both modes
       Object.values(rerollUpdaters).flat().forEach(fn => fn());
+      reflectGlobalAdvanced();
     };
     cb.addEventListener('change', update);
     update();
@@ -443,8 +567,14 @@
           }
         }
       };
-      cb.addEventListener('change', update);
-      update();
+      const prefix = cb.id.split('-')[0];
+      const handler = () => {
+        update();
+        reflectSectionHide(prefix);
+        reflectAllHide();
+      };
+      cb.addEventListener('change', handler);
+      handler();
     });
     const allHide = document.getElementById('all-hide');
     if (allHide && allHide.checked) applyAllHideState();
@@ -463,10 +593,20 @@
       if (btn) updateButtonState(btn, cb);
       cb.dispatchEvent(new Event('change'));
     });
+    ['pos', 'neg'].forEach(p => {
+      const sec = document.getElementById(`${p}-all-hide`);
+      if (sec) {
+        sec.checked = allHide.checked;
+        const btn = document.querySelector(`.toggle-button[data-target="${sec.id}"]`);
+        if (btn) updateButtonState(btn, sec);
+        sec.dispatchEvent(new Event('change'));
+      }
+    });
     const allHideBtn = document.querySelector(
       '.toggle-button[data-target="all-hide"]'
     );
     if (allHideBtn) updateButtonState(allHideBtn, allHide);
+    reflectAllHide();
   }
 
   function setupCopyButtons() {
@@ -957,6 +1097,9 @@
     setupStackControls();
     setupShuffleAll();
     setupHideToggles();
+    reflectAllRandom();
+    reflectAllHide();
+    reflectGlobalAdvanced();
 
     const allHide = document.getElementById('all-hide');
     if (allHide) {
