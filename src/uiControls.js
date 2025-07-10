@@ -296,6 +296,71 @@
     });
   }
 
+  function setupSectionHide(prefix) {
+    const cb = document.getElementById(`${prefix}-all-hide`);
+    if (!cb) return;
+    const update = () => {
+      let idx = 1;
+      while (true) {
+        const hide = document.getElementById(`${prefix}-hide-${idx}`);
+        if (!hide) break;
+        hide.checked = cb.checked;
+        const btn = document.querySelector(`.toggle-button[data-target="${hide.id}"]`);
+        if (btn) updateButtonState(btn, hide);
+        hide.dispatchEvent(new Event('change'));
+        idx++;
+      }
+      const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
+      if (btn) updateButtonState(btn, cb);
+    };
+    cb.addEventListener('change', update);
+    update();
+  }
+
+  function setupSectionOrder(prefix) {
+    const cb = document.getElementById(`${prefix}-order-random`);
+    if (!cb) return;
+    const canonicalFor = s => (s.id.includes('-depth-select') ? 'prepend' : 'canonical');
+    const update = () => {
+      const sels = [
+        ...gatherControls(prefix, 'order'),
+        ...gatherControls(prefix, 'depth')
+      ].map(p => p.select).filter(Boolean);
+      sels.forEach(s => {
+        s.value = cb.checked ? 'random' : canonicalFor(s);
+        s.dispatchEvent(new Event('change'));
+      });
+      const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
+      if (btn) updateButtonState(btn, cb);
+    };
+    cb.addEventListener('change', update);
+    update();
+  }
+
+  function setupSectionAdvanced(prefix) {
+    const cb = document.getElementById(`${prefix}-advanced`);
+    if (!cb) return;
+    const setDisplay = (el, show) => { if (el) el.style.display = show ? '' : 'none'; };
+    const update = () => {
+      const adv = cb.checked;
+      document.querySelectorAll(`[id^="${prefix}-order-select"]`).forEach(el => setDisplay(el, adv));
+      document.querySelectorAll(`[id^="${prefix}-depth-select"]`).forEach(el => setDisplay(el, adv));
+      document.querySelectorAll(`[id^="${prefix}-order-input"]`).forEach(el => {
+        if (el.parentElement && el.parentElement.classList.contains('input-row')) setDisplay(el.parentElement, adv);
+      });
+      document.querySelectorAll(`[id^="${prefix}-depth-input"]`).forEach(el => {
+        if (el.parentElement && el.parentElement.classList.contains('input-row')) setDisplay(el.parentElement, adv);
+      });
+      document.querySelectorAll(`[id^="${prefix}-order-container"]`).forEach(el => setDisplay(el, adv));
+      document.querySelectorAll(`[id^="${prefix}-depth-container"]`).forEach(el => setDisplay(el, adv));
+      const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
+      if (btn) updateButtonState(btn, cb);
+      (rerollUpdaters[prefix] || []).forEach(fn => fn());
+    };
+    cb.addEventListener('change', update);
+    update();
+  }
+
   const rerollUpdaters = {};
 
   function setupAdvancedToggle() {
@@ -336,7 +401,7 @@
         document.querySelectorAll(`[id^="${id}"]`).forEach(el => setDisplay(el, adv));
       });
       // Dice buttons remain visible in both modes
-      Object.values(rerollUpdaters).forEach(fn => fn());
+      Object.values(rerollUpdaters).flat().forEach(fn => fn());
     };
     cb.addEventListener('change', update);
     update();
@@ -446,7 +511,7 @@
       } else if (lists.ORDER_PRESETS[select.value]) {
         input.value = lists.ORDER_PRESETS[select.value].join(', ');
       }
-      if (rerollUpdaters[prefix]) rerollUpdaters[prefix]();
+      if (rerollUpdaters[prefix]) rerollUpdaters[prefix].forEach(fn => fn());
     };
     select.addEventListener('change', update);
     update();
@@ -502,7 +567,7 @@
       } else if (lists.ORDER_PRESETS[val]) {
         input.value = lists.ORDER_PRESETS[val].join(', ');
       }
-      if (rerollUpdaters[prefix]) rerollUpdaters[prefix]();
+      if (rerollUpdaters[prefix]) rerollUpdaters[prefix].forEach(fn => fn());
     });
     select.dispatchEvent(new Event('change'));
   }
@@ -571,6 +636,13 @@
       save.innerHTML = '&#128190;';
       save.addEventListener('click', () => lists.saveList(type, idx));
       btnCol.appendChild(save);
+      const rerollBtn = document.createElement('button');
+      rerollBtn.type = 'button';
+      rerollBtn.id = `${prefix}-reroll-${idx}`;
+      rerollBtn.className = 'toggle-button icon-button random-button';
+      rerollBtn.title = 'Reroll';
+      rerollBtn.innerHTML = '&#127922;';
+      btnCol.appendChild(rerollBtn);
       const copy = document.createElement('button');
       copy.type = 'button';
       copy.className = 'copy-button icon-button';
@@ -665,6 +737,7 @@
       applyPreset(sel, ta, type);
       setupOrderControl(orderSel.id, oTa.id, () => utils.parseInput(ta.value));
       setupDepthControl(depthSel.id, dTa.id);
+      setupRerollButton(rerollBtn.id, orderSel.id);
     }
     for (let i = current; i > count; i--) {
       const block = document.getElementById(`${prefix}-stack-${i}`);
@@ -673,6 +746,9 @@
     setupCopyButtons();
     setupHideToggles();
     setupToggleButtons();
+    setupSectionHide(prefix);
+    setupSectionOrder(prefix);
+    setupSectionAdvanced(prefix);
     const adv = document.getElementById('advanced-mode');
     if (adv && !adv.checked) adv.dispatchEvent(new Event('change'));
   }
@@ -713,7 +789,8 @@
     btn.addEventListener('click', reroll);
     select.addEventListener('change', updateState);
     if (adv) adv.addEventListener('change', updateState);
-    rerollUpdaters[prefix] = updateState;
+    if (!rerollUpdaters[prefix]) rerollUpdaters[prefix] = [];
+    rerollUpdaters[prefix].push(updateState);
     updateState();
   }
 
@@ -853,10 +930,16 @@
     updateDepthContainers('pos', 1);
     updateDepthContainers('neg', 1);
     setupRerollButton('base-reroll', 'base-order-select');
-    setupRerollButton('pos-reroll', 'pos-order-select');
-    setupRerollButton('neg-reroll', 'neg-order-select');
+    setupRerollButton('pos-reroll-1', 'pos-order-select');
+    setupRerollButton('neg-reroll-1', 'neg-order-select');
     setupRerollButton('divider-reroll', 'divider-order-select');
     setupAdvancedToggle();
+    setupSectionHide('pos');
+    setupSectionHide('neg');
+    setupSectionOrder('pos');
+    setupSectionOrder('neg');
+    setupSectionAdvanced('pos');
+    setupSectionAdvanced('neg');
     document.getElementById('generate').addEventListener('click', generate);
 
     setupToggleButtons();
@@ -909,6 +992,9 @@
     updateStackBlocks,
     rerollRandomOrders,
     setupRerollButton,
+    setupSectionHide,
+    setupSectionOrder,
+    setupSectionAdvanced,
     initializeUI
   };
 

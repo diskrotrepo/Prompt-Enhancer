@@ -643,12 +643,12 @@ describe('UI interactions', () => {
           <textarea id="pos-input">a,b</textarea>
         </div>
       </div>
-      <button id="pos-reroll"></button>
+      <button id="pos-reroll-1"></button>
     `;
     setupOrderControl('pos-order-select', 'pos-order-input', () => ['a', 'b']);
-    setupRerollButton('pos-reroll', 'pos-order-select');
+    setupRerollButton('pos-reroll-1', 'pos-order-select');
     setupStackControls();
-    document.getElementById('pos-reroll').click();
+    document.getElementById('pos-reroll-1').click();
     const stackCb = document.getElementById('pos-stack');
     stackCb.checked = true;
     stackCb.dispatchEvent(new Event('change'));
@@ -673,16 +673,16 @@ describe('UI interactions', () => {
         </select>
         <div class="input-row"><textarea id="pos-order-input-2"></textarea></div>
       </div>
-      <button id="pos-reroll" class="random-button"></button>
+      <button id="pos-reroll-1" class="random-button"></button>
     `;
     document.getElementById('pos-order-select').value = 'random';
     document.getElementById('pos-order-select-2').value = 'canonical';
-    setupRerollButton('pos-reroll', 'pos-order-select');
+    setupRerollButton('pos-reroll-1', 'pos-order-select');
     setupAdvancedToggle();
     const cb = document.getElementById('advanced-mode');
     cb.checked = false;
     cb.dispatchEvent(new Event('change'));
-    const btn = document.getElementById('pos-reroll');
+    const btn = document.getElementById('pos-reroll-1');
     expect(btn.classList.contains('indeterminate')).toBe(true);
   });
 
@@ -701,14 +701,14 @@ describe('UI interactions', () => {
         </select>
         <div class="input-row"><textarea id="neg-order-input-2"></textarea></div>
       </div>
-      <button id="neg-reroll" class="random-button"></button>
+      <button id="neg-reroll-1" class="random-button"></button>
     `;
-    setupRerollButton('neg-reroll', 'neg-order-select');
+    setupRerollButton('neg-reroll-1', 'neg-order-select');
     setupAdvancedToggle();
     const cb = document.getElementById('advanced-mode');
     cb.checked = false;
     cb.dispatchEvent(new Event('change'));
-    document.getElementById('neg-reroll').click();
+    document.getElementById('neg-reroll-1').click();
     expect(document.getElementById('neg-order-select').value).toBe('random');
     expect(document.getElementById('neg-order-select-2').value).toBe('random');
   });
@@ -728,14 +728,14 @@ describe('UI interactions', () => {
         </select>
         <div class="input-row"><textarea id="neg-order-input-2"></textarea></div>
       </div>
-      <button id="neg-reroll" class="random-button"></button>
+      <button id="neg-reroll-1" class="random-button"></button>
     `;
-    setupRerollButton('neg-reroll', 'neg-order-select');
+    setupRerollButton('neg-reroll-1', 'neg-order-select');
     setupAdvancedToggle();
     const cb = document.getElementById('advanced-mode');
     cb.checked = true;
     cb.dispatchEvent(new Event('change'));
-    document.getElementById('neg-reroll').click();
+    document.getElementById('neg-reroll-1').click();
     expect(document.getElementById('neg-order-select').value).toBe('random');
     expect(document.getElementById('neg-order-select-2').value).toBe('random');
   });
