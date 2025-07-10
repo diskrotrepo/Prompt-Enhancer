@@ -426,7 +426,7 @@
       hide.addEventListener('change', () => reflectSectionHide(prefix));
       i++;
     }
-    update();
+    reflectSectionHide(prefix);
   }
 
   function setupSectionOrder(prefix) {
@@ -810,6 +810,8 @@
       hideCb.id = `${prefix}-hide-${idx}`;
       hideCb.dataset.targets = `${prefix}-input-${idx},${prefix}-order-input-${idx}`;
       hideCb.hidden = true;
+      const secHide = document.getElementById(`${prefix}-all-hide`);
+      if (secHide) hideCb.checked = secHide.checked;
       btnCol.appendChild(hideCb);
       const hideBtn = document.createElement('button');
       hideBtn.type = 'button';
