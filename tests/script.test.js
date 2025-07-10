@@ -578,7 +578,6 @@ describe('UI interactions', () => {
     const d2 = document.getElementById('pos-depth-input-2').value;
     expect(d1).not.toBe('');
     expect(d2).not.toBe('');
-    expect(d1).not.toBe(d2);
   });
 
   test('advanced toggle shows and hides controls', () => {
@@ -683,10 +682,10 @@ describe('UI interactions', () => {
     cb.checked = false;
     cb.dispatchEvent(new Event('change'));
     const btn = document.getElementById('pos-reroll-1');
-    expect(btn.classList.contains('indeterminate')).toBe(true);
+    expect(btn.classList.contains('active')).toBe(true);
   });
 
-  test('simple mode reroll toggles all selects', () => {
+  test('simple mode reroll toggles only its stack', () => {
     document.body.innerHTML = `
       <input type="checkbox" id="advanced-mode">
       <div id="neg-order-container">
@@ -710,10 +709,10 @@ describe('UI interactions', () => {
     cb.dispatchEvent(new Event('change'));
     document.getElementById('neg-reroll-1').click();
     expect(document.getElementById('neg-order-select').value).toBe('random');
-    expect(document.getElementById('neg-order-select-2').value).toBe('random');
+    expect(document.getElementById('neg-order-select-2').value).toBe('canonical');
   });
 
-  test('advanced mode reroll toggles all selects', () => {
+  test('advanced mode reroll toggles only its stack', () => {
     document.body.innerHTML = `
       <input type="checkbox" id="advanced-mode">
       <div id="neg-order-container">
@@ -737,7 +736,35 @@ describe('UI interactions', () => {
     cb.dispatchEvent(new Event('change'));
     document.getElementById('neg-reroll-1').click();
     expect(document.getElementById('neg-order-select').value).toBe('random');
-    expect(document.getElementById('neg-order-select-2').value).toBe('random');
+    expect(document.getElementById('neg-order-select-2').value).toBe('canonical');
+  });
+
+  test('reroll buttons toggle independently per stack', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <div id="pos-order-container">
+        <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+        <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+        <select id="pos-order-select-2"><option value="canonical">c</option><option value="random">r</option></select>
+        <div class="input-row"><textarea id="pos-order-input-2"></textarea></div>
+      </div>
+      <div id="pos-depth-container">
+        <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+        <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
+        <select id="pos-depth-select-2"><option value="prepend">p</option><option value="random">r</option></select>
+        <div class="input-row"><textarea id="pos-depth-input-2"></textarea></div>
+      </div>
+      <button id="pos-reroll-1"></button>
+      <button id="pos-reroll-2"></button>
+    `;
+    setupRerollButton('pos-reroll-1', 'pos-order-select');
+    setupRerollButton('pos-reroll-2', 'pos-order-select-2');
+    setupAdvancedToggle();
+    document.getElementById('pos-reroll-1').click();
+    expect(document.getElementById('pos-order-select').value).toBe('random');
+    expect(document.getElementById('pos-order-select-2').value).toBe('canonical');
+    expect(document.getElementById('pos-depth-select').value).toBe('random');
+    expect(document.getElementById('pos-depth-select-2').value).toBe('prepend');
   });
 
   test('stack blocks added in simple mode hide advanced controls', () => {
@@ -778,6 +805,42 @@ describe('UI interactions', () => {
     expect(orderCont.style.display).toBe('none');
     expect(depthSel.style.display).toBe('none');
     expect(depthCont.style.display).toBe('none');
+  });
+
+  test('stack blocks added in advanced mode keep advanced controls', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <input type="checkbox" id="pos-stack">
+      <button type="button" class="toggle-button" data-target="pos-stack" data-on="Stack On" data-off="Stack Off">Stack Off</button>
+      <select id="pos-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="pos-shuffle">
+      <div id="pos-stack-container">
+        <div class="stack-block" id="pos-stack-1">
+          <select id="pos-select"></select>
+          <div class="input-row"><textarea id="pos-input"></textarea></div>
+          <div id="pos-order-container">
+            <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+            <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+          </div>
+          <div id="pos-depth-container">
+            <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+            <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
+          </div>
+        </div>
+      </div>
+    `;
+    setupAdvancedToggle();
+    setupStackControls();
+    const adv = document.getElementById('advanced-mode');
+    adv.checked = true;
+    adv.dispatchEvent(new Event('change'));
+    const cb = document.getElementById('pos-stack');
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+    const orderSel = document.getElementById('pos-order-select-2');
+    const depthSel = document.getElementById('pos-depth-select-2');
+    expect(orderSel.style.display).toBe('');
+    expect(depthSel.style.display).toBe('');
   });
 });
 

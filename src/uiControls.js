@@ -357,7 +357,14 @@
       if (btn) updateButtonState(btn, cb);
       (rerollUpdaters[prefix] || []).forEach(fn => fn());
     };
-    cb.addEventListener('change', update);
+    cb.addEventListener('change', () => {
+      cb.dataset.userSet = 'true';
+      update();
+    });
+    if (!cb.dataset.userSet) {
+      const globalAdv = document.getElementById('advanced-mode');
+      cb.checked = !!(globalAdv && globalAdv.checked);
+    }
     update();
   }
 
@@ -399,6 +406,14 @@
       });
       containerIds.forEach(id => {
         document.querySelectorAll(`[id^="${id}"]`).forEach(el => setDisplay(el, adv));
+      });
+      document.querySelectorAll('[id$="-advanced"]').forEach(sec => {
+        if (!sec.dataset.userSet) {
+          sec.checked = adv;
+          const btn = document.querySelector(`.toggle-button[data-target="${sec.id}"]`);
+          if (btn) updateButtonState(btn, sec);
+        }
+        sec.dispatchEvent(new Event('change'));
       });
       // Dice buttons remain visible in both modes
       Object.values(rerollUpdaters).flat().forEach(fn => fn());
@@ -759,13 +774,9 @@
     const adv = document.getElementById('advanced-mode');
     if (!btn || !select) return;
     const prefix = guessPrefix(selectId);
-    const gather = () =>
-      [
-        ...gatherControls(prefix, 'order'),
-        ...gatherControls(prefix, 'depth')
-      ]
-        .map(p => p.select)
-        .filter(Boolean);
+    const idx = (selectId.match(/-(\d+)$/) || [])[1] ? parseInt(selectId.match(/-(\d+)$/)[1], 10) : 1;
+    const selFor = base => document.getElementById(`${prefix}-${base}-select${idx === 1 ? '' : '-' + idx}`);
+    const gather = () => [selFor('order'), selFor('depth')].filter(Boolean);
     const updateState = () => {
       const sels = gather();
       const canonicalFor = s => (s.id.includes('-depth-select') ? 'prepend' : 'canonical');
@@ -787,7 +798,7 @@
       updateState();
     };
     btn.addEventListener('click', reroll);
-    select.addEventListener('change', updateState);
+    gather().forEach(s => s.addEventListener('change', updateState));
     if (adv) adv.addEventListener('change', updateState);
     if (!rerollUpdaters[prefix]) rerollUpdaters[prefix] = [];
     rerollUpdaters[prefix].push(updateState);
