@@ -915,6 +915,7 @@
       const allRand = sels.every(s => s.value === 'random');
       const allCan = sels.every(s => s.value === canonicalFor(s));
       reflectToggleState(btn, allRand, !allCan && !allRand);
+      reflectAllRandom();
     };
     const reroll = () => {
       const sels = gather();
