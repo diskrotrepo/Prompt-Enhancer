@@ -810,7 +810,7 @@
       const hideCb = document.createElement('input');
       hideCb.type = 'checkbox';
       hideCb.id = `${prefix}-hide-${idx}`;
-      hideCb.dataset.targets = `${prefix}-input-${idx},${prefix}-order-input-${idx}`;
+      hideCb.dataset.targets = `${prefix}-input-${idx},${prefix}-order-input-${idx},${prefix}-depth-input-${idx}`;
       hideCb.hidden = true;
       btnCol.appendChild(hideCb);
       const hideBtn = document.createElement('button');
