@@ -1356,4 +1356,71 @@ describe('List persistence', () => {
     dsel.dispatchEvent(new Event('change'));
     expect(btn.classList.contains('indeterminate')).toBe(true);
   });
+
+  test('section random button text updates with state', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="pos-order-random">
+      <button type="button" class="toggle-button" data-target="pos-order-random" data-on="Randomized" data-off="Canonical">Canonical</button>
+      <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+    `;
+    setupSectionOrder('pos');
+    const btn = document.querySelector('.toggle-button[data-target="pos-order-random"]');
+    const sel = document.getElementById('pos-order-select');
+    const dsel = document.getElementById('pos-depth-select');
+    sel.value = 'random';
+    sel.dispatchEvent(new Event('change'));
+    dsel.value = 'random';
+    dsel.dispatchEvent(new Event('change'));
+    expect(btn.textContent).toBe('Randomized');
+    dsel.value = 'prepend';
+    dsel.dispatchEvent(new Event('change'));
+    expect(btn.textContent).toBe('Canonical');
+  });
+
+  test('global random button text updates with state', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="all-random">
+      <button type="button" class="toggle-button" data-target="all-random" data-on="Randomized" data-off="Canonical">Canonical</button>
+      <input type="checkbox" id="pos-order-random">
+      <button type="button" class="toggle-button" data-target="pos-order-random" data-on="Randomized" data-off="Canonical">Canonical</button>
+      <input type="checkbox" id="neg-order-random">
+      <button type="button" class="toggle-button" data-target="neg-order-random" data-on="Randomized" data-off="Canonical">Canonical</button>
+      <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="neg-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+    `;
+    setupSectionOrder('pos');
+    setupSectionOrder('neg');
+    setupShuffleAll();
+    const btn = document.querySelector('.toggle-button[data-target="all-random"]');
+    const ps = document.getElementById('pos-order-select');
+    const ns = document.getElementById('neg-order-select');
+    ps.value = 'random';
+    ps.dispatchEvent(new Event('change'));
+    ns.value = 'random';
+    ns.dispatchEvent(new Event('change'));
+    expect(btn.textContent).toBe('Randomized');
+    ns.value = 'canonical';
+    ns.dispatchEvent(new Event('change'));
+    expect(btn.textContent).toBe('Canonical');
+  });
+
+  test('global hide button text updates when all hidden', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="all-hide">
+      <button type="button" class="toggle-button" data-target="all-hide" data-on="All hidden" data-off="All visible">All visible</button>
+      <input type="checkbox" id="hide-1" data-targets="foo" hidden>
+      <div id="foo"></div>
+    `;
+    setupToggleButtons();
+    setupHideToggles();
+    const btn = document.querySelector('.toggle-button[data-target="all-hide"]');
+    const cb = document.getElementById('hide-1');
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+    expect(btn.textContent).toBe('All hidden');
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change'));
+    expect(btn.textContent).toBe('All visible');
+  });
 });

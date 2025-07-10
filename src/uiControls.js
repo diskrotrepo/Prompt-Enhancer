@@ -219,6 +219,16 @@
     }
   }
 
+  function reflectToggleState(btn, active, indeterminate) {
+    if (!btn) return;
+    btn.classList.remove('active', 'indeterminate');
+    if (active) btn.classList.add('active');
+    else if (indeterminate) btn.classList.add('indeterminate');
+    if (btn.dataset.on && btn.dataset.off) {
+      btn.textContent = active ? btn.dataset.on : btn.dataset.off;
+    }
+  }
+
   function setupToggleButtons() {
     document.querySelectorAll('.toggle-button').forEach(btn => {
       const target = btn.dataset.target;
@@ -334,11 +344,7 @@
       idx++;
     }
     const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
-    if (btn) {
-      btn.classList.remove('active', 'indeterminate');
-      if (all) btn.classList.add('active');
-      else if (any) btn.classList.add('indeterminate');
-    }
+    reflectToggleState(btn, all, any && !all);
   }
 
   function reflectAllHide() {
@@ -350,11 +356,7 @@
     const globalCb = document.getElementById('all-hide');
     if (globalCb) globalCb.checked = all;
     const btn = document.querySelector('.toggle-button[data-target="all-hide"]');
-    if (btn) {
-      btn.classList.remove('active', 'indeterminate');
-      if (all) btn.classList.add('active');
-      else if (any) btn.classList.add('indeterminate');
-    }
+    reflectToggleState(btn, all, any && !all);
   }
 
   function reflectAllRandom() {
@@ -366,11 +368,7 @@
     const allRand = sels.every(s => s.value === 'random');
     const allCan = sels.every(s => s.value === canonicalFor(s));
     const btn = document.querySelector('.toggle-button[data-target="all-random"]');
-    if (btn) {
-      btn.classList.remove('active', 'indeterminate');
-      if (allRand) btn.classList.add('active');
-      else if (!allCan) btn.classList.add('indeterminate');
-    }
+    reflectToggleState(btn, allRand, !allCan && !allRand);
   }
 
   function reflectSectionOrder(prefix) {
@@ -384,11 +382,7 @@
     const allRand = sels.every(s => s.value === 'random');
     const allCan = sels.every(s => s.value === canonicalFor(s));
     const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
-    if (btn) {
-      btn.classList.remove('active', 'indeterminate');
-      if (allRand) btn.classList.add('active');
-      else if (!allCan) btn.classList.add('indeterminate');
-    }
+    reflectToggleState(btn, allRand, !allCan && !allRand);
   }
 
   function reflectGlobalAdvanced() {
@@ -397,11 +391,7 @@
     const allOn = secs.every(cb => cb.checked);
     const allOff = secs.every(cb => !cb.checked);
     const btn = document.querySelector('.toggle-button[data-target="advanced-mode"]');
-    if (btn) {
-      btn.classList.remove('active', 'indeterminate');
-      if (allOn) btn.classList.add('active');
-      else if (!allOff) btn.classList.add('indeterminate');
-    }
+    reflectToggleState(btn, allOn, !allOff && !allOn);
   }
 
   function setupSectionHide(prefix) {
