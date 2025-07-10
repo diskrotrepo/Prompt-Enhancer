@@ -426,7 +426,7 @@
       hide.addEventListener('change', () => reflectSectionHide(prefix));
       i++;
     }
-    reflectSectionHide(prefix);
+    update();
   }
 
   function setupSectionOrder(prefix) {
