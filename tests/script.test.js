@@ -37,7 +37,8 @@ const {
   setupAdvancedToggle,
   updateStackBlocks,
   setupSectionOrder,
-  setupSectionHide
+  setupSectionHide,
+  setupSectionAdvanced
 } = ui;
 
 describe('Utility functions', () => {
@@ -843,6 +844,34 @@ describe('UI interactions', () => {
     const depthSel = document.getElementById('pos-depth-select-2');
     expect(orderSel.style.display).toBe('');
     expect(depthSel.style.display).toBe('');
+  });
+
+  test('global advanced overrides section settings', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <button type="button" class="toggle-button" data-target="advanced-mode" data-on="Advanced" data-off="Simple">Simple</button>
+      <input type="checkbox" id="pos-advanced">
+      <button type="button" class="toggle-button" data-target="pos-advanced" data-on="Advanced" data-off="Simple">Simple</button>
+      <input type="checkbox" id="neg-advanced">
+      <button type="button" class="toggle-button" data-target="neg-advanced" data-on="Advanced" data-off="Simple">Simple</button>
+    `;
+    setupToggleButtons();
+    setupSectionAdvanced('pos');
+    setupSectionAdvanced('neg');
+    setupAdvancedToggle();
+    const globalCb = document.getElementById('advanced-mode');
+    globalCb.checked = true;
+    globalCb.dispatchEvent(new Event('change'));
+    const posCb = document.getElementById('pos-advanced');
+    posCb.checked = false;
+    posCb.dispatchEvent(new Event('change'));
+    globalCb.checked = false;
+    globalCb.dispatchEvent(new Event('change'));
+    globalCb.checked = true;
+    globalCb.dispatchEvent(new Event('change'));
+    expect(posCb.checked).toBe(true);
+    const posBtn = document.querySelector('.toggle-button[data-target="pos-advanced"]');
+    expect(posBtn.classList.contains('active')).toBe(true);
   });
 });
 

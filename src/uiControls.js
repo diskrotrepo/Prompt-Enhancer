@@ -533,11 +533,9 @@
         document.querySelectorAll(`[id^="${id}"]`).forEach(el => setDisplay(el, adv));
       });
       document.querySelectorAll('[id$="-advanced"]').forEach(sec => {
-        if (!sec.dataset.userSet) {
-          sec.checked = adv;
-          const btn = document.querySelector(`.toggle-button[data-target="${sec.id}"]`);
-          if (btn) updateButtonState(btn, sec);
-        }
+        sec.checked = adv;
+        const btn = document.querySelector(`.toggle-button[data-target="${sec.id}"]`);
+        if (btn) updateButtonState(btn, sec);
         sec.dispatchEvent(new Event('change'));
       });
       // Dice buttons remain visible in both modes
