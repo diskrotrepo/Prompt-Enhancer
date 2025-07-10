@@ -3,6 +3,7 @@
 const lists = require('../src/listManager');
 const state = require('../src/stateManager');
 const storage = require('../src/storageManager');
+const ui = require('../src/uiControls');
 
 function setupDOM() {
   document.body.innerHTML = `
@@ -106,5 +107,35 @@ describe('Storage manager', () => {
     const txt = document.getElementById('base-input').value;
     expect(txt).toBe('d');
     expect(localStorage.getItem('promptEnhancerData')).not.toBeNull();
+  });
+
+  test('importData populates stacked inputs', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="pos-stack">
+      <select id="pos-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="pos-shuffle">
+      <div id="pos-stack-container">
+        <div class="stack-block" id="pos-stack-1">
+          <select id="pos-select"></select>
+          <div class="input-row"><textarea id="pos-input"></textarea></div>
+          <div id="pos-order-container">
+            <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+            <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+          </div>
+          <div id="pos-depth-container">
+            <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+            <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
+          </div>
+        </div>
+      </div>
+    `;
+    ui.setupStackControls();
+    state.loadFromDOM();
+    const saved = {
+      lists: { presets: [] },
+      state: { 'pos-stack': true, 'pos-stack-size': '2', 'pos-input-2': 'extra' }
+    };
+    storage.importData(saved);
+    expect(document.getElementById('pos-input-2').value).toBe('extra');
   });
 });
