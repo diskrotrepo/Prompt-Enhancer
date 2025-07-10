@@ -37,4 +37,13 @@ describe('Button layout', () => {
     const reset = dom.window.document.getElementById('reset-data');
     expect(reset).not.toBeNull();
   });
+
+  test('depth hide toggles include depth textbox', () => {
+    const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'index.html'), 'utf8');
+    const dom = new JSDOM(html);
+    const posHide = dom.window.document.getElementById('pos-hide-1');
+    const negHide = dom.window.document.getElementById('neg-hide-1');
+    expect(posHide.dataset.targets).toContain('pos-depth-input');
+    expect(negHide.dataset.targets).toContain('neg-depth-input');
+  });
 });
