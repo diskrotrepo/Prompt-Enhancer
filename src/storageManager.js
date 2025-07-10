@@ -62,7 +62,20 @@
     }
   }
 
-  const api = { exportData, importData, persist, loadPersisted };
+  function resetData() {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.removeItem(KEY);
+      } catch (err) {
+        /* ignore */
+      }
+    }
+    if (typeof DEFAULT_DATA !== 'undefined') {
+      importData(DEFAULT_DATA);
+    }
+  }
+
+  const api = { exportData, importData, persist, loadPersisted, resetData };
 
   if (typeof module !== 'undefined') {
     module.exports = api;

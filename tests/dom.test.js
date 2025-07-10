@@ -30,4 +30,11 @@ describe('Button layout', () => {
       }
     });
   });
+
+  test('load/save section includes reset button', () => {
+    const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'index.html'), 'utf8');
+    const dom = new JSDOM(html);
+    const reset = dom.window.document.getElementById('reset-data');
+    expect(reset).not.toBeNull();
+  });
 });

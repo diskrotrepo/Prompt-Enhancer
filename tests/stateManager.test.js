@@ -106,4 +106,16 @@ describe('State manager integration', () => {
     expect(document.getElementById('pos-depth-input').value).toBe('1,2');
     expect(document.getElementById('neg-depth-input').value).toBe('3');
   });
+
+  test('stacked inputs round trip through state export', () => {
+    const ta = document.createElement('textarea');
+    ta.id = 'pos-input-2';
+    document.body.appendChild(ta);
+    ta.value = 'extra';
+    state.loadFromDOM();
+    const json = state.exportState();
+    ta.value = '';
+    state.importState(JSON.parse(json));
+    expect(document.getElementById('pos-input-2').value).toBe('extra');
+  });
 });
