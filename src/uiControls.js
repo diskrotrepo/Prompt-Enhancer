@@ -347,6 +347,8 @@
     );
     const all = cbs.every(cb => cb.checked);
     const any = cbs.some(cb => cb.checked);
+    const globalCb = document.getElementById('all-hide');
+    if (globalCb) globalCb.checked = all;
     const btn = document.querySelector('.toggle-button[data-target="all-hide"]');
     if (btn) {
       btn.classList.remove('active', 'indeterminate');
@@ -426,7 +428,7 @@
       hide.addEventListener('change', () => reflectSectionHide(prefix));
       i++;
     }
-    reflectSectionHide(prefix);
+    update();
   }
 
   function setupSectionOrder(prefix) {
@@ -531,11 +533,9 @@
         document.querySelectorAll(`[id^="${id}"]`).forEach(el => setDisplay(el, adv));
       });
       document.querySelectorAll('[id$="-advanced"]').forEach(sec => {
-        if (!sec.dataset.userSet) {
-          sec.checked = adv;
-          const btn = document.querySelector(`.toggle-button[data-target="${sec.id}"]`);
-          if (btn) updateButtonState(btn, sec);
-        }
+        sec.checked = adv;
+        const btn = document.querySelector(`.toggle-button[data-target="${sec.id}"]`);
+        if (btn) updateButtonState(btn, sec);
         sec.dispatchEvent(new Event('change'));
       });
       // Dice buttons remain visible in both modes
@@ -548,6 +548,8 @@
 
   function setupHideToggles() {
     const hideCheckboxes = Array.from(document.querySelectorAll('input[type="checkbox"][data-targets]'));
+    const allHide = document.getElementById('all-hide');
+    const initHandlers = !allHide || !allHide.checked;
     hideCheckboxes.forEach(cb => {
       const ids = cb.dataset.targets.split(',').map(id => id.trim());
       const elems = ids.map(id => document.getElementById(id)).filter(Boolean);
@@ -574,9 +576,8 @@
         reflectAllHide();
       };
       cb.addEventListener('change', handler);
-      handler();
+      if (initHandlers) handler();
     });
-    const allHide = document.getElementById('all-hide');
     if (allHide && allHide.checked) applyAllHideState();
     return hideCheckboxes;
   }
@@ -584,11 +585,12 @@
   function applyAllHideState() {
     const allHide = document.getElementById('all-hide');
     if (!allHide) return;
+    const state = allHide.checked;
     const hideCheckboxes = Array.from(
       document.querySelectorAll('input[type="checkbox"][data-targets]')
     );
     hideCheckboxes.forEach(cb => {
-      cb.checked = allHide.checked;
+      cb.checked = state;
       const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
       if (btn) updateButtonState(btn, cb);
       cb.dispatchEvent(new Event('change'));
@@ -596,7 +598,7 @@
     ['pos', 'neg'].forEach(p => {
       const sec = document.getElementById(`${p}-all-hide`);
       if (sec) {
-        sec.checked = allHide.checked;
+        sec.checked = state;
         const btn = document.querySelector(`.toggle-button[data-target="${sec.id}"]`);
         if (btn) updateButtonState(btn, sec);
         sec.dispatchEvent(new Event('change'));
