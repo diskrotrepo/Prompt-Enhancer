@@ -914,12 +914,14 @@
     setupSectionHide(prefix);
     setupSectionOrder(prefix);
     setupSectionAdvanced(prefix);
-    if (document.getElementById(`${prefix}-advanced`)) {
-      refreshSectionAdvanced(prefix);
-    } else {
-      const adv = document.getElementById('advanced-mode');
-      if (adv) adv.dispatchEvent(new Event('change'));
-    }
+    ['pos', 'neg'].forEach(p => {
+      if (document.getElementById(`${p}-advanced`)) {
+        refreshSectionAdvanced(p);
+      } else {
+        const adv = document.getElementById('advanced-mode');
+        if (adv) adv.dispatchEvent(new Event('change'));
+      }
+    });
   }
 
   function setupRerollButton(btnId, selectId) {
