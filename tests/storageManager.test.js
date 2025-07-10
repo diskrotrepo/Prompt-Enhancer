@@ -90,4 +90,20 @@ describe('Storage manager', () => {
     const txt = document.getElementById('base-input').value;
     expect(txt).toBe('z');
   });
+
+  test('reset loads DEFAULT_DATA', () => {
+    global.DEFAULT_DATA = {
+      lists: { presets: [{ id: 'b', title: 'b', type: 'base', items: ['d'] }] },
+      state: { 'base-input': 'd', 'base-select': 'b' }
+    };
+    document.body.innerHTML = `
+      <select id="base-select"></select>
+      <textarea id="base-input"></textarea>
+    `;
+    storage.reset();
+    const txt = document.getElementById('base-input').value;
+    expect(txt).toBe('d');
+    const stored = JSON.parse(localStorage.getItem('promptEnhancerData'));
+    expect(stored.state['base-input']).toBe('d');
+  });
 });

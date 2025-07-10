@@ -1010,6 +1010,7 @@
   function setupDataButtons() {
     const saveBtn = document.getElementById('save-data');
     const loadBtn = document.getElementById('load-data');
+    const resetBtn = document.getElementById('reset-data');
     const fileInput = document.getElementById('data-file');
     if (saveBtn) {
       saveBtn.addEventListener('click', () => {
@@ -1041,6 +1042,9 @@
         reader.readAsText(f);
         fileInput.value = '';
       });
+    }
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => storage.reset());
     }
   }
 

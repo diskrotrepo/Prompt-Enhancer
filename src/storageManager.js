@@ -62,7 +62,13 @@
     }
   }
 
-  const api = { exportData, importData, persist, loadPersisted };
+  function reset() {
+    if (typeof DEFAULT_DATA !== 'undefined') {
+      importData(DEFAULT_DATA);
+    }
+  }
+
+  const api = { exportData, importData, persist, loadPersisted, reset };
 
   if (typeof module !== 'undefined') {
     module.exports = api;
