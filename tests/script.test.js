@@ -1405,6 +1405,41 @@ describe('List persistence', () => {
     expect(btn.textContent).toBe('Canonical');
   });
 
+  test('global random button updates when all reroll buttons active', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="all-random">
+      <button type="button" class="toggle-button" data-target="all-random" data-on="Randomized" data-off="Canonical">Canonical</button>
+      <textarea id="base-input">foo</textarea>
+      <select id="base-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <textarea id="base-order-input"></textarea>
+      <button id="base-reroll" class="random-button"></button>
+      <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <textarea id="pos-order-input"></textarea>
+      <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+      <textarea id="pos-depth-input"></textarea>
+      <button id="pos-reroll-1" class="random-button"></button>
+      <select id="neg-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <textarea id="neg-order-input"></textarea>
+      <select id="neg-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+      <textarea id="neg-depth-input"></textarea>
+      <button id="neg-reroll-1" class="random-button"></button>
+      <select id="divider-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <textarea id="divider-order-input"></textarea>
+      <button id="divider-reroll" class="random-button"></button>
+    `;
+    setupShuffleAll();
+    setupRerollButton('base-reroll', 'base-order-select');
+    setupRerollButton('pos-reroll-1', 'pos-order-select');
+    setupRerollButton('neg-reroll-1', 'neg-order-select');
+    setupRerollButton('divider-reroll', 'divider-order-select');
+    document.getElementById('base-reroll').click();
+    document.getElementById('pos-reroll-1').click();
+    document.getElementById('neg-reroll-1').click();
+    document.getElementById('divider-reroll').click();
+    const btn = document.querySelector('.toggle-button[data-target="all-random"]');
+    expect(btn.textContent).toBe('Randomized');
+  });
+
   test('global hide button text updates when all hidden', () => {
     document.body.innerHTML = `
       <input type="checkbox" id="all-hide">

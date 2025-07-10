@@ -258,11 +258,7 @@
       const allRand = selects.every(s => s.value === 'random');
       const allCan = selects.every(s => s.value === canonicalFor(s));
       const btn = document.querySelector('.toggle-button[data-target="all-random"]');
-      if (btn) {
-        btn.classList.remove('active', 'indeterminate');
-        if (allRand) btn.classList.add('active');
-        else if (!allCan) btn.classList.add('indeterminate');
-      }
+      reflectToggleState(btn, allRand, !allCan && !allRand);
     };
     const updateAll = () => {
       const selects = Array.from(
