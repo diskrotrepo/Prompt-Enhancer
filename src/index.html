@@ -276,29 +276,44 @@
 
         <!-- Output display section -->
         <div class="output">
-          <h2><span>Positive Conditioning</span><span class="button-col">
-            <button type="button" class="copy-button icon-button" data-target="positive-output" title="Copy">&#128203;</button>
-            <input type="checkbox" id="positive-hide" data-targets="positive-output" hidden>
-            <button type="button" class="toggle-button icon-button hide-button" data-target="positive-hide" data-on="☰" data-off="✖">☰</button>
-          </span></h2>
-          <div class="input-row">
-            <pre id="positive-output"></pre>
+          <div class="input-group section-positive">
+            <div class="label-row">
+              <label>Positive Conditioning</label>
+              <span class="button-col">
+                <button type="button" class="copy-button icon-button" data-target="positive-output" title="Copy">&#128203;</button>
+                <input type="checkbox" id="positive-hide" data-targets="positive-output" hidden>
+                <button type="button" class="toggle-button icon-button hide-button" data-target="positive-hide" data-on="☰" data-off="✖">☰</button>
+              </span>
+            </div>
+            <div class="input-row">
+              <pre id="positive-output"></pre>
+            </div>
           </div>
-          <h2><span>Negative Conditioning</span><span class="button-col">
-            <button type="button" class="copy-button icon-button" data-target="negative-output" title="Copy">&#128203;</button>
-            <input type="checkbox" id="negative-hide" data-targets="negative-output" hidden>
-            <button type="button" class="toggle-button icon-button hide-button" data-target="negative-hide" data-on="☰" data-off="✖">☰</button>
-          </span></h2>
-          <div class="input-row">
-            <pre id="negative-output"></pre>
+          <div class="input-group section-negative">
+            <div class="label-row">
+              <label>Negative Conditioning</label>
+              <span class="button-col">
+                <button type="button" class="copy-button icon-button" data-target="negative-output" title="Copy">&#128203;</button>
+                <input type="checkbox" id="negative-hide" data-targets="negative-output" hidden>
+                <button type="button" class="toggle-button icon-button hide-button" data-target="negative-hide" data-on="☰" data-off="✖">☰</button>
+              </span>
+            </div>
+            <div class="input-row">
+              <pre id="negative-output"></pre>
+            </div>
           </div>
-          <h2><span>Processed Lyrics</span><span class="button-col">
-            <button type="button" class="copy-button icon-button" data-target="lyrics-output" title="Copy">&#128203;</button>
-            <input type="checkbox" id="lyrics-output-hide" data-targets="lyrics-output" hidden>
-            <button type="button" class="toggle-button icon-button hide-button" data-target="lyrics-output-hide" data-on="☰" data-off="✖">☰</button>
-          </span></h2>
-          <div class="input-row">
-            <pre id="lyrics-output"></pre>
+          <div class="input-group section-lyrics">
+            <div class="label-row">
+              <label>Processed Lyrics</label>
+              <span class="button-col">
+                <button type="button" class="copy-button icon-button" data-target="lyrics-output" title="Copy">&#128203;</button>
+                <input type="checkbox" id="lyrics-output-hide" data-targets="lyrics-output" hidden>
+                <button type="button" class="toggle-button icon-button hide-button" data-target="lyrics-output-hide" data-on="☰" data-off="✖">☰</button>
+              </span>
+            </div>
+            <div class="input-row">
+              <pre id="lyrics-output"></pre>
+            </div>
           </div>
         </div>
       </div>
