@@ -846,6 +846,38 @@ describe('UI interactions', () => {
     expect(depthSel.style.display).toBe('');
   });
 
+  test('advanced mode stays on after enabling stack', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <input type="checkbox" id="pos-stack">
+      <select id="pos-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="pos-shuffle">
+      <div id="pos-stack-container">
+        <div class="stack-block" id="pos-stack-1">
+          <select id="pos-select"></select>
+          <div class="input-row"><textarea id="pos-input"></textarea></div>
+          <div id="pos-order-container">
+            <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+            <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+          </div>
+          <div id="pos-depth-container">
+            <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+            <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
+          </div>
+        </div>
+      </div>
+    `;
+    setupAdvancedToggle();
+    setupStackControls();
+    const adv = document.getElementById('advanced-mode');
+    adv.checked = true;
+    adv.dispatchEvent(new Event('change'));
+    const cb = document.getElementById('pos-stack');
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+    expect(adv.checked).toBe(true);
+  });
+
   test('global advanced overrides section settings', () => {
     document.body.innerHTML = `
       <input type="checkbox" id="advanced-mode">

@@ -897,7 +897,7 @@
     setupSectionOrder(prefix);
     setupSectionAdvanced(prefix);
     const adv = document.getElementById('advanced-mode');
-    if (adv && !adv.checked) adv.dispatchEvent(new Event('change'));
+    if (adv) adv.dispatchEvent(new Event('change'));
   }
 
   function setupRerollButton(btnId, selectId) {
