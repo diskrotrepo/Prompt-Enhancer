@@ -212,8 +212,13 @@
     }
   }
 
-  function updateButtonState(btn, checkbox) {
-    btn.classList.toggle('active', checkbox.checked);
+  function updateButtonState(btn, checkbox, mixed = false) {
+    btn.classList.remove('active', 'indeterminate');
+    if (mixed) {
+      btn.classList.add('indeterminate');
+    } else if (checkbox.checked) {
+      btn.classList.add('active');
+    }
     if (btn.dataset.on && btn.dataset.off) {
       btn.textContent = checkbox.checked ? btn.dataset.on : btn.dataset.off;
     }
@@ -249,11 +254,18 @@
         sel.value = allRandom.checked ? 'random' : canonicalFor(sel);
         sel.dispatchEvent(new Event('change'));
       });
+      document.querySelectorAll('[id$="-order-random"]').forEach(sec => {
+        sec.checked = allRandom.checked;
+        const btn = document.querySelector(`.toggle-button[data-target="${sec.id}"]`);
+        if (btn) updateButtonState(btn, sec);
+        sec.dispatchEvent(new Event('change'));
+      });
       const btn = document.querySelector('.toggle-button[data-target="all-random"]');
       if (btn) updateButtonState(btn, allRandom);
+      updateAllRandomState();
     };
     allRandom.addEventListener('change', updateAll);
-    updateAll();
+    updateAllRandomState();
   }
 
   function setupStackControls() {
@@ -296,6 +308,159 @@
     });
   }
 
+  function updateSectionHideState(prefix) {
+    const master = document.getElementById(`${prefix}-all-hide`);
+    if (!master) return;
+    const states = [];
+    let idx = 1;
+    while (true) {
+      const cb = document.getElementById(`${prefix}-hide-${idx}`);
+      if (!cb) break;
+      states.push(cb.checked);
+      idx++;
+    }
+    const all = states.every(Boolean);
+    const none = states.every(v => !v);
+    master.checked = all;
+    const btn = document.querySelector(`.toggle-button[data-target="${master.id}"]`);
+    if (btn) updateButtonState(btn, master, !(all || none));
+  }
+
+  function updateAllHideState() {
+    const cb = document.getElementById('all-hide');
+    if (!cb) return;
+    const states = Array.from(document.querySelectorAll('input[type="checkbox"][data-targets]')).map(c => c.checked);
+    const all = states.every(Boolean);
+    const none = states.every(v => !v);
+    cb.checked = all;
+    const btn = document.querySelector('.toggle-button[data-target="all-hide"]');
+    if (btn) updateButtonState(btn, cb, !(all || none));
+  }
+
+  function updateSectionOrderState(prefix) {
+    const cb = document.getElementById(`${prefix}-order-random`);
+    if (!cb) return;
+    const canonicalFor = s => (s.id.includes('-depth-select') ? 'prepend' : 'canonical');
+    const sels = [...gatherControls(prefix, 'order'), ...gatherControls(prefix, 'depth')]
+      .map(p => p.select)
+      .filter(Boolean);
+    const allRand = sels.every(s => s.value === 'random');
+    const allCan = sels.every(s => s.value === canonicalFor(s));
+    cb.checked = allRand;
+    const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
+    if (btn) updateButtonState(btn, cb, !(allRand || allCan));
+  }
+
+  function updateAllRandomState() {
+    const cb = document.getElementById('all-random');
+    if (!cb) return;
+    const canonicalFor = s => (s.id.includes('-depth-select') ? 'prepend' : 'canonical');
+    const sels = Array.from(document.querySelectorAll('[id*="-order-select"], [id*="-depth-select"]'));
+    const allRand = sels.every(s => s.value === 'random');
+    const allCan = sels.every(s => s.value === canonicalFor(s));
+    cb.checked = allRand;
+    const btn = document.querySelector('.toggle-button[data-target="all-random"]');
+    if (btn) updateButtonState(btn, cb, !(allRand || allCan));
+  }
+
+  function updateGlobalAdvancedState() {
+    const cb = document.getElementById('advanced-mode');
+    if (!cb) return;
+    const secs = Array.from(document.querySelectorAll('[id$="-advanced"]'));
+    const allOn = secs.every(s => s.checked);
+    const allOff = secs.every(s => !s.checked);
+    cb.checked = allOn;
+    const btn = document.querySelector('.toggle-button[data-target="advanced-mode"]');
+    if (btn) updateButtonState(btn, cb, !(allOn || allOff));
+  }
+
+  function setupSectionHide(prefix) {
+    const cb = document.getElementById(`${prefix}-all-hide`);
+    if (!cb) return;
+    const update = () => {
+      let idx = 1;
+      while (true) {
+        const hide = document.getElementById(`${prefix}-hide-${idx}`);
+        if (!hide) break;
+        hide.checked = cb.checked;
+        const btn = document.querySelector(`.toggle-button[data-target="${hide.id}"]`);
+        if (btn) updateButtonState(btn, hide);
+        hide.dispatchEvent(new Event('change'));
+        idx++;
+      }
+      const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
+      if (btn) updateButtonState(btn, cb);
+      updateSectionHideState(prefix);
+      updateAllHideState();
+    };
+    cb.addEventListener('change', update);
+    updateSectionHideState(prefix);
+  }
+
+  function setupSectionOrder(prefix) {
+    const cb = document.getElementById(`${prefix}-order-random`);
+    if (!cb) return;
+    const canonicalFor = s => (s.id.includes('-depth-select') ? 'prepend' : 'canonical');
+    const update = () => {
+      const sels = [
+        ...gatherControls(prefix, 'order'),
+        ...gatherControls(prefix, 'depth')
+      ].map(p => p.select).filter(Boolean);
+      sels.forEach(s => {
+        s.value = cb.checked ? 'random' : canonicalFor(s);
+        s.dispatchEvent(new Event('change'));
+      });
+      const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
+      if (btn) updateButtonState(btn, cb);
+      updateSectionOrderState(prefix);
+      updateAllRandomState();
+    };
+    cb.addEventListener('change', update);
+    [
+      ...gatherControls(prefix, 'order'),
+      ...gatherControls(prefix, 'depth')
+    ].forEach(p => {
+      if (p.select) p.select.addEventListener('change', () => {
+        updateSectionOrderState(prefix);
+        updateAllRandomState();
+      });
+    });
+    updateSectionOrderState(prefix);
+  }
+
+  function setupSectionAdvanced(prefix) {
+    const cb = document.getElementById(`${prefix}-advanced`);
+    if (!cb) return;
+    const setDisplay = (el, show) => { if (el) el.style.display = show ? '' : 'none'; };
+    const update = () => {
+      const adv = cb.checked;
+      document.querySelectorAll(`[id^="${prefix}-order-select"]`).forEach(el => setDisplay(el, adv));
+      document.querySelectorAll(`[id^="${prefix}-depth-select"]`).forEach(el => setDisplay(el, adv));
+      document.querySelectorAll(`[id^="${prefix}-order-input"]`).forEach(el => {
+        if (el.parentElement && el.parentElement.classList.contains('input-row')) setDisplay(el.parentElement, adv);
+      });
+      document.querySelectorAll(`[id^="${prefix}-depth-input"]`).forEach(el => {
+        if (el.parentElement && el.parentElement.classList.contains('input-row')) setDisplay(el.parentElement, adv);
+      });
+      document.querySelectorAll(`[id^="${prefix}-order-container"]`).forEach(el => setDisplay(el, adv));
+      document.querySelectorAll(`[id^="${prefix}-depth-container"]`).forEach(el => setDisplay(el, adv));
+      const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
+      if (btn) updateButtonState(btn, cb);
+      updateGlobalAdvancedState();
+      (rerollUpdaters[prefix] || []).forEach(fn => fn());
+    };
+    cb.addEventListener('change', () => {
+      cb.dataset.userSet = 'true';
+      update();
+    });
+    if (!cb.dataset.userSet) {
+      const globalAdv = document.getElementById('advanced-mode');
+      cb.checked = !!(globalAdv && globalAdv.checked);
+    }
+    updateGlobalAdvancedState();
+    update();
+  }
+
   const rerollUpdaters = {};
 
   function setupAdvancedToggle() {
@@ -335,8 +500,16 @@
       containerIds.forEach(id => {
         document.querySelectorAll(`[id^="${id}"]`).forEach(el => setDisplay(el, adv));
       });
+      document.querySelectorAll('[id$="-advanced"]').forEach(sec => {
+        sec.checked = adv;
+        sec.dataset.userSet = '';
+        const btn = document.querySelector(`.toggle-button[data-target="${sec.id}"]`);
+        if (btn) updateButtonState(btn, sec);
+        sec.dispatchEvent(new Event('change'));
+      });
+      updateGlobalAdvancedState();
       // Dice buttons remain visible in both modes
-      Object.values(rerollUpdaters).forEach(fn => fn());
+      Object.values(rerollUpdaters).flat().forEach(fn => fn());
     };
     cb.addEventListener('change', update);
     update();
@@ -347,7 +520,7 @@
     hideCheckboxes.forEach(cb => {
       const ids = cb.dataset.targets.split(',').map(id => id.trim());
       const elems = ids.map(id => document.getElementById(id)).filter(Boolean);
-      const update = () => {
+      const update = (notify = true) => {
         elems.forEach(el => {
           el.style.display = cb.checked ? 'none' : '';
         });
@@ -362,12 +535,18 @@
             }
           }
         }
+        if (notify) {
+          const prefixMatch = cb.id.match(/^(pos|neg)-hide/);
+          if (prefixMatch) updateSectionHideState(prefixMatch[1]);
+          updateAllHideState();
+        }
       };
-      cb.addEventListener('change', update);
-      update();
+      cb.addEventListener('change', () => update(true));
+      update(false);
     });
     const allHide = document.getElementById('all-hide');
     if (allHide && allHide.checked) applyAllHideState();
+    else updateAllHideState();
     return hideCheckboxes;
   }
 
@@ -383,10 +562,17 @@
       if (btn) updateButtonState(btn, cb);
       cb.dispatchEvent(new Event('change'));
     });
+    document.querySelectorAll('[id$="-all-hide"]').forEach(sec => {
+      sec.checked = allHide.checked;
+      const btn = document.querySelector(`.toggle-button[data-target="${sec.id}"]`);
+      if (btn) updateButtonState(btn, sec);
+      sec.dispatchEvent(new Event('change'));
+    });
     const allHideBtn = document.querySelector(
       '.toggle-button[data-target="all-hide"]'
     );
     if (allHideBtn) updateButtonState(allHideBtn, allHide);
+    updateAllHideState();
   }
 
   function setupCopyButtons() {
@@ -446,7 +632,9 @@
       } else if (lists.ORDER_PRESETS[select.value]) {
         input.value = lists.ORDER_PRESETS[select.value].join(', ');
       }
-      if (rerollUpdaters[prefix]) rerollUpdaters[prefix]();
+      if (rerollUpdaters[prefix]) rerollUpdaters[prefix].forEach(fn => fn());
+      updateSectionOrderState(prefix);
+      updateAllRandomState();
     };
     select.addEventListener('change', update);
     update();
@@ -502,7 +690,7 @@
       } else if (lists.ORDER_PRESETS[val]) {
         input.value = lists.ORDER_PRESETS[val].join(', ');
       }
-      if (rerollUpdaters[prefix]) rerollUpdaters[prefix]();
+      if (rerollUpdaters[prefix]) rerollUpdaters[prefix].forEach(fn => fn());
     });
     select.dispatchEvent(new Event('change'));
   }
@@ -571,6 +759,13 @@
       save.innerHTML = '&#128190;';
       save.addEventListener('click', () => lists.saveList(type, idx));
       btnCol.appendChild(save);
+      const rerollBtn = document.createElement('button');
+      rerollBtn.type = 'button';
+      rerollBtn.id = `${prefix}-reroll-${idx}`;
+      rerollBtn.className = 'toggle-button icon-button random-button';
+      rerollBtn.title = 'Reroll';
+      rerollBtn.innerHTML = '&#127922;';
+      btnCol.appendChild(rerollBtn);
       const copy = document.createElement('button');
       copy.type = 'button';
       copy.className = 'copy-button icon-button';
@@ -665,6 +860,7 @@
       applyPreset(sel, ta, type);
       setupOrderControl(orderSel.id, oTa.id, () => utils.parseInput(ta.value));
       setupDepthControl(depthSel.id, dTa.id);
+      setupRerollButton(rerollBtn.id, orderSel.id);
     }
     for (let i = current; i > count; i--) {
       const block = document.getElementById(`${prefix}-stack-${i}`);
@@ -673,6 +869,9 @@
     setupCopyButtons();
     setupHideToggles();
     setupToggleButtons();
+    setupSectionHide(prefix);
+    setupSectionOrder(prefix);
+    setupSectionAdvanced(prefix);
     const adv = document.getElementById('advanced-mode');
     if (adv && !adv.checked) adv.dispatchEvent(new Event('change'));
   }
@@ -683,13 +882,9 @@
     const adv = document.getElementById('advanced-mode');
     if (!btn || !select) return;
     const prefix = guessPrefix(selectId);
-    const gather = () =>
-      [
-        ...gatherControls(prefix, 'order'),
-        ...gatherControls(prefix, 'depth')
-      ]
-        .map(p => p.select)
-        .filter(Boolean);
+    const idx = (selectId.match(/-(\d+)$/) || [])[1] ? parseInt(selectId.match(/-(\d+)$/)[1], 10) : 1;
+    const selFor = base => document.getElementById(`${prefix}-${base}-select${idx === 1 ? '' : '-' + idx}`);
+    const gather = () => [selFor('order'), selFor('depth')].filter(Boolean);
     const updateState = () => {
       const sels = gather();
       const canonicalFor = s => (s.id.includes('-depth-select') ? 'prepend' : 'canonical');
@@ -711,9 +906,10 @@
       updateState();
     };
     btn.addEventListener('click', reroll);
-    select.addEventListener('change', updateState);
+    gather().forEach(s => s.addEventListener('change', updateState));
     if (adv) adv.addEventListener('change', updateState);
-    rerollUpdaters[prefix] = updateState;
+    if (!rerollUpdaters[prefix]) rerollUpdaters[prefix] = [];
+    rerollUpdaters[prefix].push(updateState);
     updateState();
   }
 
@@ -853,16 +1049,25 @@
     updateDepthContainers('pos', 1);
     updateDepthContainers('neg', 1);
     setupRerollButton('base-reroll', 'base-order-select');
-    setupRerollButton('pos-reroll', 'pos-order-select');
-    setupRerollButton('neg-reroll', 'neg-order-select');
+    setupRerollButton('pos-reroll-1', 'pos-order-select');
+    setupRerollButton('neg-reroll-1', 'neg-order-select');
     setupRerollButton('divider-reroll', 'divider-order-select');
     setupAdvancedToggle();
+    setupSectionHide('pos');
+    setupSectionHide('neg');
+    setupSectionOrder('pos');
+    setupSectionOrder('neg');
+    setupSectionAdvanced('pos');
+    setupSectionAdvanced('neg');
     document.getElementById('generate').addEventListener('click', generate);
 
     setupToggleButtons();
     setupStackControls();
     setupShuffleAll();
     setupHideToggles();
+    updateAllRandomState();
+    updateAllHideState();
+    updateGlobalAdvancedState();
 
     const allHide = document.getElementById('all-hide');
     if (allHide) {
@@ -909,6 +1114,14 @@
     updateStackBlocks,
     rerollRandomOrders,
     setupRerollButton,
+    updateSectionHideState,
+    updateAllHideState,
+    updateSectionOrderState,
+    updateAllRandomState,
+    updateGlobalAdvancedState,
+    setupSectionHide,
+    setupSectionOrder,
+    setupSectionAdvanced,
     initializeUI
   };
 
