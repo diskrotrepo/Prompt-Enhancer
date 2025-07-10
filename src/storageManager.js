@@ -42,7 +42,11 @@
     }
     if (typeof data !== 'object') return;
     if (data.lists) lists.importLists(data.lists);
-    if (data.state) state.importState(data.state);
+    if (data.state) {
+      state.importState(data.state);
+      // second pass to populate elements created during import
+      state.applyToDOM(data.state);
+    }
     saveLocal(data);
   }
 
