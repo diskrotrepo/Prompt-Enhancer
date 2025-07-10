@@ -846,6 +846,38 @@ describe('UI interactions', () => {
     expect(depthSel.style.display).toBe('');
   });
 
+  test('advanced mode stays on after enabling stack', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <input type="checkbox" id="pos-stack">
+      <select id="pos-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="pos-shuffle">
+      <div id="pos-stack-container">
+        <div class="stack-block" id="pos-stack-1">
+          <select id="pos-select"></select>
+          <div class="input-row"><textarea id="pos-input"></textarea></div>
+          <div id="pos-order-container">
+            <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+            <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+          </div>
+          <div id="pos-depth-container">
+            <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+            <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
+          </div>
+        </div>
+      </div>
+    `;
+    setupAdvancedToggle();
+    setupStackControls();
+    const adv = document.getElementById('advanced-mode');
+    adv.checked = true;
+    adv.dispatchEvent(new Event('change'));
+    const cb = document.getElementById('pos-stack');
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+    expect(adv.checked).toBe(true);
+  });
+
   test('global advanced overrides section settings', () => {
     document.body.innerHTML = `
       <input type="checkbox" id="advanced-mode">
@@ -872,6 +904,125 @@ describe('UI interactions', () => {
     expect(posCb.checked).toBe(true);
     const posBtn = document.querySelector('.toggle-button[data-target="pos-advanced"]');
     expect(posBtn.classList.contains('active')).toBe(true);
+  });
+
+  test('enabling negative stack keeps positive advanced state', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <input type="checkbox" id="pos-advanced">
+      <input type="checkbox" id="neg-advanced">
+      <input type="checkbox" id="neg-stack">
+      <select id="neg-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="neg-shuffle">
+      <div id="neg-stack-container">
+        <div class="stack-block" id="neg-stack-1">
+          <select id="neg-select"></select>
+          <div class="input-row"><textarea id="neg-input"></textarea></div>
+          <div id="neg-order-container">
+            <select id="neg-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+            <div class="input-row"><textarea id="neg-order-input"></textarea></div>
+          </div>
+          <div id="neg-depth-container">
+            <select id="neg-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+            <div class="input-row"><textarea id="neg-depth-input"></textarea></div>
+          </div>
+        </div>
+      </div>
+    `;
+    setupSectionAdvanced('pos');
+    setupSectionAdvanced('neg');
+    setupAdvancedToggle();
+    setupStackControls();
+    const globalAdv = document.getElementById('advanced-mode');
+    globalAdv.checked = true;
+    globalAdv.dispatchEvent(new Event('change'));
+    const posAdv = document.getElementById('pos-advanced');
+    posAdv.checked = false;
+    posAdv.dispatchEvent(new Event('change'));
+    const negStack = document.getElementById('neg-stack');
+    negStack.checked = true;
+    negStack.dispatchEvent(new Event('change'));
+    expect(posAdv.checked).toBe(false);
+  });
+
+  test('enabling positive stack keeps negative advanced state', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <input type="checkbox" id="pos-advanced">
+      <input type="checkbox" id="neg-advanced">
+      <input type="checkbox" id="pos-stack">
+      <select id="pos-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="pos-shuffle">
+      <div id="pos-stack-container">
+        <div class="stack-block" id="pos-stack-1">
+          <select id="pos-select"></select>
+          <div class="input-row"><textarea id="pos-input"></textarea></div>
+          <div id="pos-order-container">
+            <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+            <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+          </div>
+          <div id="pos-depth-container">
+            <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+            <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
+          </div>
+        </div>
+      </div>
+    `;
+    setupSectionAdvanced('pos');
+    setupSectionAdvanced('neg');
+    setupAdvancedToggle();
+    setupStackControls();
+    const globalAdv = document.getElementById('advanced-mode');
+    globalAdv.checked = true;
+    globalAdv.dispatchEvent(new Event('change'));
+    const negAdv = document.getElementById('neg-advanced');
+    negAdv.checked = false;
+    negAdv.dispatchEvent(new Event('change'));
+    const posStack = document.getElementById('pos-stack');
+    posStack.checked = true;
+    posStack.dispatchEvent(new Event('change'));
+    expect(negAdv.checked).toBe(false);
+  });
+
+  test('disabling negative stack keeps positive advanced state', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <input type="checkbox" id="pos-advanced">
+      <input type="checkbox" id="neg-advanced">
+      <input type="checkbox" id="neg-stack">
+      <select id="neg-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="neg-shuffle">
+      <div id="neg-stack-container">
+        <div class="stack-block" id="neg-stack-1">
+          <select id="neg-select"></select>
+          <div class="input-row"><textarea id="neg-input"></textarea></div>
+          <div id="neg-order-container">
+            <select id="neg-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+            <div class="input-row"><textarea id="neg-order-input"></textarea></div>
+          </div>
+          <div id="neg-depth-container">
+            <select id="neg-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+            <div class="input-row"><textarea id="neg-depth-input"></textarea></div>
+          </div>
+        </div>
+      </div>
+    `;
+    setupSectionAdvanced('pos');
+    setupSectionAdvanced('neg');
+    setupAdvancedToggle();
+    setupStackControls();
+    const globalAdv = document.getElementById('advanced-mode');
+    globalAdv.checked = true;
+    globalAdv.dispatchEvent(new Event('change'));
+    const posAdv = document.getElementById('pos-advanced');
+    posAdv.checked = false;
+    posAdv.dispatchEvent(new Event('change'));
+    const negStack = document.getElementById('neg-stack');
+    negStack.checked = true;
+    negStack.dispatchEvent(new Event('change'));
+    negStack.checked = false;
+    negStack.dispatchEvent(new Event('change'));
+    expect(posAdv.checked).toBe(false);
   });
 });
 

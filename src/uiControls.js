@@ -483,6 +483,24 @@
     reflectGlobalAdvanced();
   }
 
+  function refreshSectionAdvanced(prefix) {
+    const cb = document.getElementById(`${prefix}-advanced`);
+    if (!cb) return;
+    const adv = cb.checked;
+    const setDisplay = (el, show) => { if (el) el.style.display = show ? '' : 'none'; };
+    document.querySelectorAll(`[id^="${prefix}-order-select"]`).forEach(el => setDisplay(el, adv));
+    document.querySelectorAll(`[id^="${prefix}-depth-select"]`).forEach(el => setDisplay(el, adv));
+    document.querySelectorAll(`[id^="${prefix}-order-input"]`).forEach(el => {
+      if (el.parentElement && el.parentElement.classList.contains('input-row')) setDisplay(el.parentElement, adv);
+    });
+    document.querySelectorAll(`[id^="${prefix}-depth-input"]`).forEach(el => {
+      if (el.parentElement && el.parentElement.classList.contains('input-row')) setDisplay(el.parentElement, adv);
+    });
+    document.querySelectorAll(`[id^="${prefix}-order-container"]`).forEach(el => setDisplay(el, adv));
+    document.querySelectorAll(`[id^="${prefix}-depth-container"]`).forEach(el => setDisplay(el, adv));
+    (rerollUpdaters[prefix] || []).forEach(fn => fn());
+  }
+
   const rerollUpdaters = {};
 
   function setupAdvancedToggle() {
@@ -896,8 +914,14 @@
     setupSectionHide(prefix);
     setupSectionOrder(prefix);
     setupSectionAdvanced(prefix);
-    const adv = document.getElementById('advanced-mode');
-    if (adv && !adv.checked) adv.dispatchEvent(new Event('change'));
+    ['pos', 'neg'].forEach(p => {
+      if (document.getElementById(`${p}-advanced`)) {
+        refreshSectionAdvanced(p);
+      } else {
+        const adv = document.getElementById('advanced-mode');
+        if (adv) adv.dispatchEvent(new Event('change'));
+      }
+    });
   }
 
   function setupRerollButton(btnId, selectId) {
