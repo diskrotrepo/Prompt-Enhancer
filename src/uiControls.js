@@ -1010,6 +1010,7 @@
   function setupDataButtons() {
     const saveBtn = document.getElementById('save-data');
     const loadBtn = document.getElementById('load-data');
+    const resetBtn = document.getElementById('reset-data');
     const fileInput = document.getElementById('data-file');
     if (saveBtn) {
       saveBtn.addEventListener('click', () => {
@@ -1022,6 +1023,13 @@
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+      });
+    }
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        if (confirm('Reset all data to defaults?')) {
+          storage.resetData();
+        }
       });
     }
     if (loadBtn && fileInput) {

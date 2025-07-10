@@ -90,4 +90,21 @@ describe('Storage manager', () => {
     const txt = document.getElementById('base-input').value;
     expect(txt).toBe('z');
   });
+
+  test('resetData clears storage and loads defaults', () => {
+    localStorage.setItem('promptEnhancerData', JSON.stringify({ state: { 'base-input': 'x' } }));
+    global.DEFAULT_DATA = {
+      lists: { presets: [{ id: 'b', title: 'b', type: 'base', items: ['d'] }] },
+      state: { 'base-input': 'd', 'base-select': 'b' }
+    };
+    document.body.innerHTML = `
+      <select id="base-select"></select>
+      <textarea id="base-input"></textarea>
+    `;
+    lists.importLists({ presets: [] });
+    storage.resetData();
+    const txt = document.getElementById('base-input').value;
+    expect(txt).toBe('d');
+    expect(localStorage.getItem('promptEnhancerData')).not.toBeNull();
+  });
 });
