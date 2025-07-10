@@ -1007,9 +1007,60 @@
     });
   }
 
+  function applyCurrentPresets() {
+    applyPreset(
+      document.getElementById('neg-select'),
+      document.getElementById('neg-input'),
+      'negative'
+    );
+    applyPreset(
+      document.getElementById('pos-select'),
+      document.getElementById('pos-input'),
+      'positive'
+    );
+    applyPreset(
+      document.getElementById('length-select'),
+      document.getElementById('length-input'),
+      'length'
+    );
+    applyPreset(
+      document.getElementById('divider-select'),
+      document.getElementById('divider-input'),
+      'divider'
+    );
+    applyPreset(
+      document.getElementById('base-select'),
+      document.getElementById('base-input'),
+      'base'
+    );
+    applyPreset(
+      document.getElementById('lyrics-select'),
+      document.getElementById('lyrics-input'),
+      'lyrics'
+    );
+  }
+
+  function resetUI() {
+    const fields = document.querySelectorAll('input[id], textarea[id], select[id]');
+    fields.forEach(el => {
+      if (el.tagName === 'SELECT') {
+        el.selectedIndex = 0;
+      } else if (el.type === 'checkbox') {
+        el.checked = el.defaultChecked;
+      } else {
+        el.value = el.defaultValue || '';
+      }
+      el.dispatchEvent(new Event('change'));
+    });
+    updateStackBlocks('pos', 1);
+    updateStackBlocks('neg', 1);
+    applyCurrentPresets();
+  }
+
   function setupDataButtons() {
     const saveBtn = document.getElementById('save-data');
     const loadBtn = document.getElementById('load-data');
+    const resetBtn = document.getElementById('reset-data');
     const fileInput = document.getElementById('data-file');
     if (saveBtn) {
       saveBtn.addEventListener('click', () => {
@@ -1022,6 +1073,14 @@
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+      });
+    }
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        if (confirm('Reset all data to defaults?')) {
+          storage.resetData();
+          resetUI();
+        }
       });
     }
     if (loadBtn && fileInput) {
@@ -1046,12 +1105,7 @@
 
   function initializeUI() {
     storage.loadPersisted();
-    applyPreset(document.getElementById('neg-select'), document.getElementById('neg-input'), 'negative');
-    applyPreset(document.getElementById('pos-select'), document.getElementById('pos-input'), 'positive');
-    applyPreset(document.getElementById('length-select'), document.getElementById('length-input'), 'length');
-    applyPreset(document.getElementById('divider-select'), document.getElementById('divider-input'), 'divider');
-    applyPreset(document.getElementById('base-select'), document.getElementById('base-input'), 'base');
-    applyPreset(document.getElementById('lyrics-select'), document.getElementById('lyrics-input'), 'lyrics');
+    applyCurrentPresets();
 
     setupPresetListener('neg-select', 'neg-input', 'negative');
     setupPresetListener('pos-select', 'pos-input', 'positive');
@@ -1151,7 +1205,9 @@
     setupSectionHide,
     setupSectionOrder,
     setupSectionAdvanced,
-    initializeUI
+    initializeUI,
+    applyCurrentPresets,
+    resetUI
   };
 
   if (typeof module !== 'undefined') {

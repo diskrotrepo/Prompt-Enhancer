@@ -17,48 +17,16 @@
     el.dispatchEvent(new Event('change'));
   }
 
-  const FIELD_IDS = [
-    'base-input',
-    'base-select',
-    'base-shuffle',
-    'pos-input',
-    'pos-select',
-    'pos-shuffle',
-    'pos-stack',
-    'pos-stack-size',
-    'neg-input',
-    'neg-select',
-    'neg-shuffle',
-    'neg-stack',
-    'neg-stack-size',
-    'neg-include-pos',
-    'divider-input',
-    'divider-select',
-    'divider-shuffle',
-    'length-input',
-    'length-select',
-    'lyrics-input',
-    'lyrics-select',
-    'lyrics-space',
-    'lyrics-remove-parens',
-    'lyrics-remove-brackets',
-    'pos-depth-select',
-    'pos-depth-input',
-    'neg-depth-select',
-    'neg-depth-input',
-    'base-order-select',
-    'base-order-input',
-    'pos-order-select',
-    'pos-order-input',
-    'neg-order-select',
-    'neg-order-input',
-    'divider-order-select',
-    'divider-order-input'
-  ];
+  function getFieldIds() {
+    if (typeof document === 'undefined') return [];
+    return Array.from(
+      document.querySelectorAll('input[id], textarea[id], select[id]')
+    ).map(el => el.id);
+  }
 
   function loadFromDOM() {
     const obj = {};
-    FIELD_IDS.forEach(id => {
+    getFieldIds().forEach(id => {
       const el = typeof document !== 'undefined' && document.getElementById(id);
       if (el) obj[id] = getVal(el);
     });
@@ -69,7 +37,7 @@
 
   function applyToDOM(state) {
     if (!state) return;
-    FIELD_IDS.forEach(id => {
+    getFieldIds().forEach(id => {
       if (Object.prototype.hasOwnProperty.call(state, id)) {
         const el = typeof document !== 'undefined' && document.getElementById(id);
         setVal(el, state[id]);
