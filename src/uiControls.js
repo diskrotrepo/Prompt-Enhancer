@@ -5,6 +5,8 @@
     global.listManager || (typeof require !== 'undefined' && require('./listManager'));
   const storage = global.storageManager || (typeof require !== "undefined" && require("./storageManager"));
 
+  let reflectAllRandomLocked = false;
+
   function guessPrefix(id) {
     const m = id.match(/^([a-z]+)(?:-(?:order|depth))?-select/);
     return m ? m[1] : id.replace(/-select.*$/, '');
@@ -265,6 +267,7 @@
       }
     };
     const updateAll = () => {
+      reflectAllRandomLocked = true;
       const selects = Array.from(
         document.querySelectorAll('[id*="-order-select"], [id*="-depth-select"]')
       );
@@ -281,6 +284,7 @@
           cb.dispatchEvent(new Event('change'));
         }
       });
+      reflectAllRandomLocked = false;
       reflect();
     };
     allRandom.addEventListener('change', updateAll);
@@ -367,6 +371,10 @@
     );
     const allRand = sels.every(s => s.value === 'random');
     const allCan = sels.every(s => s.value === canonicalFor(s));
+    if (!reflectAllRandomLocked) {
+      const globalCb = document.getElementById('all-random');
+      if (globalCb) globalCb.checked = allRand;
+    }
     const btn = document.querySelector('.toggle-button[data-target="all-random"]');
     reflectToggleState(btn, allRand, !allCan && !allRand);
   }
@@ -381,6 +389,7 @@
     ].map(p => p.select).filter(Boolean);
     const allRand = sels.every(s => s.value === 'random');
     const allCan = sels.every(s => s.value === canonicalFor(s));
+    cb.checked = allRand;
     const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
     reflectToggleState(btn, allRand, !allCan && !allRand);
   }
@@ -390,6 +399,8 @@
     if (!secs.length) return;
     const allOn = secs.every(cb => cb.checked);
     const allOff = secs.every(cb => !cb.checked);
+    const globalCb = document.getElementById('advanced-mode');
+    if (globalCb) globalCb.checked = allOn;
     const btn = document.querySelector('.toggle-button[data-target="advanced-mode"]');
     reflectToggleState(btn, allOn, !allOff && !allOn);
   }

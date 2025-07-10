@@ -1423,4 +1423,113 @@ describe('List persistence', () => {
     cb.dispatchEvent(new Event('change'));
     expect(btn.textContent).toBe('All visible');
   });
+
+  test('global random checkbox syncs with selects', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="all-random">
+      <button type="button" class="toggle-button" data-target="all-random" data-on="Randomized" data-off="Canonical">Canonical</button>
+      <input type="checkbox" id="pos-order-random">
+      <button type="button" class="toggle-button" data-target="pos-order-random" data-on="Randomized" data-off="Canonical">Canonical</button>
+      <input type="checkbox" id="neg-order-random">
+      <button type="button" class="toggle-button" data-target="neg-order-random" data-on="Randomized" data-off="Canonical">Canonical</button>
+      <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="neg-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+      <select id="neg-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+    `;
+    setupSectionOrder('pos');
+    setupSectionOrder('neg');
+    setupToggleButtons();
+    setupShuffleAll();
+    const ps = document.getElementById('pos-order-select');
+    const ns = document.getElementById('neg-order-select');
+    const pd = document.getElementById('pos-depth-select');
+    const nd = document.getElementById('neg-depth-select');
+    ps.value = 'random';
+    ps.dispatchEvent(new Event('change'));
+    ns.value = 'random';
+    ns.dispatchEvent(new Event('change'));
+    pd.value = 'random';
+    pd.dispatchEvent(new Event('change'));
+    nd.value = 'random';
+    nd.dispatchEvent(new Event('change'));
+    expect(document.getElementById('all-random').checked).toBe(true);
+    const btn = document.querySelector('.toggle-button[data-target="all-random"]');
+    btn.click();
+    expect(ps.value).toBe('canonical');
+    expect(ns.value).toBe('canonical');
+    expect(pd.value).toBe('prepend');
+    expect(nd.value).toBe('prepend');
+  });
+
+  test('section random checkbox syncs with selects', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="pos-order-random">
+      <button type="button" class="toggle-button" data-target="pos-order-random" data-on="Randomized" data-off="Canonical">Canonical</button>
+      <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+    `;
+    setupSectionOrder('pos');
+    setupToggleButtons();
+    const sel = document.getElementById('pos-order-select');
+    const dep = document.getElementById('pos-depth-select');
+    sel.value = 'random';
+    sel.dispatchEvent(new Event('change'));
+    dep.value = 'random';
+    dep.dispatchEvent(new Event('change'));
+    expect(document.getElementById('pos-order-random').checked).toBe(true);
+    const btn = document.querySelector('.toggle-button[data-target="pos-order-random"]');
+    btn.click();
+    expect(sel.value).toBe('canonical');
+    expect(dep.value).toBe('prepend');
+  });
+
+  test('global hide checkbox syncs with section hides', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="all-hide">
+      <button type="button" class="toggle-button" data-target="all-hide" data-on="All hidden" data-off="All visible">All visible</button>
+      <input type="checkbox" id="hide-1" data-targets="foo" hidden>
+      <input type="checkbox" id="hide-2" data-targets="bar" hidden>
+      <div id="foo"></div>
+      <div id="bar"></div>
+    `;
+    setupToggleButtons();
+    setupHideToggles();
+    document.getElementById('all-hide').addEventListener('change', applyAllHideState);
+    const h1 = document.getElementById('hide-1');
+    const h2 = document.getElementById('hide-2');
+    h1.checked = true;
+    h1.dispatchEvent(new Event('change'));
+    h2.checked = true;
+    h2.dispatchEvent(new Event('change'));
+    expect(document.getElementById('all-hide').checked).toBe(true);
+    const btn = document.querySelector('.toggle-button[data-target="all-hide"]');
+    btn.click();
+    expect(h1.checked).toBe(false);
+    expect(h2.checked).toBe(false);
+  });
+
+  test('advanced mode checkbox syncs with sections', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <button type="button" class="toggle-button" data-target="advanced-mode" data-on="Advanced" data-off="Simple">Simple</button>
+      <input type="checkbox" id="pos-advanced">
+      <button type="button" class="toggle-button" data-target="pos-advanced" data-on="Advanced" data-off="Simple">Simple</button>
+      <input type="checkbox" id="neg-advanced">
+      <button type="button" class="toggle-button" data-target="neg-advanced" data-on="Advanced" data-off="Simple">Simple</button>
+    `;
+    setupToggleButtons();
+    setupSectionAdvanced('pos');
+    setupSectionAdvanced('neg');
+    setupAdvancedToggle();
+    document.getElementById('pos-advanced').checked = true;
+    document.getElementById('pos-advanced').dispatchEvent(new Event('change'));
+    document.getElementById('neg-advanced').checked = true;
+    document.getElementById('neg-advanced').dispatchEvent(new Event('change'));
+    expect(document.getElementById('advanced-mode').checked).toBe(true);
+    const btn = document.querySelector('.toggle-button[data-target="advanced-mode"]');
+    btn.click();
+    expect(document.getElementById('pos-advanced').checked).toBe(false);
+    expect(document.getElementById('neg-advanced').checked).toBe(false);
+  });
 });
