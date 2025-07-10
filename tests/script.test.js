@@ -36,7 +36,8 @@ const {
   rerollRandomOrders,
   setupAdvancedToggle,
   updateStackBlocks,
-  setupSectionOrder
+  setupSectionOrder,
+  setupSectionHide
 } = ui;
 
 describe('Utility functions', () => {
@@ -1083,6 +1084,88 @@ describe('List persistence', () => {
     allHide.checked = false;
     allHide.dispatchEvent(new Event('change'));
     expect(posInput2.style.display).toBe('');
+  });
+
+  test('section all-hide applies to new stack blocks', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="pos-all-hide">
+      <input type="checkbox" id="pos-stack">
+      <select id="pos-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="pos-shuffle">
+      <select id="pos-select"></select>
+      <select id="pos-order-select"></select>
+      <select id="pos-depth-select"></select>
+      <div id="pos-stack-container">
+        <div class="stack-block" id="pos-stack-1">
+          <div class="label-row">
+            <label>Stack 1</label>
+            <div class="button-col">
+              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-input" hidden>
+              <button type="button" class="toggle-button hide-button" data-target="pos-hide-1" data-on="☰" data-off="✖">☰</button>
+            </div>
+          </div>
+          <div class="input-row"><textarea id="pos-input"></textarea></div>
+          <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+        </div>
+      </div>`;
+    setupToggleButtons();
+    setupStackControls();
+    setupHideToggles();
+    setupSectionHide('pos');
+    const secHide = document.getElementById('pos-all-hide');
+    secHide.checked = true;
+    secHide.dispatchEvent(new Event('change'));
+    const stackCb = document.getElementById('pos-stack');
+    stackCb.checked = true;
+    stackCb.dispatchEvent(new Event('change'));
+    const posInput2 = document.getElementById('pos-input-2');
+    expect(posInput2.style.display).toBe('none');
+  });
+
+  test('global hide stays off when section toggled visible before stacking', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="all-hide">
+      <button type="button" class="toggle-button" data-target="all-hide" data-on="All hidden" data-off="All visible">All visible</button>
+      <input type="checkbox" id="pos-all-hide">
+      <button type="button" class="toggle-button" data-target="pos-all-hide" data-on="All hidden" data-off="All visible">All visible</button>
+      <input type="checkbox" id="pos-stack">
+      <select id="pos-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="pos-shuffle">
+      <select id="pos-select"></select>
+      <select id="pos-order-select"></select>
+      <select id="pos-depth-select"></select>
+      <div id="pos-stack-container">
+        <div class="stack-block" id="pos-stack-1">
+          <div class="label-row">
+            <label>Stack 1</label>
+            <div class="button-col">
+              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-input" hidden>
+              <button type="button" class="toggle-button hide-button" data-target="pos-hide-1" data-on="☰" data-off="✖">☰</button>
+            </div>
+          </div>
+          <div class="input-row"><textarea id="pos-input"></textarea></div>
+          <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+        </div>
+      </div>`;
+    setupToggleButtons();
+    setupStackControls();
+    setupHideToggles();
+    setupSectionHide('pos');
+    const globalHide = document.getElementById('all-hide');
+    globalHide.checked = true;
+    globalHide.dispatchEvent(new Event('change'));
+    const secHide = document.getElementById('pos-all-hide');
+    secHide.checked = false;
+    secHide.dispatchEvent(new Event('change'));
+    expect(globalHide.checked).toBe(false);
+    const stackCb = document.getElementById('pos-stack');
+    stackCb.checked = true;
+    stackCb.dispatchEvent(new Event('change'));
+    const posInput2 = document.getElementById('pos-input-2');
+    expect(posInput2.style.display).toBe('');
+    expect(globalHide.checked).toBe(false);
+    const secBtn = document.querySelector('.toggle-button[data-target="pos-all-hide"]');
+    expect(secBtn.classList.contains('active')).toBe(false);
   });
 
   test('hide button works for dynamically added stack blocks', () => {
