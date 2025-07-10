@@ -5,6 +5,8 @@
     global.listManager || (typeof require !== 'undefined' && require('./listManager'));
   const storage = global.storageManager || (typeof require !== "undefined" && require("./storageManager"));
 
+  let reflectAllRandomLocked = false;
+
   function guessPrefix(id) {
     const m = id.match(/^([a-z]+)(?:-(?:order|depth))?-select/);
     return m ? m[1] : id.replace(/-select.*$/, '');
@@ -219,6 +221,16 @@
     }
   }
 
+  function reflectToggleState(btn, active, indeterminate) {
+    if (!btn) return;
+    btn.classList.remove('active', 'indeterminate');
+    if (active) btn.classList.add('active');
+    else if (indeterminate) btn.classList.add('indeterminate');
+    if (btn.dataset.on && btn.dataset.off) {
+      btn.textContent = active ? btn.dataset.on : btn.dataset.off;
+    }
+  }
+
   function setupToggleButtons() {
     document.querySelectorAll('.toggle-button').forEach(btn => {
       const target = btn.dataset.target;
@@ -255,6 +267,7 @@
       }
     };
     const updateAll = () => {
+      reflectAllRandomLocked = true;
       const selects = Array.from(
         document.querySelectorAll('[id*="-order-select"], [id*="-depth-select"]')
       );
@@ -271,6 +284,7 @@
           cb.dispatchEvent(new Event('change'));
         }
       });
+      reflectAllRandomLocked = false;
       reflect();
     };
     allRandom.addEventListener('change', updateAll);
@@ -334,11 +348,7 @@
       idx++;
     }
     const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
-    if (btn) {
-      btn.classList.remove('active', 'indeterminate');
-      if (all) btn.classList.add('active');
-      else if (any) btn.classList.add('indeterminate');
-    }
+    reflectToggleState(btn, all, any && !all);
   }
 
   function reflectAllHide() {
@@ -350,11 +360,7 @@
     const globalCb = document.getElementById('all-hide');
     if (globalCb) globalCb.checked = all;
     const btn = document.querySelector('.toggle-button[data-target="all-hide"]');
-    if (btn) {
-      btn.classList.remove('active', 'indeterminate');
-      if (all) btn.classList.add('active');
-      else if (any) btn.classList.add('indeterminate');
-    }
+    reflectToggleState(btn, all, any && !all);
   }
 
   function reflectAllRandom() {
@@ -365,12 +371,12 @@
     );
     const allRand = sels.every(s => s.value === 'random');
     const allCan = sels.every(s => s.value === canonicalFor(s));
-    const btn = document.querySelector('.toggle-button[data-target="all-random"]');
-    if (btn) {
-      btn.classList.remove('active', 'indeterminate');
-      if (allRand) btn.classList.add('active');
-      else if (!allCan) btn.classList.add('indeterminate');
+    if (!reflectAllRandomLocked) {
+      const globalCb = document.getElementById('all-random');
+      if (globalCb) globalCb.checked = allRand;
     }
+    const btn = document.querySelector('.toggle-button[data-target="all-random"]');
+    reflectToggleState(btn, allRand, !allCan && !allRand);
   }
 
   function reflectSectionOrder(prefix) {
@@ -383,12 +389,9 @@
     ].map(p => p.select).filter(Boolean);
     const allRand = sels.every(s => s.value === 'random');
     const allCan = sels.every(s => s.value === canonicalFor(s));
+    cb.checked = allRand;
     const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
-    if (btn) {
-      btn.classList.remove('active', 'indeterminate');
-      if (allRand) btn.classList.add('active');
-      else if (!allCan) btn.classList.add('indeterminate');
-    }
+    reflectToggleState(btn, allRand, !allCan && !allRand);
   }
 
   function reflectGlobalAdvanced() {
@@ -396,12 +399,10 @@
     if (!secs.length) return;
     const allOn = secs.every(cb => cb.checked);
     const allOff = secs.every(cb => !cb.checked);
+    const globalCb = document.getElementById('advanced-mode');
+    if (globalCb) globalCb.checked = allOn;
     const btn = document.querySelector('.toggle-button[data-target="advanced-mode"]');
-    if (btn) {
-      btn.classList.remove('active', 'indeterminate');
-      if (allOn) btn.classList.add('active');
-      else if (!allOff) btn.classList.add('indeterminate');
-    }
+    reflectToggleState(btn, allOn, !allOff && !allOn);
   }
 
   function setupSectionHide(prefix) {
@@ -810,7 +811,7 @@
       const hideCb = document.createElement('input');
       hideCb.type = 'checkbox';
       hideCb.id = `${prefix}-hide-${idx}`;
-      hideCb.dataset.targets = `${prefix}-input-${idx},${prefix}-order-input-${idx}`;
+      hideCb.dataset.targets = `${prefix}-input-${idx},${prefix}-order-input-${idx},${prefix}-depth-input-${idx}`;
       hideCb.hidden = true;
       btnCol.appendChild(hideCb);
       const hideBtn = document.createElement('button');
