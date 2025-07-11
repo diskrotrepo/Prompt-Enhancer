@@ -669,9 +669,7 @@
     const prefix = guessPrefix(selectId);
     const update = () => {
       const items = getItems();
-      if (select.value === 'canonical') {
-        input.value = items.map((_, i) => i).join(', ');
-      } else if (select.value === 'random') {
+      if (select.value === 'canonical' || select.value === 'random') {
         input.value = '';
       } else if (lists.ORDER_PRESETS[select.value]) {
         input.value = lists.ORDER_PRESETS[select.value].join(', ');
