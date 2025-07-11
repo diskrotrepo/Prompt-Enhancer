@@ -65,7 +65,13 @@
   }
 
   function collectInputs() {
-    const baseItems = utils.parseInput(document.getElementById('base-input').value, true);
+    const baseItems = utils.parseInput(
+      document.getElementById('base-input').value,
+      true
+    );
+    const baseOrderSel = document.getElementById('base-order-select');
+    const baseOrderVal = baseOrderSel ? baseOrderSel.value : 'canonical';
+    if (baseOrderVal === 'random') utils.shuffle(baseItems);
     function collectLists(prefix, count) {
       const result = [];
       for (let i = 1; i <= count; i++) {
@@ -108,20 +114,45 @@
     const posDepths = posStackOn ? rawPosDepths : rawPosDepths[0];
     const rawNegDepths = collectDepths('neg', negStackOn ? negStackSize : 1);
     const negDepths = negStackOn ? rawNegDepths : rawNegDepths[0];
-    const baseOrder = utils.parseOrderInput(document.getElementById('base-order-input')?.value || '');
-    function collectOrders(prefix, count) {
+    let baseOrder = null;
+    if (baseOrderVal !== 'canonical' && baseOrderVal !== 'random') {
+      baseOrder = utils.parseOrderInput(
+        document.getElementById('base-order-input')?.value || ''
+      );
+    }
+    function collectOrders(prefix, count, mods) {
       const result = [];
       for (let i = 1; i <= count; i++) {
-        const id = `${prefix}-order-input${i === 1 ? '' : '-' + i}`;
-        const el = document.getElementById(id);
-        result.push(utils.parseOrderInput(el?.value || ''));
+        const sel = document.getElementById(
+          `${prefix}-order-select${i === 1 ? '' : '-' + i}`
+        );
+        const val = sel ? sel.value : 'canonical';
+        if (val === 'random') {
+          const list = Array.isArray(mods[0]) ? mods[i - 1] || mods[0] : mods;
+          utils.shuffle(list);
+          result.push(null);
+        } else if (val === 'canonical') {
+          result.push(null);
+        } else {
+          const id = `${prefix}-order-input${i === 1 ? '' : '-' + i}`;
+          const el = document.getElementById(id);
+          result.push(utils.parseOrderInput(el?.value || ''));
+        }
       }
-      return result;
+      return result.length === 1 ? result[0] : result;
     }
 
-    const posOrder = collectOrders('pos', posStackOn ? posStackSize : 1);
-    const negOrder = collectOrders('neg', negStackOn ? negStackSize : 1);
-    const dividerOrder = utils.parseOrderInput(document.getElementById('divider-order-input')?.value || '');
+    const posOrder = collectOrders('pos', posStackOn ? posStackSize : 1, posMods);
+    const negOrder = collectOrders('neg', negStackOn ? negStackSize : 1, negMods);
+    const dividerOrderSel = document.getElementById('divider-order-select');
+    const dividerOrderVal = dividerOrderSel ? dividerOrderSel.value : 'canonical';
+    if (dividerOrderVal === 'random') utils.shuffle(dividerMods);
+    const dividerOrder =
+      dividerOrderVal !== 'canonical' && dividerOrderVal !== 'random'
+        ? utils.parseOrderInput(
+            document.getElementById('divider-order-input')?.value || ''
+          )
+        : null;
     return {
       baseItems,
       negMods,
@@ -669,9 +700,7 @@
     const prefix = guessPrefix(selectId);
     const update = () => {
       const items = getItems();
-      if (select.value === 'canonical') {
-        input.value = items.map((_, i) => i).join(', ');
-      } else if (select.value === 'random') {
+      if (select.value === 'canonical' || select.value === 'random') {
         input.value = '';
       } else if (lists.ORDER_PRESETS[select.value]) {
         input.value = lists.ORDER_PRESETS[select.value].join(', ');

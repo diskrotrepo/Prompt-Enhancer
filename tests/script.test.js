@@ -374,6 +374,64 @@ describe('Prompt building', () => {
     const expectedNeg = out.positive.replace(/\bp /g, 'n p ');
     expect(out.negative).toBe(expectedNeg);
   });
+
+  test('canonical order adapts to updated base items', () => {
+    document.body.innerHTML = `
+      <select id="base-select"></select>
+      <textarea id="base-input"></textarea>
+      <input type="checkbox" id="base-shuffle">
+      <select id="base-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <textarea id="base-order-input"></textarea>
+      <select id="pos-select"></select>
+      <textarea id="pos-input"></textarea>
+      <input type="checkbox" id="pos-shuffle">
+      <input type="checkbox" id="pos-stack">
+      <select id="pos-stack-size"><option value="2">2</option></select>
+      <select id="neg-select"></select>
+      <textarea id="neg-input"></textarea>
+      <input type="checkbox" id="neg-shuffle">
+      <input type="checkbox" id="neg-stack">
+      <select id="neg-stack-size"><option value="2">2</option></select>
+      <input type="checkbox" id="neg-include-pos">
+      <select id="pos-order-select"></select>
+      <textarea id="pos-order-input"></textarea>
+      <select id="neg-order-select"></select>
+      <textarea id="neg-order-input"></textarea>
+      <select id="divider-select"></select>
+      <textarea id="divider-input"></textarea>
+      <input type="checkbox" id="divider-shuffle">
+      <select id="divider-order-select"></select>
+      <textarea id="divider-order-input"></textarea>
+      <select id="pos-depth-select"></select>
+      <textarea id="pos-depth-input"></textarea>
+      <select id="neg-depth-select"></select>
+      <textarea id="neg-depth-input"></textarea>
+      <select id="length-select"></select>
+      <input id="length-input">
+      <select id="lyrics-select"></select>
+      <textarea id="lyrics-input"></textarea>
+      <select id="lyrics-space"><option value="1">1</option><option value="2">2</option></select>
+      <input type="checkbox" id="lyrics-remove-parens">
+      <input type="checkbox" id="lyrics-remove-brackets">
+      <pre id="positive-output"></pre>
+      <pre id="negative-output"></pre>
+      <pre id="lyrics-output"></pre>
+      <button id="generate"></button>
+    `;
+    setupOrderControl('base-order-select', 'base-order-input', () =>
+      parseInput(document.getElementById('base-input').value, true)
+    );
+    const base = document.getElementById('base-input');
+    const sel = document.getElementById('base-order-select');
+    base.value = 'a. b. c.';
+    sel.value = 'canonical';
+    sel.dispatchEvent(new Event('change'));
+    base.value = 'x. y.';
+    const { baseItems, baseOrder } = ui.collectInputs();
+    const out = buildVersions(baseItems, [], [], 100, false);
+    expect(baseOrder).toBeNull();
+    expect(out.positive.startsWith('x. y.')).toBe(true);
+  });
 });
 
 describe('Lyrics processing', () => {
