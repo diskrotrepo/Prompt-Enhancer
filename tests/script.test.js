@@ -1608,4 +1608,22 @@ describe('List persistence', () => {
     cb.dispatchEvent(new Event('change'));
     expect(btn.textContent).toBe('All visible');
   });
+
+  test('canonical base order adapts to input changes', () => {
+    document.body.innerHTML = `
+      <select id="base-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <textarea id="base-order-input"></textarea>
+      <textarea id="base-input">a. b.</textarea>
+    `;
+    setupOrderControl('base-order-select', 'base-order-input', () =>
+      utils.parseInput(document.getElementById('base-input').value, true)
+    );
+    const select = document.getElementById('base-order-select');
+    expect(select.value).toBe('canonical');
+    expect(document.getElementById('base-order-input').value).toBe('');
+    document.getElementById('base-input').value = 'a. b. c.';
+    const items = utils.parseInput(document.getElementById('base-input').value, true);
+    const order = utils.parseOrderInput(document.getElementById('base-order-input').value);
+    expect(utils.applyOrder(items, order)).toEqual(items);
+  });
 });
