@@ -662,7 +662,7 @@
   }
 
 
-  function setupOrderControl(selectId, inputId, getItems) {
+  function setupOrderControl(selectId, inputId, getItems, watchId) {
     const select = document.getElementById(selectId);
     const input = document.getElementById(inputId);
     if (!select || !input) return;
@@ -679,6 +679,14 @@
       if (rerollUpdaters[prefix]) rerollUpdaters[prefix].forEach(fn => fn());
     };
     select.addEventListener('change', update);
+    if (watchId) {
+      const src = document.getElementById(watchId);
+      if (src) {
+        src.addEventListener('input', () => {
+          if (select.value === 'canonical') update();
+        });
+      }
+    }
     update();
   }
 
@@ -900,7 +908,7 @@
       container.appendChild(block);
       setupPresetListener(sel.id, ta.id, type);
       applyPreset(sel, ta, type);
-      setupOrderControl(orderSel.id, oTa.id, () => utils.parseInput(ta.value));
+      setupOrderControl(orderSel.id, oTa.id, () => utils.parseInput(ta.value), ta.id);
       setupDepthControl(depthSel.id, dTa.id);
       setupRerollButton(rerollBtn.id, orderSel.id);
     }
@@ -1133,17 +1141,29 @@
     populateDepthOptions(document.getElementById('pos-depth-select'));
     populateDepthOptions(document.getElementById('neg-depth-select'));
 
-    setupOrderControl('base-order-select', 'base-order-input', () =>
-      utils.parseInput(document.getElementById('base-input').value, true)
+    setupOrderControl(
+      'base-order-select',
+      'base-order-input',
+      () => utils.parseInput(document.getElementById('base-input').value, true),
+      'base-input'
     );
-    setupOrderControl('pos-order-select', 'pos-order-input', () =>
-      utils.parseInput(document.getElementById('pos-input').value)
+    setupOrderControl(
+      'pos-order-select',
+      'pos-order-input',
+      () => utils.parseInput(document.getElementById('pos-input').value),
+      'pos-input'
     );
-    setupOrderControl('neg-order-select', 'neg-order-input', () =>
-      utils.parseInput(document.getElementById('neg-input').value)
+    setupOrderControl(
+      'neg-order-select',
+      'neg-order-input',
+      () => utils.parseInput(document.getElementById('neg-input').value),
+      'neg-input'
     );
-    setupOrderControl('divider-order-select', 'divider-order-input', () =>
-      utils.parseDividerInput(document.getElementById('divider-input').value || '')
+    setupOrderControl(
+      'divider-order-select',
+      'divider-order-input',
+      () => utils.parseDividerInput(document.getElementById('divider-input').value || ''),
+      'divider-input'
     );
     setupDepthControl('pos-depth-select', 'pos-depth-input');
     setupDepthControl('neg-depth-select', 'neg-depth-input');

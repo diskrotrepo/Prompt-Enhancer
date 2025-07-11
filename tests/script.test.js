@@ -539,6 +539,27 @@ describe('UI interactions', () => {
     expect(document.getElementById('base-order-input').value).toBe('1, 0');
   });
 
+  test('canonical base order updates when base input changes', () => {
+    document.body.innerHTML = `
+      <select id="base-order-select">
+        <option value="canonical">c</option>
+        <option value="random">r</option>
+      </select>
+      <textarea id="base-order-input"></textarea>
+      <textarea id="base-input">a</textarea>
+    `;
+    setupOrderControl(
+      'base-order-select',
+      'base-order-input',
+      () => utils.parseInput(document.getElementById('base-input').value, true),
+      'base-input'
+    );
+    const baseInput = document.getElementById('base-input');
+    baseInput.value = 'a,b,c';
+    baseInput.dispatchEvent(new Event('input'));
+    expect(document.getElementById('base-order-input').value).toBe('0, 1, 2');
+  });
+
   test('rerollRandomOrders handles multiple order controls', () => {
     document.body.innerHTML = `
       <select id="pos-order-select">
