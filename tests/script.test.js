@@ -38,7 +38,8 @@ const {
   updateStackBlocks,
   setupSectionOrder,
   setupSectionHide,
-  setupSectionAdvanced
+  setupSectionAdvanced,
+  setupDepthControl
 } = ui;
 
 describe('Utility functions', () => {
@@ -507,13 +508,16 @@ describe('UI interactions', () => {
       <button id="base-reroll" class="toggle-button random-button" data-select="base-order-select"></button>
     `;
     const orig = utils.shuffle;
-    utils.shuffle = jest.fn();
+    utils.shuffle = jest.fn(arr => {
+      arr.reverse();
+      return arr;
+    });
     setupOrderControl('base-order-select', 'base-order-input', () => ['a', 'b', 'c']);
     setupRerollButton('base-reroll', 'base-order-select');
     document.getElementById('base-reroll').click();
     expect(document.getElementById('base-order-select').value).toBe('random');
-    expect(document.getElementById('base-order-input').value).toBe('');
-    expect(utils.shuffle).not.toHaveBeenCalled();
+    expect(document.getElementById('base-order-input').value).toBe('2, 1, 0');
+    expect(utils.shuffle).toHaveBeenCalled();
     utils.shuffle = orig;
   });
 
@@ -558,6 +562,56 @@ describe('UI interactions', () => {
     baseInput.value = 'a,b,c';
     baseInput.dispatchEvent(new Event('input'));
     expect(document.getElementById('base-order-input').value).toBe('0, 1, 2');
+  });
+
+  test('random base order updates when base input changes', () => {
+    document.body.innerHTML = `
+      <select id="base-order-select">
+        <option value="canonical">c</option>
+        <option value="random">r</option>
+      </select>
+      <textarea id="base-order-input"></textarea>
+      <textarea id="base-input">a</textarea>
+    `;
+    const orig = utils.shuffle;
+    utils.shuffle = jest.fn(arr => {
+      arr.reverse();
+      return arr;
+    });
+    setupOrderControl(
+      'base-order-select',
+      'base-order-input',
+      () => utils.parseInput(document.getElementById('base-input').value, true),
+      'base-input'
+    );
+    const sel = document.getElementById('base-order-select');
+    sel.value = 'random';
+    sel.dispatchEvent(new Event('change'));
+    const baseInput = document.getElementById('base-input');
+    baseInput.value = 'a,b,c';
+    baseInput.dispatchEvent(new Event('input'));
+    utils.shuffle = orig;
+    expect(document.getElementById('base-order-input').value).toBe('2, 1, 0');
+  });
+
+  test('append depth updates when base input changes', () => {
+    document.body.innerHTML = `
+      <select id="pos-depth-select">
+        <option value="prepend">p</option>
+        <option value="append">a</option>
+      </select>
+      <textarea id="pos-depth-input"></textarea>
+      <textarea id="base-input">foo bar,baz</textarea>
+    `;
+    setupDepthControl('pos-depth-select', 'pos-depth-input', 'base-input');
+    const sel = document.getElementById('pos-depth-select');
+    sel.value = 'append';
+    sel.dispatchEvent(new Event('change'));
+    expect(document.getElementById('pos-depth-input').value).toBe('2, 1');
+    const baseInput = document.getElementById('base-input');
+    baseInput.value = 'foo,baz qux quux';
+    baseInput.dispatchEvent(new Event('input'));
+    expect(document.getElementById('pos-depth-input').value).toBe('1, 3');
   });
 
   test('rerollRandomOrders handles multiple order controls', () => {

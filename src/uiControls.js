@@ -672,7 +672,9 @@
       if (select.value === 'canonical') {
         input.value = items.map((_, i) => i).join(', ');
       } else if (select.value === 'random') {
-        input.value = '';
+        const arr = items.map((_, i) => i);
+        utils.shuffle(arr);
+        input.value = arr.join(', ');
       } else if (lists.ORDER_PRESETS[select.value]) {
         input.value = lists.ORDER_PRESETS[select.value].join(', ');
       }
@@ -683,7 +685,12 @@
       const src = document.getElementById(watchId);
       if (src) {
         src.addEventListener('input', () => {
-          if (select.value === 'canonical') update();
+          if (
+            select.value === 'canonical' ||
+            select.value === 'random' ||
+            lists.ORDER_PRESETS[select.value]
+          )
+            update();
         });
       }
     }
@@ -710,7 +717,7 @@
   }
 
 
-  function setupDepthControl(selectId, inputId) {
+  function setupDepthControl(selectId, inputId, watchId = 'base-input') {
     const select = document.getElementById(selectId);
     const input = document.getElementById(inputId);
     const baseInput = document.getElementById('base-input');
@@ -718,6 +725,7 @@
     const prefix = guessPrefix(selectId);
     const build = mode => {
       const bases = utils.parseInput(baseInput.value, true);
+      const counts = bases.map(b => utils.countWords(b));
       if (!bases.length) {
         input.value = mode === 'prepend' ? '0' : '';
         return;
@@ -726,14 +734,18 @@
         input.value = '0';
         return;
       }
-      const counts = bases.map(b => utils.countWords(b));
       if (mode === 'append') {
         input.value = counts.join(', ');
         return;
       }
+      if (mode === 'random') {
+        const vals = counts.map(c => Math.floor(Math.random() * (c + 1)));
+        input.value = vals.join(', ');
+        return;
+      }
       input.value = '';
     };
-    select.addEventListener('change', () => {
+    const update = () => {
       const val = select.value;
       if (val === 'prepend' || val === 'append' || val === 'random') {
         build(val);
@@ -741,8 +753,22 @@
         input.value = lists.ORDER_PRESETS[val].join(', ');
       }
       if (rerollUpdaters[prefix]) rerollUpdaters[prefix].forEach(fn => fn());
-    });
-    select.dispatchEvent(new Event('change'));
+    };
+    select.addEventListener('change', update);
+    const src = document.getElementById(watchId);
+    if (src) {
+      src.addEventListener('input', () => {
+        if (
+          select.value === 'prepend' ||
+          select.value === 'append' ||
+          select.value === 'random' ||
+          lists.ORDER_PRESETS[select.value]
+        ) {
+          update();
+        }
+      });
+    }
+    update();
   }
 
   function updateDepthContainers(prefix, count) {
@@ -768,7 +794,7 @@
       ta.placeholder = '0,1,2';
       div.appendChild(ta);
       container.appendChild(div);
-      setupDepthControl(sel.id, ta.id);
+      setupDepthControl(sel.id, ta.id, 'base-input');
     }
     for (let i = current; i > count; i--) {
       const idx = i;
@@ -909,7 +935,7 @@
       setupPresetListener(sel.id, ta.id, type);
       applyPreset(sel, ta, type);
       setupOrderControl(orderSel.id, oTa.id, () => utils.parseInput(ta.value), ta.id);
-      setupDepthControl(depthSel.id, dTa.id);
+      setupDepthControl(depthSel.id, dTa.id, 'base-input');
       setupRerollButton(rerollBtn.id, orderSel.id);
     }
     for (let i = current; i > count; i--) {
@@ -1165,8 +1191,8 @@
       () => utils.parseDividerInput(document.getElementById('divider-input').value || ''),
       'divider-input'
     );
-    setupDepthControl('pos-depth-select', 'pos-depth-input');
-    setupDepthControl('neg-depth-select', 'neg-depth-input');
+    setupDepthControl('pos-depth-select', 'pos-depth-input', 'base-input');
+    setupDepthControl('neg-depth-select', 'neg-depth-input', 'base-input');
     updateDepthContainers('pos', 1);
     updateDepthContainers('neg', 1);
     setupRerollButton('base-reroll', 'base-order-select');
@@ -1231,6 +1257,7 @@
     setupCopyButtons,
     setupDataButtons,
     setupOrderControl,
+    setupDepthControl,
     setupAdvancedToggle,
     updateStackBlocks,
     rerollRandomOrders,
