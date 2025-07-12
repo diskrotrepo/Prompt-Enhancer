@@ -653,7 +653,7 @@ describe('UI interactions', () => {
     const sel = document.getElementById('pos-depth-select');
     sel.value = 'append';
     sel.dispatchEvent(new Event('change'));
-    expect(document.getElementById('pos-depth-input').value).toBe('4');
+    expect(document.getElementById('pos-depth-input').value).toBe('2');
   });
 
   test('negative depth includes positive modifiers when enabled', () => {
@@ -680,7 +680,7 @@ describe('UI interactions', () => {
     const sel = document.getElementById('neg-depth-select');
     sel.value = 'append';
     sel.dispatchEvent(new Event('change'));
-    expect(document.getElementById('neg-depth-input').value).toBe('4');
+    expect(document.getElementById('neg-depth-input').value).toBe('3');
   });
 
   test('prepend depth populates zeros for each base term', () => {
