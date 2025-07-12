@@ -635,6 +635,54 @@ describe('UI interactions', () => {
     expect(document.getElementById('pos-depth-input').value).toBe('1, 3');
   });
 
+  test('append depth uses modifier length', () => {
+    document.body.innerHTML = `
+      <select id="pos-depth-select">
+        <option value="append">a</option>
+      </select>
+      <textarea id="pos-depth-input"></textarea>
+      <textarea id="base-input">foo bar</textarea>
+      <textarea id="pos-input">baz qux</textarea>
+      <textarea id="pos-order-input">0</textarea>
+    `;
+    setupDepthControl('pos-depth-select', 'pos-depth-input', [
+      'base-input',
+      'pos-input',
+      'pos-order-input'
+    ]);
+    const sel = document.getElementById('pos-depth-select');
+    sel.value = 'append';
+    sel.dispatchEvent(new Event('change'));
+    expect(document.getElementById('pos-depth-input').value).toBe('4');
+  });
+
+  test('negative depth includes positive modifiers when enabled', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="neg-include-pos" checked>
+      <select id="neg-depth-select">
+        <option value="append">a</option>
+      </select>
+      <textarea id="neg-depth-input"></textarea>
+      <textarea id="base-input">foo bar</textarea>
+      <textarea id="neg-input">bad</textarea>
+      <textarea id="neg-order-input">0</textarea>
+      <textarea id="pos-input">good</textarea>
+      <textarea id="pos-order-input">0</textarea>
+    `;
+    setupDepthControl('neg-depth-select', 'neg-depth-input', [
+      'base-input',
+      'neg-input',
+      'neg-order-input',
+      'neg-include-pos',
+      'pos-input',
+      'pos-order-input'
+    ]);
+    const sel = document.getElementById('neg-depth-select');
+    sel.value = 'append';
+    sel.dispatchEvent(new Event('change'));
+    expect(document.getElementById('neg-depth-input').value).toBe('4');
+  });
+
   test('prepend depth populates zeros for each base term', () => {
     document.body.innerHTML = `
       <select id="pos-depth-select">

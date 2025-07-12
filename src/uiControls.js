@@ -27,6 +27,60 @@
     return results;
   }
 
+  function getOrderedMods(prefix, idx = 1) {
+    const inp = document.getElementById(
+      `${prefix}-input${idx === 1 ? '' : '-' + idx}`
+    );
+    const mods = utils.parseInput(inp?.value || '');
+    const ordEl = document.getElementById(
+      `${prefix}-order-input${idx === 1 ? '' : '-' + idx}`
+    );
+    const ord = utils.parseOrderInput(ordEl?.value || '');
+    return ord.length ? utils.applyOrder(mods, ord) : mods;
+  }
+
+  function baseCounts() {
+    const baseInput = document.getElementById('base-input');
+    return utils
+      .parseInput(baseInput?.value || '', true)
+      .map(b => utils.countWords(b));
+  }
+
+  function getTotalPosWords(i) {
+    const stackOn = document.getElementById('pos-stack')?.checked;
+    const stackSize = parseInt(
+      document.getElementById('pos-stack-size')?.value || '1',
+      10
+    );
+    const count = stackOn ? stackSize : 1;
+    let total = 0;
+    for (let s = 1; s <= count; s++) {
+      const mods = getOrderedMods('pos', s);
+      if (!mods.length) continue;
+      total += utils.countWords(mods[i % mods.length]);
+    }
+    return total;
+  }
+
+  function computeDepthCounts(prefix, idx = 1) {
+    const bases = baseCounts();
+    if (!bases.length) return [];
+    const mods = getOrderedMods(prefix, idx);
+    const includePos =
+      prefix === 'neg' &&
+      document.getElementById('neg-include-pos')?.checked;
+    const len = mods.length || bases.length;
+    const counts = [];
+    for (let i = 0; i < len; i++) {
+      let total = bases[i % bases.length];
+      if (includePos) total += getTotalPosWords(i);
+      const mod = mods[i % (mods.length || 1)];
+      if (mod) total += utils.countWords(mod);
+      counts.push(total);
+    }
+    return counts;
+  }
+
   function applyPreset(selectEl, inputEl, presetsOrType) {
     let presets = presetsOrType;
     if (typeof presetsOrType === 'string') {
@@ -726,16 +780,17 @@
   function setupDepthControl(selectId, inputId, watchIds = 'base-input') {
     const select = document.getElementById(selectId);
     const input = document.getElementById(inputId);
-    const baseInput = document.getElementById('base-input');
-    if (!select || !input || !baseInput) return;
+    if (!select || !input) return;
     const prefix = guessPrefix(selectId);
+    const idx = (selectId.match(/-(\d+)$/) || [])[1]
+      ? parseInt(selectId.match(/-(\d+)$/)[1], 10)
+      : 1;
     const build = mode => {
-      const bases = utils.parseInput(baseInput.value, true);
-      if (!bases.length) {
+      const counts = computeDepthCounts(prefix, idx);
+      if (!counts.length) {
         input.value = '';
         return;
       }
-      const counts = bases.map(b => utils.countWords(b));
       if (mode === 'prepend') {
         input.value = counts.map(() => 0).join(', ');
         return;
@@ -805,7 +860,11 @@
       ta.placeholder = '0,1,2';
       div.appendChild(ta);
       container.appendChild(div);
-      setupDepthControl(sel.id, ta.id, ['base-input', 'base-select']);
+      const watchers = ['base-input', 'base-select'];
+      watchers.push(`${prefix}-input${idx === 1 ? '' : '-' + idx}`);
+      watchers.push(`${prefix}-order-input${idx === 1 ? '' : '-' + idx}`);
+      if (prefix === 'neg') watchers.push('neg-include-pos');
+      setupDepthControl(sel.id, ta.id, watchers);
     }
     for (let i = current; i > count; i--) {
       const idx = i;
@@ -1059,7 +1118,15 @@
     const depthConfigs = [...gatherDepth('pos'), ...gatherDepth('neg')];
     depthConfigs.forEach(cfg => {
       if (!cfg.select || !cfg.input || cfg.select.value !== 'random') return;
-      const counts = baseItems.map(b => utils.countWords(b));
+      const pref = guessPrefix(cfg.select.id);
+      const idx = (cfg.select.id.match(/-(\d+)$/) || [])[1]
+        ? parseInt(cfg.select.id.match(/-(\d+)$/)[1], 10)
+        : 1;
+      const counts = computeDepthCounts(pref, idx);
+      if (!counts.length) {
+        cfg.input.value = '';
+        return;
+      }
       const vals = counts.map(c => Math.floor(Math.random() * (c + 1)));
       cfg.input.value = vals.join(', ');
     });
@@ -1205,8 +1272,21 @@
       () => utils.parseDividerInput(document.getElementById('divider-input').value || ''),
       ['divider-input', 'divider-select']
     );
-    setupDepthControl('pos-depth-select', 'pos-depth-input', ['base-input', 'base-select']);
-    setupDepthControl('neg-depth-select', 'neg-depth-input', ['base-input', 'base-select']);
+    setupDepthControl('pos-depth-select', 'pos-depth-input', [
+      'base-input',
+      'base-select',
+      'pos-input',
+      'pos-order-input'
+    ]);
+    setupDepthControl('neg-depth-select', 'neg-depth-input', [
+      'base-input',
+      'base-select',
+      'neg-input',
+      'neg-order-input',
+      'neg-include-pos',
+      'pos-input',
+      'pos-order-input'
+    ]);
     updateDepthContainers('pos', 1);
     updateDepthContainers('neg', 1);
     setupRerollButton('base-reroll', 'base-order-select');
@@ -1281,7 +1361,8 @@
     setupSectionAdvanced,
     initializeUI,
     applyCurrentPresets,
-    resetUI
+    resetUI,
+    computeDepthCounts
   };
 
   if (typeof module !== 'undefined') {
