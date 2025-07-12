@@ -27,6 +27,49 @@
     return results;
   }
 
+  function collectValues(pairs) {
+    if (!pairs.length) return null;
+    const values = pairs.map(p => utils.parseOrderInput(p.input?.value || ''));
+    return pairs.length === 1 ? values[0] : values;
+  }
+
+  function collectLists(prefix, count) {
+    const result = [];
+    for (let i = 1; i <= count; i++) {
+      const el = document.getElementById(`${prefix}-input${i === 1 ? '' : '-' + i}`);
+      result.push(utils.parseInput(el?.value || ''));
+    }
+    return result;
+  }
+
+  function computeDepthCounts(prefix) {
+    const baseItems = utils.parseInput(document.getElementById('base-input')?.value || '', true);
+    const baseOrder = utils.parseOrderInput(
+      document.getElementById('base-order-input')?.value || ''
+    );
+    const ordered = baseOrder.length ? utils.applyOrder(baseItems, baseOrder) : baseItems;
+    let counts = ordered.map(b => utils.countWords(b));
+    if (
+      prefix === 'neg' &&
+      document.getElementById('neg-include-pos')?.checked
+    ) {
+      const stackOn = document.getElementById('pos-stack')?.checked;
+      const stackSize = parseInt(
+        document.getElementById('pos-stack-size')?.value || '1',
+        10
+      );
+      let extra = 0;
+      const mods = stackOn
+        ? collectLists('pos', stackSize)
+        : [utils.parseInput(document.getElementById('pos-input')?.value || '')];
+      mods.forEach(list => {
+        if (list.length) extra += utils.countWords(list[0]);
+      });
+      counts = counts.map(c => c + extra);
+    }
+    return counts;
+  }
+
   function applyPreset(selectEl, inputEl, presetsOrType) {
     let presets = presetsOrType;
     if (typeof presetsOrType === 'string') {
@@ -730,12 +773,11 @@
     if (!select || !input || !baseInput) return;
     const prefix = guessPrefix(selectId);
     const build = mode => {
-      const bases = utils.parseInput(baseInput.value, true);
-      if (!bases.length) {
+      const counts = computeDepthCounts(prefix);
+      if (!counts.length) {
         input.value = '';
         return;
       }
-      const counts = bases.map(b => utils.countWords(b));
       if (mode === 'prepend') {
         input.value = counts.map(() => 0).join(', ');
         return;
@@ -805,7 +847,9 @@
       ta.placeholder = '0,1,2';
       div.appendChild(ta);
       container.appendChild(div);
-      setupDepthControl(sel.id, ta.id, ['base-input', 'base-select']);
+      const watchers = ['base-input', 'base-select', 'base-order-input'];
+      if (prefix === 'neg') watchers.push('neg-include-pos');
+      setupDepthControl(sel.id, ta.id, watchers);
     }
     for (let i = current; i > count; i--) {
       const idx = i;
@@ -946,7 +990,9 @@
       setupPresetListener(sel.id, ta.id, type);
       applyPreset(sel, ta, type);
       setupOrderControl(orderSel.id, oTa.id, () => utils.parseInput(ta.value), ta.id);
-      setupDepthControl(depthSel.id, dTa.id, ['base-input', 'base-select']);
+      const dWatch = ['base-input', 'base-select', 'base-order-input'];
+      if (prefix === 'neg') dWatch.push('neg-include-pos');
+      setupDepthControl(depthSel.id, dTa.id, dWatch);
       setupRerollButton(rerollBtn.id, orderSel.id);
     }
     for (let i = current; i > count; i--) {
@@ -1059,7 +1105,8 @@
     const depthConfigs = [...gatherDepth('pos'), ...gatherDepth('neg')];
     depthConfigs.forEach(cfg => {
       if (!cfg.select || !cfg.input || cfg.select.value !== 'random') return;
-      const counts = baseItems.map(b => utils.countWords(b));
+      const prefix = guessPrefix(cfg.select.id);
+      const counts = computeDepthCounts(prefix);
       const vals = counts.map(c => Math.floor(Math.random() * (c + 1)));
       cfg.input.value = vals.join(', ');
     });
@@ -1205,8 +1252,13 @@
       () => utils.parseDividerInput(document.getElementById('divider-input').value || ''),
       ['divider-input', 'divider-select']
     );
-    setupDepthControl('pos-depth-select', 'pos-depth-input', ['base-input', 'base-select']);
-    setupDepthControl('neg-depth-select', 'neg-depth-input', ['base-input', 'base-select']);
+    setupDepthControl('pos-depth-select', 'pos-depth-input', ['base-input', 'base-select', 'base-order-input']);
+    setupDepthControl('neg-depth-select', 'neg-depth-input', [
+      'base-input',
+      'base-select',
+      'base-order-input',
+      'neg-include-pos'
+    ]);
     updateDepthContainers('pos', 1);
     updateDepthContainers('neg', 1);
     setupRerollButton('base-reroll', 'base-order-select');

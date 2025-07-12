@@ -689,6 +689,29 @@ describe('UI interactions', () => {
     expect(document.getElementById('pos-depth-input').value).toBe('1, 3');
   });
 
+  test('negative append depth considers positive modifiers', () => {
+    document.body.innerHTML = `
+      <select id="neg-depth-select">
+        <option value="append">a</option>
+      </select>
+      <textarea id="neg-depth-input"></textarea>
+      <textarea id="base-input">foo bar</textarea>
+      <textarea id="pos-input">good</textarea>
+      <input type="checkbox" id="neg-include-pos">
+      <textarea id="base-order-input"></textarea>
+    `;
+    document.getElementById('neg-include-pos').checked = true;
+    setupDepthControl(
+      'neg-depth-select',
+      'neg-depth-input',
+      ['base-input', 'base-order-input', 'neg-include-pos', 'pos-input']
+    );
+    const sel = document.getElementById('neg-depth-select');
+    sel.value = 'append';
+    sel.dispatchEvent(new Event('change'));
+    expect(document.getElementById('neg-depth-input').value).toBe('3');
+  });
+
   test('base order updates when selecting a preset', () => {
     importLists({
       presets: [
