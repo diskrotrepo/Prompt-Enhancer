@@ -55,6 +55,8 @@
       inputEl.value = list[0] || '';
     }
     inputEl.disabled = false;
+    inputEl.dispatchEvent(new Event('input'));
+    inputEl.dispatchEvent(new Event('change'));
   }
 
   function setupPresetListener(selectId, inputId, type) {
@@ -662,7 +664,7 @@
   }
 
 
-  function setupOrderControl(selectId, inputId, getItems) {
+  function setupOrderControl(selectId, inputId, getItems, watchId) {
     const select = document.getElementById(selectId);
     const input = document.getElementById(inputId);
     if (!select || !input) return;
@@ -672,13 +674,31 @@
       if (select.value === 'canonical') {
         input.value = items.map((_, i) => i).join(', ');
       } else if (select.value === 'random') {
-        input.value = '';
+        const arr = items.map((_, i) => i);
+        utils.shuffle(arr);
+        input.value = arr.join(', ');
       } else if (lists.ORDER_PRESETS[select.value]) {
         input.value = lists.ORDER_PRESETS[select.value].join(', ');
       }
       if (rerollUpdaters[prefix]) rerollUpdaters[prefix].forEach(fn => fn());
     };
     select.addEventListener('change', update);
+    if (watchId) {
+      const src = document.getElementById(watchId);
+      if (src) {
+        const handler = () => {
+          if (
+            select.value === 'canonical' ||
+            select.value === 'random' ||
+            lists.ORDER_PRESETS[select.value]
+          ) {
+            update();
+          }
+        };
+        src.addEventListener('input', handler);
+        src.addEventListener('change', handler);
+      }
+    }
     update();
   }
 
@@ -702,7 +722,7 @@
   }
 
 
-  function setupDepthControl(selectId, inputId) {
+  function setupDepthControl(selectId, inputId, watchId = 'base-input') {
     const select = document.getElementById(selectId);
     const input = document.getElementById(inputId);
     const baseInput = document.getElementById('base-input');
@@ -710,22 +730,27 @@
     const prefix = guessPrefix(selectId);
     const build = mode => {
       const bases = utils.parseInput(baseInput.value, true);
+      const counts = bases.map(b => utils.countWords(b));
       if (!bases.length) {
-        input.value = mode === 'prepend' ? '0' : '';
+        input.value = '';
         return;
       }
       if (mode === 'prepend') {
-        input.value = '0';
+        input.value = counts.map(() => 0).join(', ');
         return;
       }
-      const counts = bases.map(b => utils.countWords(b));
       if (mode === 'append') {
         input.value = counts.join(', ');
         return;
       }
+      if (mode === 'random') {
+        const vals = counts.map(c => Math.floor(Math.random() * (c + 1)));
+        input.value = vals.join(', ');
+        return;
+      }
       input.value = '';
     };
-    select.addEventListener('change', () => {
+    const update = () => {
       const val = select.value;
       if (val === 'prepend' || val === 'append' || val === 'random') {
         build(val);
@@ -733,8 +758,24 @@
         input.value = lists.ORDER_PRESETS[val].join(', ');
       }
       if (rerollUpdaters[prefix]) rerollUpdaters[prefix].forEach(fn => fn());
-    });
-    select.dispatchEvent(new Event('change'));
+    };
+    select.addEventListener('change', update);
+    const src = document.getElementById(watchId);
+    if (src) {
+      const handler = () => {
+        if (
+          select.value === 'prepend' ||
+          select.value === 'append' ||
+          select.value === 'random' ||
+          lists.ORDER_PRESETS[select.value]
+        ) {
+          update();
+        }
+      };
+      src.addEventListener('input', handler);
+      src.addEventListener('change', handler);
+    }
+    update();
   }
 
   function updateDepthContainers(prefix, count) {
@@ -760,7 +801,7 @@
       ta.placeholder = '0,1,2';
       div.appendChild(ta);
       container.appendChild(div);
-      setupDepthControl(sel.id, ta.id);
+      setupDepthControl(sel.id, ta.id, 'base-input');
     }
     for (let i = current; i > count; i--) {
       const idx = i;
@@ -900,8 +941,8 @@
       container.appendChild(block);
       setupPresetListener(sel.id, ta.id, type);
       applyPreset(sel, ta, type);
-      setupOrderControl(orderSel.id, oTa.id, () => utils.parseInput(ta.value));
-      setupDepthControl(depthSel.id, dTa.id);
+      setupOrderControl(orderSel.id, oTa.id, () => utils.parseInput(ta.value), ta.id);
+      setupDepthControl(depthSel.id, dTa.id, 'base-input');
       setupRerollButton(rerollBtn.id, orderSel.id);
     }
     for (let i = current; i > count; i--) {
@@ -1058,12 +1099,15 @@
     fields.forEach(el => {
       if (el.tagName === 'SELECT') {
         el.selectedIndex = 0;
+        el.dispatchEvent(new Event('change'));
       } else if (el.type === 'checkbox') {
         el.checked = el.defaultChecked;
+        el.dispatchEvent(new Event('change'));
       } else {
         el.value = el.defaultValue || '';
+        el.dispatchEvent(new Event('input'));
+        el.dispatchEvent(new Event('change'));
       }
-      el.dispatchEvent(new Event('change'));
     });
     updateStackBlocks('pos', 1);
     updateStackBlocks('neg', 1);
@@ -1133,20 +1177,32 @@
     populateDepthOptions(document.getElementById('pos-depth-select'));
     populateDepthOptions(document.getElementById('neg-depth-select'));
 
-    setupOrderControl('base-order-select', 'base-order-input', () =>
-      utils.parseInput(document.getElementById('base-input').value, true)
+    setupOrderControl(
+      'base-order-select',
+      'base-order-input',
+      () => utils.parseInput(document.getElementById('base-input').value, true),
+      'base-input'
     );
-    setupOrderControl('pos-order-select', 'pos-order-input', () =>
-      utils.parseInput(document.getElementById('pos-input').value)
+    setupOrderControl(
+      'pos-order-select',
+      'pos-order-input',
+      () => utils.parseInput(document.getElementById('pos-input').value),
+      'pos-input'
     );
-    setupOrderControl('neg-order-select', 'neg-order-input', () =>
-      utils.parseInput(document.getElementById('neg-input').value)
+    setupOrderControl(
+      'neg-order-select',
+      'neg-order-input',
+      () => utils.parseInput(document.getElementById('neg-input').value),
+      'neg-input'
     );
-    setupOrderControl('divider-order-select', 'divider-order-input', () =>
-      utils.parseDividerInput(document.getElementById('divider-input').value || '')
+    setupOrderControl(
+      'divider-order-select',
+      'divider-order-input',
+      () => utils.parseDividerInput(document.getElementById('divider-input').value || ''),
+      'divider-input'
     );
-    setupDepthControl('pos-depth-select', 'pos-depth-input');
-    setupDepthControl('neg-depth-select', 'neg-depth-input');
+    setupDepthControl('pos-depth-select', 'pos-depth-input', 'base-input');
+    setupDepthControl('neg-depth-select', 'neg-depth-input', 'base-input');
     updateDepthContainers('pos', 1);
     updateDepthContainers('neg', 1);
     setupRerollButton('base-reroll', 'base-order-select');
@@ -1211,6 +1267,7 @@
     setupCopyButtons,
     setupDataButtons,
     setupOrderControl,
+    setupDepthControl,
     setupAdvancedToggle,
     updateStackBlocks,
     rerollRandomOrders,
