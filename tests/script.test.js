@@ -38,7 +38,9 @@ const {
   updateStackBlocks,
   setupSectionOrder,
   setupSectionHide,
-  setupSectionAdvanced
+  setupSectionAdvanced,
+  setupDepthControl,
+  setupPresetListener
 } = ui;
 
 describe('Utility functions', () => {
@@ -507,13 +509,16 @@ describe('UI interactions', () => {
       <button id="base-reroll" class="toggle-button random-button" data-select="base-order-select"></button>
     `;
     const orig = utils.shuffle;
-    utils.shuffle = jest.fn();
+    utils.shuffle = jest.fn(arr => {
+      arr.reverse();
+      return arr;
+    });
     setupOrderControl('base-order-select', 'base-order-input', () => ['a', 'b', 'c']);
     setupRerollButton('base-reroll', 'base-order-select');
     document.getElementById('base-reroll').click();
     expect(document.getElementById('base-order-select').value).toBe('random');
-    expect(document.getElementById('base-order-input').value).toBe('');
-    expect(utils.shuffle).not.toHaveBeenCalled();
+    expect(document.getElementById('base-order-input').value).toBe('2, 1, 0');
+    expect(utils.shuffle).toHaveBeenCalled();
     utils.shuffle = orig;
   });
 
@@ -537,6 +542,184 @@ describe('UI interactions', () => {
     rerollRandomOrders();
     utils.shuffle = orig;
     expect(document.getElementById('base-order-input').value).toBe('1, 0');
+  });
+
+  test('canonical base order updates when base input changes', () => {
+    document.body.innerHTML = `
+      <select id="base-order-select">
+        <option value="canonical">c</option>
+        <option value="random">r</option>
+      </select>
+      <textarea id="base-order-input"></textarea>
+      <textarea id="base-input">a</textarea>
+    `;
+    setupOrderControl(
+      'base-order-select',
+      'base-order-input',
+      () => utils.parseInput(document.getElementById('base-input').value, true),
+      'base-input'
+    );
+    const baseInput = document.getElementById('base-input');
+    baseInput.value = 'a,b,c';
+    baseInput.dispatchEvent(new Event('input'));
+    expect(document.getElementById('base-order-input').value).toBe('0, 1, 2');
+  });
+
+  test('random base order updates when base input changes', () => {
+    document.body.innerHTML = `
+      <select id="base-order-select">
+        <option value="canonical">c</option>
+        <option value="random">r</option>
+      </select>
+      <textarea id="base-order-input"></textarea>
+      <textarea id="base-input">a</textarea>
+    `;
+    const orig = utils.shuffle;
+    utils.shuffle = jest.fn(arr => {
+      arr.reverse();
+      return arr;
+    });
+    setupOrderControl(
+      'base-order-select',
+      'base-order-input',
+      () => utils.parseInput(document.getElementById('base-input').value, true),
+      'base-input'
+    );
+    const sel = document.getElementById('base-order-select');
+    sel.value = 'random';
+    sel.dispatchEvent(new Event('change'));
+    const baseInput = document.getElementById('base-input');
+    baseInput.value = 'a,b,c';
+    baseInput.dispatchEvent(new Event('input'));
+    utils.shuffle = orig;
+    expect(document.getElementById('base-order-input').value).toBe('2, 1, 0');
+  });
+
+  test('append depth updates when base input changes', () => {
+    document.body.innerHTML = `
+      <select id="pos-depth-select">
+        <option value="prepend">p</option>
+        <option value="append">a</option>
+      </select>
+      <textarea id="pos-depth-input"></textarea>
+      <textarea id="base-input">foo bar,baz</textarea>
+    `;
+    setupDepthControl('pos-depth-select', 'pos-depth-input', 'base-input');
+    const sel = document.getElementById('pos-depth-select');
+    sel.value = 'append';
+    sel.dispatchEvent(new Event('change'));
+    expect(document.getElementById('pos-depth-input').value).toBe('2, 1');
+    const baseInput = document.getElementById('base-input');
+    baseInput.value = 'foo,baz qux quux';
+    baseInput.dispatchEvent(new Event('input'));
+    expect(document.getElementById('pos-depth-input').value).toBe('1, 3');
+  });
+
+  test('random depth updates when base input changes', () => {
+    document.body.innerHTML = `
+      <select id="pos-depth-select">
+        <option value="prepend">p</option>
+        <option value="random">r</option>
+      </select>
+      <textarea id="pos-depth-input"></textarea>
+      <textarea id="base-input">foo bar,baz</textarea>
+    `;
+    const origRand = Math.random;
+    let idx = 0;
+    Math.random = jest.fn(() => [0.4, 0.9][idx++]);
+    setupDepthControl('pos-depth-select', 'pos-depth-input', 'base-input');
+    const sel = document.getElementById('pos-depth-select');
+    sel.value = 'random';
+    sel.dispatchEvent(new Event('change'));
+    expect(document.getElementById('pos-depth-input').value).toBe('1, 1');
+    const baseInput = document.getElementById('base-input');
+    idx = 0;
+    Math.random = jest.fn(() => [0.3, 0.8][idx++]);
+    baseInput.value = 'foo,baz qux quux';
+    baseInput.dispatchEvent(new Event('input'));
+    Math.random = origRand;
+    expect(document.getElementById('pos-depth-input').value).toBe('0, 3');
+  });
+
+  test('base order updates when selecting a preset', () => {
+    importLists({
+      presets: [
+        { id: 'b', title: 'b', type: 'base', items: ['a', 'b', 'c'] }
+      ]
+    });
+    document.body.innerHTML = `
+      <select id="base-select"><option value="b">b</option></select>
+      <textarea id="base-input"></textarea>
+      <select id="base-order-select"><option value="canonical">c</option></select>
+      <textarea id="base-order-input"></textarea>
+    `;
+    setupPresetListener('base-select', 'base-input', 'base');
+    setupOrderControl(
+      'base-order-select',
+      'base-order-input',
+      () => utils.parseInput(document.getElementById('base-input').value, true),
+      'base-input'
+    );
+    const sel = document.getElementById('base-select');
+    sel.value = 'b';
+    sel.dispatchEvent(new Event('change'));
+    expect(document.getElementById('base-order-input').value).toBe('0, 1, 2');
+  });
+
+  test('depth updates when selecting a base preset', () => {
+    importLists({
+      presets: [
+        { id: 'b2', title: 'b2', type: 'base', items: ['foo bar', 'baz qux quux'] }
+      ]
+    });
+    document.body.innerHTML = `
+      <select id="base-select"><option value="b2">b2</option></select>
+      <textarea id="base-input"></textarea>
+      <select id="pos-depth-select">
+        <option value="prepend">p</option>
+        <option value="append">a</option>
+      </select>
+      <textarea id="pos-depth-input"></textarea>
+    `;
+    setupPresetListener('base-select', 'base-input', 'base');
+    setupDepthControl('pos-depth-select', 'pos-depth-input', 'base-input');
+    const depthSel = document.getElementById('pos-depth-select');
+    depthSel.value = 'append';
+    depthSel.dispatchEvent(new Event('change'));
+    const baseSel = document.getElementById('base-select');
+    baseSel.value = 'b2';
+    baseSel.dispatchEvent(new Event('change'));
+    expect(document.getElementById('pos-depth-input').value).toBe('2, 3');
+  });
+
+  test('random depth updates when selecting a base preset', () => {
+    importLists({
+      presets: [
+        { id: 'b3', title: 'b3', type: 'base', items: ['foo bar', 'baz qux quux'] }
+      ]
+    });
+    document.body.innerHTML = `
+      <select id="base-select"><option value="b3">b3</option></select>
+      <textarea id="base-input"></textarea>
+      <select id="pos-depth-select">
+        <option value="prepend">p</option>
+        <option value="random">r</option>
+      </select>
+      <textarea id="pos-depth-input"></textarea>
+    `;
+    const origRand = Math.random;
+    let idx = 0;
+    Math.random = jest.fn(() => [0.2, 0.9][idx++]);
+    setupPresetListener('base-select', 'base-input', 'base');
+    setupDepthControl('pos-depth-select', 'pos-depth-input', 'base-input');
+    const depthSel = document.getElementById('pos-depth-select');
+    depthSel.value = 'random';
+    depthSel.dispatchEvent(new Event('change'));
+    const baseSel = document.getElementById('base-select');
+    baseSel.value = 'b3';
+    baseSel.dispatchEvent(new Event('change'));
+    Math.random = origRand;
+    expect(document.getElementById('pos-depth-input').value).toBe('0, 3');
   });
 
   test('rerollRandomOrders handles multiple order controls', () => {
