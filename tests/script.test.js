@@ -680,7 +680,7 @@ describe('UI interactions', () => {
     const sel = document.getElementById('neg-depth-select');
     sel.value = 'append';
     sel.dispatchEvent(new Event('change'));
-    expect(document.getElementById('neg-depth-input').value).toBe('4');
+    expect(document.getElementById('neg-depth-input').value).toBe('3');
   });
 
   test('prepend depth populates zeros for each base term', () => {

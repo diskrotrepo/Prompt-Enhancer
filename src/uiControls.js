@@ -75,7 +75,8 @@
       let total = bases[i % bases.length];
       if (includePos) total += getTotalPosWords(i);
       const mod = mods[i % (mods.length || 1)];
-      if (mod) total += utils.countWords(mod);
+      if (mod && !(prefix === 'neg' && includePos))
+        total += utils.countWords(mod);
       counts.push(total);
     }
     return counts;
