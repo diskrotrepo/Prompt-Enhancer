@@ -686,14 +686,17 @@
     if (watchId) {
       const src = document.getElementById(watchId);
       if (src) {
-        src.addEventListener('input', () => {
+        const handler = () => {
           if (
             select.value === 'canonical' ||
             select.value === 'random' ||
             lists.ORDER_PRESETS[select.value]
-          )
+          ) {
             update();
-        });
+          }
+        };
+        src.addEventListener('input', handler);
+        src.addEventListener('change', handler);
       }
     }
     update();
@@ -759,7 +762,7 @@
     select.addEventListener('change', update);
     const src = document.getElementById(watchId);
     if (src) {
-      src.addEventListener('input', () => {
+      const handler = () => {
         if (
           select.value === 'prepend' ||
           select.value === 'append' ||
@@ -768,7 +771,9 @@
         ) {
           update();
         }
-      });
+      };
+      src.addEventListener('input', handler);
+      src.addEventListener('change', handler);
     }
     update();
   }

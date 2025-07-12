@@ -565,6 +565,26 @@ describe('UI interactions', () => {
     expect(document.getElementById('base-order-input').value).toBe('0, 1, 2');
   });
 
+  test('canonical base order updates on change events', () => {
+    document.body.innerHTML = `
+      <select id="base-order-select">
+        <option value="canonical">c</option>
+      </select>
+      <textarea id="base-order-input"></textarea>
+      <textarea id="base-input">a</textarea>
+    `;
+    setupOrderControl(
+      'base-order-select',
+      'base-order-input',
+      () => utils.parseInput(document.getElementById('base-input').value, true),
+      'base-input'
+    );
+    const baseInput = document.getElementById('base-input');
+    baseInput.value = 'a,b,c';
+    baseInput.dispatchEvent(new Event('change'));
+    expect(document.getElementById('base-order-input').value).toBe('0, 1, 2');
+  });
+
   test('random base order updates when base input changes', () => {
     document.body.innerHTML = `
       <select id="base-order-select">
@@ -612,6 +632,24 @@ describe('UI interactions', () => {
     const baseInput = document.getElementById('base-input');
     baseInput.value = 'foo,baz qux quux';
     baseInput.dispatchEvent(new Event('input'));
+    expect(document.getElementById('pos-depth-input').value).toBe('1, 3');
+  });
+
+  test('append depth updates on change events', () => {
+    document.body.innerHTML = `
+      <select id="pos-depth-select">
+        <option value="append">a</option>
+      </select>
+      <textarea id="pos-depth-input"></textarea>
+      <textarea id="base-input">foo bar,baz</textarea>
+    `;
+    setupDepthControl('pos-depth-select', 'pos-depth-input', 'base-input');
+    const sel = document.getElementById('pos-depth-select');
+    sel.value = 'append';
+    sel.dispatchEvent(new Event('change'));
+    const baseInput = document.getElementById('base-input');
+    baseInput.value = 'foo,baz qux quux';
+    baseInput.dispatchEvent(new Event('change'));
     expect(document.getElementById('pos-depth-input').value).toBe('1, 3');
   });
 
