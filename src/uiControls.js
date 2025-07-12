@@ -1162,7 +1162,6 @@
 
   function initializeUI() {
     storage.loadPersisted();
-    applyCurrentPresets();
 
     setupPresetListener('neg-select', 'neg-input', 'negative');
     setupPresetListener('pos-select', 'pos-input', 'positive');
@@ -1234,6 +1233,7 @@
 
     setupCopyButtons();
     setupDataButtons();
+    applyCurrentPresets();
 
     const baseSave = document.getElementById('base-save');
     if (baseSave) baseSave.addEventListener('click', () => lists.saveList('base'));
