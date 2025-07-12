@@ -39,7 +39,8 @@ const {
   setupSectionOrder,
   setupSectionHide,
   setupSectionAdvanced,
-  setupDepthControl
+  setupDepthControl,
+  setupPresetListener
 } = ui;
 
 describe('Utility functions', () => {
@@ -612,6 +613,57 @@ describe('UI interactions', () => {
     baseInput.value = 'foo,baz qux quux';
     baseInput.dispatchEvent(new Event('input'));
     expect(document.getElementById('pos-depth-input').value).toBe('1, 3');
+  });
+
+  test('base order updates when selecting a preset', () => {
+    importLists({
+      presets: [
+        { id: 'b', title: 'b', type: 'base', items: ['a', 'b', 'c'] }
+      ]
+    });
+    document.body.innerHTML = `
+      <select id="base-select"><option value="b">b</option></select>
+      <textarea id="base-input"></textarea>
+      <select id="base-order-select"><option value="canonical">c</option></select>
+      <textarea id="base-order-input"></textarea>
+    `;
+    setupPresetListener('base-select', 'base-input', 'base');
+    setupOrderControl(
+      'base-order-select',
+      'base-order-input',
+      () => utils.parseInput(document.getElementById('base-input').value, true),
+      'base-input'
+    );
+    const sel = document.getElementById('base-select');
+    sel.value = 'b';
+    sel.dispatchEvent(new Event('change'));
+    expect(document.getElementById('base-order-input').value).toBe('0, 1, 2');
+  });
+
+  test('depth updates when selecting a base preset', () => {
+    importLists({
+      presets: [
+        { id: 'b2', title: 'b2', type: 'base', items: ['foo bar', 'baz qux quux'] }
+      ]
+    });
+    document.body.innerHTML = `
+      <select id="base-select"><option value="b2">b2</option></select>
+      <textarea id="base-input"></textarea>
+      <select id="pos-depth-select">
+        <option value="prepend">p</option>
+        <option value="append">a</option>
+      </select>
+      <textarea id="pos-depth-input"></textarea>
+    `;
+    setupPresetListener('base-select', 'base-input', 'base');
+    setupDepthControl('pos-depth-select', 'pos-depth-input', 'base-input');
+    const depthSel = document.getElementById('pos-depth-select');
+    depthSel.value = 'append';
+    depthSel.dispatchEvent(new Event('change'));
+    const baseSel = document.getElementById('base-select');
+    baseSel.value = 'b2';
+    baseSel.dispatchEvent(new Event('change'));
+    expect(document.getElementById('pos-depth-input').value).toBe('2, 3');
   });
 
   test('rerollRandomOrders handles multiple order controls', () => {

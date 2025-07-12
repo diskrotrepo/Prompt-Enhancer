@@ -55,6 +55,8 @@
       inputEl.value = list[0] || '';
     }
     inputEl.disabled = false;
+    inputEl.dispatchEvent(new Event('input'));
+    inputEl.dispatchEvent(new Event('change'));
   }
 
   function setupPresetListener(selectId, inputId, type) {
@@ -1092,12 +1094,15 @@
     fields.forEach(el => {
       if (el.tagName === 'SELECT') {
         el.selectedIndex = 0;
+        el.dispatchEvent(new Event('change'));
       } else if (el.type === 'checkbox') {
         el.checked = el.defaultChecked;
+        el.dispatchEvent(new Event('change'));
       } else {
         el.value = el.defaultValue || '';
+        el.dispatchEvent(new Event('input'));
+        el.dispatchEvent(new Event('change'));
       }
-      el.dispatchEvent(new Event('change'));
     });
     updateStackBlocks('pos', 1);
     updateStackBlocks('neg', 1);
