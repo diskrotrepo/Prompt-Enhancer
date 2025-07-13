@@ -1,10 +1,12 @@
 /** @jest-environment jsdom */
 
-const lists = require('../src/listManager');
-const state = require('../src/stateManager');
-const storage = require('../src/storageManager');
-const ui = require('../src/uiControls');
-
+global.__TEST__ = true;
+if (typeof window !== "undefined") window.__TEST__ = true;
+const main = require("../src/script");
+const lists = main;
+const state = main;
+const storage = main;
+const ui = main;
 function setupDOM() {
   document.body.innerHTML = `
     <select id="base-select"></select>
