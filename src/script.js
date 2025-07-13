@@ -29,6 +29,7 @@
  * 5. UI Controls
  *    - Input collection and output display (collectInputs, displayOutput)
  *    - Event handlers and setup (setupPresetListener, initializeUI)
+ *    - Reusable id iteration (forEachId) and stack helpers (getStackSize)
  * 6. Initialization and Exports
  *    - IIFE setup and module exports
  */
@@ -1121,19 +1122,55 @@
    */
   function gatherControls(prefix, base) {
     const results = [];
-    let idx = 1;
-    while (true) {
-      const sel = document.getElementById(
-        `${prefix}-${base}-select${idx === 1 ? '' : '-' + idx}`
-      );
-      if (!sel) break;
-      const inp = document.getElementById(
-        `${prefix}-${base}-input${idx === 1 ? '' : '-' + idx}`
-      );
+    forEachId(`${prefix}-${base}-select`, (sel, idx) => {
+      const inp = document.getElementById(`${prefix}-${base}-input${idx === 1 ? '' : '-' + idx}`);
       results.push({ select: sel, input: inp });
-      idx++;
-    }
+    });
     return results;
+  }
+
+  /**
+   * Get the current stack size for a prefix by reading the checkbox and size field.
+   * Example: getStackSize('pos') returns 2 when pos-stack is checked and pos-stack-size is 2.
+   * Purpose: Central helper so depth watchers update correctly when stack counts change.
+   * Usage: setupStackControls and computeDepthCounts.
+   * 50% Rule: Simple DOM reads with example for clarity.
+   * @param {string} prefix - Section prefix (pos/neg).
+   * @returns {number} - Active stack count.
+   */
+  function getStackSize(prefix) {
+    const stack = document.getElementById(`${prefix}-stack`);
+    const size = document.getElementById(`${prefix}-stack-size`);
+    if (stack && stack.checked && size) {
+      const val = parseInt(size.value || '1', 10);
+      return isNaN(val) ? 1 : val;
+    }
+    return 1;
+  }
+
+  /**
+   * Iterate over sequentially numbered ids, invoking a callback for each.
+   * Example: forEachId('pos-hide', cb) visits pos-hide, pos-hide-2, ...
+   * Purpose: Consolidate repeated while loops for dynamic controls.
+   * Usage: In setupSectionHide, setupSectionOrder, and other loops.
+   * 50% Rule: Simple iteration with example for clarity.
+   * @param {string} baseId - Id prefix for index 1.
+   * @param {Function} fn - Callback receiving element and index.
+   */
+  function forEachId(baseId, fn) {
+    let i = 1;
+    let id = baseId;
+    let el = document.getElementById(id);
+    if (!el) {
+      id = `${baseId}-1`;
+      el = document.getElementById(id);
+    }
+    while (el) {
+      fn(el, i);
+      i++;
+      id = `${baseId}-${i}`;
+      el = document.getElementById(id);
+    }
   }
 
   /** 
@@ -1594,6 +1631,12 @@
         }
         const count = stackCb.checked ? parseInt(sizeEl.value, 10) || 1 : 1;
         updateStackBlocks(cfg.prefix, count);
+        if (cfg.prefix === 'pos') {
+          const negCount = getStackSize('neg');
+          updateDepthContainers('neg', negCount);
+        } else {
+          updateDepthContainers('neg', count);
+        }
       };
       stackCb.addEventListener('change', update);
       sizeEl.addEventListener('change', update);
@@ -1611,16 +1654,12 @@
   function reflectSectionHide(prefix) {
     const cb = document.getElementById(`${prefix}-all-hide`);
     if (!cb) return;
-    let idx = 1;
     let all = true;
     let any = false;
-    while (true) {
-      const hide = document.getElementById(`${prefix}-hide-${idx}`);
-      if (!hide) break;
+    forEachId(`${prefix}-hide`, hide => {
       all = all && hide.checked;
       any = any || hide.checked;
-      idx++;
-    }
+    });
     const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
     reflectToggleState(btn, all, any && !all);
   }
@@ -1708,26 +1747,18 @@
     const cb = document.getElementById(`${prefix}-all-hide`);
     if (!cb) return;
     const update = () => {
-      let idx = 1;
-      while (true) {
-        const hide = document.getElementById(`${prefix}-hide-${idx}`);
-        if (!hide) break;
+      forEachId(`${prefix}-hide`, hide => {
         hide.checked = cb.checked;
         const btn = document.querySelector(`.toggle-button[data-target="${hide.id}"]`);
         if (btn) updateButtonState(btn, hide);
         hide.dispatchEvent(new Event('change'));
-        idx++;
-      }
+      });
       reflectSectionHide(prefix);
     };
     cb.addEventListener('change', update);
-    let i = 1;
-    while (true) {
-      const hide = document.getElementById(`${prefix}-hide-${i}`);
-      if (!hide) break;
+    forEachId(`${prefix}-hide`, hide => {
       hide.addEventListener('change', () => reflectSectionHide(prefix));
-      i++;
-    }
+    });
     update();
   }
 
@@ -1755,15 +1786,18 @@
       reflectAllRandom();
     };
     cb.addEventListener('change', update);
-    let i = 1;
-    while (true) {
-      const sel = document.getElementById(`${prefix}-order-select${i === 1 ? '' : '-' + i}`);
-      if (!sel) break;
-      sel.addEventListener('change', () => { reflectSectionOrder(prefix); reflectAllRandom(); });
-      const dep = document.getElementById(`${prefix}-depth-select${i === 1 ? '' : '-' + i}`);
-      if (dep) dep.addEventListener('change', () => { reflectSectionOrder(prefix); reflectAllRandom(); });
-      i++;
-    }
+    forEachId(`${prefix}-order-select`, (sel, idx) => {
+      sel.addEventListener('change', () => {
+        reflectSectionOrder(prefix);
+        reflectAllRandom();
+      });
+      const dep = document.getElementById(`${prefix}-depth-select${idx === 1 ? '' : '-' + idx}`);
+      if (dep)
+        dep.addEventListener('change', () => {
+          reflectSectionOrder(prefix);
+          reflectAllRandom();
+        });
+    });
     reflectSectionOrder(prefix);
   }
 
@@ -2172,11 +2206,13 @@
     update();
   }
 
-  /** 
+  /**
    * Create or remove depth input blocks to match the requested stack size.
    * Purpose: Dynamic depth controls for stacks.
-   * Usage: In updateStackBlocks.
+   * Usage: In updateStackBlocks and stack listeners.
    * 50% Rule: Creates elements dynamically.
+   * Watchers: Negative depth containers track positive fields listed here.
+   * Update this list when new inputs are added to avoid stale depth values.
    * @param {string} prefix - Prefix.
    * @param {number} count - Number of blocks.
    */
@@ -2203,14 +2239,16 @@
       ta.placeholder = '0,1,2';
       div.appendChild(ta);
       container.appendChild(div);
+      // Each depth input must rebuild when related fields change.
+      // Watch the base input and this stack's order and modifiers first.
       const watchers = ['base-input', 'base-select'];
       watchers.push(`${prefix}-input${idx === 1 ? '' : '-' + idx}`);
       watchers.push(`${prefix}-order-input${idx === 1 ? '' : '-' + idx}`);
       if (prefix === 'neg') {
+        // Negative depth may depend on positive stacks when include-pos is on.
+        // Add those fields so changes trigger recomputation.
         watchers.push('neg-include-pos');
-        const count = document.getElementById('pos-stack')?.checked
-          ? parseInt(document.getElementById('pos-stack-size')?.value || '1', 10)
-          : 1;
+        const count = getStackSize('pos');
         for (let p = 1; p <= count; p++) {
           watchers.push(`pos-input${p === 1 ? '' : '-' + p}`);
           watchers.push(`pos-order-input${p === 1 ? '' : '-' + p}`);
@@ -2446,15 +2484,10 @@
     );
     const gatherItems = prefix => {
       const arr = [];
-      let idx = 1;
-      while (true) {
-        const el = document.getElementById(`${prefix}-input${idx === 1 ? '' : '-' + idx}`);
-        if (!el) break;
+      forEachId(`${prefix}-input`, el => {
         arr.push(utils.parseInput(el.value || ''));
-        idx++;
-      }
-      if (arr.length === 1) return arr[0];
-      return arr;
+      });
+      return arr.length === 1 ? arr[0] : arr;
     };
 
     const posItems = gatherItems('pos');
