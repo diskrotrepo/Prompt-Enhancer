@@ -1,26 +1,14 @@
 # AGENT Instructions
 
-This directory stores the client side code. All files use two spaces for indentation with no trailing whitespace.
+The client code is consolidated into a single file `script.js`. Organize that file into clear sections:
 
-## Folder structure
+- pure, side-effect free utilities at the top
+- UI helpers below them
+- any remaining logic in a final section
 
-```
-src/
-  index.html        # UI layout
-  script.js         # main logic tied to the DOM
-  style.css         # styling
-  assets/           # images and fonts
-  lib/              # pure functions only
-  default_list.js   # preset data
-  stateManager.js   # state container
-  listManager.js    # preset list helpers
-  storageManager.js # persistence helpers
-  uiControls.js     # small DOM interactions
-```
-
-Place any side-effect free logic inside `src/lib` so other modules remain focused on their direct tasks.
+Document functions so their input and output are understandable at a glance.
+Indentation is two spaces with no trailing whitespace.
 
 ## Testing
 
-Run all checks with `npm test`. The goal is complete coverage. If any bug reaches production, write a test that exposes it and then consider similar gaps that might allow related bugs. Expand the suite until you are confident it cannot happen again.
-
+Run the full suite with `npm test` whenever you modify code. Expand coverage whenever a bug is fixed or a new feature is added.
