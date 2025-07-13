@@ -123,8 +123,8 @@ describe('Prompt building', () => {
     expect(out).toEqual({ positive: 'good cat', negative: 'bad good cat' });
   });
 
-  test('buildVersions offsets depth for negatives when positives included', () => {
-    const out = buildVersions(['cat'], ['bad'], ['good'], 20, true, [], true, 1, 1, [1], [1]);
+  test('buildVersions applies negative depth after positives', () => {
+    const out = buildVersions(['cat'], ['bad'], ['good'], 20, true, [], true, 1, 1, [1], [2]);
     expect(out).toEqual({ positive: 'cat good', negative: 'cat good bad' });
   });
 
@@ -145,7 +145,7 @@ describe('Prompt building', () => {
     expect(out).toEqual({ positive: 'a x b y c', negative: 'a n b c' });
   });
 
-  test('negative depth offset accounts for stacked positives', () => {
+  test('negative depth accounts for stacked positives', () => {
     const out = buildVersions(
       ['foo bar baz'],
       ['bad'],
@@ -157,9 +157,26 @@ describe('Prompt building', () => {
       2,
       1,
       [1],
-      [1]
+      [5]
     );
-    expect(out).toEqual({ positive: 'foo good great bar baz', negative: 'foo good great bad bar baz' });
+    expect(out).toEqual({ positive: 'foo good great bar baz', negative: 'foo good great bar baz bad' });
+  });
+
+  test('append depths derived from computeDepthCounts place negatives last', () => {
+    const out = buildVersions(
+      ['foo bar'],
+      ['bad'],
+      ['good'],
+      50,
+      true,
+      [],
+      true,
+      1,
+      1,
+      [2],
+      [3]
+    );
+    expect(out).toEqual({ positive: 'foo bar good, foo bar good', negative: 'foo bar good bad, foo bar good bad' });
   });
 
   test('negative depth uses independent values', () => {
@@ -174,7 +191,7 @@ describe('Prompt building', () => {
       1,
       1,
       [0],
-      [2]
+      [3]
     );
     expect(out).toEqual({ positive: 'pos a b', negative: 'pos a b neg' });
   });
@@ -653,7 +670,7 @@ describe('UI interactions', () => {
     const sel = document.getElementById('pos-depth-select');
     sel.value = 'append';
     sel.dispatchEvent(new Event('change'));
-    expect(document.getElementById('pos-depth-input').value).toBe('4');
+    expect(document.getElementById('pos-depth-input').value).toBe('2');
   });
 
   test('negative depth includes positive modifiers when enabled', () => {
@@ -680,7 +697,7 @@ describe('UI interactions', () => {
     const sel = document.getElementById('neg-depth-select');
     sel.value = 'append';
     sel.dispatchEvent(new Event('change'));
-    expect(document.getElementById('neg-depth-input').value).toBe('4');
+    expect(document.getElementById('neg-depth-input').value).toBe('3');
   });
 
   test('prepend depth populates zeros for each base term', () => {
