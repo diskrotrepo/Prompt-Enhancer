@@ -45,6 +45,8 @@ const {
   setupSectionHide,
   setupSectionAdvanced,
   setupDepthControl,
+  updateDepthContainers,
+  depthWatchIds,
   setupPresetListener
 } = ui;
 
@@ -923,6 +925,42 @@ describe('UI interactions', () => {
     const d2 = document.getElementById('pos-depth-input-2').value;
     expect(d1).not.toBe('');
     expect(d2).not.toBe('');
+  });
+
+  test('rerollRandomOrders refreshes negative append depth when stacks randomize', () => {
+    document.body.innerHTML = `
+      <textarea id="base-input">foo bar</textarea>
+      <input type="checkbox" id="pos-stack" checked>
+      <select id="pos-stack-size"><option value="2">2</option></select>
+      <div id="pos-stack-container"></div>
+      <div id="pos-order-container"></div>
+      <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
+      <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+      <select id="pos-order-select-2"><option value="canonical">c</option><option value="random">r</option></select>
+      <div class="input-row"><textarea id="pos-order-input-2"></textarea></div>
+      <textarea id="pos-input">good</textarea>
+      <textarea id="pos-input-2">great job</textarea>
+      <input type="checkbox" id="neg-stack" checked>
+      <select id="neg-stack-size"><option value="1">1</option></select>
+      <input type="checkbox" id="neg-include-pos" checked>
+      <div id="neg-depth-container">
+        <select id="neg-depth-select"><option value="append">a</option></select>
+        <div class="input-row"><textarea id="neg-depth-input"></textarea></div>
+      </div>`;
+    updateStackBlocks('pos', 2);
+    updateDepthContainers('neg', 1);
+    setupOrderControl('pos-order-select', 'pos-order-input', () => ['good', 'better']);
+    setupOrderControl('pos-order-select-2', 'pos-order-input-2', () => ['good', 'great job']);
+    setupDepthControl('neg-depth-select', 'neg-depth-input', depthWatchIds('neg', 1));
+    document.getElementById('pos-order-select').value = 'random';
+    document.getElementById('pos-order-select-2').value = 'random';
+    document.getElementById('neg-depth-select').value = 'append';
+    document.getElementById('neg-depth-select').dispatchEvent(new Event('change'));
+    const before = document.getElementById('neg-depth-input').value;
+    document.getElementById('neg-depth-input').value = '';
+    rerollRandomOrders();
+    const after = document.getElementById('neg-depth-input').value;
+    expect(after).toBe('5');
   });
 
   test('advanced toggle shows and hides controls', () => {

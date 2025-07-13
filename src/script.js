@@ -29,6 +29,8 @@
  * 5. UI Controls
  *    - Input collection and output display (collectInputs, displayOutput)
  *    - Event handlers and setup (setupPresetListener, initializeUI)
+ *    - Reusable id iteration (forEachId)
+ *    - Watcher utilities (depthWatchIds)
  * 6. Initialization and Exports
  *    - IIFE setup and module exports
  */
@@ -571,6 +573,8 @@
   let ORDER_PRESETS = {};
 
   let LISTS;
+  /** Default presets load from `default_list.js` to keep this file lighter.
+    * Custom builders may embed data directly but external loading keeps edits concise. */
   if (typeof DEFAULT_LIST !== 'undefined' && Array.isArray(DEFAULT_LIST.presets)) {
     LISTS = JSON.parse(JSON.stringify(DEFAULT_LIST));
   } else if (
@@ -1121,19 +1125,36 @@
    */
   function gatherControls(prefix, base) {
     const results = [];
-    let idx = 1;
-    while (true) {
-      const sel = document.getElementById(
-        `${prefix}-${base}-select${idx === 1 ? '' : '-' + idx}`
-      );
-      if (!sel) break;
-      const inp = document.getElementById(
-        `${prefix}-${base}-input${idx === 1 ? '' : '-' + idx}`
-      );
+    forEachId(`${prefix}-${base}-select`, (sel, idx) => {
+      const inp = document.getElementById(`${prefix}-${base}-input${idx === 1 ? '' : '-' + idx}`);
       results.push({ select: sel, input: inp });
-      idx++;
-    }
+    });
     return results;
+  }
+
+  /**
+   * Iterate over sequentially numbered ids, invoking a callback for each.
+   * Example: forEachId('pos-hide', cb) visits pos-hide, pos-hide-2, ...
+   * Purpose: Consolidate repeated while loops for dynamic controls.
+   * Usage: In setupSectionHide, setupSectionOrder, and other loops.
+   * 50% Rule: Simple iteration with example for clarity.
+   * @param {string} baseId - Id prefix for index 1.
+   * @param {Function} fn - Callback receiving element and index.
+   */
+  function forEachId(baseId, fn) {
+    let i = 1;
+    let id = baseId;
+    let el = document.getElementById(id);
+    if (!el) {
+      id = `${baseId}-1`;
+      el = document.getElementById(id);
+    }
+    while (el) {
+      fn(el, i);
+      i++;
+      id = `${baseId}-${i}`;
+      el = document.getElementById(id);
+    }
   }
 
   /** 
@@ -1594,6 +1615,12 @@
         }
         const count = stackCb.checked ? parseInt(sizeEl.value, 10) || 1 : 1;
         updateStackBlocks(cfg.prefix, count);
+        if (cfg.prefix === 'pos') {
+          const negCount = document.getElementById('neg-stack')?.checked
+            ? parseInt(document.getElementById('neg-stack-size')?.value || '1', 10)
+            : 1;
+          updateDepthContainers('neg', negCount, true);
+        }
       };
       stackCb.addEventListener('change', update);
       sizeEl.addEventListener('change', update);
@@ -1611,16 +1638,12 @@
   function reflectSectionHide(prefix) {
     const cb = document.getElementById(`${prefix}-all-hide`);
     if (!cb) return;
-    let idx = 1;
     let all = true;
     let any = false;
-    while (true) {
-      const hide = document.getElementById(`${prefix}-hide-${idx}`);
-      if (!hide) break;
+    forEachId(`${prefix}-hide`, hide => {
       all = all && hide.checked;
       any = any || hide.checked;
-      idx++;
-    }
+    });
     const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
     reflectToggleState(btn, all, any && !all);
   }
@@ -1708,26 +1731,18 @@
     const cb = document.getElementById(`${prefix}-all-hide`);
     if (!cb) return;
     const update = () => {
-      let idx = 1;
-      while (true) {
-        const hide = document.getElementById(`${prefix}-hide-${idx}`);
-        if (!hide) break;
+      forEachId(`${prefix}-hide`, hide => {
         hide.checked = cb.checked;
         const btn = document.querySelector(`.toggle-button[data-target="${hide.id}"]`);
         if (btn) updateButtonState(btn, hide);
         hide.dispatchEvent(new Event('change'));
-        idx++;
-      }
+      });
       reflectSectionHide(prefix);
     };
     cb.addEventListener('change', update);
-    let i = 1;
-    while (true) {
-      const hide = document.getElementById(`${prefix}-hide-${i}`);
-      if (!hide) break;
+    forEachId(`${prefix}-hide`, hide => {
       hide.addEventListener('change', () => reflectSectionHide(prefix));
-      i++;
-    }
+    });
     update();
   }
 
@@ -1755,15 +1770,18 @@
       reflectAllRandom();
     };
     cb.addEventListener('change', update);
-    let i = 1;
-    while (true) {
-      const sel = document.getElementById(`${prefix}-order-select${i === 1 ? '' : '-' + i}`);
-      if (!sel) break;
-      sel.addEventListener('change', () => { reflectSectionOrder(prefix); reflectAllRandom(); });
-      const dep = document.getElementById(`${prefix}-depth-select${i === 1 ? '' : '-' + i}`);
-      if (dep) dep.addEventListener('change', () => { reflectSectionOrder(prefix); reflectAllRandom(); });
-      i++;
-    }
+    forEachId(`${prefix}-order-select`, (sel, idx) => {
+      sel.addEventListener('change', () => {
+        reflectSectionOrder(prefix);
+        reflectAllRandom();
+      });
+      const dep = document.getElementById(`${prefix}-depth-select${idx === 1 ? '' : '-' + idx}`);
+      if (dep)
+        dep.addEventListener('change', () => {
+          reflectSectionOrder(prefix);
+          reflectAllRandom();
+        });
+    });
     reflectSectionOrder(prefix);
   }
 
@@ -2180,7 +2198,43 @@
    * @param {string} prefix - Prefix.
    * @param {number} count - Number of blocks.
    */
-  function updateDepthContainers(prefix, count) {
+  /**
+   * Build the list of ids that should trigger depth recalculation.
+   * Purpose: Centralize watcher dependencies so new inputs stay in sync.
+   * Line comments capture which elements matter when negatives include positives.
+   * 50% Rule: Documented example plus logic summary.
+   * @param {string} prefix - Section prefix.
+   * @param {number} idx - Stack index.
+   * @returns {string[]} - Array of watcher ids.
+   */
+  function depthWatchIds(prefix, idx) {
+    const list = ['base-input', 'base-select'];
+    list.push(`${prefix}-input${idx === 1 ? '' : '-' + idx}`);
+    list.push(`${prefix}-order-input${idx === 1 ? '' : '-' + idx}`);
+    if (prefix === 'neg') {
+      list.push('neg-include-pos');
+      const posCount = document.getElementById('pos-stack')?.checked
+        ? parseInt(document.getElementById('pos-stack-size')?.value || '1', 10)
+        : 1;
+      for (let p = 1; p <= posCount; p++) {
+        list.push(`pos-input${p === 1 ? '' : '-' + p}`);
+        list.push(`pos-order-input${p === 1 ? '' : '-' + p}`);
+      }
+    }
+    return list;
+  }
+
+  /**
+   * Create or remove depth input blocks to match the requested stack size.
+   * Watcher lists rely on depthWatchIds; pass refresh=true when related
+   * inputs (like positive stacks) change so existing controls rebuild watchers.
+   * Purpose: Dynamic depth controls with synchronized dependencies.
+   * 50% Rule: Loops with comments; refresh handles updates.
+   * @param {string} prefix - Prefix.
+   * @param {number} count - Number of blocks.
+   * @param {boolean} [refresh=false] - Reapply watchers on existing elements.
+   */
+  function updateDepthContainers(prefix, count, refresh = false) {
     const container = document.getElementById(`${prefix}-depth-container`);
     const baseId = `${prefix}-depth`;
     const adv = document.getElementById('advanced-mode');
@@ -2188,6 +2242,17 @@
     const defaultVal = !adv || !adv.checked ? baseSel?.value || 'prepend' : undefined;
     if (!container) return;
     const current = container.querySelectorAll('select').length;
+    if (refresh) {
+      for (let i = 1; i <= Math.min(current, count); i++) {
+        const sel = document.getElementById(
+          `${baseId}-select${i === 1 ? '' : '-' + i}`
+        );
+        const ta = document.getElementById(
+          `${baseId}-input${i === 1 ? '' : '-' + i}`
+        );
+        if (sel && ta) setupDepthControl(sel.id, ta.id, depthWatchIds(prefix, i));
+      }
+    }
     for (let i = current; i < count; i++) {
       const idx = i + 1;
       const sel = document.createElement('select');
@@ -2203,20 +2268,7 @@
       ta.placeholder = '0,1,2';
       div.appendChild(ta);
       container.appendChild(div);
-      const watchers = ['base-input', 'base-select'];
-      watchers.push(`${prefix}-input${idx === 1 ? '' : '-' + idx}`);
-      watchers.push(`${prefix}-order-input${idx === 1 ? '' : '-' + idx}`);
-      if (prefix === 'neg') {
-        watchers.push('neg-include-pos');
-        const count = document.getElementById('pos-stack')?.checked
-          ? parseInt(document.getElementById('pos-stack-size')?.value || '1', 10)
-          : 1;
-        for (let p = 1; p <= count; p++) {
-          watchers.push(`pos-input${p === 1 ? '' : '-' + p}`);
-          watchers.push(`pos-order-input${p === 1 ? '' : '-' + p}`);
-        }
-      }
-      setupDepthControl(sel.id, ta.id, watchers);
+      setupDepthControl(sel.id, ta.id, depthWatchIds(prefix, idx));
     }
     for (let i = current; i > count; i--) {
       const idx = i;
@@ -2446,15 +2498,10 @@
     );
     const gatherItems = prefix => {
       const arr = [];
-      let idx = 1;
-      while (true) {
-        const el = document.getElementById(`${prefix}-input${idx === 1 ? '' : '-' + idx}`);
-        if (!el) break;
+      forEachId(`${prefix}-input`, el => {
         arr.push(utils.parseInput(el.value || ''));
-        idx++;
-      }
-      if (arr.length === 1) return arr[0];
-      return arr;
+      });
+      return arr.length === 1 ? arr[0] : arr;
     };
 
     const posItems = gatherItems('pos');
@@ -2483,6 +2530,9 @@
       const arr = cfg.items.map((_, i) => i);
       utils.shuffle(arr);
       cfg.input.value = arr.join(', ');
+      // Trigger watchers so dependent depths update
+      cfg.input.dispatchEvent(new Event('input'));
+      cfg.input.dispatchEvent(new Event('change'));
     });
 
     function gatherDepth(prefix) {
@@ -2503,6 +2553,9 @@
       }
       const vals = counts.map(c => Math.floor(Math.random() * (c + 1)));
       cfg.input.value = vals.join(', ');
+      // Trigger watchers so dependent counts refresh
+      cfg.input.dispatchEvent(new Event('input'));
+      cfg.input.dispatchEvent(new Event('change'));
     });
   }
 
@@ -2757,6 +2810,8 @@
     setupSectionHide,
     setupSectionOrder,
     setupSectionAdvanced,
+    updateDepthContainers,
+    depthWatchIds,
     initializeUI,
     applyCurrentPresets,
     resetUI,
@@ -2782,6 +2837,7 @@
     }
   }
 
+  // For Jest tests this file exports helpers via CommonJS.
   if (typeof module !== 'undefined') {
     module.exports = { ...utils, ...lists, ...state, ...storage, ...ui };
   } else {
