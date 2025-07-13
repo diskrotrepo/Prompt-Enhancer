@@ -5,6 +5,20 @@ All client logic lives in a single `script.js` file to make code search easy whe
 
 The project embraces the **50% Rule**: many small, better-than-even improvements compound into reliable software. Document intent and reasoning so later revisions build on that advantage.
 
+## Applying the 50% Rule to LLM Collaboration
+
+The 50% Rule in this context means diversifying token combinations to reinforce semantic meaning. When making changes, use multiple "attack angles" to document them:
+
+- **Token Diversity**: Express changes via line-by-line comments, structural overviews, TOC updates, natural language explanations, and examples.
+- **Reinforcement**: Each method adds redundancy; if one is unclear, others clarify the intent.
+- **Permutation**: Reorder or rephrase documentation to activate different model pathways.
+
+Directives for LLMs:
+- For every change, update comments in code files using at least three methods (e.g., function purpose, line-by-line, section summary).
+- Ensure AGENTS.md files reflect new structures.
+- Use diverse phrasing to communicate changes to future LLM instances, increasing success probability.
+
+
 For development details see `src/AGENTS.md`.
 
 ## Testing

@@ -8,45 +8,73 @@
  * improvements follow the **50% Rule**—each refinement boosts the odds that
  * future work succeeds.
  *
- * Table of Contents:
+ * Applying the 50% Rule to Documentation:
+ * - Layer multiple methods (TOC, section summaries, function purposes, line-by-line comments) to ensure >50% clarity per method, compounding to robust understanding.
+ * - Diversify explanations: structural overviews for architecture, detailed comments for logic, examples for usage.
+ * - This redundancy reinforces intent, like diverse token combinations in prompts.
+ *
+ * Detailed Table of Contents:
  * 1. Pure Utility Functions
+ *    - Parsing and manipulation helpers (parseInput, countWords, etc.)
+ *    - Core prompt building logic (applyModifierStack, buildVersions)
  * 2. List Management
+ *    - Preset loading and population (populateSelect, loadLists)
+ *    - Export/import and saving lists
  * 3. State Management
+ *    - DOM interaction for state (getVal, setVal, loadFromDOM)
+ *    - Export/import state
  * 4. Storage Handling
+ *    - LocalStorage operations (saveLocal, loadLocal)
+ *    - Data persistence (persist, loadPersisted)
  * 5. UI Controls
+ *    - Input collection and output display (collectInputs, displayOutput)
+ *    - Event handlers and setup (setupPresetListener, initializeUI)
  * 6. Initialization and Exports
+ *    - IIFE setup and module exports
  */
 (function (global) {
   "use strict";
-  // ======== Pure Utility Functions ========
+// ======== Pure Utility Functions ========
+// Section Purpose: Side-effect-free helpers for parsing, manipulating, and building prompts.
+// These functions are pure to ensure predictability, following the 50% Rule by combining small, reliable operations.
+// Structural Overview: Grouped utilities that avoid DOM or state changes, enabling easy testing and reuse.
+// Section Summary: Provides foundational tools for text processing and prompt generation, used throughout the app.
 
   /**
    * Split a raw text block into individual items.
-   * If keepDelim is true punctuation is preserved and a trailing period is
-   * added when missing so other code can treat each string as a sentence.
-   *
-   * @param {string} raw Text entered by the user
-   * @param {boolean} [keepDelim=false] Keep punctuation delimiters
-   * @returns {string[]} array of parsed items
+   * If keepDelim is true, punctuation is preserved and a trailing period is added when missing
+   * so other code can treat each string as a sentence.
+   * Purpose: Parse user input into arrays, handling delimiters flexibly for prompts and modifiers.
+   * Usage Example: parseInput("item1, item2.", true) returns ["item1,", "item2."].
+   * 50% Rule: Employs multiple strategies (normalization, splitting, trimming) for robust parsing; diverse methods ensure clarity.
+   * @param {string} raw - Text entered by the user.
+   * @param {boolean} [keepDelim=false] - Keep punctuation delimiters.
+   * @returns {string[]} - Array of parsed items.
    */
   function parseInput(raw, keepDelim = false) {
+    // Check for empty input
     if (!raw) return [];
     if (!keepDelim) {
+      // Normalize delimiters to commas
       const normalized = raw.replace(/;/g, ',').replace(/\s*,\s*/g, ',');
+      // Split, trim, and filter empty items
       return normalized
         .split(/[,\n]+/)
         .map(s => s.trim())
         .filter(Boolean);
     }
+    // Handle delimiter preservation
     const normalized = raw.replace(/\r\n/g, '\n');
     const delims = [',', '.', ';', ':', '!', '?', '\n'];
     const items = [];
     let current = '';
+    // Iterate through each character
     for (let i = 0; i < normalized.length; i++) {
       const ch = normalized[i];
       current += ch;
       if (delims.includes(ch)) {
         let natural = /[,.!:;?\n]/.test(ch);
+        // Handle consecutive delimiters and spaces
         while (i + 1 < normalized.length) {
           const next = normalized[i + 1];
           if (delims.includes(next)) {
@@ -66,6 +94,7 @@
         current = '';
       }
     }
+    // Handle trailing item with period if needed
     if (current) {
       if (!/[,.!:;?\n]\s*$/.test(current)) {
         current += '. ';
@@ -78,9 +107,11 @@
   /**
    * Count how many words a string contains.
    * Trailing punctuation is ignored so "cat." counts as one word.
-   *
-   * @param {string} str Text to examine
-   * @returns {number} word count
+   * Purpose: Calculate word count for depth insertion and limits.
+   * Usage Example: countWords("hello world.") returns 2.
+   * 50% Rule: Cleans string via trim and replace for accurate counting; explained via example and purpose for reinforcement.
+   * @param {string} str - Text to examine.
+   * @returns {number} - Word count.
    */
   function countWords(str) {
     const cleaned = str.trim().replace(/[,.!:;?]$/, '');
@@ -91,6 +122,11 @@
   /**
    * Parse a textarea of divider lines.
    * Empty lines are removed but whitespace is preserved.
+   * Purpose: Split divider input into array for prompt separation.
+   * Usage Example: parseDividerInput("line1\n\nline2") returns ["line1", "line2"].
+   * 50% Rule: Simple split and filter; documented with example and line comments.
+   * @param {string} raw - Raw divider text.
+   * @returns {string[]} - Array of non-empty lines.
    */
   function parseDividerInput(raw) {
     if (!raw) return [];
@@ -99,6 +135,11 @@
 
   /**
    * Convert a comma or space separated list into numeric indices.
+   * Purpose: Parse order strings into index arrays for reordering.
+   * Usage Example: parseOrderInput("1, 3") returns [1, 3].
+   * 50% Rule: Uses split, map, filter for parsing; multiple docs reinforce usage.
+   * @param {string} raw - Input string of indices.
+   * @returns {number[]} - Array of parsed numbers.
    */
   function parseOrderInput(raw) {
     if (!raw) return [];
@@ -111,6 +152,12 @@
   /**
    * Reorder items according to an index array. If order is shorter than the
    * items list it cycles through.
+   * Purpose: Apply custom ordering to arrays like modifiers.
+   * Usage Example: applyOrder(["a", "b", "c"], [2, 0]) returns ["c", "a", "c"] (cycling).
+   * 50% Rule: Modular arithmetic for cycling; example shows behavior.
+   * @param {string[]} items - Array to reorder.
+   * @param {number[]} order - Indices for reordering.
+   * @returns {string[]} - Reordered array.
    */
   function applyOrder(items, order) {
     if (!Array.isArray(order) || !order.length) return items.slice();
@@ -123,6 +170,13 @@
   /**
    * Insert a term into a phrase at a given word position. Punctuation at the
    * end is preserved and the term can be placed past the end (wraps around).
+   * Purpose: Insert modifiers at specific depths in phrases.
+   * Usage Example: insertAtDepth("hello world.", "beautiful", 1) returns "hello beautiful world.".
+   * 50% Rule: Handles tail punctuation separately; wraps with modulo.
+   * @param {string} phrase - Base phrase.
+   * @param {string} term - Term to insert.
+   * @param {number} depth - Word position to insert at.
+   * @returns {string} - Modified phrase.
    */
   function insertAtDepth(phrase, term, depth) {
     if (!term) return phrase;
@@ -141,7 +195,14 @@
     return words.join(' ') + tail;
   }
 
-  /** Randomize an array in place using Fisher-Yates. */
+  /** 
+   * Randomize an array in place using Fisher-Yates.
+   * Purpose: Shuffle arrays for random ordering.
+   * Usage Example: shuffle([1,2,3]) might return [3,1,2].
+   * 50% Rule: Standard algorithm with loop; in-place for efficiency.
+   * @param {any[]} arr - Array to shuffle.
+   * @returns {any[]} - Shuffled array (same reference).
+   */
   function shuffle(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -152,6 +213,12 @@
 
   /**
    * Trim two arrays to the same length by taking the shorter length from each.
+   * Purpose: Equalize positive/negative prompt lengths.
+   * Usage Example: equalizeLength([1,2,3], [a,b]) returns [[1,2], [a,b]].
+   * 50% Rule: Simple min length; used for consistency in outputs.
+   * @param {any[]} a - First array.
+   * @param {any[]} b - Second array.
+   * @returns {any[][]} - Pair of trimmed arrays.
    */
   function equalizeLength(a, b) {
     const len = Math.min(a.length, b.length);
@@ -163,6 +230,19 @@
    * stacked so multiple sets are applied in sequence. Divider items are
    * inserted when the base list repeats. The return value is trimmed so the
    * cumulative string length does not exceed `limit`.
+   * Purpose: Core logic to apply stacked modifiers to base items.
+   * Usage: Internal to buildVersions; builds prompt arrays.
+   * 50% Rule: Complex loop with length checks; documented via params and logic summary.
+   * @param {string[]} baseItems - Base prompt items.
+   * @param {string[]|string[][]} modifiers - Modifiers or stacked lists.
+   * @param {number} limit - Max length for result.
+   * @param {number} [stackSize=1] - Number of stacks.
+   * @param {number[]|number[][]} [modOrders=null] - Orders for modifiers.
+   * @param {boolean} [delimited=false] - If items are delimited.
+   * @param {string[]} [dividers=[]] - Dividers to insert.
+   * @param {number[]} [itemOrder=null] - Order for base items.
+   * @param {number[]|number[][]} [depths=null] - Depths for insertions.
+   * @returns {string[]} - Modified items array.
    */
   function applyModifierStack(
     baseItems,
@@ -244,6 +324,19 @@
    * Build negative versions by inserting negative modifiers into already
    * modified positive terms. This keeps divider placement consistent between
    * positive and negative outputs.
+   * Purpose: Apply negative modifiers on top of positive ones for consistency.
+   * Usage: Internal to buildVersions when includePosForNeg is true.
+   * 50% Rule: Mirrors applyModifierStack logic for negatives; example in usage.
+   * @param {string[]} posTerms - Positive terms to modify.
+   * @param {string[]|string[][]} negMods - Negative modifiers.
+   * @param {number} limit - Max length.
+   * @param {number} [stackSize=1] - Stack size.
+   * @param {number[]|number[][]} [modOrders=null] - Orders.
+   * @param {boolean} [delimited=false] - Delimited flag.
+   * @param {string[]} [dividers=[]] - Dividers.
+   * @param {number[]} [itemOrder=null] - Item order.
+   * @param {number[]|number[][]} [depths=null] - Depths.
+   * @returns {string[]} - Negative terms array.
    */
   function applyNegativeOnPositive(
     posTerms,
@@ -324,6 +417,25 @@
   /**
    * High level builder that returns both positive and negative prompt strings.
    * It delegates to applyModifierStack and optionally applyNegativeOnPositive.
+   * Purpose: Generate final positive and negative prompts from inputs.
+   * Usage Example: buildVersions(items, negMods, posMods, 1000) returns {positive: '...', negative: '...'}.
+   * 50% Rule: Orchestrates stacking and equalization; trims for limits.
+   * @param {string[]} items - Base items.
+   * @param {string[]|string[][]} negMods - Negative modifiers.
+   * @param {string[]|string[][]} posMods - Positive modifiers.
+   * @param {number} limit - Max length.
+   * @param {boolean} [includePosForNeg=false] - Include positives in negatives.
+   * @param {string[]} [dividers=[]] - Dividers.
+   * @param {boolean} [shuffleDividers=true] - Shuffle dividers.
+   * @param {number} [posStackSize=1] - Positive stack size.
+   * @param {number} [negStackSize=1] - Negative stack size.
+   * @param {number[]|number[][]} [posDepths=null] - Positive depths.
+   * @param {number[]|number[][]} [negDepths=null] - Negative depths.
+   * @param {number[]} [baseOrder=null] - Base order.
+   * @param {number[]|number[][]} [posOrder=null] - Positive order.
+   * @param {number[]|number[][]} [negOrder=null] - Negative order.
+   * @param {number[]} [dividerOrder=null] - Divider order.
+   * @returns {{positive: string, negative: string}} - Generated prompts.
    */
   function buildVersions(
     items,
@@ -396,6 +508,14 @@
    * Normalize a block of lyrics text.
    * All punctuation is stripped, optionally removing parentheses or brackets,
    * and random spacing up to `maxSpaces` is introduced between words.
+   * Purpose: Process lyrics for use in prompts, adding randomness.
+   * Usage Example: processLyrics("hello (world)", 2, true) might return "hello  world".
+   * 50% Rule: Regex cleaning and random spacing; handles options.
+   * @param {string} text - Input lyrics.
+   * @param {number} maxSpaces - Max spaces between words.
+   * @param {boolean} [removeParens=false] - Remove parentheses.
+   * @param {boolean} [removeBrackets=false] - Remove brackets.
+   * @returns {string} - Processed lyrics.
    */
   function processLyrics(text, maxSpaces, removeParens = false, removeBrackets = false) {
     if (!text) return '';
@@ -436,7 +556,12 @@
     processLyrics
   };
 
-  // ======== List Management ========
+// ======== List Management ========
+// Section Purpose: Manage preset lists for modifiers, lengths, etc.
+// Structures data for easy access and UI population, using 50% Rule via redundant checks and deep copies.
+// Structural Overview: Initializes preset maps from global lists, handles loading/saving.
+// Section Summary: Centralizes preset handling for reusability across UI and logic.
+
   let NEG_PRESETS = {};
   let POS_PRESETS = {};
   let LENGTH_PRESETS = {};
@@ -470,6 +595,11 @@
   /**
    * Fill a <select> element with options derived from preset objects.
    * The first preset is selected by default for convenience.
+   * Purpose: Populate dropdowns with preset titles.
+   * Usage: Called in loadLists to update UI selects.
+   * 50% Rule: Loops with conditional selection; ensures non-empty defaults.
+   * @param {HTMLSelectElement} selectEl - Select element to populate.
+   * @param {Object[]} presets - Array of preset objects.
    */
   function populateSelect(selectEl, presets) {
     selectEl.innerHTML = '';
@@ -487,6 +617,11 @@
   /**
    * Populate a depth selection dropdown. Depth presets allow inserting
    * modifiers at a specific word index.
+   * Purpose: Set up options for depth selection including presets.
+   * Usage: Called in loadLists for depth selects.
+   * 50% Rule: Static options plus dynamic presets; simple loop.
+   * @param {HTMLSelectElement} selectEl - Select to populate.
+   * @param {Object[]} presets - Preset objects.
    */
   function populateDepthSelect(selectEl, presets) {
     if (!selectEl) return;
@@ -508,6 +643,10 @@
   /**
    * Initialize preset maps from the LISTS structure. This also rebuilds the
    * dropdown menus in the UI when presets change.
+   * Purpose: Load and categorize presets, update UI selects.
+   * Usage: Called on init and after imports.
+   * 50% Rule: Filters by type with arrays; calls populate for each.
+   * No params/returns; side-effect on global presets and UI.
    */
   function loadLists() {
     NEG_PRESETS = {};
@@ -567,7 +706,13 @@
     if (negDepthSelect) populateDepthSelect(negDepthSelect, order);
   }
 
-  /** Serialize current preset lists into JSON. */
+  /** 
+   * Serialize current preset lists into JSON.
+   * Purpose: Export lists for saving or sharing.
+   * Usage: Called in exportData.
+   * 50% Rule: Simple stringify; no params.
+   * @returns {string} - JSON string of lists.
+   */
   function exportLists() {
     return JSON.stringify(LISTS, null, 2);
   }
@@ -575,6 +720,11 @@
   /**
    * Import preset lists from an object. When additive is true existing lists
    * are merged, otherwise they are replaced.
+   * Purpose: Load external lists, optionally merging.
+   * Usage Example: importLists(obj, true) merges with existing.
+   * 50% Rule: Checks and merges with findIndex; cleans items.
+   * @param {Object} obj - Lists object to import.
+   * @param {boolean} [additive=false] - Merge mode.
    */
   function importLists(obj, additive = false) {
     if (!obj || typeof obj !== 'object' || !Array.isArray(obj.presets)) return;
@@ -613,6 +763,11 @@
   /**
    * Save the list typed into the UI back into the preset store. Prompts the
    * user for a preset name.
+   * Purpose: Persist user-entered lists as presets.
+   * Usage: Called on save button clicks.
+   * 50% Rule: Handles different types with map; updates UI.
+   * @param {string} type - List type (e.g., 'positive').
+   * @param {number} [index=1] - Stack index.
    */
   function saveList(type, index = 1) {
     const map = {
@@ -676,11 +831,21 @@
     saveList
   };
 
-  // ======== State Management ========
+// ======== State Management ========
+// Section Purpose: Handle application state synchronization with DOM.
+// Ensures consistent state loading/saving, layering getters/setters for reliability.
+// Structural Overview: Uses global State object for form values.
+// Section Summary: Abstracts form I/O for export/import and persistence.
+
   const State = {};
 
   /**
    * Helper to read a form element's value, abstracting checkbox state.
+   * Purpose: Get value from input elements uniformly.
+   * Usage: Internal to loadFromDOM.
+   * 50% Rule: Handles checkbox specially; simple.
+   * @param {HTMLElement} el - Form element.
+   * @returns {any} - Value or undefined.
    */
   function getVal(el) {
     if (!el) return undefined;
@@ -691,6 +856,11 @@
   /**
    * Mirror of getVal that writes a value back to the element and dispatches a
    * change event so listeners update.
+   * Purpose: Set value and trigger updates.
+   * Usage: Internal to applyToDOM.
+   * 50% Rule: Dispatches event for reactivity.
+   * @param {HTMLElement} el - Form element.
+   * @param {any} val - Value to set.
    */
   function setVal(el, val) {
     if (!el) return;
@@ -702,7 +872,13 @@
     el.dispatchEvent(new Event('change'));
   }
 
-  /** List all form control ids present in the document. */
+  /** 
+   * List all form control ids present in the document.
+   * Purpose: Get ids for state operations.
+   * Usage: In loadFromDOM and applyToDOM.
+   * 50% Rule: Queries and maps; environment check.
+   * @returns {string[]} - Array of ids.
+   */
   function getFieldIds() {
     if (typeof document === 'undefined') return [];
     return Array.from(
@@ -710,7 +886,13 @@
     ).map(el => el.id);
   }
 
-  /** Capture the current form state into the State object. */
+  /** 
+   * Capture the current form state into the State object.
+   * Purpose: Sync DOM to State.
+   * Usage: Before exports.
+   * 50% Rule: Loops over ids; assigns to State.
+   * @returns {Object} - State object.
+   */
   function loadFromDOM() {
     const obj = {};
     getFieldIds().forEach(id => {
@@ -722,7 +904,13 @@
     return obj;
   }
 
-  /** Populate form controls from a state object. */
+  /** 
+   * Populate form controls from a state object.
+   * Purpose: Apply state to DOM.
+   * Usage: On imports.
+   * 50% Rule: Loops and sets values.
+   * @param {Object} state - State to apply.
+   */
   function applyToDOM(state) {
     if (!state) return;
     getFieldIds().forEach(id => {
@@ -735,7 +923,13 @@
     Object.assign(State, state);
   }
 
-  /** Serialize State as JSON. */
+  /** 
+   * Serialize State as JSON.
+   * Purpose: Export state.
+   * Usage: In exportData.
+   * 50% Rule: Simple stringify.
+   * @returns {string} - JSON string.
+   */
   function exportState() {
     return JSON.stringify(State, null, 2);
   }
@@ -743,6 +937,10 @@
   /**
    * Load state from JSON or object and apply to the DOM. Invalid data is
    * ignored silently.
+   * Purpose: Import and apply state.
+   * Usage: On load.
+   * 50% Rule: Error handling; applies to DOM.
+   * @param {string|Object} obj - JSON or object.
    */
   function importState(obj) {
     if (!obj) return;
@@ -760,11 +958,21 @@
 
   const state = { State, loadFromDOM, applyToDOM, exportState, importState };
 
-  // ======== Storage Handling ========
+// ======== Storage Handling ========
+// Section Purpose: Persist data to localStorage.
+// Combines error handling and fallbacks to apply 50% Rule for robust storage.
+// Structural Overview: Uses KEY for storage; handles JSON.
+// Section Summary: Manages persistence for lists and state.
 
   const KEY = 'promptEnhancerData';
 
-  /** Persist data to localStorage. Errors are ignored. */
+  /** 
+   * Persist data to localStorage. Errors are ignored.
+   * Purpose: Save data safely.
+   * Usage: In persist.
+   * 50% Rule: Try-catch ignore.
+   * @param {Object} data - Data to save.
+   */
   function saveLocal(data) {
     if (typeof localStorage === 'undefined') return;
     try {
@@ -774,7 +982,13 @@
     }
   }
 
-  /** Retrieve persisted data from localStorage. */
+  /** 
+   * Retrieve persisted data from localStorage.
+   * Purpose: Load saved data.
+   * Usage: In loadPersisted.
+   * 50% Rule: Try-catch return null.
+   * @returns {Object|null} - Loaded data or null.
+   */
   function loadLocal() {
     if (typeof localStorage === 'undefined') return null;
     try {
@@ -785,7 +999,13 @@
     }
   }
 
-  /** Combine lists and form state into a single JSON string. */
+  /** 
+   * Combine lists and form state into a single JSON string.
+   * Purpose: Full export.
+   * Usage: On save.
+   * 50% Rule: Combines exports.
+   * @returns {string} - JSON string.
+   */
   function exportData() {
     const listData = JSON.parse(lists.exportLists());
     state.loadFromDOM();
@@ -796,6 +1016,10 @@
   /**
    * Load list and state data from an object or JSON string. Unknown fields are
    * ignored.
+   * Purpose: Full import.
+   * Usage: On load.
+   * 50% Rule: Parses and imports parts.
+   * @param {string|Object} obj - Data to import.
    */
   function importData(obj) {
     if (!obj) return;
@@ -817,13 +1041,23 @@
     saveLocal(data);
   }
 
-  /** Save the current state to localStorage. */
+  /** 
+   * Save the current state to localStorage.
+   * Purpose: Persist on changes.
+   * Usage: On beforeunload.
+   * 50% Rule: Calls export and save.
+   */
   function persist() {
     const json = exportData();
     saveLocal(JSON.parse(json));
   }
 
-  /** Load state from localStorage or fallback defaults. */
+  /** 
+   * Load state from localStorage or fallback defaults.
+   * Purpose: Init from storage.
+   * Usage: In initializeUI.
+   * 50% Rule: Fallback to DEFAULT_DATA.
+   */
   function loadPersisted() {
     const stored = loadLocal();
     if (stored) {
@@ -835,7 +1069,12 @@
     }
   }
 
-  /** Clear localStorage and reload defaults. */
+  /** 
+   * Clear localStorage and reload defaults.
+   * Purpose: Reset data.
+   * Usage: On reset button.
+   * 50% Rule: Remove and import default.
+   */
   function resetData() {
     if (typeof localStorage !== 'undefined') {
       try {
@@ -851,8 +1090,20 @@
 
   const storage = { exportData, importData, persist, loadPersisted, resetData };
 
-  // ======== UI Controls ========
-  /** Infer the section prefix from a control id. */
+// ======== UI Controls ========
+// Section Purpose: Handle user interface interactions and event setups.
+// Layers multiple setup functions and event listeners for comprehensive UI control.
+// Structural Overview: Many setup functions for buttons, toggles, etc.
+// Section Summary: Manages all DOM interactions and event binding.
+
+  /** 
+   * Infer the section prefix from a control id.
+   * Purpose: Extract prefix for dynamic ids.
+   * Usage: Internal utility.
+   * 50% Rule: Regex match.
+   * @param {string} id - Element id.
+   * @returns {string} - Prefix.
+   */
   function guessPrefix(id) {
     const m = id.match(/^([a-z]+)(?:-(?:order|depth))?-select/);
     return m ? m[1] : id.replace(/-select.*$/, '');
@@ -861,6 +1112,12 @@
   /**
    * Gather all select/input pairs that share a prefix and base id. Useful for
    * iterating over stacked modifiers.
+   * Purpose: Collect controls for stacks.
+   * Usage: In various setups.
+   * 50% Rule: Loop until no more.
+   * @param {string} prefix - Section prefix.
+   * @param {string} base - Base id part.
+   * @returns {Object[]} - Array of {select, input}.
    */
   function gatherControls(prefix, base) {
     const results = [];
@@ -879,7 +1136,15 @@
     return results;
   }
 
-  /** Retrieve modifiers for a stack index, applying any user-supplied order. */
+  /** 
+   * Retrieve modifiers for a stack index, applying any user-supplied order.
+   * Purpose: Get ordered mods for building.
+   * Usage: In collectInputs.
+   * 50% Rule: Parses and applies order.
+   * @param {string} prefix - Prefix.
+   * @param {number} [idx=1] - Index.
+   * @returns {string[]} - Ordered modifiers.
+   */
   function getOrderedMods(prefix, idx = 1) {
     const inp = document.getElementById(
       `${prefix}-input${idx === 1 ? '' : '-' + idx}`
@@ -892,7 +1157,13 @@
     return ord.length ? utils.applyOrder(mods, ord) : mods;
   }
 
-  /** Word counts for each base prompt item. */
+  /** 
+   * Word counts for each base prompt item.
+   * Purpose: Compute base word counts for depths.
+   * Usage: In computeDepthCounts.
+   * 50% Rule: Maps parse and count.
+   * @returns {number[]} - Array of counts.
+   */
   function baseCounts() {
     const baseInput = document.getElementById('base-input');
     return utils
@@ -900,7 +1171,14 @@
       .map(b => utils.countWords(b));
   }
 
-  /** How many words of positive modifiers would precede index i. */
+  /** 
+   * How many words of positive modifiers would precede index i.
+   * Purpose: Calculate positive word impact for neg depths.
+   * Usage: In computeDepthCounts.
+   * 50% Rule: Loops over stacks.
+   * @param {number} i - Index.
+   * @returns {number} - Total words.
+   */
   function getTotalPosWords(i) {
     const stackOn = document.getElementById('pos-stack')?.checked;
     const stackSize = parseInt(
@@ -920,6 +1198,12 @@
   /**
    * Determine insertion depths for modifiers so negative depth calculations
    * know where the base phrase ends.
+   * Purpose: Compute word counts for depth insertions.
+   * Usage: In setupDepthControl.
+   * 50% Rule: Includes positives if needed.
+   * @param {string} prefix - Prefix (pos/neg).
+   * @param {number} [idx=1] - Index.
+   * @returns {number[]} - Array of counts.
    */
   function computeDepthCounts(prefix, idx = 1) {
     const bases = baseCounts();
@@ -938,7 +1222,15 @@
     return counts;
   }
 
-  /** Load preset values into an input when the associated select changes. */
+  /** 
+   * Load preset values into an input when the associated select changes.
+   * Purpose: Apply selected preset to input.
+   * Usage: In setupPresetListener.
+   * 50% Rule: Handles different types.
+   * @param {HTMLSelectElement} selectEl - Select.
+   * @param {HTMLElement} inputEl - Input.
+   * @param {string|Object} presetsOrType - Type or presets.
+   */
   function applyPreset(selectEl, inputEl, presetsOrType) {
     let presets = presetsOrType;
     if (typeof presetsOrType === 'string') {
@@ -971,7 +1263,15 @@
     inputEl.dispatchEvent(new Event('change'));
   }
 
-  /** Wire up a preset select so the input updates on change. */
+  /** 
+   * Wire up a preset select so the input updates on change.
+   * Purpose: Add listener for preset application.
+   * Usage: In initializeUI.
+   * 50% Rule: Event listener.
+   * @param {string} selectId - Select id.
+   * @param {string} inputId - Input id.
+   * @param {string} type - Type.
+   */
   function setupPresetListener(selectId, inputId, type) {
     const select = document.getElementById(selectId);
     const input = document.getElementById(inputId);
@@ -981,6 +1281,10 @@
 
   /**
    * Gather all user input from the page and normalize it for buildVersions.
+   * Purpose: Collect and parse all form inputs.
+   * Usage: In generate.
+   * 50% Rule: Handles stacking, parses all fields.
+   * @returns {Object} - Input object for buildVersions.
    */
   function collectInputs() {
     const baseItems = utils.parseInput(document.getElementById('base-input').value, true);
@@ -1061,7 +1365,13 @@
     };
   }
 
-  /** Show generated prompt strings in the output fields. */
+  /** 
+   * Show generated prompt strings in the output fields.
+   * Purpose: Update output textareas.
+   * Usage: In generate.
+   * 50% Rule: Simple set textContent.
+   * @param {{positive: string, negative: string}} result - Prompts.
+   */
   function displayOutput(result) {
     document.getElementById('positive-output').textContent = result.positive;
     document.getElementById('negative-output').textContent = result.negative;
@@ -1070,6 +1380,9 @@
   /**
    * Main click handler for the Generate button. Reads inputs, builds prompts
    * and updates the UI. Alerts if no base items were entered.
+   * Purpose: Orchestrate generation.
+   * Usage: On generate click.
+   * 50% Rule: Calls collect, build, display; handles lyrics too.
    */
   function generate() {
     rerollRandomOrders();
@@ -1135,7 +1448,14 @@
     }
   }
 
-  /** Toggle a button's active style to reflect checkbox state. */
+  /** 
+   * Toggle a button's active style to reflect checkbox state.
+   * Purpose: Visual sync for toggles.
+   * Usage: In setupToggleButtons.
+   * 50% Rule: Class toggle and text update.
+   * @param {HTMLElement} btn - Button.
+   * @param {HTMLInputElement} checkbox - Checkbox.
+   */
   function updateButtonState(btn, checkbox) {
     btn.classList.toggle('active', checkbox.checked);
     if (btn.dataset.on && btn.dataset.off) {
@@ -1143,7 +1463,15 @@
     }
   }
 
-  /** Apply active or indeterminate classes without changing checkbox state. */
+  /** 
+   * Apply active or indeterminate classes without changing checkbox state.
+   * Purpose: Reflect state visually.
+   * Usage: In reflect functions.
+   * 50% Rule: Class management.
+   * @param {HTMLElement} btn - Button.
+   * @param {boolean} active - Active state.
+   * @param {boolean} indeterminate - Indeterminate state.
+   */
   function reflectToggleState(btn, active, indeterminate) {
     if (!btn) return;
     btn.classList.remove('active', 'indeterminate');
@@ -1154,7 +1482,12 @@
     }
   }
 
-  /** Enable buttons that act as proxies for hidden checkboxes. */
+  /** 
+   * Enable buttons that act as proxies for hidden checkboxes.
+   * Purpose: Setup toggle behavior.
+   * Usage: In initializeUI.
+   * 50% Rule: Event listeners.
+   */
   function setupToggleButtons() {
     document.querySelectorAll('.toggle-button').forEach(btn => {
       const target = btn.dataset.target;
@@ -1172,7 +1505,12 @@
     });
   }
 
-  /** Global randomization toggle affecting all order/depth selects. */
+  /** 
+   * Global randomization toggle affecting all order/depth selects.
+   * Purpose: Sync all to random or canonical.
+   * Usage: In initializeUI.
+   * 50% Rule: Reflect and update functions.
+   */
   function setupShuffleAll() {
     const allRandom = document.getElementById('all-random');
     if (!allRandom) return;
@@ -1217,7 +1555,12 @@
     reflect();
   }
 
-  /** Control dynamic creation of stacked modifier blocks. */
+  /** 
+   * Control dynamic creation of stacked modifier blocks.
+   * Purpose: Handle stack toggles and sizes.
+   * Usage: In initializeUI.
+   * 50% Rule: Updates blocks on change.
+   */
   function setupStackControls() {
     const configs = [
       { prefix: 'pos', stack: 'pos-stack', size: 'pos-stack-size', shuffle: 'pos-shuffle' },
@@ -1258,7 +1601,13 @@
     });
   }
 
-  /** Update section hide button state based on individual hide checkboxes. */
+  /** 
+   * Update section hide button state based on individual hide checkboxes.
+   * Purpose: Reflect hide state.
+   * Usage: In setupSectionHide.
+   * 50% Rule: Loops to check all/any.
+   * @param {string} prefix - Section prefix.
+   */
   function reflectSectionHide(prefix) {
     const cb = document.getElementById(`${prefix}-all-hide`);
     if (!cb) return;
@@ -1276,7 +1625,12 @@
     reflectToggleState(btn, all, any && !all);
   }
 
-  /** Update the global hide button to reflect overall section state. */
+  /** 
+   * Update the global hide button to reflect overall section state.
+   * Purpose: Global hide reflection.
+   * Usage: In setupHideToggles.
+   * 50% Rule: Every/some checks.
+   */
   function reflectAllHide() {
     const cbs = Array.from(
       document.querySelectorAll('input[type="checkbox"][data-targets]')
@@ -1289,7 +1643,12 @@
     reflectToggleState(btn, all, any && !all);
   }
 
-  /** Update the global randomization button to reflect dropdown values. */
+  /** 
+   * Update the global randomization button to reflect dropdown values.
+   * Purpose: Global random reflection.
+   * Usage: In setupShuffleAll.
+   * 50% Rule: Every checks.
+   */
   function reflectAllRandom() {
     const canonicalFor = sel =>
       sel.id.includes('-depth-select') ? 'prepend' : 'canonical';
@@ -1302,7 +1661,13 @@
     reflectToggleState(btn, allRand, !allCan && !allRand);
   }
 
-  /** Mirror randomization state for a section's order/depth controls. */
+  /** 
+   * Mirror randomization state for a section's order/depth controls.
+   * Purpose: Section random reflection.
+   * Usage: In setupSectionOrder.
+   * 50% Rule: Every checks.
+   * @param {string} prefix - Prefix.
+   */
   function reflectSectionOrder(prefix) {
     const cb = document.getElementById(`${prefix}-order-random`);
     if (!cb) return;
@@ -1317,7 +1682,12 @@
     reflectToggleState(btn, allRand, !allCan && !allRand);
   }
 
-  /** Keep the global advanced toggle consistent with per-section states. */
+  /** 
+   * Keep the global advanced toggle consistent with per-section states.
+   * Purpose: Global advanced reflection.
+   * Usage: In setupSectionAdvanced.
+   * 50% Rule: Every checks.
+   */
   function reflectGlobalAdvanced() {
     const secs = Array.from(document.querySelectorAll('[id$="-advanced"]'));
     if (!secs.length) return;
@@ -1327,7 +1697,13 @@
     reflectToggleState(btn, allOn, !allOff && !allOn);
   }
 
-  /** Hook up the hide-all checkbox for a section. */
+  /** 
+   * Hook up the hide-all checkbox for a section.
+   * Purpose: Sync section hides.
+   * Usage: In initializeUI.
+   * 50% Rule: Event and reflect.
+   * @param {string} prefix - Prefix.
+   */
   function setupSectionHide(prefix) {
     const cb = document.getElementById(`${prefix}-all-hide`);
     if (!cb) return;
@@ -1355,7 +1731,13 @@
     update();
   }
 
-  /** Hook up the randomize-order checkbox for a section. */
+  /** 
+   * Hook up the randomize-order checkbox for a section.
+   * Purpose: Sync section random.
+   * Usage: In initializeUI.
+   * 50% Rule: Update and reflect.
+   * @param {string} prefix - Prefix.
+   */
   function setupSectionOrder(prefix) {
     const cb = document.getElementById(`${prefix}-order-random`);
     if (!cb) return;
@@ -1385,7 +1767,13 @@
     reflectSectionOrder(prefix);
   }
 
-  /** Show or hide advanced options within a section. */
+  /** 
+   * Show or hide advanced options within a section.
+   * Purpose: Toggle advanced UI.
+   * Usage: In initializeUI.
+   * 50% Rule: Display toggles.
+   * @param {string} prefix - Prefix.
+   */
   function setupSectionAdvanced(prefix) {
     const cb = document.getElementById(`${prefix}-advanced`);
     if (!cb) return;
@@ -1419,7 +1807,13 @@
     reflectGlobalAdvanced();
   }
 
-  /** Force UI refresh of advanced elements for a section. */
+  /** 
+   * Force UI refresh of advanced elements for a section.
+   * Purpose: Refresh advanced display.
+   * Usage: After stack updates.
+   * 50% Rule: Similar to update in setup.
+   * @param {string} prefix - Prefix.
+   */
   function refreshSectionAdvanced(prefix) {
     const cb = document.getElementById(`${prefix}-advanced`);
     if (!cb) return;
@@ -1440,7 +1834,12 @@
 
   const rerollUpdaters = {};
 
-  /** Master toggle for advanced mode, updating all sections accordingly. */
+  /** 
+   * Master toggle for advanced mode, updating all sections accordingly.
+   * Purpose: Global advanced toggle.
+   * Usage: In initializeUI.
+   * 50% Rule: Updates all sections.
+   */
   function setupAdvancedToggle() {
     const cb = document.getElementById('advanced-mode');
     if (!cb) return;
@@ -1492,7 +1891,13 @@
     update();
   }
 
-  /** Attach hide buttons to inputs and synchronize the global state. */
+  /** 
+   * Attach hide buttons to inputs and synchronize the global state.
+   * Purpose: Setup hide toggles.
+   * Usage: In initializeUI.
+   * 50% Rule: Event listeners for each.
+   * @returns {HTMLInputElement[]} - Hide checkboxes.
+   */
   function setupHideToggles() {
     const hideCheckboxes = Array.from(document.querySelectorAll('input[type="checkbox"][data-targets]'));
     const allHide = document.getElementById('all-hide');
@@ -1529,7 +1934,12 @@
     return hideCheckboxes;
   }
 
-  /** Apply the global hide state to all individual sections. */
+  /** 
+   * Apply the global hide state to all individual sections.
+   * Purpose: Sync all hides.
+   * Usage: On all-hide change.
+   * 50% Rule: Loops over checkboxes.
+   */
   function applyAllHideState() {
     const allHide = document.getElementById('all-hide');
     if (!allHide) return;
@@ -1559,7 +1969,12 @@
     reflectAllHide();
   }
 
-  /** Attach clipboard copy handlers to .copy-button elements. */
+  /** 
+   * Attach clipboard copy handlers to .copy-button elements.
+   * Purpose: Copy to clipboard.
+   * Usage: In initializeUI.
+   * 50% Rule: Async with feedback.
+   */
   function setupCopyButtons() {
     document.querySelectorAll('.copy-button').forEach(btn => {
       const target = document.getElementById(btn.dataset.target);
@@ -1584,7 +1999,13 @@
     });
   }
 
-  /** Fill order dropdown with canonical, random and preset options. */
+  /** 
+   * Fill order dropdown with canonical, random and preset options.
+   * Purpose: Populate order selects.
+   * Usage: In initializeUI.
+   * 50% Rule: Static + dynamic options.
+   * @param {HTMLSelectElement} select - Select to populate.
+   */
   function populateOrderOptions(select) {
     if (!select) return;
     select.innerHTML = '';
@@ -1607,6 +2028,13 @@
   /**
    * Update the order textarea when the associated select or watched inputs
    * change. Provides canonical, random and preset ordering.
+   * Purpose: Sync order input with select.
+   * Usage: In initializeUI.
+   * 50% Rule: Handles modes, shuffles.
+   * @param {string} selectId - Select id.
+   * @param {string} inputId - Input id.
+   * @param {Function} getItems - Function to get items.
+   * @param {string|string[]} watchIds - Ids to watch.
    */
   function setupOrderControl(selectId, inputId, getItems, watchIds) {
     const select = document.getElementById(selectId);
@@ -1647,7 +2075,13 @@
     update();
   }
 
-  /** Depth dropdown uses prepend, append and random plus presets. */
+  /** 
+   * Depth dropdown uses prepend, append and random plus presets.
+   * Purpose: Populate depth selects.
+   * Usage: In initializeUI.
+   * 50% Rule: Similar to order.
+   * @param {HTMLSelectElement} select - Select.
+   */
   function populateDepthOptions(select) {
     if (!select) return;
     select.innerHTML = '';
@@ -1671,6 +2105,12 @@
   /**
    * Like setupOrderControl but for depth values. Recomputes counts when base
    * or modifier inputs change.
+   * Purpose: Sync depth input.
+   * Usage: In initializeUI.
+   * 50% Rule: Modes with random.
+   * @param {string} selectId - Select id.
+   * @param {string} inputId - Input id.
+   * @param {string[]} [watchIds='base-input'] - Watch ids.
    */
   function setupDepthControl(selectId, inputId, watchIds = 'base-input') {
     const select = document.getElementById(selectId);
@@ -1732,7 +2172,14 @@
     update();
   }
 
-  /** Create or remove depth input blocks to match the requested stack size. */
+  /** 
+   * Create or remove depth input blocks to match the requested stack size.
+   * Purpose: Dynamic depth controls for stacks.
+   * Usage: In updateStackBlocks.
+   * 50% Rule: Creates elements dynamically.
+   * @param {string} prefix - Prefix.
+   * @param {number} count - Number of blocks.
+   */
   function updateDepthContainers(prefix, count) {
     const container = document.getElementById(`${prefix}-depth-container`);
     const baseId = `${prefix}-depth`;
@@ -1771,7 +2218,14 @@
     }
   }
 
-  /** Generate stacked modifier blocks dynamically for positive or negative lists. */
+  /** 
+   * Generate stacked modifier blocks dynamically for positive or negative lists.
+   * Purpose: Create stack UI blocks.
+   * Usage: In setupStackControls.
+   * 50% Rule: Dynamic element creation.
+   * @param {string} prefix - Prefix (pos/neg).
+   * @param {number} count - Number of blocks.
+   */
   function updateStackBlocks(prefix, count) {
     const container = document.getElementById(`${prefix}-stack-container`);
     if (!container) return;
@@ -1925,7 +2379,14 @@
     });
   }
 
-  /** Button that toggles order/depth selects between random and canonical. */
+  /** 
+   * Button that toggles order/depth selects between random and canonical.
+   * Purpose: Reroll random values.
+   * Usage: In updateStackBlocks.
+   * 50% Rule: Toggles modes.
+   * @param {string} btnId - Button id.
+   * @param {string} selectId - Select id.
+   */
   function setupRerollButton(btnId, selectId) {
     const btn = document.getElementById(btnId);
     const select = document.getElementById(selectId);
@@ -1962,7 +2423,12 @@
     updateState();
   }
 
-  /** Force all selects currently set to random to generate new orders. */
+  /** 
+   * Force all selects currently set to random to generate new orders.
+   * Purpose: Reroll on generate.
+   * Usage: In generate.
+   * 50% Rule: Gathers and shuffles.
+   */
   function rerollRandomOrders() {
 
     const baseItems = utils.parseInput(
@@ -2031,7 +2497,12 @@
     });
   }
 
-  /** Load preset values into all inputs based on current select choices. */
+  /** 
+   * Load preset values into all inputs based on current select choices.
+   * Purpose: Apply all presets.
+   * Usage: In resetUI.
+   * 50% Rule: Calls applyPreset for each.
+   */
   function applyCurrentPresets() {
     applyPreset(
       document.getElementById('neg-select'),
@@ -2065,7 +2536,12 @@
     );
   }
 
-  /** Reset all form fields to defaults and reapply presets. */
+  /** 
+   * Reset all form fields to defaults and reapply presets.
+   * Purpose: Full UI reset.
+   * Usage: On reset button.
+   * 50% Rule: Loops over fields.
+   */
   function resetUI() {
     const fields = document.querySelectorAll('input[id], textarea[id], select[id]');
     fields.forEach(el => {
@@ -2086,7 +2562,12 @@
     applyCurrentPresets();
   }
 
-  /** Wire up Load, Save and Reset data buttons. */
+  /** 
+   * Wire up Load, Save and Reset data buttons.
+   * Purpose: Handle data buttons.
+   * Usage: In initializeUI.
+   * 50% Rule: Event listeners for file I/O.
+   */
   function setupDataButtons() {
     const saveBtn = document.getElementById('save-data');
     const loadBtn = document.getElementById('load-data');
@@ -2133,7 +2614,12 @@
     }
   }
 
-  /** Startup routine called once DOM is ready. */
+  /** 
+   * Startup routine called once DOM is ready.
+   * Purpose: Initialize everything.
+   * Usage: On load.
+   * 50% Rule: Calls all setups.
+   */
   function initializeUI() {
     storage.loadPersisted();
     applyCurrentPresets();
@@ -2268,7 +2754,12 @@
     computeDepthCounts
   };
 
-  // ======== Initialization ========
+// ======== Initialization and Exports ========
+// Section Purpose: Bootstrap the application and export modules.
+// Uses IIFE for encapsulation, with conditional DOM readiness checks.
+// Structural Overview: Conditional init and exports.
+// Section Summary: Entry point for app start and module access.
+
   if (
     typeof document !== 'undefined' &&
     !(typeof window !== 'undefined' && window.__TEST__) &&
