@@ -15,3 +15,7 @@ npm test
 ```
 
 Tests live in the `tests/` directory and cover all functionality.
+
+The test suite runs under Node and therefore loads `script.js` via `require`. A small
+`module.exports` block at the bottom of the file exposes its helpers for these tests.
+Default preset data lives in `src/default_list.js` to keep the main script light.

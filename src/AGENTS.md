@@ -30,7 +30,8 @@ Indentation is two spaces with no trailing whitespace.
 
 Depth inputs rely on DOM watchers to rebuild values when related fields change.
 Negative depth selectors that include positive modifiers must watch the
-corresponding positive fields. Update `updateDepthContainers` if new inputs are
+corresponding positive fields. The helper `depthWatchIds` centralizes this list;
+update it or call `updateDepthContainers` with `refresh=true` when new inputs are
 added so these watchers remain synchronized.
 
 ## Testing
