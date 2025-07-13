@@ -30,6 +30,7 @@
  *    - Input collection and output display (collectInputs, displayOutput)
  *    - Event handlers and setup (setupPresetListener, initializeUI)
  *    - Reusable id iteration (forEachId)
+ *    - Watcher utilities (depthWatchIds)
  * 6. Initialization and Exports
  *    - IIFE setup and module exports
  */
@@ -1612,6 +1613,12 @@
         }
         const count = stackCb.checked ? parseInt(sizeEl.value, 10) || 1 : 1;
         updateStackBlocks(cfg.prefix, count);
+        if (cfg.prefix === 'pos') {
+          const negCount = document.getElementById('neg-stack')?.checked
+            ? parseInt(document.getElementById('neg-stack-size')?.value || '1', 10)
+            : 1;
+          updateDepthContainers('neg', negCount, true);
+        }
       };
       stackCb.addEventListener('change', update);
       sizeEl.addEventListener('change', update);
@@ -2189,7 +2196,43 @@
    * @param {string} prefix - Prefix.
    * @param {number} count - Number of blocks.
    */
-  function updateDepthContainers(prefix, count) {
+  /**
+   * Build the list of ids that should trigger depth recalculation.
+   * Purpose: Centralize watcher dependencies so new inputs stay in sync.
+   * Line comments capture which elements matter when negatives include positives.
+   * 50% Rule: Documented example plus logic summary.
+   * @param {string} prefix - Section prefix.
+   * @param {number} idx - Stack index.
+   * @returns {string[]} - Array of watcher ids.
+   */
+  function depthWatchIds(prefix, idx) {
+    const list = ['base-input', 'base-select'];
+    list.push(`${prefix}-input${idx === 1 ? '' : '-' + idx}`);
+    list.push(`${prefix}-order-input${idx === 1 ? '' : '-' + idx}`);
+    if (prefix === 'neg') {
+      list.push('neg-include-pos');
+      const posCount = document.getElementById('pos-stack')?.checked
+        ? parseInt(document.getElementById('pos-stack-size')?.value || '1', 10)
+        : 1;
+      for (let p = 1; p <= posCount; p++) {
+        list.push(`pos-input${p === 1 ? '' : '-' + p}`);
+        list.push(`pos-order-input${p === 1 ? '' : '-' + p}`);
+      }
+    }
+    return list;
+  }
+
+  /**
+   * Create or remove depth input blocks to match the requested stack size.
+   * Watcher lists rely on depthWatchIds; pass refresh=true when related
+   * inputs (like positive stacks) change so existing controls rebuild watchers.
+   * Purpose: Dynamic depth controls with synchronized dependencies.
+   * 50% Rule: Loops with comments; refresh handles updates.
+   * @param {string} prefix - Prefix.
+   * @param {number} count - Number of blocks.
+   * @param {boolean} [refresh=false] - Reapply watchers on existing elements.
+   */
+  function updateDepthContainers(prefix, count, refresh = false) {
     const container = document.getElementById(`${prefix}-depth-container`);
     const baseId = `${prefix}-depth`;
     const adv = document.getElementById('advanced-mode');
@@ -2197,6 +2240,17 @@
     const defaultVal = !adv || !adv.checked ? baseSel?.value || 'prepend' : undefined;
     if (!container) return;
     const current = container.querySelectorAll('select').length;
+    if (refresh) {
+      for (let i = 1; i <= Math.min(current, count); i++) {
+        const sel = document.getElementById(
+          `${baseId}-select${i === 1 ? '' : '-' + i}`
+        );
+        const ta = document.getElementById(
+          `${baseId}-input${i === 1 ? '' : '-' + i}`
+        );
+        if (sel && ta) setupDepthControl(sel.id, ta.id, depthWatchIds(prefix, i));
+      }
+    }
     for (let i = current; i < count; i++) {
       const idx = i + 1;
       const sel = document.createElement('select');
@@ -2212,20 +2266,7 @@
       ta.placeholder = '0,1,2';
       div.appendChild(ta);
       container.appendChild(div);
-      const watchers = ['base-input', 'base-select'];
-      watchers.push(`${prefix}-input${idx === 1 ? '' : '-' + idx}`);
-      watchers.push(`${prefix}-order-input${idx === 1 ? '' : '-' + idx}`);
-      if (prefix === 'neg') {
-        watchers.push('neg-include-pos');
-        const count = document.getElementById('pos-stack')?.checked
-          ? parseInt(document.getElementById('pos-stack-size')?.value || '1', 10)
-          : 1;
-        for (let p = 1; p <= count; p++) {
-          watchers.push(`pos-input${p === 1 ? '' : '-' + p}`);
-          watchers.push(`pos-order-input${p === 1 ? '' : '-' + p}`);
-        }
-      }
-      setupDepthControl(sel.id, ta.id, watchers);
+      setupDepthControl(sel.id, ta.id, depthWatchIds(prefix, idx));
     }
     for (let i = current; i > count; i--) {
       const idx = i;
