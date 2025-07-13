@@ -291,15 +291,6 @@
       posDepths
     );
     let useNegDepths = negDepths;
-    if (includePosForNeg && Array.isArray(negDepths) && posStackSize > 0) {
-      if (Array.isArray(negDepths[0])) {
-        useNegDepths = negDepths.map(arr =>
-          arr.map(d => (d > 0 ? d + posStackSize : d))
-        );
-      } else {
-        useNegDepths = negDepths.map(d => (d > 0 ? d + posStackSize : d));
-      }
-    }
     const negTerms = includePosForNeg
       ? applyNegativeOnPositive(
           posTerms,

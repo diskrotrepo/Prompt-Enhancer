@@ -74,8 +74,6 @@
     for (let i = 0; i < len; i++) {
       let total = bases[i % bases.length];
       if (includePos) total += getTotalPosWords(i);
-      const mod = mods[i % (mods.length || 1)];
-      if (mod) total += utils.countWords(mod);
       counts.push(total);
     }
     return counts;
