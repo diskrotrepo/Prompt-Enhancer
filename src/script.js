@@ -1,6 +1,24 @@
+/*
+ * Prompt Enhancer main script
+ *
+ * The file is intentionally monolithic so all logic is searchable in one place.
+ * Functions are grouped by responsibility: side effect free helpers first,
+ * then UI helpers, and finally initialization.  When reviewing or modifying
+ * code keep comments in sync with logic to aid debugging.
+ */
 (function (global) {
   "use strict";
   // ======== Pure Utility Functions ========
+
+  /**
+   * Split a raw text block into individual items.
+   * If keepDelim is true punctuation is preserved and a trailing period is
+   * added when missing so other code can treat each string as a sentence.
+   *
+   * @param {string} raw Text entered by the user
+   * @param {boolean} [keepDelim=false] Keep punctuation delimiters
+   * @returns {string[]} array of parsed items
+   */
   function parseInput(raw, keepDelim = false) {
     if (!raw) return [];
     if (!keepDelim) {
@@ -47,17 +65,31 @@
     return items.filter(Boolean);
   }
 
+  /**
+   * Count how many words a string contains.
+   * Trailing punctuation is ignored so "cat." counts as one word.
+   *
+   * @param {string} str Text to examine
+   * @returns {number} word count
+   */
   function countWords(str) {
     const cleaned = str.trim().replace(/[,.!:;?]$/, '');
     if (!cleaned) return 0;
     return cleaned.split(/\s+/).length;
   }
 
+  /**
+   * Parse a textarea of divider lines.
+   * Empty lines are removed but whitespace is preserved.
+   */
   function parseDividerInput(raw) {
     if (!raw) return [];
     return raw.split(/\r?\n/).filter(line => line !== '');
   }
 
+  /**
+   * Convert a comma or space separated list into numeric indices.
+   */
   function parseOrderInput(raw) {
     if (!raw) return [];
     return raw
@@ -66,6 +98,10 @@
       .filter(n => !isNaN(n));
   }
 
+  /**
+   * Reorder items according to an index array. If order is shorter than the
+   * items list it cycles through.
+   */
   function applyOrder(items, order) {
     if (!Array.isArray(order) || !order.length) return items.slice();
     return items.map((_, i) => {
@@ -74,6 +110,10 @@
     });
   }
 
+  /**
+   * Insert a term into a phrase at a given word position. Punctuation at the
+   * end is preserved and the term can be placed past the end (wraps around).
+   */
   function insertAtDepth(phrase, term, depth) {
     if (!term) return phrase;
     const match = phrase.match(/([,.!:;?\n]\s*)$/);
@@ -91,6 +131,7 @@
     return words.join(' ') + tail;
   }
 
+  /** Randomize an array in place using Fisher-Yates. */
   function shuffle(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -99,11 +140,20 @@
     return arr;
   }
 
+  /**
+   * Trim two arrays to the same length by taking the shorter length from each.
+   */
   function equalizeLength(a, b) {
     const len = Math.min(a.length, b.length);
     return [a.slice(0, len), b.slice(0, len)];
   }
 
+  /**
+   * Combine base items with one or more modifier lists. Modifiers may be
+   * stacked so multiple sets are applied in sequence. Divider items are
+   * inserted when the base list repeats. The return value is trimmed so the
+   * cumulative string length does not exceed `limit`.
+   */
   function applyModifierStack(
     baseItems,
     modifiers,
@@ -180,6 +230,11 @@
     return result;
   }
 
+  /**
+   * Build negative versions by inserting negative modifiers into already
+   * modified positive terms. This keeps divider placement consistent between
+   * positive and negative outputs.
+   */
   function applyNegativeOnPositive(
     posTerms,
     negMods,
@@ -256,6 +311,10 @@
     return result;
   }
 
+  /**
+   * High level builder that returns both positive and negative prompt strings.
+   * It delegates to applyModifierStack and optionally applyNegativeOnPositive.
+   */
   function buildVersions(
     items,
     negMods,
@@ -323,6 +382,11 @@
     };
   }
 
+  /**
+   * Normalize a block of lyrics text.
+   * All punctuation is stripped, optionally removing parentheses or brackets,
+   * and random spacing up to `maxSpaces` is introduced between words.
+   */
   function processLyrics(text, maxSpaces, removeParens = false, removeBrackets = false) {
     if (!text) return '';
     const limit = parseInt(maxSpaces, 10);
@@ -393,6 +457,10 @@
     LISTS = { presets: [] };
   }
 
+  /**
+   * Fill a <select> element with options derived from preset objects.
+   * The first preset is selected by default for convenience.
+   */
   function populateSelect(selectEl, presets) {
     selectEl.innerHTML = '';
     presets.forEach((preset, index) => {
@@ -406,6 +474,10 @@
     });
   }
 
+  /**
+   * Populate a depth selection dropdown. Depth presets allow inserting
+   * modifiers at a specific word index.
+   */
   function populateDepthSelect(selectEl, presets) {
     if (!selectEl) return;
     selectEl.innerHTML = '';
@@ -423,6 +495,10 @@
     });
   }
 
+  /**
+   * Initialize preset maps from the LISTS structure. This also rebuilds the
+   * dropdown menus in the UI when presets change.
+   */
   function loadLists() {
     NEG_PRESETS = {};
     POS_PRESETS = {};
@@ -481,10 +557,15 @@
     if (negDepthSelect) populateDepthSelect(negDepthSelect, order);
   }
 
+  /** Serialize current preset lists into JSON. */
   function exportLists() {
     return JSON.stringify(LISTS, null, 2);
   }
 
+  /**
+   * Import preset lists from an object. When additive is true existing lists
+   * are merged, otherwise they are replaced.
+   */
   function importLists(obj, additive = false) {
     if (!obj || typeof obj !== 'object' || !Array.isArray(obj.presets)) return;
     if (!additive) {
@@ -519,6 +600,10 @@
     loadLists();
   }
 
+  /**
+   * Save the list typed into the UI back into the preset store. Prompts the
+   * user for a preset name.
+   */
   function saveList(type, index = 1) {
     const map = {
       base: { select: 'base-select', input: 'base-input', store: BASE_PRESETS },
@@ -584,12 +669,19 @@
   // ======== State Management ========
   const State = {};
 
+  /**
+   * Helper to read a form element's value, abstracting checkbox state.
+   */
   function getVal(el) {
     if (!el) return undefined;
     if (el.type === 'checkbox') return el.checked;
     return el.value;
   }
 
+  /**
+   * Mirror of getVal that writes a value back to the element and dispatches a
+   * change event so listeners update.
+   */
   function setVal(el, val) {
     if (!el) return;
     if (el.type === 'checkbox') {
@@ -600,6 +692,7 @@
     el.dispatchEvent(new Event('change'));
   }
 
+  /** List all form control ids present in the document. */
   function getFieldIds() {
     if (typeof document === 'undefined') return [];
     return Array.from(
@@ -607,6 +700,7 @@
     ).map(el => el.id);
   }
 
+  /** Capture the current form state into the State object. */
   function loadFromDOM() {
     const obj = {};
     getFieldIds().forEach(id => {
@@ -618,6 +712,7 @@
     return obj;
   }
 
+  /** Populate form controls from a state object. */
   function applyToDOM(state) {
     if (!state) return;
     getFieldIds().forEach(id => {
@@ -630,10 +725,15 @@
     Object.assign(State, state);
   }
 
+  /** Serialize State as JSON. */
   function exportState() {
     return JSON.stringify(State, null, 2);
   }
 
+  /**
+   * Load state from JSON or object and apply to the DOM. Invalid data is
+   * ignored silently.
+   */
   function importState(obj) {
     if (!obj) return;
     let data = obj;
@@ -654,6 +754,7 @@
 
   const KEY = 'promptEnhancerData';
 
+  /** Persist data to localStorage. Errors are ignored. */
   function saveLocal(data) {
     if (typeof localStorage === 'undefined') return;
     try {
@@ -663,6 +764,7 @@
     }
   }
 
+  /** Retrieve persisted data from localStorage. */
   function loadLocal() {
     if (typeof localStorage === 'undefined') return null;
     try {
@@ -673,6 +775,7 @@
     }
   }
 
+  /** Combine lists and form state into a single JSON string. */
   function exportData() {
     const listData = JSON.parse(lists.exportLists());
     state.loadFromDOM();
@@ -680,6 +783,10 @@
     return JSON.stringify({ lists: listData, state: stateData }, null, 2);
   }
 
+  /**
+   * Load list and state data from an object or JSON string. Unknown fields are
+   * ignored.
+   */
   function importData(obj) {
     if (!obj) return;
     let data = obj;
@@ -700,11 +807,13 @@
     saveLocal(data);
   }
 
+  /** Save the current state to localStorage. */
   function persist() {
     const json = exportData();
     saveLocal(JSON.parse(json));
   }
 
+  /** Load state from localStorage or fallback defaults. */
   function loadPersisted() {
     const stored = loadLocal();
     if (stored) {
@@ -716,6 +825,7 @@
     }
   }
 
+  /** Clear localStorage and reload defaults. */
   function resetData() {
     if (typeof localStorage !== 'undefined') {
       try {
@@ -732,11 +842,16 @@
   const storage = { exportData, importData, persist, loadPersisted, resetData };
 
   // ======== UI Controls ========
+  /** Infer the section prefix from a control id. */
   function guessPrefix(id) {
     const m = id.match(/^([a-z]+)(?:-(?:order|depth))?-select/);
     return m ? m[1] : id.replace(/-select.*$/, '');
   }
 
+  /**
+   * Gather all select/input pairs that share a prefix and base id. Useful for
+   * iterating over stacked modifiers.
+   */
   function gatherControls(prefix, base) {
     const results = [];
     let idx = 1;
@@ -754,6 +869,7 @@
     return results;
   }
 
+  /** Retrieve modifiers for a stack index, applying any user-supplied order. */
   function getOrderedMods(prefix, idx = 1) {
     const inp = document.getElementById(
       `${prefix}-input${idx === 1 ? '' : '-' + idx}`
@@ -766,6 +882,7 @@
     return ord.length ? utils.applyOrder(mods, ord) : mods;
   }
 
+  /** Word counts for each base prompt item. */
   function baseCounts() {
     const baseInput = document.getElementById('base-input');
     return utils
@@ -773,6 +890,7 @@
       .map(b => utils.countWords(b));
   }
 
+  /** How many words of positive modifiers would precede index i. */
   function getTotalPosWords(i) {
     const stackOn = document.getElementById('pos-stack')?.checked;
     const stackSize = parseInt(
@@ -789,6 +907,10 @@
     return total;
   }
 
+  /**
+   * Determine insertion depths for modifiers so negative depth calculations
+   * know where the base phrase ends.
+   */
   function computeDepthCounts(prefix, idx = 1) {
     const bases = baseCounts();
     if (!bases.length) return [];
@@ -806,6 +928,7 @@
     return counts;
   }
 
+  /** Load preset values into an input when the associated select changes. */
   function applyPreset(selectEl, inputEl, presetsOrType) {
     let presets = presetsOrType;
     if (typeof presetsOrType === 'string') {
@@ -838,6 +961,7 @@
     inputEl.dispatchEvent(new Event('change'));
   }
 
+  /** Wire up a preset select so the input updates on change. */
   function setupPresetListener(selectId, inputId, type) {
     const select = document.getElementById(selectId);
     const input = document.getElementById(inputId);
@@ -845,6 +969,9 @@
     select.addEventListener('change', () => applyPreset(select, input, type));
   }
 
+  /**
+   * Gather all user input from the page and normalize it for buildVersions.
+   */
   function collectInputs() {
     const baseItems = utils.parseInput(document.getElementById('base-input').value, true);
     function collectLists(prefix, count) {
@@ -924,11 +1051,16 @@
     };
   }
 
+  /** Show generated prompt strings in the output fields. */
   function displayOutput(result) {
     document.getElementById('positive-output').textContent = result.positive;
     document.getElementById('negative-output').textContent = result.negative;
   }
 
+  /**
+   * Main click handler for the Generate button. Reads inputs, builds prompts
+   * and updates the UI. Alerts if no base items were entered.
+   */
   function generate() {
     rerollRandomOrders();
     const {
@@ -993,6 +1125,7 @@
     }
   }
 
+  /** Toggle a button's active style to reflect checkbox state. */
   function updateButtonState(btn, checkbox) {
     btn.classList.toggle('active', checkbox.checked);
     if (btn.dataset.on && btn.dataset.off) {
@@ -1000,6 +1133,7 @@
     }
   }
 
+  /** Apply active or indeterminate classes without changing checkbox state. */
   function reflectToggleState(btn, active, indeterminate) {
     if (!btn) return;
     btn.classList.remove('active', 'indeterminate');
@@ -1010,6 +1144,7 @@
     }
   }
 
+  /** Enable buttons that act as proxies for hidden checkboxes. */
   function setupToggleButtons() {
     document.querySelectorAll('.toggle-button').forEach(btn => {
       const target = btn.dataset.target;
@@ -1027,6 +1162,7 @@
     });
   }
 
+  /** Global randomization toggle affecting all order/depth selects. */
   function setupShuffleAll() {
     const allRandom = document.getElementById('all-random');
     if (!allRandom) return;
@@ -1071,6 +1207,7 @@
     reflect();
   }
 
+  /** Control dynamic creation of stacked modifier blocks. */
   function setupStackControls() {
     const configs = [
       { prefix: 'pos', stack: 'pos-stack', size: 'pos-stack-size', shuffle: 'pos-shuffle' },
@@ -1111,6 +1248,7 @@
     });
   }
 
+  /** Update section hide button state based on individual hide checkboxes. */
   function reflectSectionHide(prefix) {
     const cb = document.getElementById(`${prefix}-all-hide`);
     if (!cb) return;
@@ -1128,6 +1266,7 @@
     reflectToggleState(btn, all, any && !all);
   }
 
+  /** Update the global hide button to reflect overall section state. */
   function reflectAllHide() {
     const cbs = Array.from(
       document.querySelectorAll('input[type="checkbox"][data-targets]')
@@ -1140,6 +1279,7 @@
     reflectToggleState(btn, all, any && !all);
   }
 
+  /** Update the global randomization button to reflect dropdown values. */
   function reflectAllRandom() {
     const canonicalFor = sel =>
       sel.id.includes('-depth-select') ? 'prepend' : 'canonical';
@@ -1152,6 +1292,7 @@
     reflectToggleState(btn, allRand, !allCan && !allRand);
   }
 
+  /** Mirror randomization state for a section's order/depth controls. */
   function reflectSectionOrder(prefix) {
     const cb = document.getElementById(`${prefix}-order-random`);
     if (!cb) return;
@@ -1166,6 +1307,7 @@
     reflectToggleState(btn, allRand, !allCan && !allRand);
   }
 
+  /** Keep the global advanced toggle consistent with per-section states. */
   function reflectGlobalAdvanced() {
     const secs = Array.from(document.querySelectorAll('[id$="-advanced"]'));
     if (!secs.length) return;
@@ -1175,6 +1317,7 @@
     reflectToggleState(btn, allOn, !allOff && !allOn);
   }
 
+  /** Hook up the hide-all checkbox for a section. */
   function setupSectionHide(prefix) {
     const cb = document.getElementById(`${prefix}-all-hide`);
     if (!cb) return;
@@ -1202,6 +1345,7 @@
     update();
   }
 
+  /** Hook up the randomize-order checkbox for a section. */
   function setupSectionOrder(prefix) {
     const cb = document.getElementById(`${prefix}-order-random`);
     if (!cb) return;
@@ -1231,6 +1375,7 @@
     reflectSectionOrder(prefix);
   }
 
+  /** Show or hide advanced options within a section. */
   function setupSectionAdvanced(prefix) {
     const cb = document.getElementById(`${prefix}-advanced`);
     if (!cb) return;
@@ -1264,6 +1409,7 @@
     reflectGlobalAdvanced();
   }
 
+  /** Force UI refresh of advanced elements for a section. */
   function refreshSectionAdvanced(prefix) {
     const cb = document.getElementById(`${prefix}-advanced`);
     if (!cb) return;
@@ -1284,6 +1430,7 @@
 
   const rerollUpdaters = {};
 
+  /** Master toggle for advanced mode, updating all sections accordingly. */
   function setupAdvancedToggle() {
     const cb = document.getElementById('advanced-mode');
     if (!cb) return;
@@ -1335,6 +1482,7 @@
     update();
   }
 
+  /** Attach hide buttons to inputs and synchronize the global state. */
   function setupHideToggles() {
     const hideCheckboxes = Array.from(document.querySelectorAll('input[type="checkbox"][data-targets]'));
     const allHide = document.getElementById('all-hide');
@@ -1371,6 +1519,7 @@
     return hideCheckboxes;
   }
 
+  /** Apply the global hide state to all individual sections. */
   function applyAllHideState() {
     const allHide = document.getElementById('all-hide');
     if (!allHide) return;
@@ -1400,6 +1549,7 @@
     reflectAllHide();
   }
 
+  /** Attach clipboard copy handlers to .copy-button elements. */
   function setupCopyButtons() {
     document.querySelectorAll('.copy-button').forEach(btn => {
       const target = document.getElementById(btn.dataset.target);
@@ -1424,6 +1574,7 @@
     });
   }
 
+  /** Fill order dropdown with canonical, random and preset options. */
   function populateOrderOptions(select) {
     if (!select) return;
     select.innerHTML = '';
@@ -1443,6 +1594,10 @@
   }
 
 
+  /**
+   * Update the order textarea when the associated select or watched inputs
+   * change. Provides canonical, random and preset ordering.
+   */
   function setupOrderControl(selectId, inputId, getItems, watchIds) {
     const select = document.getElementById(selectId);
     const input = document.getElementById(inputId);
@@ -1482,6 +1637,7 @@
     update();
   }
 
+  /** Depth dropdown uses prepend, append and random plus presets. */
   function populateDepthOptions(select) {
     if (!select) return;
     select.innerHTML = '';
@@ -1502,6 +1658,10 @@
   }
 
 
+  /**
+   * Like setupOrderControl but for depth values. Recomputes counts when base
+   * or modifier inputs change.
+   */
   function setupDepthControl(selectId, inputId, watchIds = 'base-input') {
     const select = document.getElementById(selectId);
     const input = document.getElementById(inputId);
@@ -1562,6 +1722,7 @@
     update();
   }
 
+  /** Create or remove depth input blocks to match the requested stack size. */
   function updateDepthContainers(prefix, count) {
     const container = document.getElementById(`${prefix}-depth-container`);
     const baseId = `${prefix}-depth`;
@@ -1600,6 +1761,7 @@
     }
   }
 
+  /** Generate stacked modifier blocks dynamically for positive or negative lists. */
   function updateStackBlocks(prefix, count) {
     const container = document.getElementById(`${prefix}-stack-container`);
     if (!container) return;
@@ -1753,6 +1915,7 @@
     });
   }
 
+  /** Button that toggles order/depth selects between random and canonical. */
   function setupRerollButton(btnId, selectId) {
     const btn = document.getElementById(btnId);
     const select = document.getElementById(selectId);
@@ -1789,6 +1952,7 @@
     updateState();
   }
 
+  /** Force all selects currently set to random to generate new orders. */
   function rerollRandomOrders() {
 
     const baseItems = utils.parseInput(
@@ -1857,6 +2021,7 @@
     });
   }
 
+  /** Load preset values into all inputs based on current select choices. */
   function applyCurrentPresets() {
     applyPreset(
       document.getElementById('neg-select'),
@@ -1890,6 +2055,7 @@
     );
   }
 
+  /** Reset all form fields to defaults and reapply presets. */
   function resetUI() {
     const fields = document.querySelectorAll('input[id], textarea[id], select[id]');
     fields.forEach(el => {
@@ -1910,6 +2076,7 @@
     applyCurrentPresets();
   }
 
+  /** Wire up Load, Save and Reset data buttons. */
   function setupDataButtons() {
     const saveBtn = document.getElementById('save-data');
     const loadBtn = document.getElementById('load-data');
@@ -1956,6 +2123,7 @@
     }
   }
 
+  /** Startup routine called once DOM is ready. */
   function initializeUI() {
     storage.loadPersisted();
     applyCurrentPresets();

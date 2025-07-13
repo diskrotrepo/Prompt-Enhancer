@@ -1,4 +1,8 @@
 /** @jest-environment jsdom */
+/**
+ * Integration tests for the monolithic script.
+ * These run in a jsdom environment so DOM manipulations can be exercised.
+ */
 
 global.__TEST__ = true;
 if (typeof window !== 'undefined') {
