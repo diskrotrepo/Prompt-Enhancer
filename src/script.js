@@ -16,7 +16,7 @@
  * Detailed Table of Contents:
  * 1. Pure Utility Functions
  *    - Parsing and manipulation helpers (parseInput, countWords, etc.)
- *    - Core prompt building logic (applyModifierStack, buildVersions)
+ *    - Core prompt building logic (buildOrderedModifiers, applyModifierStack, buildVersions)
  * 2. List Management
  *    - Preset loading and population (populateSelect, loadLists)
  *    - Export/import and saving lists
@@ -228,13 +228,38 @@
   }
 
   /**
+   * Generate ordered modifier arrays for a stack configuration.
+   * Accepts a single list or an array of lists and applies ordering rules.
+   * Purpose: Centralize modifier ordering for reuse by stack builders.
+   * Usage Example: buildOrderedModifiers(['a','b'], 2, [1,0]) returns
+   * [['b','a'], ['b','a']].
+   * 50% Rule: Shared helper reduces duplicated loops and clarifies intent.
+   * @param {string[]|string[][]} modifiers - Modifiers or arrays of modifiers.
+   * @param {number} stackSize - Desired stack count.
+   * @param {number[]|number[][]} [orders=null] - Order indices.
+   * @returns {string[][]} - Array of ordered modifier lists.
+   */
+  function buildOrderedModifiers(modifiers, stackSize, orders = null) {
+    const count = stackSize > 0 ? stackSize : 1;
+    const lists = Array.isArray(modifiers[0]) ? modifiers : Array(count).fill(modifiers);
+    const multi = Array.isArray(orders) && Array.isArray(orders[0]);
+    const result = [];
+    for (let i = 0; i < count; i++) {
+      const mods = lists[i % lists.length];
+      const ord = multi ? orders[i % orders.length] : orders;
+      result.push(ord ? applyOrder(mods, ord) : mods.slice());
+    }
+    return result;
+  }
+
+  /**
    * Combine base items with one or more modifier lists. Modifiers may be
    * stacked so multiple sets are applied in sequence. Divider items are
    * inserted when the base list repeats. The return value is trimmed so the
    * cumulative string length does not exceed `limit`.
    * Purpose: Core logic to apply stacked modifiers to base items.
    * Usage: Internal to buildVersions; builds prompt arrays.
-   * 50% Rule: Complex loop with length checks; documented via params and logic summary.
+   * 50% Rule: Uses buildOrderedModifiers for stacks and checks length in a loop.
    * @param {string[]} baseItems - Base prompt items.
    * @param {string[]|string[][]} modifiers - Modifiers or stacked lists.
    * @param {number} limit - Max length for result.
@@ -257,22 +282,7 @@
     itemOrder = null,
     depths = null
   ) {
-    const count = stackSize > 0 ? stackSize : 1;
-    const modLists = Array.isArray(modifiers[0]) ? modifiers : Array(count).fill(modifiers);
-    const orders = [];
-    if (Array.isArray(modOrders) && Array.isArray(modOrders[0])) {
-      for (let i = 0; i < count; i++) {
-        const mods = modLists[i % modLists.length];
-        const ord = modOrders[i % modOrders.length];
-        orders.push(ord ? applyOrder(mods, ord) : mods.slice());
-      }
-    } else {
-      for (let i = 0; i < count; i++) {
-        const mods = modLists[i % modLists.length];
-        const orderedMods = modOrders ? applyOrder(mods, modOrders) : mods.slice();
-        orders.push(orderedMods);
-      }
-    }
+    const orders = buildOrderedModifiers(modifiers, stackSize, modOrders);
     const dividerPool = dividers.slice();
     let items = baseItems.slice();
     if (itemOrder) items = applyOrder(items, itemOrder);
@@ -328,7 +338,7 @@
    * positive and negative outputs.
    * Purpose: Apply negative modifiers on top of positive ones for consistency.
    * Usage: Internal to buildVersions when includePosForNeg is true.
-   * 50% Rule: Mirrors applyModifierStack logic for negatives; example in usage.
+   * 50% Rule: Uses buildOrderedModifiers to mirror applyModifierStack logic.
    * @param {string[]} posTerms - Positive terms to modify.
    * @param {string[]|string[][]} negMods - Negative modifiers.
    * @param {number} limit - Max length.
@@ -351,22 +361,7 @@
     itemOrder = null,
     depths = null
   ) {
-    const count = stackSize > 0 ? stackSize : 1;
-    const modLists = Array.isArray(negMods[0]) ? negMods : Array(count).fill(negMods);
-    const orders = [];
-    if (Array.isArray(modOrders) && Array.isArray(modOrders[0])) {
-      for (let i = 0; i < count; i++) {
-        const mods = modLists[i % modLists.length];
-        const ord = modOrders[i % modOrders.length];
-        orders.push(ord ? applyOrder(mods, ord) : mods.slice());
-      }
-    } else {
-      for (let i = 0; i < count; i++) {
-        const mods = modLists[i % modLists.length];
-        const orderedMods = modOrders ? applyOrder(mods, modOrders) : mods.slice();
-        orders.push(orderedMods);
-      }
-    }
+    const orders = buildOrderedModifiers(negMods, stackSize, modOrders);
     const dividerSet = new Set(dividers);
     const result = [];
     let modIdx = 0;
@@ -552,6 +547,7 @@
     insertAtDepth,
     shuffle,
     equalizeLength,
+    buildOrderedModifiers,
     applyModifierStack,
     applyNegativeOnPositive,
     buildVersions,
