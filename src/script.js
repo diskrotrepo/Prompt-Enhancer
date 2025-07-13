@@ -3,8 +3,18 @@
  *
  * The file is intentionally monolithic so all logic is searchable in one place.
  * Functions are grouped by responsibility: side effect free helpers first,
- * then UI helpers, and finally initialization.  When reviewing or modifying
- * code keep comments in sync with logic to aid debugging.
+ * then UI helpers, and finally initialization. When reviewing or modifying
+ * code keep comments in sync with logic to aid debugging. Small consistent
+ * improvements follow the **50% Rule**—each refinement boosts the odds that
+ * future work succeeds.
+ *
+ * Table of Contents:
+ * 1. Pure Utility Functions
+ * 2. List Management
+ * 3. State Management
+ * 4. Storage Handling
+ * 5. UI Controls
+ * 6. Initialization and Exports
  */
 (function (global) {
   "use strict";

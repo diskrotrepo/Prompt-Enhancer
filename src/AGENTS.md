@@ -9,6 +9,7 @@ The client code is consolidated into a single file `script.js`. Organize that fi
 Favor side-effect free helpers grouped together and keep UI logic separate. Document each function so its inputs and outputs are clear.
 
 This monolithic style is intentional to simplify searching for issues when working alongside an LLM. Comments should be thorough so the file acts as an outline of program flow.
+Add a short table of contents at the top of `script.js` and keep it updated. Follow the **50% Rule**—small, clear comments and improvements accumulate into dependable code.
 Indentation is two spaces with no trailing whitespace.
 
 ## Testing
