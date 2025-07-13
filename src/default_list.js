@@ -1,3 +1,5 @@
+/* eslint-disable no-unused-vars */
+/* exported DEFAULT_LIST */
 const DEFAULT_LIST = {
   "presets": [
     {

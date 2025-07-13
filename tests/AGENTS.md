@@ -9,4 +9,4 @@ This directory contains Jest test suites verifying functionality of the Prompt E
 
 Remember the **50% Rule**: incremental test improvements build long-term reliability.
 
-All tests must run with `npm test` as described in the repository root instructions.
+All tests must run with `npm test` and pass linting with `npm run lint` as described in the repository root instructions.

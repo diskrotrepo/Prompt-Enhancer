@@ -4,9 +4,11 @@
   "description": "Prompt Enhancer tests",
   "scripts": {
     "pretest": "npm install",
-    "test": "jest"
+    "test": "jest",
+    "lint": "eslint src"
   },
   "devDependencies": {
+    "eslint": "^8.56.0",
     "jest": "^29.6.1",
     "jest-environment-jsdom": "^29.6.1"
   }

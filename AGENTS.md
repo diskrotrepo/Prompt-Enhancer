@@ -27,6 +27,7 @@ Run all programmatic checks with:
 
 ```bash
 npm test
+npm run lint
 ```
 
 Always execute the test suite whenever you change code.

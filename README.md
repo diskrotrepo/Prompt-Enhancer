@@ -8,10 +8,16 @@ The code is intentionally kept in a single `script.js` file so an LLM can search
 
 ## Development
 
-Install dependencies and run the test suite:
+Install dependencies, lint the code and run the test suite:
 
 ```bash
 npm test
+```
+
+Check code style with:
+
+```bash
+npm run lint
 ```
 
 Tests live in the `tests/` directory and cover all functionality.

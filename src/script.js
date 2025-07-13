@@ -283,6 +283,7 @@
     const result = [];
     let idx = 0;
     let divIdx = 0;
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       const needDivider = idx > 0 && idx % items.length === 0 && dividerPool.length;
       let term = items[idx % items.length];

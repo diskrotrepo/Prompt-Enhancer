@@ -36,4 +36,4 @@ added so these watchers remain synchronized.
 
 ## Testing
 
-Run the full suite with `npm test` whenever you modify code. Expand coverage whenever a bug is fixed or a new feature is added.
+Run the full suite with `npm test` and check style via `npm run lint` whenever you modify code. Expand coverage whenever a bug is fixed or a new feature is added.
