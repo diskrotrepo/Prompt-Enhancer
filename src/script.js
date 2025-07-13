@@ -29,6 +29,7 @@
  * 5. UI Controls
  *    - Input collection and output display (collectInputs, displayOutput)
  *    - Event handlers and setup (setupPresetListener, initializeUI)
+ *    - Reusable id iteration (forEachId)
  * 6. Initialization and Exports
  *    - IIFE setup and module exports
  */
@@ -1121,19 +1122,36 @@
    */
   function gatherControls(prefix, base) {
     const results = [];
-    let idx = 1;
-    while (true) {
-      const sel = document.getElementById(
-        `${prefix}-${base}-select${idx === 1 ? '' : '-' + idx}`
-      );
-      if (!sel) break;
-      const inp = document.getElementById(
-        `${prefix}-${base}-input${idx === 1 ? '' : '-' + idx}`
-      );
+    forEachId(`${prefix}-${base}-select`, (sel, idx) => {
+      const inp = document.getElementById(`${prefix}-${base}-input${idx === 1 ? '' : '-' + idx}`);
       results.push({ select: sel, input: inp });
-      idx++;
-    }
+    });
     return results;
+  }
+
+  /**
+   * Iterate over sequentially numbered ids, invoking a callback for each.
+   * Example: forEachId('pos-hide', cb) visits pos-hide, pos-hide-2, ...
+   * Purpose: Consolidate repeated while loops for dynamic controls.
+   * Usage: In setupSectionHide, setupSectionOrder, and other loops.
+   * 50% Rule: Simple iteration with example for clarity.
+   * @param {string} baseId - Id prefix for index 1.
+   * @param {Function} fn - Callback receiving element and index.
+   */
+  function forEachId(baseId, fn) {
+    let i = 1;
+    let id = baseId;
+    let el = document.getElementById(id);
+    if (!el) {
+      id = `${baseId}-1`;
+      el = document.getElementById(id);
+    }
+    while (el) {
+      fn(el, i);
+      i++;
+      id = `${baseId}-${i}`;
+      el = document.getElementById(id);
+    }
   }
 
   /** 
@@ -1611,16 +1629,12 @@
   function reflectSectionHide(prefix) {
     const cb = document.getElementById(`${prefix}-all-hide`);
     if (!cb) return;
-    let idx = 1;
     let all = true;
     let any = false;
-    while (true) {
-      const hide = document.getElementById(`${prefix}-hide-${idx}`);
-      if (!hide) break;
+    forEachId(`${prefix}-hide`, hide => {
       all = all && hide.checked;
       any = any || hide.checked;
-      idx++;
-    }
+    });
     const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
     reflectToggleState(btn, all, any && !all);
   }
@@ -1708,26 +1722,18 @@
     const cb = document.getElementById(`${prefix}-all-hide`);
     if (!cb) return;
     const update = () => {
-      let idx = 1;
-      while (true) {
-        const hide = document.getElementById(`${prefix}-hide-${idx}`);
-        if (!hide) break;
+      forEachId(`${prefix}-hide`, hide => {
         hide.checked = cb.checked;
         const btn = document.querySelector(`.toggle-button[data-target="${hide.id}"]`);
         if (btn) updateButtonState(btn, hide);
         hide.dispatchEvent(new Event('change'));
-        idx++;
-      }
+      });
       reflectSectionHide(prefix);
     };
     cb.addEventListener('change', update);
-    let i = 1;
-    while (true) {
-      const hide = document.getElementById(`${prefix}-hide-${i}`);
-      if (!hide) break;
+    forEachId(`${prefix}-hide`, hide => {
       hide.addEventListener('change', () => reflectSectionHide(prefix));
-      i++;
-    }
+    });
     update();
   }
 
@@ -1755,15 +1761,18 @@
       reflectAllRandom();
     };
     cb.addEventListener('change', update);
-    let i = 1;
-    while (true) {
-      const sel = document.getElementById(`${prefix}-order-select${i === 1 ? '' : '-' + i}`);
-      if (!sel) break;
-      sel.addEventListener('change', () => { reflectSectionOrder(prefix); reflectAllRandom(); });
-      const dep = document.getElementById(`${prefix}-depth-select${i === 1 ? '' : '-' + i}`);
-      if (dep) dep.addEventListener('change', () => { reflectSectionOrder(prefix); reflectAllRandom(); });
-      i++;
-    }
+    forEachId(`${prefix}-order-select`, (sel, idx) => {
+      sel.addEventListener('change', () => {
+        reflectSectionOrder(prefix);
+        reflectAllRandom();
+      });
+      const dep = document.getElementById(`${prefix}-depth-select${idx === 1 ? '' : '-' + idx}`);
+      if (dep)
+        dep.addEventListener('change', () => {
+          reflectSectionOrder(prefix);
+          reflectAllRandom();
+        });
+    });
     reflectSectionOrder(prefix);
   }
 
@@ -2446,15 +2455,10 @@
     );
     const gatherItems = prefix => {
       const arr = [];
-      let idx = 1;
-      while (true) {
-        const el = document.getElementById(`${prefix}-input${idx === 1 ? '' : '-' + idx}`);
-        if (!el) break;
+      forEachId(`${prefix}-input`, el => {
         arr.push(utils.parseInput(el.value || ''));
-        idx++;
-      }
-      if (arr.length === 1) return arr[0];
-      return arr;
+      });
+      return arr.length === 1 ? arr[0] : arr;
     };
 
     const posItems = gatherItems('pos');
