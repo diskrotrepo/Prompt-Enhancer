@@ -703,6 +703,82 @@ describe('UI interactions', () => {
     expect(document.getElementById('neg-depth-input').value).toBe('3');
   });
 
+  const appendMap = [
+    {
+      desc: 'negative append depth for second stack reacts to positive changes',
+      before: '3',
+      after: '4',
+      update() {
+        const inp = document.getElementById('pos-input-2');
+        inp.value = 'great job';
+        inp.dispatchEvent(new Event('input'));
+      }
+    }
+  ];
+
+  appendMap.forEach(cfg => {
+    test(cfg.desc, () => {
+      document.body.innerHTML = `
+        <input type="checkbox" id="pos-stack">
+        <select id="pos-stack-size"><option value="2">2</option></select>
+        <input type="checkbox" id="neg-stack">
+        <select id="neg-stack-size"><option value="2">2</option></select>
+        <input type="checkbox" id="neg-include-pos" checked>
+        <div id="neg-depth-container">
+          <select id="neg-depth-select"><option value="append">a</option></select>
+          <div class="input-row"><textarea id="neg-depth-input"></textarea></div>
+        </div>
+        <div id="pos-stack-container"></div>
+        <div id="neg-stack-container"></div>
+        <textarea id="pos-input"></textarea>
+        <textarea id="pos-order-input"></textarea>
+        <textarea id="pos-input-2">good</textarea>
+        <textarea id="pos-order-input-2"></textarea>
+        <textarea id="neg-input"></textarea>
+        <textarea id="neg-order-input"></textarea>
+        <textarea id="neg-input-2"></textarea>
+        <textarea id="neg-order-input-2"></textarea>
+        <textarea id="base-input">foo bar</textarea>
+        <select id="base-select"></select>
+      `;
+      setupDepthControl('neg-depth-select', 'neg-depth-input', [
+        'base-input',
+        'neg-input',
+        'neg-order-input',
+        'neg-include-pos',
+        'pos-input',
+        'pos-order-input'
+      ]);
+      document.getElementById('neg-stack-container').innerHTML =
+        '<div class="stack-block" id="neg-stack-1"></div>';
+      document.getElementById('pos-stack-container').innerHTML =
+        '<div class="stack-block" id="pos-stack-1"></div>';
+      const posStack = document.getElementById('pos-stack');
+      posStack.checked = true;
+      const negStack = document.getElementById('neg-stack');
+      negStack.checked = true;
+      updateStackBlocks('pos', 2);
+      updateStackBlocks('neg', 2);
+      setupDepthControl('neg-depth-select-2', 'neg-depth-input-2', [
+        'base-input',
+        'base-select',
+        'neg-input-2',
+        'neg-order-input-2',
+        'neg-include-pos',
+        'pos-input',
+        'pos-order-input',
+        'pos-input-2',
+        'pos-order-input-2'
+      ]);
+      const sel = document.getElementById('neg-depth-select-2');
+      sel.value = 'append';
+      sel.dispatchEvent(new Event('change'));
+      expect(document.getElementById('neg-depth-input-2').value).toBe(cfg.before);
+      cfg.update();
+      expect(document.getElementById('neg-depth-input-2').value).toBe(cfg.after);
+    });
+  });
+
   test('prepend depth populates zeros for each base term', () => {
     document.body.innerHTML = `
       <select id="pos-depth-select">
