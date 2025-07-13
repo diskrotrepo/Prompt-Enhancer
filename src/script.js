@@ -1219,13 +1219,18 @@
    * know where the base phrase ends.
    * Purpose: Compute word counts for depth insertions.
    * Usage: In setupDepthControl.
-   * 50% Rule: Includes positives if needed.
+   * 50% Rule: Includes positives if needed and respects base ordering.
    * @param {string} prefix - Prefix (pos/neg).
    * @param {number} [idx=1] - Index.
    * @returns {number[]} - Array of counts.
    */
   function computeDepthCounts(prefix, idx = 1) {
-    const bases = baseCounts();
+    let bases = baseCounts();
+    // Apply base order so counts align with current item sequence
+    const ord = utils.parseOrderInput(
+      document.getElementById('base-order-input')?.value || ''
+    );
+    if (ord.length) bases = utils.applyOrder(bases, ord);
     if (!bases.length) return [];
     const mods = getOrderedMods(prefix, idx);
     const includePos =

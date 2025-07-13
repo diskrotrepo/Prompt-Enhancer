@@ -34,6 +34,10 @@ corresponding positive fields. The helper `depthWatchIds` centralizes this list;
 update it or call `updateDepthContainers` with `refresh=true` when new inputs are
 added so these watchers remain synchronized.
 
+Base ordering affects depth calculations. The function `computeDepthCounts`
+applies the user’s base order input so word counts align with the displayed
+sequence.
+
 ## Testing
 
 Run the full suite with `npm test` whenever you modify code. Expand coverage whenever a bug is fixed or a new feature is added.
