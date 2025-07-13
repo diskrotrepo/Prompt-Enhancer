@@ -26,6 +26,13 @@ Directives for LLMs:
 
 Indentation is two spaces with no trailing whitespace.
 
+### Depth Control Note
+
+Depth inputs rely on DOM watchers to rebuild values when related fields change.
+Negative depth selectors that include positive modifiers must watch the
+corresponding positive fields. Update `updateDepthContainers` if new inputs are
+added so these watchers remain synchronized.
+
 ## Testing
 
 Run the full suite with `npm test` whenever you modify code. Expand coverage whenever a bug is fixed or a new feature is added.

@@ -2206,7 +2206,16 @@
       const watchers = ['base-input', 'base-select'];
       watchers.push(`${prefix}-input${idx === 1 ? '' : '-' + idx}`);
       watchers.push(`${prefix}-order-input${idx === 1 ? '' : '-' + idx}`);
-      if (prefix === 'neg') watchers.push('neg-include-pos');
+      if (prefix === 'neg') {
+        watchers.push('neg-include-pos');
+        const count = document.getElementById('pos-stack')?.checked
+          ? parseInt(document.getElementById('pos-stack-size')?.value || '1', 10)
+          : 1;
+        for (let p = 1; p <= count; p++) {
+          watchers.push(`pos-input${p === 1 ? '' : '-' + p}`);
+          watchers.push(`pos-order-input${p === 1 ? '' : '-' + p}`);
+        }
+      }
       setupDepthControl(sel.id, ta.id, watchers);
     }
     for (let i = current; i > count; i--) {
