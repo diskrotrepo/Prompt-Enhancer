@@ -31,7 +31,8 @@
  *    - Event handlers and setup (setupPresetListener, initializeUI)
  *    - Reusable id iteration (forEachId)
  *    - Watcher utilities (depthWatchIds)
- *    - Lyrics extras (processLyrics list insertion, UI integration)
+ *    - Lyrics extras (processLyrics list insertion, UI integration,
+ *      insertion stack)
  * 6. Initialization and Exports
  *    - IIFE setup and module exports
  */
@@ -518,6 +519,7 @@
    * @param {number} maxSpaces - Max spaces between words.
    * @param {boolean} [removeParens=false] - Remove parentheses.
    * @param {boolean} [removeBrackets=false] - Remove brackets.
+   * @param {number} [insertDepth=1] - Spacing depth for list insertion.
    * @returns {string} - Processed lyrics.
    */
   function processLyrics(
@@ -526,8 +528,7 @@
     removeParens = false,
     removeBrackets = false,
     insertItems = null,
-    insertMin = 1,
-    insertMax = 1,
+    insertDepth = 1,
     depthCallback = null
   ) {
     if (!text) return '';
@@ -545,11 +546,13 @@
     cleaned = cleaned.replace(/\s+/g, ' ').trim();
     const words = cleaned.split(' ');
     const depths = [];
-    if (Array.isArray(insertItems) && insertItems.length && insertMax >= insertMin) {
+    if (Array.isArray(insertItems) && insertItems.length && insertDepth > 0) {
       let depth = 0;
       const inserted = [];
+      const minInc = Math.floor(insertDepth / 2);
+      const maxInc = insertDepth;
       insertItems.forEach(item => {
-        const inc = insertMin + Math.floor(Math.random() * (insertMax - insertMin + 1));
+        const inc = minInc + Math.floor(Math.random() * (maxInc - minInc + 1));
         depth += inc;
         const offset = inserted.filter(d => d <= depth).length;
         const adj = depth + offset;
@@ -1495,10 +1498,18 @@
       const removeBrackets = document.getElementById('lyrics-remove-brackets')?.checked;
       const insertOn = document.getElementById('lyrics-insert-toggle')?.checked;
       const insertList = insertOn
-        ? utils.parseInput(document.getElementById('lyrics-insert-input')?.value)
+        ? (() => {
+            const all = [];
+            gatherControls('lyrics-insert', 'input').forEach(p => {
+              all.push(...utils.parseInput(p.input.value));
+            });
+            return all;
+          })()
         : null;
-      const insertMin = parseInt(document.getElementById('lyrics-insert-min')?.value || '1', 10);
-      const insertMax = parseInt(document.getElementById('lyrics-insert-max')?.value || '1', 10);
+      const insertDepth = parseInt(
+        document.getElementById('lyrics-insert-depth-val')?.value || '1',
+        10
+      );
       const depthArea = document.getElementById('lyrics-insert-depth');
       const processed = utils.processLyrics(
         lyricsInput.value,
@@ -1506,8 +1517,7 @@
         removeParens,
         removeBrackets,
         insertList,
-        insertMin,
-        insertMax,
+        insertDepth,
         depths => { if (depthArea) depthArea.value = depths.join(','); }
       );
       document.getElementById('lyrics-output').textContent = processed;
@@ -1636,36 +1646,43 @@
   function setupStackControls() {
     const configs = [
       { prefix: 'pos', stack: 'pos-stack', size: 'pos-stack-size', shuffle: 'pos-shuffle' },
-      { prefix: 'neg', stack: 'neg-stack', size: 'neg-stack-size', shuffle: 'neg-shuffle' }
+      { prefix: 'neg', stack: 'neg-stack', size: 'neg-stack-size', shuffle: 'neg-shuffle' },
+      { prefix: 'lyrics-insert', stack: 'lyrics-insert-stack', size: 'lyrics-insert-stack-size' }
     ];
     configs.forEach(cfg => {
       const stackCb = document.getElementById(cfg.stack);
       const sizeEl = document.getElementById(cfg.size);
-      const shuffleCb = document.getElementById(cfg.shuffle);
-      const shuffleBtn = document.querySelector(`.toggle-button[data-target="${cfg.shuffle}"]`);
-      if (!stackCb || !sizeEl || !shuffleCb) return;
-      let prev = shuffleCb.checked;
+      const shuffleCb = cfg.shuffle ? document.getElementById(cfg.shuffle) : null;
+      const shuffleBtn = cfg.shuffle ? document.querySelector(`.toggle-button[data-target="${cfg.shuffle}"]`) : null;
+      if (!stackCb || !sizeEl) return;
+      let prev = shuffleCb ? shuffleCb.checked : false;
       const update = () => {
         if (stackCb.checked) {
-          prev = shuffleCb.checked;
-          shuffleCb.checked = true;
-          if (shuffleBtn) {
+          if (shuffleCb) {
+            prev = shuffleCb.checked;
+            shuffleCb.checked = true;
+          }
+          if (shuffleBtn && shuffleCb) {
             shuffleBtn.classList.add('disabled');
             shuffleBtn.setAttribute('disabled', 'true');
             updateButtonState(shuffleBtn, shuffleCb);
           }
           sizeEl.style.display = '';
         } else {
-          if (shuffleBtn) {
+          if (shuffleBtn && shuffleCb) {
             shuffleBtn.classList.remove('disabled');
             shuffleBtn.removeAttribute('disabled');
             updateButtonState(shuffleBtn, shuffleCb);
           }
-          shuffleCb.checked = prev;
+          if (shuffleCb) shuffleCb.checked = prev;
           sizeEl.style.display = 'none';
         }
         const count = stackCb.checked ? parseInt(sizeEl.value, 10) || 1 : 1;
-        updateStackBlocks(cfg.prefix, count);
+        if (cfg.prefix === 'lyrics-insert') {
+          updateInsertStackBlocks(count);
+        } else {
+          updateStackBlocks(cfg.prefix, count);
+        }
         if (cfg.prefix === 'pos') {
           const negCount = document.getElementById('neg-stack')?.checked
             ? parseInt(document.getElementById('neg-stack-size')?.value || '1', 10)
@@ -2498,6 +2515,92 @@
     });
   }
 
+  /**
+   * Build stacked blocks for lyrics insertion.
+   * Purpose: Manage dynamic insert list stacks.
+   * Usage: In setupInsertStackControls.
+   * 50% Rule: Mirror positive/negative logic with simplified fields.
+   * @param {number} count - Desired block count.
+   */
+  function updateInsertStackBlocks(count) {
+    const container = document.getElementById('lyrics-insert-stack-container');
+    if (!container) return;
+    const current = container.querySelectorAll('.stack-block').length;
+    for (let i = current; i < count; i++) {
+      const idx = i + 1;
+      const block = document.createElement('div');
+      block.className = 'stack-block section-lyrics';
+      block.id = `lyrics-insert-stack-${idx}`;
+
+      const labelRow = document.createElement('div');
+      labelRow.className = 'label-row';
+      if (count > 1) {
+        const lbl = document.createElement('label');
+        lbl.textContent = `Stack ${idx}`;
+        labelRow.appendChild(lbl);
+      }
+      const btnCol = document.createElement('div');
+      btnCol.className = 'button-col';
+      const save = document.createElement('button');
+      save.type = 'button';
+      save.id = `lyrics-insert-save-${idx}`;
+      save.className = 'save-button icon-button';
+      save.title = 'Save';
+      save.innerHTML = '&#128190;';
+      save.addEventListener('click', () => lists.saveList('lyrics-insert', idx));
+      btnCol.appendChild(save);
+      const copy = document.createElement('button');
+      copy.type = 'button';
+      copy.className = 'copy-button icon-button';
+      copy.dataset.target = `lyrics-insert-input-${idx}`;
+      copy.title = 'Copy';
+      copy.innerHTML = '&#128203;';
+      btnCol.appendChild(copy);
+      const hideCb = document.createElement('input');
+      hideCb.type = 'checkbox';
+      hideCb.id = `lyrics-insert-hide-${idx}`;
+      hideCb.dataset.targets = `lyrics-insert-input-${idx}`;
+      hideCb.hidden = true;
+      btnCol.appendChild(hideCb);
+      const hideBtn = document.createElement('button');
+      hideBtn.type = 'button';
+      hideBtn.className = 'toggle-button icon-button hide-button';
+      hideBtn.dataset.target = hideCb.id;
+      hideBtn.dataset.on = '☰';
+      hideBtn.dataset.off = '✖';
+      hideBtn.textContent = '☰';
+      btnCol.appendChild(hideBtn);
+      labelRow.appendChild(btnCol);
+      block.appendChild(labelRow);
+
+      const sel = document.createElement('select');
+      sel.id = `lyrics-insert-select-${idx}`;
+      const baseSel = document.getElementById('lyrics-insert-select');
+      if (baseSel) sel.innerHTML = baseSel.innerHTML;
+      block.appendChild(sel);
+
+      const row = document.createElement('div');
+      row.className = 'input-row';
+      const ta = document.createElement('textarea');
+      ta.id = `lyrics-insert-input-${idx}`;
+      ta.rows = 2;
+      ta.placeholder = 'phrases';
+      row.appendChild(ta);
+      block.appendChild(row);
+
+      container.appendChild(block);
+      setupPresetListener(sel.id, ta.id, 'lyrics-insert');
+      applyPreset(sel, ta, 'lyrics-insert');
+    }
+    for (let i = current; i > count; i--) {
+      const block = document.getElementById(`lyrics-insert-stack-${i}`);
+      if (block) block.remove();
+    }
+    setupCopyButtons();
+    setupHideToggles();
+    setupToggleButtons();
+  }
+
   /** 
    * Button that toggles order/depth selects between random and canonical.
    * Purpose: Reroll random values.
@@ -2654,11 +2757,12 @@
       document.getElementById('lyrics-input'),
       'lyrics'
     );
-    const liSel = document.getElementById('lyrics-insert-select');
-    const liInp = document.getElementById('lyrics-insert-input');
-    if (liSel && liInp) {
-      applyPreset(liSel, liInp, 'lyrics-insert');
-    }
+    forEachId('lyrics-insert-select', (sel, idx) => {
+      const inp = document.getElementById(
+        `lyrics-insert-input${idx === 1 ? '' : '-' + idx}`
+      );
+      if (sel && inp) applyPreset(sel, inp, 'lyrics-insert');
+    });
   }
 
   /** 
@@ -2684,6 +2788,7 @@
     });
     updateStackBlocks('pos', 1);
     updateStackBlocks('neg', 1);
+    updateInsertStackBlocks(1);
     applyCurrentPresets();
   }
 
@@ -2869,6 +2974,7 @@
     setupDepthControl,
     setupAdvancedToggle,
     updateStackBlocks,
+    updateInsertStackBlocks,
     rerollRandomOrders,
     setupRerollButton,
     setupSectionHide,

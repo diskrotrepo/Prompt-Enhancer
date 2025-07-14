@@ -274,18 +274,36 @@
           <label for="lyrics-insert-input">List Insertion</label>
           <input type="checkbox" id="lyrics-insert-toggle" hidden>
           <button type="button" class="toggle-button" data-target="lyrics-insert-toggle" data-on="Insert On" data-off="Insert Off">Insert Off</button>
+          <input type="checkbox" id="lyrics-insert-stack" hidden>
+          <button type="button" class="toggle-button" data-target="lyrics-insert-stack" data-on="Stack On" data-off="Stack Off">Stack Off</button>
         </div>
-        <select id="lyrics-insert-select"></select>
-        <div class="input-row">
-          <textarea id="lyrics-insert-input" rows="2" placeholder="phrases"></textarea>
+        <select id="lyrics-insert-stack-size" style="display:none">
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+        </select>
+        <div id="lyrics-insert-stack-container">
+          <div class="stack-block section-lyrics" id="lyrics-insert-stack-1">
+            <div class="label-row">
+              <label>Stack 1</label>
+              <div class="button-col">
+                <button type="button" id="lyrics-insert-save-1" class="save-button icon-button" title="Save">&#128190;</button>
+                <button type="button" class="copy-button icon-button" data-target="lyrics-insert-input" title="Copy">&#128203;</button>
+                <input type="checkbox" id="lyrics-insert-hide-1" data-targets="lyrics-insert-input" hidden>
+                <button type="button" class="toggle-button icon-button hide-button" data-target="lyrics-insert-hide-1" data-on="☰" data-off="✖">☰</button>
+              </div>
+            </div>
+            <select id="lyrics-insert-select"></select>
+            <div class="input-row">
+              <textarea id="lyrics-insert-input" rows="2" placeholder="phrases"></textarea>
+            </div>
+          </div>
         </div>
         <div class="label-row">
-          <label for="lyrics-insert-min">Min Depth</label>
-          <label for="lyrics-insert-max">Max Depth</label>
+          <label for="lyrics-insert-depth-val">Depth</label>
         </div>
         <div class="input-row">
-          <input type="number" id="lyrics-insert-min" value="1" min="1">
-          <input type="number" id="lyrics-insert-max" value="1" min="1">
+          <input type="number" id="lyrics-insert-depth-val" value="2" min="1">
         </div>
         <div class="input-row">
           <textarea id="lyrics-insert-depth" rows="1" placeholder="depths" readonly></textarea>

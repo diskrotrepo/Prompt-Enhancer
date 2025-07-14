@@ -41,6 +41,7 @@ const {
   rerollRandomOrders,
   setupAdvancedToggle,
   updateStackBlocks,
+  updateInsertStackBlocks,
   setupSectionOrder,
   setupSectionHide,
   setupSectionAdvanced,
@@ -459,8 +460,7 @@ describe('Lyrics processing', () => {
       false,
       false,
       ['x', 'y'],
-      1,
-      1,
+      2,
       d => depths.push(...d)
     );
     Math.random = orig;
@@ -1650,6 +1650,18 @@ describe('List persistence', () => {
     updateStackBlocks('pos', 2);
     const block = document.getElementById('pos-stack-2');
     expect(block.querySelector('.copy-button')).not.toBeNull();
+    expect(block.querySelector('.save-button')).not.toBeNull();
+  });
+
+  test('updateInsertStackBlocks creates stack blocks', () => {
+    document.body.innerHTML = `
+      <select id="lyrics-insert-select"></select>
+      <div id="lyrics-insert-stack-container">
+        <div class="stack-block" id="lyrics-insert-stack-1"></div>
+      </div>`;
+    updateInsertStackBlocks(2);
+    const block = document.getElementById('lyrics-insert-stack-2');
+    expect(block).not.toBeNull();
     expect(block.querySelector('.save-button')).not.toBeNull();
   });
 

@@ -30,9 +30,10 @@ Indentation is two spaces with no trailing whitespace.
 
 The lyrics section includes an optional list insertion tool. When active it
 inserts bracketed phrases into the lyrics at progressively larger depths. Each
-depth equals the prior depth plus a random amount between the user supplied
-min and max values. The depths are displayed for reference in a read‑only
-textarea.
+depth equals the prior depth plus a random amount between half of the chosen
+depth value and the value itself. Multiple insertion lists may be stacked just
+like positive or negative modifiers. The final depths are displayed for
+reference in a read‑only textarea.
 
 ### Depth Control Note
 
