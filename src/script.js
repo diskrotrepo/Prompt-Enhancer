@@ -2237,45 +2237,52 @@
   function updateDepthContainers(prefix, count, refresh = false) {
     const container = document.getElementById(`${prefix}-depth-container`);
     const baseId = `${prefix}-depth`;
-    const adv = document.getElementById('advanced-mode');
-    const baseSel = document.getElementById(`${baseId}-select`);
-    const defaultVal = !adv || !adv.checked ? baseSel?.value || 'prepend' : undefined;
     if (!container) return;
+    // The first stack always owns the base depth controls. Extra stacks
+    // manage their own containers, so only one set should exist here.
     const current = container.querySelectorAll('select').length;
+    const target = 1; // keep a single select/input pair in the base container
+
+    // Refresh mode just rebuilds watchers for existing controls without
+    // adding or removing elements. This keeps stack one stable when toggling.
     if (refresh) {
-      for (let i = 1; i <= Math.min(current, count); i++) {
+      for (let i = 1; i <= count; i++) {
         const sel = document.getElementById(
           `${baseId}-select${i === 1 ? '' : '-' + i}`
         );
         const ta = document.getElementById(
           `${baseId}-input${i === 1 ? '' : '-' + i}`
         );
-        if (sel && ta) setupDepthControl(sel.id, ta.id, depthWatchIds(prefix, i));
+        if (sel && ta) {
+          setupDepthControl(sel.id, ta.id, depthWatchIds(prefix, i));
+        }
       }
+      return;
     }
-    for (let i = current; i < count; i++) {
-      const idx = i + 1;
+
+    // Ensure exactly one depth control exists for stack one.
+    if (current < target) {
       const sel = document.createElement('select');
-      sel.id = `${baseId}-select-${idx}`;
+      sel.id = `${baseId}-select`;
       populateDepthOptions(sel);
-      if (defaultVal) sel.value = defaultVal;
       container.appendChild(sel);
       const div = document.createElement('div');
       div.className = 'input-row';
       const ta = document.createElement('textarea');
-      ta.id = `${baseId}-input-${idx}`;
+      ta.id = `${baseId}-input`;
       ta.rows = 1;
       ta.placeholder = '0,1,2';
       div.appendChild(ta);
       container.appendChild(div);
-      setupDepthControl(sel.id, ta.id, depthWatchIds(prefix, idx));
-    }
-    for (let i = current; i > count; i--) {
-      const idx = i;
-      const sel = document.getElementById(`${baseId}-select-${idx}`);
-      const ta = document.getElementById(`${baseId}-input-${idx}`);
-      if (sel) sel.remove();
-      if (ta && ta.parentElement) ta.parentElement.remove();
+      setupDepthControl(sel.id, ta.id, depthWatchIds(prefix, 1));
+    } else if (current > target) {
+      for (let i = current; i > target; i--) {
+        const idx = i === 1 ? '' : '-' + i;
+        const sel = document.getElementById(`${baseId}-select${idx}`);
+        const ta = document.getElementById(`${baseId}-input${idx}`);
+        if (sel) sel.remove();
+        if (ta && ta.parentElement) ta.parentElement.remove();
+      }
     }
   }
 
