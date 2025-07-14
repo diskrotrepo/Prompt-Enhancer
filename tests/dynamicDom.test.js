@@ -7,17 +7,19 @@ const main = require('../src/script');
 const ui = main;
 
 describe('Dynamic DOM updates', () => {
-  test('updateDepthContainers adds and removes blocks', () => {
+  test('updateDepthContainers refreshes watchers without duplicating controls', () => {
     document.body.innerHTML = `
       <textarea id="base-input">foo</textarea>
       <div id="pos-depth-container">
         <select id="pos-depth-select"><option value="prepend">p</option><option value="append">a</option></select>
         <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
       </div>
+      <div id="pos-depth-container-2">
+        <select id="pos-depth-select-2"><option value="prepend">p</option></select>
+        <div class="input-row"><textarea id="pos-depth-input-2"></textarea></div>
+      </div>
     `;
-    ui.updateDepthContainers('pos', 2);
-    expect(document.querySelectorAll('#pos-depth-container select').length).toBe(2);
-    ui.updateDepthContainers('pos', 1, true);
+    ui.updateDepthContainers('pos', 2, true);
     expect(document.querySelectorAll('#pos-depth-container select').length).toBe(1);
     const sel = document.getElementById('pos-depth-select');
     sel.value = 'append';
