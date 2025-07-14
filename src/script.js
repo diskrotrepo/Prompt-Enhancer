@@ -31,7 +31,7 @@
  *    - Event handlers and setup (setupPresetListener, initializeUI)
  *    - Reusable id iteration (forEachId)
  *    - Watcher utilities (depthWatchIds)
- *    - Lyrics extras (processLyrics list insertion)
+ *    - Lyrics extras (processLyrics list insertion, UI integration)
  * 6. Initialization and Exports
  *    - IIFE setup and module exports
  */
@@ -814,7 +814,7 @@
       length: { select: 'length-select', input: 'length-input', store: LENGTH_PRESETS },
       divider: { select: 'divider-select', input: 'divider-input', store: DIVIDER_PRESETS },
       lyrics: { select: 'lyrics-select', input: 'lyrics-input', store: LYRICS_PRESETS },
-      lyricsInsert: { select: 'lyrics-insert-select', input: 'lyrics-insert-input', store: LYRICS_INSERT_PRESETS },
+      'lyrics-insert': { select: 'lyrics-insert-select', input: 'lyrics-insert-input', store: LYRICS_INSERT_PRESETS },
       order: { select: 'pos-depth-select', input: 'pos-depth-input', store: ORDER_PRESETS }
     };
     const cfg = map[type];
@@ -1302,6 +1302,8 @@
         presets = lists.BASE_PRESETS;
       } else if (presetsOrType === 'lyrics') {
         presets = lists.LYRICS_PRESETS;
+      } else if (presetsOrType === 'lyrics-insert') {
+        presets = lists.LYRICS_INSERT_PRESETS;
       } else {
         presets = {};
       }
@@ -2652,6 +2654,11 @@
       document.getElementById('lyrics-input'),
       'lyrics'
     );
+    const liSel = document.getElementById('lyrics-insert-select');
+    const liInp = document.getElementById('lyrics-insert-input');
+    if (liSel && liInp) {
+      applyPreset(liSel, liInp, 'lyrics-insert');
+    }
   }
 
   /** 
@@ -2748,6 +2755,7 @@
     setupPresetListener('divider-select', 'divider-input', 'divider');
     setupPresetListener('base-select', 'base-input', 'base');
     setupPresetListener('lyrics-select', 'lyrics-input', 'lyrics');
+    setupPresetListener('lyrics-insert-select', 'lyrics-insert-input', 'lyrics-insert');
     populateOrderOptions(document.getElementById('base-order-select'));
     populateOrderOptions(document.getElementById('pos-order-select'));
     populateOrderOptions(document.getElementById('neg-order-select'));
