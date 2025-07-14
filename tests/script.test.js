@@ -24,7 +24,8 @@ const {
   parseOrderInput,
   applyOrder,
   insertAtDepth,
-  countWords
+  countWords,
+  computeDepthCounts
 } = utils;
 
 const { exportLists, importLists, saveList } = lists;
@@ -218,6 +219,39 @@ describe('Prompt building', () => {
       [0]
     );
     expect(out).toEqual({ positive: 'pre foo bar post, pre foo bar post', negative: 'n foo bar, n foo bar' });
+  });
+
+  test('computeDepthCounts includes prior positive stacks', () => {
+    document.body.innerHTML = `
+      <textarea id="base-input">foo bar</textarea>
+      <textarea id="pos-input">p1</textarea>
+      <textarea id="pos-input-2">p2</textarea>
+      <textarea id="pos-order-input"></textarea>
+      <textarea id="pos-order-input-2"></textarea>
+      <input id="pos-stack" type="checkbox" checked>
+      <input id="pos-stack-size" value="2">
+    `;
+    const counts = computeDepthCounts('pos', 2);
+    expect(counts).toEqual([3]);
+  });
+
+  test('computeDepthCounts includes prior negative stacks and positives', () => {
+    document.body.innerHTML = `
+      <textarea id="base-input">foo bar</textarea>
+      <textarea id="pos-input">good</textarea>
+      <textarea id="pos-order-input"></textarea>
+      <input id="pos-stack" type="checkbox" checked>
+      <input id="pos-stack-size" value="1">
+      <textarea id="neg-input">bad1</textarea>
+      <textarea id="neg-input-2">bad2</textarea>
+      <textarea id="neg-order-input"></textarea>
+      <textarea id="neg-order-input-2"></textarea>
+      <input id="neg-stack" type="checkbox" checked>
+      <input id="neg-stack-size" value="2">
+      <input id="neg-include-pos" type="checkbox" checked>
+    `;
+    const counts = computeDepthCounts('neg', 2);
+    expect(counts).toEqual([4]);
   });
 
   test('buildVersions returns empty strings when items list is empty', () => {

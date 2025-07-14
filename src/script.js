@@ -1217,6 +1217,32 @@
   }
 
   /**
+   * Words from earlier stacks of a section.
+   * Purpose: Calculate prior stack impact on later depths.
+   * Usage: In computeDepthCounts.
+   * 50% Rule: Iterates over existing stacks with comments.
+   * @param {string} prefix - Section prefix.
+   * @param {number} idx - Current stack index.
+   * @param {number} i - Item index.
+   * @returns {number} - Word count total.
+   */
+  function getPrevStackWords(prefix, idx, i) {
+    const stackOn = document.getElementById(`${prefix}-stack`)?.checked;
+    const stackSize = parseInt(
+      document.getElementById(`${prefix}-stack-size`)?.value || '1',
+      10
+    );
+    const count = stackOn ? stackSize : 1;
+    let total = 0;
+    for (let s = 1; s < idx && s <= count; s++) {
+      const mods = getOrderedMods(prefix, s);
+      if (!mods.length) continue;
+      total += utils.countWords(mods[i % mods.length]);
+    }
+    return total;
+  }
+
+  /**
    * Determine insertion depths for modifiers so negative depth calculations
    * know where the base phrase ends.
    * Purpose: Compute word counts for depth insertions.
@@ -1238,6 +1264,7 @@
     for (let i = 0; i < len; i++) {
       let total = bases[i % bases.length];
       if (includePos) total += getTotalPosWords(i);
+      total += getPrevStackWords(prefix, idx, i);
       counts.push(total);
     }
     return counts;
