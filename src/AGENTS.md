@@ -34,6 +34,10 @@ corresponding positive fields. The helper `depthWatchIds` centralizes this list;
 update it or call `updateDepthContainers` with `refresh=true` when new inputs are
 added so these watchers remain synchronized.
 
+`computeDepthCounts` now sums words from earlier stacks for both positive and
+negative sections. Random depth calculations therefore consider all preceding
+modifiers when multiple stacks are active.
+
 ## Testing
 
 Run the full suite with `npm test` whenever you modify code. Expand coverage whenever a bug is fixed or a new feature is added.
