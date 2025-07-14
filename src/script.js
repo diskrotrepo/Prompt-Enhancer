@@ -31,6 +31,7 @@
  *    - Event handlers and setup (setupPresetListener, initializeUI)
  *    - Reusable id iteration (forEachId)
  *    - Watcher utilities (depthWatchIds)
+ *    - Lyrics extras (processLyrics list insertion)
  * 6. Initialization and Exports
  *    - IIFE setup and module exports
  */
@@ -519,7 +520,16 @@
    * @param {boolean} [removeBrackets=false] - Remove brackets.
    * @returns {string} - Processed lyrics.
    */
-  function processLyrics(text, maxSpaces, removeParens = false, removeBrackets = false) {
+  function processLyrics(
+    text,
+    maxSpaces,
+    removeParens = false,
+    removeBrackets = false,
+    insertItems = null,
+    insertMin = 1,
+    insertMax = 1,
+    depthCallback = null
+  ) {
     if (!text) return '';
     const limit = parseInt(maxSpaces, 10);
     const max = !isNaN(limit) && limit > 0 ? limit : 1;
@@ -534,6 +544,22 @@
     cleaned = cleaned.replace(/\r?\n/g, ' ');
     cleaned = cleaned.replace(/\s+/g, ' ').trim();
     const words = cleaned.split(' ');
+    const depths = [];
+    if (Array.isArray(insertItems) && insertItems.length && insertMax >= insertMin) {
+      let depth = 0;
+      const inserted = [];
+      insertItems.forEach(item => {
+        const inc = insertMin + Math.floor(Math.random() * (insertMax - insertMin + 1));
+        depth += inc;
+        const offset = inserted.filter(d => d <= depth).length;
+        const adj = depth + offset;
+        depths.push(adj);
+        const idx = Math.min(adj, words.length);
+        words.splice(idx, 0, `[${item}]`);
+        inserted.push(adj);
+      });
+    }
+    if (typeof depthCallback === 'function') depthCallback(depths);
     return words
       .map((w, i) => {
         if (i === words.length - 1) return w;
@@ -570,6 +596,7 @@
   let DIVIDER_PRESETS = {};
   let BASE_PRESETS = {};
   let LYRICS_PRESETS = {};
+  let LYRICS_INSERT_PRESETS = {};
   let ORDER_PRESETS = {};
 
   let LISTS;
@@ -665,6 +692,7 @@
     const divs = [];
     const base = [];
     const lyrics = [];
+    const lyricsInsert = [];
     const order = [];
     if (LISTS.presets && Array.isArray(LISTS.presets)) {
       LISTS.presets.forEach(p => {
@@ -686,6 +714,9 @@
         } else if (p.type === 'lyrics') {
           LYRICS_PRESETS[p.id] = p.items || [];
           lyrics.push(p);
+        } else if (p.type === 'lyrics-insert') {
+          LYRICS_INSERT_PRESETS[p.id] = p.items || [];
+          lyricsInsert.push(p);
         } else if (p.type === 'order') {
           ORDER_PRESETS[p.id] = p.items || [];
           order.push(p);
@@ -704,6 +735,8 @@
     if (baseSelect) populateSelect(baseSelect, base);
     const lyricsSelect = document.getElementById('lyrics-select');
     if (lyricsSelect) populateSelect(lyricsSelect, lyrics);
+    const insertSelect = document.getElementById('lyrics-insert-select');
+    if (insertSelect) populateSelect(insertSelect, lyricsInsert);
     const posDepthSelect = document.getElementById('pos-depth-select');
     if (posDepthSelect) populateDepthSelect(posDepthSelect, order);
     const negDepthSelect = document.getElementById('neg-depth-select');
@@ -781,6 +814,7 @@
       length: { select: 'length-select', input: 'length-input', store: LENGTH_PRESETS },
       divider: { select: 'divider-select', input: 'divider-input', store: DIVIDER_PRESETS },
       lyrics: { select: 'lyrics-select', input: 'lyrics-input', store: LYRICS_PRESETS },
+      lyricsInsert: { select: 'lyrics-insert-select', input: 'lyrics-insert-input', store: LYRICS_INSERT_PRESETS },
       order: { select: 'pos-depth-select', input: 'pos-depth-input', store: ORDER_PRESETS }
     };
     const cfg = map[type];
@@ -828,6 +862,7 @@
     get DIVIDER_PRESETS() { return DIVIDER_PRESETS; },
     get BASE_PRESETS() { return BASE_PRESETS; },
     get LYRICS_PRESETS() { return LYRICS_PRESETS; },
+    get LYRICS_INSERT_PRESETS() { return LYRICS_INSERT_PRESETS; },
     get ORDER_PRESETS() { return ORDER_PRESETS; },
     loadLists,
     exportLists,
@@ -1456,16 +1491,30 @@
       const maxSpaces = spaceSel ? spaceSel.value : 1;
       const removeParens = document.getElementById('lyrics-remove-parens')?.checked;
       const removeBrackets = document.getElementById('lyrics-remove-brackets')?.checked;
+      const insertOn = document.getElementById('lyrics-insert-toggle')?.checked;
+      const insertList = insertOn
+        ? utils.parseInput(document.getElementById('lyrics-insert-input')?.value)
+        : null;
+      const insertMin = parseInt(document.getElementById('lyrics-insert-min')?.value || '1', 10);
+      const insertMax = parseInt(document.getElementById('lyrics-insert-max')?.value || '1', 10);
+      const depthArea = document.getElementById('lyrics-insert-depth');
       const processed = utils.processLyrics(
         lyricsInput.value,
         maxSpaces,
         removeParens,
-        removeBrackets
+        removeBrackets,
+        insertList,
+        insertMin,
+        insertMax,
+        depths => { if (depthArea) depthArea.value = depths.join(','); }
       );
       document.getElementById('lyrics-output').textContent = processed;
+      if (!insertOn && depthArea) depthArea.value = '';
     } else {
       const out = document.getElementById('lyrics-output');
       if (out) out.textContent = '';
+      const depthArea = document.getElementById('lyrics-insert-depth');
+      if (depthArea) depthArea.value = '';
     }
   }
 

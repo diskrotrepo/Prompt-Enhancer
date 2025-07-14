@@ -683,6 +683,12 @@ const DEFAULT_LIST = {
       "type": "lyrics"
     },
     {
+      "id": "lyrics-insert-demo",
+      "title": "Demo Insert List",
+      "items": ["chorus", "verse"],
+      "type": "lyrics-insert"
+    },
+    {
       "id": "divider-simple",
       "title": "Simple",
       "items": [],

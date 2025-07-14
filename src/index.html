@@ -270,6 +270,26 @@
           <option value="9">9</option>
           <option value="10">10</option>
         </select>
+        <div class="label-row">
+          <label for="lyrics-insert-input">List Insertion</label>
+          <input type="checkbox" id="lyrics-insert-toggle" hidden>
+          <button type="button" class="toggle-button" data-target="lyrics-insert-toggle" data-on="Insert On" data-off="Insert Off">Insert Off</button>
+        </div>
+        <select id="lyrics-insert-select"></select>
+        <div class="input-row">
+          <textarea id="lyrics-insert-input" rows="2" placeholder="phrases"></textarea>
+        </div>
+        <div class="label-row">
+          <label for="lyrics-insert-min">Min Depth</label>
+          <label for="lyrics-insert-max">Max Depth</label>
+        </div>
+        <div class="input-row">
+          <input type="number" id="lyrics-insert-min" value="1" min="1">
+          <input type="number" id="lyrics-insert-max" value="1" min="1">
+        </div>
+        <div class="input-row">
+          <textarea id="lyrics-insert-depth" rows="1" placeholder="depths" readonly></textarea>
+        </div>
       </div>
       <!-- Action buttons -->
         <button id="generate">Generate</button>

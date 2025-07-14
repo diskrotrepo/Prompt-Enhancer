@@ -448,6 +448,25 @@ describe('Lyrics processing', () => {
     const out = processLyrics(input, 1, false, true);
     expect(out).toBe('alpha gamma');
   });
+
+  test('processLyrics inserts list items and reports depths', () => {
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0);
+    const depths = [];
+    const out = processLyrics(
+      'a b c',
+      1,
+      false,
+      false,
+      ['x', 'y'],
+      1,
+      1,
+      d => depths.push(...d)
+    );
+    Math.random = orig;
+    expect(out).toBe('a [x] b [y] c');
+    expect(depths).toEqual([1, 3]);
+  });
 });
 
 describe('UI interactions', () => {
