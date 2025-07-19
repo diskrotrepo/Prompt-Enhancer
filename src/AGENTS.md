@@ -26,6 +26,15 @@ Directives for LLMs:
 
 Indentation is two spaces with no trailing whitespace.
 
+### Lyrics List Insertion
+
+The lyrics section includes an optional list insertion tool. When active it
+inserts bracketed phrases into the lyrics at progressively larger depths. Each
+depth equals the prior depth plus a random amount. The user specifies a single
+interval value. Half of that interval is used as the minimal step and the full
+value is the maximum. Calculated depths appear in a read‑only textarea for
+reference.
+
 ### Depth Control Note
 
 Depth inputs rely on DOM watchers to rebuild values when related fields change.
