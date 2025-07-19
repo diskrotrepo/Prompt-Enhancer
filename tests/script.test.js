@@ -42,6 +42,7 @@ const {
   rerollRandomOrders,
   setupAdvancedToggle,
   updateStackBlocks,
+  updateInsertStackBlocks,
   setupSectionOrder,
   setupSectionHide,
   setupSectionAdvanced,
@@ -481,6 +482,24 @@ describe('Lyrics processing', () => {
     const input = 'alpha [beta] gamma {delta} <epsilon>';
     const out = processLyrics(input, 1, false, true);
     expect(out).toBe('alpha gamma');
+  });
+
+  test('processLyrics inserts list items and reports depths', () => {
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0);
+    const depths = [];
+    const out = processLyrics(
+      'a b c',
+      1,
+      false,
+      false,
+      ['x', 'y'],
+      2,
+      d => depths.push(...d)
+    );
+    Math.random = orig;
+    expect(out).toBe('a [x] b [y] c');
+    expect(depths).toEqual([1, 3]);
   });
 });
 
@@ -1508,6 +1527,21 @@ describe('List persistence', () => {
     expect(opt).not.toBeNull();
   });
 
+  test('saveList works for lyrics insert', () => {
+    document.body.innerHTML = `
+      <select id="lyrics-insert-select"></select>
+      <textarea id="lyrics-insert-input">foo</textarea>
+    `;
+    importLists({ presets: [] });
+    global.prompt = jest.fn().mockReturnValue('li1');
+    saveList('lyrics-insert');
+    const data = JSON.parse(exportLists());
+    const preset = data.presets.find(p => p.id === 'li1' && p.type === 'lyrics-insert');
+    expect(preset.items).toEqual(['foo']);
+    const opt = document.querySelector('#lyrics-insert-select option[value="li1"]');
+    expect(opt).not.toBeNull();
+  });
+
   test('sequential save and reload', () => {
     document.body.innerHTML = `
       <select id="pos-select"></select>
@@ -1522,9 +1556,11 @@ describe('List persistence', () => {
       <textarea id="divider-input"></textarea>
       <select id="lyrics-select"></select>
       <textarea id="lyrics-input"></textarea>
+      <select id="lyrics-insert-select"></select>
+      <textarea id="lyrics-insert-input"></textarea>
     `;
     importLists({ presets: [] });
-    let names = ['p1', 'p2', 'b1', 'n1', 'l1', 'd1', 'ly1'];
+    let names = ['p1', 'p2', 'b1', 'n1', 'l1', 'd1', 'ly1', 'li1'];
     global.prompt = jest.fn(() => names.shift());
     document.getElementById('pos-input').value = 'x';
     saveList('positive');
@@ -1540,9 +1576,11 @@ describe('List persistence', () => {
     saveList('divider');
     document.getElementById('lyrics-input').value = 'lyric';
     saveList('lyrics');
+    document.getElementById('lyrics-insert-input').value = 'foo';
+    saveList('lyrics-insert');
 
     const exported = JSON.parse(exportLists());
-    expect(exported.presets.length).toBe(7);
+    expect(exported.presets.length).toBe(8);
 
     document.body.innerHTML = `
       <select id="pos-select"></select>
@@ -1557,6 +1595,8 @@ describe('List persistence', () => {
       <textarea id="divider-input"></textarea>
       <select id="lyrics-select"></select>
       <textarea id="lyrics-input"></textarea>
+      <select id="lyrics-insert-select"></select>
+      <textarea id="lyrics-insert-input"></textarea>
     `;
     importLists(exported);
     const posSelVals = Array.from(document.querySelectorAll('#pos-select option')).map(o => o.value);
@@ -1587,6 +1627,11 @@ describe('List persistence', () => {
       lyrSelect.value = 'ly1';
       applyPreset(lyrSelect, lyrInput, 'lyrics');
       expect(lyrInput.value).toBe('lyric');
+      const insertSelect = document.getElementById('lyrics-insert-select');
+      const insertInput = document.getElementById('lyrics-insert-input');
+      insertSelect.value = 'li1';
+      applyPreset(insertSelect, insertInput, 'lyrics-insert');
+      expect(insertInput.value).toBe('foo');
   });
 
   test('importLists additive merges lists', () => {
@@ -1639,6 +1684,18 @@ describe('List persistence', () => {
     updateStackBlocks('pos', 2);
     const block = document.getElementById('pos-stack-2');
     expect(block.querySelector('.copy-button')).not.toBeNull();
+    expect(block.querySelector('.save-button')).not.toBeNull();
+  });
+
+  test('updateInsertStackBlocks creates stack blocks', () => {
+    document.body.innerHTML = `
+      <select id="lyrics-insert-select"></select>
+      <div id="lyrics-insert-stack-container">
+        <div class="stack-block" id="lyrics-insert-stack-1"></div>
+      </div>`;
+    updateInsertStackBlocks(2);
+    const block = document.getElementById('lyrics-insert-stack-2');
+    expect(block).not.toBeNull();
     expect(block.querySelector('.save-button')).not.toBeNull();
   });
 
