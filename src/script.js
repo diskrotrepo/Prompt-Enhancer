@@ -45,7 +45,9 @@
   /**
    * Split a raw text block into individual items.
    * If keepDelim is true, punctuation is preserved and a trailing period is added when missing
-   * so other code can treat each string as a sentence.
+   * so other code can treat each string as a sentence. Closing brackets right
+   * after a delimiter stay with the preceding item so parentheses like
+   * "(example.)" remain intact.
    * Purpose: Parse user input into arrays, handling delimiters flexibly for prompts and modifiers.
    * Usage Example: parseInput("item1, item2.", true) returns ["item1,", "item2."].
    * 50% Rule: Employs multiple strategies (normalization, splitting, trimming) for robust parsing; diverse methods ensure clarity.
@@ -76,11 +78,16 @@
       current += ch;
       if (delims.includes(ch)) {
         let natural = /[,.!:;?\n]/.test(ch);
-        // Handle consecutive delimiters and spaces
+        // Extend through adjacent delimiters, closing brackets, and spaces
         while (i + 1 < normalized.length) {
           const next = normalized[i + 1];
           if (delims.includes(next)) {
             if (/[,.!:;?\n]/.test(next)) natural = true;
+            current += next;
+            i++;
+            continue;
+          }
+          if (next === ')' || next === ']' || next === '}' || next === '>') {
             current += next;
             i++;
             continue;
@@ -509,7 +516,8 @@
   /**
    * Normalize a block of lyrics text.
    * All punctuation is stripped, optionally removing parentheses or brackets,
-   * and random spacing up to `maxSpaces` is introduced between words.
+   * and random spacing up to `maxSpaces` is introduced between words. Unicode
+   * letters from any language are preserved.
    * Purpose: Process lyrics for use in prompts, adding randomness.
    * Usage Example: processLyrics("hello (world)", 2, true) might return "hello  world".
    * 50% Rule: Regex cleaning and random spacing; handles options.
@@ -526,11 +534,12 @@
     let cleaned = text.toLowerCase();
     if (removeParens) cleaned = cleaned.replace(/\([^()]*\)/g, ' ');
     if (removeBrackets) cleaned = cleaned.replace(/\[[^\]]*\]|\{[^}]*\}|<[^>]*>/g, ' ');
-    let pattern = '[^\\w\\s';
+    // Use Unicode property escapes so non-English letters remain intact
+    let pattern = '[^\\p{L}\\p{N}\\s';
     if (!removeParens) pattern += '\\(\\)';
     if (!removeBrackets) pattern += '\\[\\]\\{\\}<>';
     pattern += ']';
-    cleaned = cleaned.replace(new RegExp(pattern, 'g'), '');
+    cleaned = cleaned.replace(new RegExp(pattern, 'gu'), '');
     cleaned = cleaned.replace(/\r?\n/g, ' ');
     cleaned = cleaned.replace(/\s+/g, ' ').trim();
     const words = cleaned.split(' ');
