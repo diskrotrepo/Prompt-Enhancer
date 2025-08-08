@@ -517,17 +517,33 @@
    * Normalize a block of lyrics text.
    * All punctuation is stripped, optionally removing parentheses or brackets,
    * and random spacing up to `maxSpaces` is introduced between words. Unicode
-   * letters from any language are preserved.
-   * Purpose: Process lyrics for use in prompts, adding randomness.
-   * Usage Example: processLyrics("hello (world)", 2, true) might return "hello  world".
-   * 50% Rule: Regex cleaning and random spacing; handles options.
+   * letters from any language are preserved. Optional insertions wrapped in
+   * brackets can be injected every `interval` words, stacking multiple items
+   * per insertion.
+   * Purpose: Process lyrics for use in prompts, adding randomness and optional
+   * bracketed insertions.
+   * Usage Example: processLyrics("hello world", 2, false, false, ['x'], 2, 1)
+   *   may yield "hello [x] world".
+   * 50% Rule: Regex cleaning, token insertion, and random spacing; comments,
+   * example, and summary reinforce intent.
    * @param {string} text - Input lyrics.
    * @param {number} maxSpaces - Max spaces between words.
    * @param {boolean} [removeParens=false] - Remove parentheses.
    * @param {boolean} [removeBrackets=false] - Remove brackets.
+   * @param {string[]} [insertions=[]] - Terms to inject in brackets.
+   * @param {number} [interval=0] - Insert every N words.
+   * @param {number} [stackSize=1] - Number of terms per insertion.
    * @returns {string} - Processed lyrics.
    */
-  function processLyrics(text, maxSpaces, removeParens = false, removeBrackets = false) {
+  function processLyrics(
+    text,
+    maxSpaces,
+    removeParens = false,
+    removeBrackets = false,
+    insertions = [],
+    interval = 0,
+    stackSize = 1
+  ) {
     if (!text) return '';
     const limit = parseInt(maxSpaces, 10);
     const max = !isNaN(limit) && limit > 0 ? limit : 1;
@@ -543,11 +559,21 @@
     cleaned = cleaned.replace(/\r?\n/g, ' ');
     cleaned = cleaned.replace(/\s+/g, ' ').trim();
     const words = cleaned.split(' ');
-    return words
-      .map((w, i) => {
-        if (i === words.length - 1) return w;
+    const tokens = [];
+    words.forEach((w, i) => {
+      tokens.push(w);
+      const atInterval = insertions.length && interval > 0 && (i + 1) % interval === 0;
+      const notEnd = i < words.length - 1;
+      if (atInterval && notEnd) {
+        const picks = shuffle(insertions.slice()).slice(0, stackSize);
+        tokens.push(`[${picks.join(' ')}]`);
+      }
+    });
+    return tokens
+      .map((t, i) => {
+        if (i === tokens.length - 1) return t;
         const spaces = 1 + Math.floor(Math.random() * max);
-        return w + ' '.repeat(spaces);
+        return t + ' '.repeat(spaces);
       })
       .join('');
   }
@@ -568,7 +594,7 @@
   };
 
 // ======== List Management ========
-// Section Purpose: Manage preset lists for modifiers, lengths, etc.
+// Section Purpose: Manage preset lists for modifiers, lengths, lyrics, and insertions.
 // Structures data for easy access and UI population, using 50% Rule via redundant checks and deep copies.
 // Structural Overview: Initializes preset maps from global lists, handles loading/saving.
 // Section Summary: Centralizes preset handling for reusability across UI and logic.
@@ -579,6 +605,7 @@
   let DIVIDER_PRESETS = {};
   let BASE_PRESETS = {};
   let LYRICS_PRESETS = {};
+  let INSERT_PRESETS = {};
   let ORDER_PRESETS = {};
 
   let LISTS;
@@ -668,12 +695,14 @@
     DIVIDER_PRESETS = {};
     BASE_PRESETS = {};
     LYRICS_PRESETS = {};
+    INSERT_PRESETS = {};
     const neg = [];
     const pos = [];
     const len = [];
     const divs = [];
     const base = [];
     const lyrics = [];
+    const inserts = [];
     const order = [];
     if (LISTS.presets && Array.isArray(LISTS.presets)) {
       LISTS.presets.forEach(p => {
@@ -695,6 +724,9 @@
         } else if (p.type === 'lyrics') {
           LYRICS_PRESETS[p.id] = p.items || [];
           lyrics.push(p);
+        } else if (p.type === 'insertion') {
+          INSERT_PRESETS[p.id] = p.items || [];
+          inserts.push(p);
         } else if (p.type === 'order') {
           ORDER_PRESETS[p.id] = p.items || [];
           order.push(p);
@@ -713,6 +745,8 @@
     if (baseSelect) populateSelect(baseSelect, base);
     const lyricsSelect = document.getElementById('lyrics-select');
     if (lyricsSelect) populateSelect(lyricsSelect, lyrics);
+    const insertSelect = document.getElementById('lyrics-insert-select');
+    if (insertSelect) populateSelect(insertSelect, inserts);
     const posDepthSelect = document.getElementById('pos-depth-select');
     if (posDepthSelect) populateDepthSelect(posDepthSelect, order);
     const negDepthSelect = document.getElementById('neg-depth-select');
@@ -790,6 +824,7 @@
       length: { select: 'length-select', input: 'length-input', store: LENGTH_PRESETS },
       divider: { select: 'divider-select', input: 'divider-input', store: DIVIDER_PRESETS },
       lyrics: { select: 'lyrics-select', input: 'lyrics-input', store: LYRICS_PRESETS },
+      insertion: { select: 'lyrics-insert-select', input: 'lyrics-insert-input', store: INSERT_PRESETS },
       order: { select: 'pos-depth-select', input: 'pos-depth-input', store: ORDER_PRESETS }
     };
     const cfg = map[type];
@@ -837,6 +872,7 @@
     get DIVIDER_PRESETS() { return DIVIDER_PRESETS; },
     get BASE_PRESETS() { return BASE_PRESETS; },
     get LYRICS_PRESETS() { return LYRICS_PRESETS; },
+    get INSERT_PRESETS() { return INSERT_PRESETS; },
     get ORDER_PRESETS() { return ORDER_PRESETS; },
     loadLists,
     exportLists,
@@ -1303,6 +1339,8 @@
         presets = lists.BASE_PRESETS;
       } else if (presetsOrType === 'lyrics') {
         presets = lists.LYRICS_PRESETS;
+      } else if (presetsOrType === 'insertion') {
+        presets = lists.INSERT_PRESETS;
       } else {
         presets = {};
       }
@@ -1439,7 +1477,7 @@
    * and updates the UI. Alerts if no base items were entered.
    * Purpose: Orchestrate generation.
    * Usage: On generate click.
-   * 50% Rule: Calls collect, build, display; handles lyrics too.
+   * 50% Rule: Calls collect, build, display; handles lyrics and insertions too.
    */
   function generate() {
     rerollRandomOrders();
@@ -1492,11 +1530,21 @@
       const maxSpaces = spaceSel ? spaceSel.value : 1;
       const removeParens = document.getElementById('lyrics-remove-parens')?.checked;
       const removeBrackets = document.getElementById('lyrics-remove-brackets')?.checked;
+      // Insertions: list of bracketed terms, word interval, and stack size
+      const insertInput = document.getElementById('lyrics-insert-input');
+      const insertItems = insertInput ? utils.parseInput(insertInput.value) : [];
+      const intervalSel = document.getElementById('lyrics-insert-interval');
+      const interval = intervalSel ? parseInt(intervalSel.value, 10) : 0;
+      const stackSel = document.getElementById('lyrics-insert-stack');
+      const stack = stackSel ? parseInt(stackSel.value, 10) : 1;
       const processed = utils.processLyrics(
         lyricsInput.value,
         maxSpaces,
         removeParens,
-        removeBrackets
+        removeBrackets,
+        insertItems,
+        interval,
+        stack
       );
       document.getElementById('lyrics-output').textContent = processed;
     } else {
@@ -2639,6 +2687,9 @@
       document.getElementById('lyrics-input'),
       'lyrics'
     );
+    const insSel = document.getElementById('lyrics-insert-select');
+    const insInp = document.getElementById('lyrics-insert-input');
+    if (insSel && insInp) applyPreset(insSel, insInp, 'insertion');
   }
 
   /** 
@@ -2735,6 +2786,7 @@
     setupPresetListener('divider-select', 'divider-input', 'divider');
     setupPresetListener('base-select', 'base-input', 'base');
     setupPresetListener('lyrics-select', 'lyrics-input', 'lyrics');
+    setupPresetListener('lyrics-insert-select', 'lyrics-insert-input', 'insertion');
     populateOrderOptions(document.getElementById('base-order-select'));
     populateOrderOptions(document.getElementById('pos-order-select'));
     populateOrderOptions(document.getElementById('neg-order-select'));
@@ -2825,6 +2877,8 @@
     if (divSave) divSave.addEventListener('click', () => lists.saveList('divider'));
     const lyricsSave = document.getElementById('lyrics-save');
     if (lyricsSave) lyricsSave.addEventListener('click', () => lists.saveList('lyrics'));
+    const insertSave = document.getElementById('lyrics-insert-save');
+    if (insertSave) insertSave.addEventListener('click', () => lists.saveList('insertion'));
     if (typeof window !== 'undefined') {
       window.addEventListener('beforeunload', () => storage.persist());
     }

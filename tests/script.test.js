@@ -517,6 +517,19 @@ describe('Lyrics processing', () => {
     const out = processLyrics(input, 1, false, true);
     expect(out).toBe('alpha gamma');
   });
+
+  test('processLyrics inserts terms at intervals', () => {
+    const out = processLyrics('a b c d', 1, false, false, ['x'], 2, 1);
+    expect(out).toBe('a b [x] c d');
+  });
+
+  test('processLyrics stacks multiple insertions', () => {
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0);
+    const out = processLyrics('a b c d', 1, false, false, ['x','y'], 2, 2);
+    Math.random = orig;
+    expect(out).toBe('a b [y x] c d');
+  });
 });
 
 describe('UI interactions', () => {
@@ -1540,6 +1553,21 @@ describe('List persistence', () => {
     const preset = data.presets.find(p => p.id === 'ly1' && p.type === 'lyrics');
     expect(preset.items).toEqual(['line1\nline2']);
     const opt = document.querySelector('#lyrics-select option[value="ly1"]');
+    expect(opt).not.toBeNull();
+  });
+
+  test('saveList works for insertions', () => {
+    document.body.innerHTML = `
+      <select id="lyrics-insert-select"></select>
+      <textarea id="lyrics-insert-input">a,b</textarea>
+    `;
+    importLists({ presets: [] });
+    global.prompt = jest.fn().mockReturnValue('ins1');
+    saveList('insertion');
+    const data = JSON.parse(exportLists());
+    const preset = data.presets.find(p => p.id === 'ins1' && p.type === 'insertion');
+    expect(preset.items).toEqual(['a', 'b']);
+    const opt = document.querySelector('#lyrics-insert-select option[value="ins1"]');
     expect(opt).not.toBeNull();
   });
 

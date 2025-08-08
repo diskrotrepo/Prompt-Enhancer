@@ -38,6 +38,13 @@ added so these watchers remain synchronized.
 negative sections. Random depth calculations therefore consider all preceding
 modifiers when multiple stacks are active.
 
+### Lyrics Insertions
+
+Lyrics processing includes an optional *Insertions* list. Terms from this list
+are injected at word intervals and can stack multiple items inside brackets.
+When adding new controls to this subsystem, ensure related selectors are
+included in presets and state persistence.
+
 ## Testing
 
 Run the full suite with `npm test` whenever you modify code. Expand coverage whenever a bug is fixed or a new feature is added.
