@@ -79,6 +79,12 @@ describe('Utility functions', () => {
     expect(parseInput('a\n\nb', true)).toEqual(['a\n\n', 'b. ']);
   });
 
+  // Ensures delimiter periods inside parentheses keep closing brackets attached
+  test('parseInput keeps closing brackets with prior sentence', () => {
+    const input = 'First (one.) Second.';
+    expect(parseInput(input, true)).toEqual(['First (one.) ', 'Second.']);
+  });
+
   test('parseDividerInput splits by line', () => {
     const raw = 'one\ntwo';
     expect(parseDividerInput(raw)).toEqual(['one', 'two']);
@@ -434,6 +440,28 @@ describe('Prompt building', () => {
     const expectedNeg = out.positive.replace(/\bp /g, 'n p ');
     expect(out.negative).toBe(expectedNeg);
   });
+
+  // Complex multi-stack scenario combining Unicode and nested punctuation
+  test('buildVersions handles unicode and parentheses in multi-stack prompts', () => {
+    const items = parseInput('First (one.) Second.', true);
+    const out = buildVersions(
+      items,
+      ['מינוס'],
+      [['פלוס'], ['加']],
+      50,
+      true,
+      [],
+      true,
+      2,
+      1,
+      [[1], [2]],
+      [3]
+    );
+    expect(out).toEqual({
+      positive: 'First פלוס (one.) 加, 加 Second פלוס.',
+      negative: 'First פלוס (one.) מינוס 加, 加 Second פלוס מינוס.'
+    });
+  });
 });
 
 describe('Lyrics processing', () => {
@@ -453,6 +481,13 @@ describe('Lyrics processing', () => {
     const input = 'a [b] c {d} <e>';
     const out = processLyrics(input, 1);
     expect(out).toBe('a [b] c {d} <e>');
+  });
+
+  // Unicode characters like Hebrew and Chinese should survive normalization
+  test('processLyrics preserves non-English letters', () => {
+    const input = 'שלום 你好 world';
+    const out = processLyrics(input, 1);
+    expect(out).toBe('שלום 你好 world');
   });
 
   test('processLyrics inserts random spaces up to max', () => {
