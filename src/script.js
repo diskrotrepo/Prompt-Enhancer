@@ -1030,7 +1030,8 @@
 // Section Purpose: Persist data to localStorage.
 // Combines error handling and fallbacks to apply 50% Rule for robust storage.
 // Structural Overview: Uses KEY for storage; handles JSON.
-// Section Summary: Manages persistence for lists and state.
+// Section Summary: Manages persistence for lists and state, with reset
+// falling back to built-in defaults.
 
   const KEY = 'promptEnhancerData';
 
@@ -1137,11 +1138,11 @@
     }
   }
 
-  /** 
+  /**
    * Clear localStorage and reload defaults.
    * Purpose: Reset data.
    * Usage: On reset button.
-   * 50% Rule: Remove and import default.
+   * 50% Rule: Remove and import default or fallback lists.
    */
   function resetData() {
     if (typeof localStorage !== 'undefined') {
@@ -1153,6 +1154,9 @@
     }
     if (typeof DEFAULT_DATA !== 'undefined') {
       importData(DEFAULT_DATA);
+    } else if (typeof DEFAULT_LIST !== 'undefined') {
+      // Fallback when no full state is provided
+      lists.importLists(DEFAULT_LIST);
     }
   }
 
@@ -1162,7 +1166,8 @@
 // Section Purpose: Handle user interface interactions and event setups.
 // Layers multiple setup functions and event listeners for comprehensive UI control.
 // Structural Overview: Many setup functions for buttons, toggles, etc.
-// Section Summary: Manages all DOM interactions and event binding.
+// Section Summary: Manages all DOM interactions and event binding, ensuring
+// dropdowns are populated on startup.
 
   /** 
    * Infer the section prefix from a control id.
@@ -2792,14 +2797,15 @@
     }
   }
 
-  /** 
+  /**
    * Startup routine called once DOM is ready.
-   * Purpose: Initialize everything.
+   * Purpose: Initialize everything and load preset dropdowns.
    * Usage: On load.
    * 50% Rule: Calls all setups.
    */
   function initializeUI() {
     storage.loadPersisted();
+    loadLists(); // Populate selects on first load
     applyCurrentPresets();
 
     setupPresetListener('neg-select', 'neg-input', 'negative');
