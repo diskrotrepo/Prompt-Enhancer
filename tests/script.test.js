@@ -530,6 +530,14 @@ describe('Lyrics processing', () => {
     Math.random = orig;
     expect(out).toBe('a b [y x] c d');
   });
+
+  test('processLyrics randomizes insertion positions around mean', () => {
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0);
+    const out = processLyrics('a b c d e f', 1, false, false, ['x'], 2, 1, true);
+    Math.random = orig;
+    expect(out).toBe('a b [x] c [x] d [x] e f');
+  });
 });
 
 describe('UI interactions', () => {

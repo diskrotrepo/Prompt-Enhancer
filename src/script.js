@@ -519,10 +519,11 @@
    * and random spacing up to `maxSpaces` is introduced between words. Unicode
    * letters from any language are preserved. Optional insertions wrapped in
    * brackets can be injected every `interval` words, stacking multiple items
-   * per insertion.
+   * per insertion. When `randomize` is true the interval becomes the average
+   * spacing and injection points are chosen uniformly across the lyrics.
    * Purpose: Process lyrics for use in prompts, adding randomness and optional
-   * bracketed insertions.
-   * Usage Example: processLyrics("hello world", 2, false, false, ['x'], 2, 1)
+   * bracketed insertions with optional random placement.
+   * Usage Example: processLyrics("hello world", 2, false, false, ['x'], 2, 1, true)
    *   may yield "hello [x] world".
    * 50% Rule: Regex cleaning, token insertion, and random spacing; comments,
    * example, and summary reinforce intent.
@@ -533,6 +534,7 @@
    * @param {string[]} [insertions=[]] - Terms to inject in brackets.
    * @param {number} [interval=0] - Insert every N words.
    * @param {number} [stackSize=1] - Number of terms per insertion.
+   * @param {boolean} [randomize=false] - Treat interval as mean and randomize positions.
    * @returns {string} - Processed lyrics.
    */
   function processLyrics(
@@ -542,7 +544,8 @@
     removeBrackets = false,
     insertions = [],
     interval = 0,
-    stackSize = 1
+    stackSize = 1,
+    randomize = false
   ) {
     if (!text) return '';
     const limit = parseInt(maxSpaces, 10);
@@ -560,13 +563,29 @@
     cleaned = cleaned.replace(/\s+/g, ' ').trim();
     const words = cleaned.split(' ');
     const tokens = [];
+    let positions = [];
+    if (randomize && insertions.length && interval > 0) {
+      const count = Math.floor(words.length / interval);
+      const slots = words.length - 1;
+      const idxs = Array.from({ length: slots }, (_, i) => i + 1);
+      positions = shuffle(idxs).slice(0, count).sort((a, b) => a - b);
+    }
+    let p = 0;
     words.forEach((w, i) => {
       tokens.push(w);
-      const atInterval = insertions.length && interval > 0 && (i + 1) % interval === 0;
       const notEnd = i < words.length - 1;
-      if (atInterval && notEnd) {
+      let insert = false;
+      if (insertions.length && interval > 0 && notEnd) {
+        if (randomize) {
+          insert = positions[p] === i + 1;
+        } else {
+          insert = (i + 1) % interval === 0;
+        }
+      }
+      if (insert) {
         const picks = shuffle(insertions.slice()).slice(0, stackSize);
         tokens.push(`[${picks.join(' ')}]`);
+        if (randomize) p++;
       }
     });
     return tokens
@@ -1530,13 +1549,15 @@
       const maxSpaces = spaceSel ? spaceSel.value : 1;
       const removeParens = document.getElementById('lyrics-remove-parens')?.checked;
       const removeBrackets = document.getElementById('lyrics-remove-brackets')?.checked;
-      // Insertions: list of bracketed terms, word interval, and stack size
+      // Insertions: list of bracketed terms, word interval, stack size, and optional randomization
       const insertInput = document.getElementById('lyrics-insert-input');
       const insertItems = insertInput ? utils.parseInput(insertInput.value) : [];
       const intervalSel = document.getElementById('lyrics-insert-interval');
       const interval = intervalSel ? parseInt(intervalSel.value, 10) : 0;
       const stackSel = document.getElementById('lyrics-insert-stack');
       const stack = stackSel ? parseInt(stackSel.value, 10) : 1;
+      const randCb = document.getElementById('lyrics-insert-random');
+      const randomize = randCb ? randCb.checked : false;
       const processed = utils.processLyrics(
         lyricsInput.value,
         maxSpaces,
@@ -1544,7 +1565,8 @@
         removeBrackets,
         insertItems,
         interval,
-        stack
+        stack,
+        randomize
       );
       document.getElementById('lyrics-output').textContent = processed;
     } else {

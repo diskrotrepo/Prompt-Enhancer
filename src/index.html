@@ -239,20 +239,23 @@
     <!-- Lyrics processing input -->
       <div class="input-group section-lyrics">
         <div class="label-row">
-          <label for="lyrics-input">Lyrics</label>
-          <input type="checkbox" id="lyrics-remove-parens" hidden>
-          <button type="button" class="toggle-button" data-target="lyrics-remove-parens" data-on="Parens Removed" data-off="Parens Kept">Parens Kept</button>
-          <input type="checkbox" id="lyrics-remove-brackets" hidden>
-          <button type="button" class="toggle-button" data-target="lyrics-remove-brackets" data-on="Brackets Removed" data-off="Brackets Kept">Brackets Kept</button>
-          <div class="button-col">
-            <button type="button" id="lyrics-save" class="save-button icon-button" title="Save">&#128190;</button>
-            <button type="button" class="copy-button icon-button" data-target="lyrics-input" title="Copy">&#128203;</button>
-            <input type="checkbox" id="lyrics-hide" data-targets="lyrics-input,lyrics-space,lyrics-remove-parens,lyrics-remove-brackets" hidden>
-            <button type="button" class="toggle-button icon-button hide-button" data-target="lyrics-hide" data-on="☰" data-off="✖">☰</button>
-          </div>
+          <label>Lyrics</label>
         </div>
         <div id="lyrics-container">
           <div class="stack-block section-lyrics" id="lyrics-block">
+            <div class="label-row">
+              <label for="lyrics-input">Lyrics</label>
+              <input type="checkbox" id="lyrics-remove-parens" hidden>
+              <button type="button" class="toggle-button" data-target="lyrics-remove-parens" data-on="Parens Removed" data-off="Parens Kept">Parens Kept</button>
+              <input type="checkbox" id="lyrics-remove-brackets" hidden>
+              <button type="button" class="toggle-button" data-target="lyrics-remove-brackets" data-on="Brackets Removed" data-off="Brackets Kept">Brackets Kept</button>
+              <div class="button-col">
+                <button type="button" id="lyrics-save" class="save-button icon-button" title="Save">&#128190;</button>
+                <button type="button" class="copy-button icon-button" data-target="lyrics-input" title="Copy">&#128203;</button>
+                <input type="checkbox" id="lyrics-hide" data-targets="lyrics-input,lyrics-space,lyrics-remove-parens,lyrics-remove-brackets" hidden>
+                <button type="button" class="toggle-button icon-button hide-button" data-target="lyrics-hide" data-on="☰" data-off="✖">☰</button>
+              </div>
+            </div>
             <select id="lyrics-select"></select>
             <div class="input-row">
               <textarea id="lyrics-input" rows="4" placeholder="Enter lyrics"></textarea>
@@ -279,7 +282,7 @@
               <div class="button-col">
                 <button type="button" id="lyrics-insert-save" class="save-button icon-button" title="Save">&#128190;</button>
                 <button type="button" class="copy-button icon-button" data-target="lyrics-insert-input" title="Copy">&#128203;</button>
-                <input type="checkbox" id="lyrics-insert-hide" data-targets="lyrics-insert-input,lyrics-insert-interval,lyrics-insert-stack" hidden>
+                <input type="checkbox" id="lyrics-insert-hide" data-targets="lyrics-insert-input,lyrics-insert-interval,lyrics-insert-stack,lyrics-insert-random" hidden>
                 <button type="button" class="toggle-button icon-button hide-button" data-target="lyrics-insert-hide" data-on="☰" data-off="✖">☰</button>
               </div>
             </div>
@@ -289,6 +292,8 @@
             </div>
             <div class="label-row">
               <label for="lyrics-insert-interval">Insert Every</label>
+              <input type="checkbox" id="lyrics-insert-random" hidden>
+              <button type="button" class="toggle-button" data-target="lyrics-insert-random" data-on="Randomized" data-off="Fixed">Fixed</button>
             </div>
             <select id="lyrics-insert-interval">
               <option value="0" selected>0</option>

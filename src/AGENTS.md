@@ -42,8 +42,10 @@ modifiers when multiple stacks are active.
 
 Lyrics processing includes an optional *Insertions* list. Terms from this list
 are injected at word intervals and can stack multiple items inside brackets.
-When adding new controls to this subsystem, ensure related selectors are
-included in presets and state persistence.
+Intervals may be randomized so the chosen frequency acts as a mean with
+positions selected uniformly across the lyrics. When adding new controls to
+this subsystem, ensure related selectors are included in presets and state
+persistence.
 
 ## Testing
 
