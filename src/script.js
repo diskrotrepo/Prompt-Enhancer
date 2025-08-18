@@ -514,17 +514,19 @@
   }
 
   /**
-   * Normalize a block of lyrics text.
-   * All punctuation is stripped, optionally removing parentheses or brackets,
-   * and random spacing up to `maxSpaces` is introduced between words. Unicode
-   * letters from any language are preserved. Optional insertions wrapped in
+  * Normalize a block of lyrics text.
+  * Most punctuation is stripped while internal apostrophes remain so
+  * contractions keep their pronunciation. Parentheses or brackets can be
+  * optionally removed, and random spacing up to `maxSpaces` is introduced
+  * between words. Unicode letters from any language are preserved. Optional
+  * insertions wrapped in
    * brackets can be injected every `interval` words, stacking multiple items
    * per insertion. When `randomize` is true the interval becomes the average
    * spacing and injection points are chosen uniformly across the lyrics.
    * Purpose: Process lyrics for use in prompts, adding randomness and optional
    * bracketed insertions with optional random placement.
-   * Usage Example: processLyrics("hello world", 2, false, false, ['x'], 2, 1, true)
-   *   may yield "hello [x] world".
+  * Usage Example: processLyrics("hello world", 2, false, false, ['x'], 2, 1, true)
+  *   may yield "hello [x] world". processLyrics("We'd", 1) returns "we'd".
    * 50% Rule: Regex cleaning, token insertion, and random spacing; comments,
    * example, and summary reinforce intent.
    * @param {string} text - Input lyrics.
@@ -554,7 +556,9 @@
     if (removeParens) cleaned = cleaned.replace(/\([^()]*\)/g, ' ');
     if (removeBrackets) cleaned = cleaned.replace(/\[[^\]]*\]|\{[^}]*\}|<[^>]*>/g, ' ');
     // Use Unicode property escapes so non-English letters remain intact
+    // Allow straight (') and curly (\u2019) apostrophes to preserve contractions
     let pattern = '[^\\p{L}\\p{N}\\s';
+    pattern += "'\u2019";
     if (!removeParens) pattern += '\\(\\)';
     if (!removeBrackets) pattern += '\\[\\]\\{\\}<>';
     pattern += ']';
