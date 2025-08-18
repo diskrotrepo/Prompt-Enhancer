@@ -490,6 +490,12 @@ describe('Lyrics processing', () => {
     expect(out).toBe('שלום 你好 world');
   });
 
+  test('processLyrics retains apostrophes in contractions', () => {
+    const input = "We'd we're we’re can't";
+    const out = processLyrics(input, 1);
+    expect(out).toBe("we'd we're we’re can't");
+  });
+
   test('processLyrics inserts random spaces up to max', () => {
     const orig = Math.random;
     Math.random = jest.fn().mockReturnValue(0.9);
@@ -706,11 +712,8 @@ describe('UI interactions', () => {
       <textarea id="base-order-input"></textarea>
       <textarea id="base-input">a</textarea>
     `;
-    const orig = utils.shuffle;
-    utils.shuffle = jest.fn(arr => {
-      arr.reverse();
-      return arr;
-    });
+    const origRand = Math.random;
+    Math.random = jest.fn().mockReturnValue(0);
     setupOrderControl(
       'base-order-select',
       'base-order-input',
@@ -723,8 +726,8 @@ describe('UI interactions', () => {
     const baseInput = document.getElementById('base-input');
     baseInput.value = 'a,b,c';
     baseInput.dispatchEvent(new Event('input'));
-    utils.shuffle = orig;
-    expect(document.getElementById('base-order-input').value).not.toBe('0, 1, 2');
+    Math.random = origRand;
+    expect(document.getElementById('base-order-input').value).toBe('1, 2, 0');
   });
 
   test('append depth updates when base input changes', () => {
