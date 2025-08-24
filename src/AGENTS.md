@@ -50,8 +50,9 @@ persistence.
 ### Help Mode
 
 Help Mode uses `data-help` attributes or the `helpMap` in `script.js` to show
-tooltips when users click elements. When new buttons or sections are added,
-provide a concise description so the help overlay stays informative.
+tooltips when users click elements. Lists and input boxes also need coverage;
+avoid vague text. When new buttons or sections are added, provide concise,
+specific descriptions so the help overlay stays informative.
 
 ## Testing
 
