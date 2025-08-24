@@ -47,6 +47,12 @@ positions selected uniformly across the lyrics. When adding new controls to
 this subsystem, ensure related selectors are included in presets and state
 persistence.
 
+### Help Mode
+
+Help Mode uses `data-help` attributes or the `helpMap` in `script.js` to show
+tooltips when users click elements. When new buttons or sections are added,
+provide a concise description so the help overlay stays informative.
+
 ## Testing
 
 Run the full suite with `npm test` whenever you modify code. Expand coverage whenever a bug is fixed or a new feature is added.

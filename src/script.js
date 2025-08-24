@@ -31,6 +31,7 @@
  *    - Event handlers and setup (setupPresetListener, initializeUI)
  *    - Reusable id iteration (forEachId)
  *    - Watcher utilities (depthWatchIds)
+ *    - Help mode toggle and tooltip handling (setupHelpMode)
  * 6. Initialization and Exports
  *    - IIFE setup and module exports
  */
@@ -1171,7 +1172,7 @@
 // Layers multiple setup functions and event listeners for comprehensive UI control.
 // Structural Overview: Many setup functions for buttons, toggles, etc.
 // Section Summary: Manages all DOM interactions and event binding, ensuring
-// dropdowns are populated on startup.
+// dropdowns are populated on startup and help tooltips describe controls.
 
   /** 
    * Infer the section prefix from a control id.
@@ -2802,6 +2803,118 @@
   }
 
   /**
+   * Enable help mode with clickable tooltips.
+   * Purpose: Explain UI elements via data-help attributes.
+   * Usage: Called in initializeUI.
+   * 50% Rule: Maps help text, intercepts clicks, displays tooltip.
+   */
+  function setupHelpMode() {
+    const cb = document.getElementById('help-mode');
+    if (!cb) return; // Guard if toggle is missing
+
+    // Map selectors to descriptive text
+    const helpMap = {
+      '#load-data': 'Load prompt lists from a JSON file.',
+      '#save-data': 'Save current lists as JSON.',
+      '#reset-data': 'Reset lists to defaults.',
+      '[data-target="all-hide"]': 'Show or hide every section.',
+      '[data-target="all-random"]': 'Toggle global randomization.',
+      '[data-target="advanced-mode"]': 'Switch between simple and advanced options.',
+      '[data-target="help-mode"]': 'Enable help mode; clicking reveals tooltips.',
+      '#generate': 'Build prompts using current settings.',
+      '.section-data': 'Manage stored prompt lists.',
+      '.section-actions': 'Global toggles including help mode.',
+      '.section-base': 'Base prompts anchoring the concept.',
+      '.section-positive': 'Positive modifiers or outputs.',
+      '.section-negative': 'Negative modifiers or outputs.',
+      '.section-divider': 'Connector phrases placed between terms.',
+      '.section-length': 'Character limit controls.',
+      '.section-lyrics': 'Lyrics entry and processing.'
+    };
+    // Apply help text to matching elements
+    Object.entries(helpMap).forEach(([sel, text]) => {
+      document.querySelectorAll(sel).forEach(el => {
+        if (!el.dataset.help) el.dataset.help = text;
+      });
+    });
+    // Specific help for output containers
+    const posOut = document.getElementById('positive-output');
+    if (posOut) posOut.closest('.input-group').dataset.help = 'Resulting positive prompt.';
+    const negOut = document.getElementById('negative-output');
+    if (negOut) negOut.closest('.input-group').dataset.help = 'Resulting negative prompt.';
+    const lyrOut = document.getElementById('lyrics-output');
+    if (lyrOut) lyrOut.closest('.input-group').dataset.help = 'Processed lyrics with randomized spacing.';
+    // Generic helpers for common button classes
+    document.querySelectorAll('.copy-button').forEach(el => {
+      if (!el.dataset.help) el.dataset.help = 'Copy text from target field.';
+    });
+    document.querySelectorAll('.save-button').forEach(el => {
+      if (!el.dataset.help) el.dataset.help = 'Save current list to presets.';
+    });
+    document.querySelectorAll('.random-button').forEach(el => {
+      if (!el.dataset.help) el.dataset.help = 'Randomize order or values.';
+    });
+    document.querySelectorAll('.hide-button').forEach(el => {
+      if (!el.dataset.help) el.dataset.help = 'Hide or show associated inputs.';
+    });
+    document.querySelectorAll('.toggle-button').forEach(el => {
+      if (!el.dataset.help) el.dataset.help = 'Toggle related setting.';
+    });
+
+    let tooltip; // Reused tooltip element
+
+    // Display tooltip below clicked element
+    const show = el => {
+      const text = el.dataset.help || el.title;
+      if (!text) return;
+      if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.className = 'help-tooltip';
+        document.body.appendChild(tooltip);
+      }
+      tooltip.textContent = text;
+      const rect = el.getBoundingClientRect();
+      tooltip.style.left = `${rect.left + window.scrollX}px`;
+      tooltip.style.top = `${rect.bottom + window.scrollY + 4}px`;
+      tooltip.style.display = 'block';
+    };
+
+    // Hide tooltip helper
+    const hide = () => {
+      if (tooltip) tooltip.style.display = 'none';
+    };
+
+    // Intercept clicks when help mode is active
+    document.addEventListener(
+      'click',
+      e => {
+        if (!cb.checked) return;
+        const el = e.target.closest('[data-help], [title]');
+        if (el) {
+          // Allow help-mode toggle to disable itself while still showing help
+          if (el.dataset && el.dataset.target === 'help-mode') {
+            show(el);
+            return;
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          show(el);
+        } else {
+          hide();
+        }
+      },
+      true
+    );
+
+    // Clear tooltip when disabling help mode
+    cb.addEventListener('change', () => {
+      if (!cb.checked) hide();
+    });
+    // Hide tooltip on scroll for clarity
+    window.addEventListener('scroll', hide);
+  }
+
+  /**
    * Startup routine called once DOM is ready.
    * Purpose: Initialize everything and load preset dropdowns.
    * Usage: On load.
@@ -2896,6 +3009,7 @@
 
     setupCopyButtons();
     setupDataButtons();
+    setupHelpMode();
 
     const baseSave = document.getElementById('base-save');
     if (baseSave) baseSave.addEventListener('click', () => lists.saveList('base'));
@@ -2930,6 +3044,7 @@
     applyAllHideState,
     setupCopyButtons,
     setupDataButtons,
+    setupHelpMode,
     setupOrderControl,
     setupDepthControl,
     setupAdvancedToggle,
