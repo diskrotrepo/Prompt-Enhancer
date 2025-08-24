@@ -587,3 +587,16 @@ button {
 .section-data {
   background: linear-gradient(45deg, rgba(80, 80, 80, 0.3), rgba(40, 40, 40, 0.3));
 }
+
+/* Help mode tooltip styling */
+.help-tooltip {
+  position: absolute;
+  background: #000;
+  color: #fff;
+  border: 1px solid #444;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  max-width: 200px;
+  pointer-events: none;
+  z-index: 2000;
+}

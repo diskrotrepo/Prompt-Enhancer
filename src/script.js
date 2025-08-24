@@ -31,6 +31,7 @@
  *    - Event handlers and setup (setupPresetListener, initializeUI)
  *    - Reusable id iteration (forEachId)
  *    - Watcher utilities (depthWatchIds)
+ *    - Help mode toggle and tooltip handling (setupHelpMode)
  * 6. Initialization and Exports
  *    - IIFE setup and module exports
  */
@@ -1171,7 +1172,7 @@
 // Layers multiple setup functions and event listeners for comprehensive UI control.
 // Structural Overview: Many setup functions for buttons, toggles, etc.
 // Section Summary: Manages all DOM interactions and event binding, ensuring
-// dropdowns are populated on startup.
+// dropdowns are populated on startup and help tooltips describe controls.
 
   /** 
    * Infer the section prefix from a control id.
@@ -2802,6 +2803,175 @@
   }
 
   /**
+   * Enable help mode with clickable tooltips.
+   * Purpose: Explain UI elements via data-help attributes.
+   * Usage: Called in initializeUI.
+   * 50% Rule: Maps help text, applies it to new and existing controls, then intercepts clicks and displays a tooltip.
+   */
+  function setupHelpMode() {
+    const cb = document.getElementById('help-mode');
+    if (!cb) return; // Guard if toggle is missing
+
+    // Map selectors to descriptive text
+    const helpMap = {
+      '#load-data': 'Load prompt lists from a JSON file.',
+      '#save-data': 'Save current lists as JSON.',
+      '#reset-data': 'Reset lists to defaults.',
+      '[data-target="all-hide"]': 'Show or hide every section.',
+      '[data-target="all-random"]': 'Toggle global randomization.',
+      '[data-target="advanced-mode"]': 'Switch between simple and advanced options.',
+      '[data-target="help-mode"]': 'Enable help mode; clicking reveals tooltips.',
+      '#generate': 'Build prompts using current settings.',
+      '.section-data': 'Manage stored prompt lists.',
+      '.section-actions': 'Global toggles including help mode.',
+      '.section-base': 'Base prompts anchoring the concept.',
+      '.section-positive': 'Positive modifiers or outputs.',
+      '.section-negative': 'Negative modifiers or outputs.',
+      '.section-divider': 'Connector phrases placed between terms.',
+      '.section-length': 'Character limit controls.',
+      '.section-lyrics': 'Lyrics entry and processing.',
+      // Toggle buttons
+      '[data-target="pos-stack"]': 'Combine multiple positive lists.',
+      '[data-target="pos-all-hide"]': 'Show or hide all positive stacks.',
+      '[data-target="pos-order-random"]': 'Randomize order of positive modifiers.',
+      '[data-target="pos-advanced"]': 'Reveal advanced positive options.',
+      '[data-target="neg-include-pos"]': 'Apply negatives after positive prompt.',
+      '[data-target="neg-stack"]': 'Combine multiple negative lists.',
+      '[data-target="neg-all-hide"]': 'Show or hide all negative stacks.',
+      '[data-target="neg-order-random"]': 'Randomize order of negative modifiers.',
+      '[data-target="neg-advanced"]': 'Reveal advanced negative options.',
+      '[data-target="lyrics-remove-parens"]': 'Strip parentheses from lyrics before processing.',
+      '[data-target="lyrics-remove-brackets"]': 'Strip brackets from lyrics before processing.',
+      '[data-target="lyrics-insert-random"]': 'Randomize insertion intervals for lyric terms.',
+      // Inputs and lists
+      '#base-select': 'Choose base prompt preset.',
+      '#base-input': 'Comma or newline separated base prompts.',
+      '#base-order-select': 'Preset ordering for base prompts.',
+      '#base-order-input': 'Manual order for base prompts.',
+      'select[id^="pos-select"]': 'Choose positive list preset.',
+      'textarea[id^="pos-input"]': 'Positive modifiers separated by commas or newlines.',
+      'select[id^="pos-order-select"]': 'Preset ordering for positives.',
+      'textarea[id^="pos-order-input"]': 'Manual order for positives.',
+      'select[id^="pos-depth-select"]': 'Depth position options for positives.',
+      'textarea[id^="pos-depth-input"]': 'Manual depth indices for positives.',
+      '#pos-stack-size': 'Number of positive stacks.',
+      'select[id^="neg-select"]': 'Choose negative list preset.',
+      'textarea[id^="neg-input"]': 'Negative modifiers separated by commas or newlines.',
+      'select[id^="neg-order-select"]': 'Preset ordering for negatives.',
+      'textarea[id^="neg-order-input"]': 'Manual order for negatives.',
+      'select[id^="neg-depth-select"]': 'Depth position options for negatives.',
+      'textarea[id^="neg-depth-input"]': 'Manual depth indices for negatives.',
+      '#neg-stack-size': 'Number of negative stacks.',
+      '#divider-select': 'Choose divider preset.',
+      '#divider-input': 'Divider phrases rotated between terms.',
+      '#divider-order-select': 'Preset ordering for dividers.',
+      '#divider-order-input': 'Manual order for dividers.',
+      '#length-select': 'Preset length limits.',
+      '#length-input': 'Maximum allowed characters.',
+      '#lyrics-select': 'Choose lyrics preset.',
+      '#lyrics-input': 'Lyrics text with optional random spacing.',
+      '#lyrics-space': 'Max spaces inserted between lyric words.',
+      '#lyrics-insert-select': 'Choose insertion terms preset.',
+      '#lyrics-insert-input': 'Terms to inject into lyrics.',
+      '#lyrics-insert-interval': 'Interval for lyric insertions.',
+      '#lyrics-insert-stack': 'Number of terms inserted each time.'
+    };
+
+    // Apply help text to matching elements
+    const applyHelpHints = (root = document) => {
+      Object.entries(helpMap).forEach(([sel, text]) => {
+        root.querySelectorAll(sel).forEach(el => {
+          if (!el.dataset.help) el.dataset.help = text;
+        });
+      });
+    };
+    applyHelpHints();
+
+    // Observe DOM changes so newly added inputs also get help text
+    const observer = new MutationObserver(muts => {
+      muts.forEach(m => {
+        m.addedNodes.forEach(node => {
+          if (node.nodeType === 1) applyHelpHints(node);
+        });
+      });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Specific help for output containers
+    const posOut = document.getElementById('positive-output');
+    if (posOut) posOut.closest('.input-group').dataset.help = 'Resulting positive prompt.';
+    const negOut = document.getElementById('negative-output');
+    if (negOut) negOut.closest('.input-group').dataset.help = 'Resulting negative prompt.';
+    const lyrOut = document.getElementById('lyrics-output');
+    if (lyrOut) lyrOut.closest('.input-group').dataset.help = 'Processed lyrics with randomized spacing.';
+    // Generic helpers for common button classes
+    document.querySelectorAll('.copy-button').forEach(el => {
+      if (!el.dataset.help) el.dataset.help = 'Copy text from target field.';
+    });
+    document.querySelectorAll('.save-button').forEach(el => {
+      if (!el.dataset.help) el.dataset.help = 'Save current list to presets.';
+    });
+    document.querySelectorAll('.random-button').forEach(el => {
+      if (!el.dataset.help) el.dataset.help = 'Randomize order or values.';
+    });
+    document.querySelectorAll('.hide-button').forEach(el => {
+      if (!el.dataset.help) el.dataset.help = 'Hide or show associated inputs.';
+    });
+
+    let tooltip; // Reused tooltip element
+
+    // Display tooltip below clicked element
+    const show = el => {
+      const text = el.dataset.help || el.title;
+      if (!text) return;
+      if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.className = 'help-tooltip';
+        document.body.appendChild(tooltip);
+      }
+      tooltip.textContent = text;
+      const rect = el.getBoundingClientRect();
+      tooltip.style.left = `${rect.left + window.scrollX}px`;
+      tooltip.style.top = `${rect.bottom + window.scrollY + 4}px`;
+      tooltip.style.display = 'block';
+    };
+
+    // Hide tooltip helper
+    const hide = () => {
+      if (tooltip) tooltip.style.display = 'none';
+    };
+
+    // Intercept clicks when help mode is active
+    document.addEventListener(
+      'click',
+      e => {
+        if (!cb.checked) return;
+        const el = e.target.closest('[data-help], [title]');
+        if (el) {
+          // Allow help-mode toggle to disable itself while still showing help
+          if (el.dataset && el.dataset.target === 'help-mode') {
+            show(el);
+            return;
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          show(el);
+        } else {
+          hide();
+        }
+      },
+      true
+    );
+
+    // Clear tooltip when disabling help mode
+    cb.addEventListener('change', () => {
+      if (!cb.checked) hide();
+    });
+    // Hide tooltip on scroll for clarity
+    window.addEventListener('scroll', hide);
+  }
+
+  /**
    * Startup routine called once DOM is ready.
    * Purpose: Initialize everything and load preset dropdowns.
    * Usage: On load.
@@ -2896,6 +3066,7 @@
 
     setupCopyButtons();
     setupDataButtons();
+    setupHelpMode();
 
     const baseSave = document.getElementById('base-save');
     if (baseSave) baseSave.addEventListener('click', () => lists.saveList('base'));
@@ -2930,6 +3101,7 @@
     applyAllHideState,
     setupCopyButtons,
     setupDataButtons,
+    setupHelpMode,
     setupOrderControl,
     setupDepthControl,
     setupAdvancedToggle,
