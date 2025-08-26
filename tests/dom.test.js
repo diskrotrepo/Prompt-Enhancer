@@ -46,4 +46,18 @@ describe('Button layout', () => {
     expect(posHide.dataset.targets).toContain('pos-depth-input');
     expect(negHide.dataset.targets).toContain('neg-depth-input');
   });
+
+  // Layout adaptation: label rows should wrap so buttons never overflow their container
+  test('label-row flex container wraps buttons onto a new line', () => {
+    const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'index.html'), 'utf8');
+    const css = fs.readFileSync(path.join(__dirname, '..', 'src', 'style.css'), 'utf8');
+    const dom = new JSDOM(html, { pretendToBeVisual: true });
+    const { window } = dom;
+    const styleEl = window.document.createElement('style');
+    styleEl.textContent = css;
+    window.document.head.appendChild(styleEl); // load stylesheet so computed style reflects flex-wrap
+    const row = window.document.querySelector('.label-row');
+    const computed = window.getComputedStyle(row);
+    expect(computed.flexWrap).toBe('wrap');
+  });
 });

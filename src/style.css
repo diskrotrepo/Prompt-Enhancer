@@ -379,14 +379,17 @@ button {
 }
 
 /* Checkbox label styling */
+/* Flex container wraps buttons on narrow screens to prevent overflow */
 .label-row {
-    display: flex;
-    align-items: center;
-    margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.25rem;
+  flex-wrap: wrap; /* drop controls to new line instead of overshooting */
 }
 
 .label-row label {
-    margin-right: auto; /* push button stack to the right */
+  margin-right: auto; /* push button stack to the right */
+  /* When wrapping occurs, label stays on top while buttons follow */
 }
 
 
