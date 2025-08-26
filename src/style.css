@@ -385,11 +385,12 @@ button {
   align-items: center;
   margin-bottom: 0.25rem;
   flex-wrap: wrap; /* drop controls to new line instead of overshooting */
+  justify-content: flex-end; /* keep wrapped controls aligned right */
+  gap: 0.25rem; /* uniform spacing for multi-row layouts */
 }
 
 .label-row label {
-  margin-right: auto; /* push button stack to the right */
-  /* When wrapping occurs, label stays on top while buttons follow */
+  flex: 1 0 100%; /* label occupies its own row on top */
 }
 
 

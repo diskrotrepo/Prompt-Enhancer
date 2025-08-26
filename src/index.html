@@ -82,6 +82,10 @@
         <div class="input-group section-positive">
           <div class="label-row">
             <label for="pos-input">Positive Modifier List</label>
+            <!-- Icon column placed right after label so it stays top-right on mobile -->
+            <div class="button-col">
+              <input type="checkbox" id="pos-shuffle" hidden>
+            </div>
             <input type="checkbox" id="pos-stack" hidden>
             <button type="button" class="toggle-button" data-target="pos-stack" data-on="Stack On" data-off="Stack Off">Stack Off</button>
             <input type="checkbox" id="pos-all-hide" hidden>
@@ -90,9 +94,6 @@
             <button type="button" class="toggle-button" data-target="pos-order-random" data-on="Randomized" data-off="Canonical">Canonical</button>
             <input type="checkbox" id="pos-advanced" hidden>
             <button type="button" class="toggle-button" data-target="pos-advanced" data-on="Advanced" data-off="Simple">Simple</button>
-            <div class="button-col">
-              <input type="checkbox" id="pos-shuffle" hidden>
-            </div>
           </div>
           <select id="pos-stack-size" style="display:none">
             <option value="2">2</option>
@@ -142,6 +143,10 @@
         <div class="input-group section-negative">
           <div class="label-row">
             <label for="neg-input">Negative Modifier List</label>
+            <!-- Icon column placed right after label so it stays top-right on mobile -->
+            <div class="button-col">
+              <input type="checkbox" id="neg-shuffle" hidden>
+            </div>
             <input type="checkbox" id="neg-include-pos" hidden>
             <button type="button" class="toggle-button" data-target="neg-include-pos" data-on="Positive Mods Included" data-off="Positive Mods Ignored">Positive Mods Ignored</button>
             <input type="checkbox" id="neg-stack" hidden>
@@ -152,9 +157,6 @@
             <button type="button" class="toggle-button" data-target="neg-order-random" data-on="Randomized" data-off="Canonical">Canonical</button>
             <input type="checkbox" id="neg-advanced" hidden>
             <button type="button" class="toggle-button" data-target="neg-advanced" data-on="Advanced" data-off="Simple">Simple</button>
-            <div class="button-col">
-              <input type="checkbox" id="neg-shuffle" hidden>
-            </div>
           </div>
           <select id="neg-stack-size" style="display:none">
             <option value="2">2</option>

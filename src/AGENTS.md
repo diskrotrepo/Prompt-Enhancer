@@ -54,6 +54,11 @@ tooltips when users click elements. Lists and input boxes also need coverage;
 avoid vague text. When new buttons or sections are added, provide concise,
 specific descriptions so the help overlay stays informative.
 
+Label rows rely on flexbox. Place any `.button-col` directly after the
+`<label>` so icon controls stay anchored at the top-right of their inputs on
+mobile screens. Text buttons should follow the icon column so they wrap
+underneath while staying right aligned.
+
 ## Testing
 
 Run the full suite with `npm test` whenever you modify code. Expand coverage whenever a bug is fixed or a new feature is added.
