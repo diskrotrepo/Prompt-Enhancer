@@ -300,6 +300,12 @@ blockquote p {
         margin-bottom: 0.5rem;
         margin-right: 0;
     }
+    .label-row label {
+        flex-basis: 100%; /* stack label above buttons on narrow screens */
+    }
+    .label-row .button-col {
+        width: 100%; /* ensure button groups span full width */
+    }
 }
 
 /* ===== FORM ELEMENTS ===== */
@@ -385,6 +391,7 @@ button {
   align-items: center;
   margin-bottom: 0.25rem;
   flex-wrap: wrap; /* drop controls to new line instead of overshooting */
+  gap: 0.25rem; /* consistent spacing for wrapped controls */
 }
 
 .label-row label {
@@ -447,10 +454,13 @@ button {
 }
 
 .button-col {
-  display: inline-flex;
+  display: flex;
   flex-direction: row;
   align-items: center;
-  margin-left: 0.25rem;
+  margin-left: auto; /* keep button groups flush right */
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.25rem; /* space between buttons */
 }
 .button-col .icon-button {
   width: 1.8rem;
@@ -459,11 +469,6 @@ button {
   justify-content: center;
   align-items: center;
   padding: 0;
-  margin-left: 0;
-  margin-right: 0.25rem;
-}
-.button-col .icon-button:last-child {
-  margin-right: 0;
 }
 
 .toggle-button.icon-button {
