@@ -281,31 +281,44 @@ blockquote p {
     }
 }
 
-/* Mobile breakpoint */
+/* Mobile breakpoint
+ * - Trim padding for compact layout
+ * - Center headers and section titles
+ * - Span button groups full width on wrap
+ */
 @media (max-width: 480px) {
-    .main-content {
-        padding: 10px;
-    }
+  .main-content {
+    padding: 10px;
+  }
 
-    .content {
-        padding: 10px;
-    }
+  .content {
+    padding: 10px;
+  }
 
-    .input-group {
-        margin-bottom: 0.75rem;
-    }
+  .input-group {
+    margin-bottom: 0.75rem;
+  }
 
-    button {
-        width: auto; /* keep buttons at their natural size */
-        margin-bottom: 0.5rem;
-        margin-right: 0;
-    }
-    .label-row label {
-        flex-basis: 100%; /* stack label above buttons on narrow screens */
-    }
-    .label-row .button-col {
-        width: 100%; /* ensure button groups span full width */
-    }
+  button {
+    width: auto; /* keep buttons at their natural size */
+    margin-bottom: 0.5rem;
+    margin-right: 0;
+  }
+
+  h1,
+  .output h2 {
+    text-align: center; /* center main heading and output titles */
+  }
+
+  .label-row label {
+    flex-basis: 100%; /* stack label above buttons on narrow screens */
+    margin: 0 auto; /* center label when it spans full width */
+    text-align: center; /* ensure label text is centered */
+  }
+
+  .label-row .button-col {
+    width: 100%; /* ensure button groups span full width */
+  }
 }
 
 /* ===== FORM ELEMENTS ===== */
