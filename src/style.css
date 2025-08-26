@@ -284,7 +284,7 @@ blockquote p {
 /* Mobile breakpoint
  * - Trim padding for compact layout
  * - Center headers and section titles
- * - Span button groups full width on wrap
+ * - Keep icon button groups distinct from text controls
  */
 @media (max-width: 480px) {
   .main-content {
@@ -301,7 +301,7 @@ blockquote p {
 
   button {
     width: auto; /* keep buttons at their natural size */
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem; /* tighten vertical spacing */
     margin-right: 0;
   }
 
@@ -316,9 +316,7 @@ blockquote p {
     text-align: center; /* ensure label text is centered */
   }
 
-  .label-row .button-col {
-    width: 100%; /* ensure button groups span full width */
-  }
+  /* allow button stacks to size naturally so icon groups stay intact */
 }
 
 /* ===== FORM ELEMENTS ===== */
@@ -404,7 +402,6 @@ button {
   align-items: center;
   margin-bottom: 0.25rem;
   flex-wrap: wrap; /* drop controls to new line instead of overshooting */
-  gap: 0.25rem; /* consistent spacing for wrapped controls */
 }
 
 .label-row label {
@@ -472,8 +469,7 @@ button {
   align-items: center;
   margin-left: auto; /* keep button groups flush right */
   flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.25rem; /* space between buttons */
+  justify-content: flex-start; /* text buttons lead, icons float right */
 }
 .button-col .icon-button {
   width: 1.8rem;
@@ -482,6 +478,10 @@ button {
   justify-content: center;
   align-items: center;
   padding: 0;
+}
+/* first icon pushes remaining icons as a unit to the edge */
+.button-col .icon-button:first-of-type {
+  margin-left: auto;
 }
 
 .toggle-button.icon-button {
