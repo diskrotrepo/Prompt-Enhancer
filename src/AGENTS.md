@@ -26,6 +26,12 @@ Directives for LLMs:
 
 Indentation is two spaces with no trailing whitespace.
 
+### Button Grouping
+
+Text-based toggles that appear alongside icon buttons should sit in a
+separate `.text-button-group` container. This keeps icons clustered for
+the right edge on mobile while text buttons center on their own line.
+
 ### Depth Control Note
 
 Depth inputs rely on DOM watchers to rebuild values when related fields change.

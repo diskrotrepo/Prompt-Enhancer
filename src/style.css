@@ -473,6 +473,8 @@ button {
   flex: 1;
 }
 
+/* Shared layout for button clusters.
+ * Text groups sit before icons while icons still hug the edge. */
 .button-col {
   display: flex;
   flex-direction: row;
@@ -480,6 +482,10 @@ button {
   margin-left: auto; /* keep button groups flush right */
   flex-wrap: wrap;
   justify-content: flex-start; /* text buttons lead, icons float right */
+}
+.button-col.text-button-group {
+  margin-left: 0; /* keep text toggles adjacent so icon group can sit separately */
+  justify-content: flex-start; /* let toggles flow naturally on wide screens */
 }
 .button-col .icon-button {
   width: 1.8rem;
