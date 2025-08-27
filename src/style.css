@@ -485,7 +485,14 @@ button {
 }
 .button-col.text-button-group {
   margin-left: 0; /* keep text toggles adjacent so icon group can sit separately */
-  justify-content: flex-start; /* let toggles flow naturally on wide screens */
+  justify-content: flex-start; /* let toggles flow naturally on wide screens; mobile override centers */
+}
+
+/* On narrow screens, center text-only groups without affecting icon clusters */
+@media (max-width: 480px) {
+  .button-col.text-button-group {
+    justify-content: center; /* align lyrics toggles with other centered buttons */
+  }
 }
 .button-col .icon-button {
   width: 1.8rem;
