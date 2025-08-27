@@ -283,8 +283,8 @@ blockquote p {
 
 /* Mobile breakpoint
  * - Trim padding for compact layout
- * - Center headers and section titles
- * - Keep icon button groups distinct from text controls
+ * - Center headers and text button rows
+ * - Keep icon clusters pinned to the right
  */
 @media (max-width: 480px) {
   .main-content {
@@ -314,6 +314,16 @@ blockquote p {
     flex-basis: 100%; /* stack label above buttons on narrow screens */
     margin: 0 auto; /* center label when it spans full width */
     text-align: center; /* ensure label text is centered */
+  }
+
+  /* Center text-based controls but keep icon clusters pinned right */
+  .label-row .button-col {
+    width: 100%;
+    margin-left: 0; /* drop desktop right alignment */
+    justify-content: center; /* default to middle for text buttons */
+  }
+  .label-row .button-col .icon-button:first-of-type {
+    margin-left: auto; /* first icon nudges its group to the edge */
   }
 
   /* allow button stacks to size naturally so icon groups stay intact */
