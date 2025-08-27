@@ -484,8 +484,10 @@ button {
   justify-content: flex-start; /* text buttons lead, icons float right */
 }
 .button-col.text-button-group {
-  margin-left: 0; /* keep text toggles adjacent so icon group can sit separately */
-  justify-content: flex-start; /* let toggles flow naturally on wide screens */
+  /* text-only groups span the full row so their toggles center */
+  margin-left: 0; /* prevent text buttons from hugging the icon cluster */
+  flex-basis: 100%; /* force a line break away from labels and icons */
+  justify-content: center; /* center text buttons on their own row */
 }
 .button-col .icon-button {
   width: 1.8rem;

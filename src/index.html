@@ -256,19 +256,19 @@
           <div class="stack-block section-lyrics" id="lyrics-block">
             <div class="label-row">
               <label for="lyrics-input">Lyrics</label>
-              <!-- Cleaning toggles live in their own group so icons don't overflow on mobile -->
-              <div class="button-col text-button-group">
-                <input type="checkbox" id="lyrics-remove-parens" hidden>
-                <button type="button" class="toggle-button" data-target="lyrics-remove-parens" data-on="Parens Removed" data-off="Parens Kept">Parens Kept</button>
-                <input type="checkbox" id="lyrics-remove-brackets" hidden>
-                <button type="button" class="toggle-button" data-target="lyrics-remove-brackets" data-on="Brackets Removed" data-off="Brackets Kept">Brackets Kept</button>
-              </div>
-              <!-- Icon buttons remain clustered separately to avoid wrapping with text toggles -->
+              <!-- Icon buttons remain clustered to the right on all screens -->
               <div class="button-col">
                 <button type="button" id="lyrics-save" class="save-button icon-button" title="Save">&#128190;</button>
                 <button type="button" class="copy-button icon-button" data-target="lyrics-input" title="Copy">&#128203;</button>
                 <input type="checkbox" id="lyrics-hide" data-targets="lyrics-input,lyrics-space,lyrics-remove-parens,lyrics-remove-brackets" hidden>
                 <button type="button" class="toggle-button icon-button hide-button" data-target="lyrics-hide" data-on="☰" data-off="✖">☰</button>
+              </div>
+              <!-- Cleaning toggles break to their own centered row -->
+              <div class="button-col text-button-group">
+                <input type="checkbox" id="lyrics-remove-parens" hidden>
+                <button type="button" class="toggle-button" data-target="lyrics-remove-parens" data-on="Parens Removed" data-off="Parens Kept">Parens Kept</button>
+                <input type="checkbox" id="lyrics-remove-brackets" hidden>
+                <button type="button" class="toggle-button" data-target="lyrics-remove-brackets" data-on="Brackets Removed" data-off="Brackets Kept">Brackets Kept</button>
               </div>
             </div>
             <select id="lyrics-select"></select>
@@ -307,8 +307,8 @@
             </div>
             <div class="label-row">
               <label for="lyrics-insert-interval">Insert Every</label>
-              <!-- Randomization toggle shares group styling -->
-              <div class="button-col">
+              <!-- Randomization toggle centers on its own line -->
+              <div class="button-col text-button-group">
                 <input type="checkbox" id="lyrics-insert-random" hidden>
                 <button type="button" class="toggle-button" data-target="lyrics-insert-random" data-on="Randomized" data-off="Fixed">Fixed</button>
               </div>
