@@ -281,31 +281,57 @@ blockquote p {
     }
 }
 
-/* Mobile breakpoint */
+/* Mobile breakpoint
+ * - Trim padding for compact layout
+ * - Center headers and section titles
+ * - Keep icon button groups distinct from text controls
+ */
 @media (max-width: 480px) {
-    .main-content {
-        padding: 10px;
-    }
+  .main-content {
+    padding: 10px;
+  }
 
-    .content {
-        padding: 10px;
-    }
+  .content {
+    padding: 10px;
+  }
 
-    .input-group {
-        margin-bottom: 0.75rem;
-    }
+  .input-group {
+    margin-bottom: 0.75rem;
+  }
 
-    button {
-        width: auto; /* keep buttons at their natural size */
-        margin-bottom: 0.5rem;
-        margin-right: 0;
-    }
-    .label-row label {
-        flex-basis: 100%; /* stack label above buttons on narrow screens */
-    }
-    .label-row .button-col {
-        width: 100%; /* ensure button groups span full width */
-    }
+  button {
+    width: auto; /* keep buttons at their natural size */
+    margin-bottom: 0.25rem; /* tighten vertical spacing */
+    margin-right: 0;
+  }
+
+  h1,
+  .output h2 {
+    text-align: center; /* center main heading and output titles */
+  }
+
+  .label-row label {
+    flex-basis: 100%; /* stack label above buttons on narrow screens */
+    margin: 0 auto; /* center label when it spans full width */
+    text-align: center; /* ensure label text is centered */
+  }
+
+  /* Center text buttons while keeping icon sets on the right */
+  .button-col {
+    width: 100%;
+    margin-left: 0; /* allow full-width centering */
+    justify-content: center;
+  }
+
+  /* spread first and last text buttons to center the group */
+  .button-col button:not(.icon-button):first-of-type {
+    margin-left: auto;
+  }
+  .button-col button:not(.icon-button):last-of-type {
+    margin-right: auto;
+  }
+
+  /* allow button stacks to size naturally so icon groups stay intact */
 }
 
 /* ===== FORM ELEMENTS ===== */
@@ -391,7 +417,6 @@ button {
   align-items: center;
   margin-bottom: 0.25rem;
   flex-wrap: wrap; /* drop controls to new line instead of overshooting */
-  gap: 0.25rem; /* consistent spacing for wrapped controls */
 }
 
 .label-row label {
@@ -459,8 +484,7 @@ button {
   align-items: center;
   margin-left: auto; /* keep button groups flush right */
   flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.25rem; /* space between buttons */
+  justify-content: flex-start; /* text buttons lead, icons float right */
 }
 .button-col .icon-button {
   width: 1.8rem;
@@ -469,6 +493,10 @@ button {
   justify-content: center;
   align-items: center;
   padding: 0;
+}
+/* first icon pushes remaining icons as a unit to the edge */
+.button-col .icon-button:first-of-type {
+  margin-left: auto;
 }
 
 .toggle-button.icon-button {
