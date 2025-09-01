@@ -19,7 +19,7 @@
  *    - Core prompt building logic (applyModifierStack, buildVersions)
  * 2. List Management
  *    - Preset loading and population (populateSelect, loadLists)
- *    - Export/import and saving lists
+ *    - Export/import, saving and deleting lists
  * 3. State Management
  *    - DOM interaction for state (getVal, setVal, loadFromDOM)
  *    - Export/import state
@@ -620,7 +620,7 @@
 // ======== List Management ========
 // Section Purpose: Manage preset lists for modifiers, lengths, lyrics, and insertions.
 // Structures data for easy access and UI population, using 50% Rule via redundant checks and deep copies.
-// Structural Overview: Initializes preset maps from global lists, handles loading/saving.
+// Structural Overview: Initializes preset maps from global lists, handles loading/saving/deleting.
 // Section Summary: Centralizes preset handling for reusability across UI and logic.
 
   let NEG_PRESETS = {};
@@ -889,6 +889,49 @@
     sel.value = name;
   }
 
+  /**
+   * Remove the selected preset from both storage and UI.
+   * Purpose: Delete a saved list.
+   * Usage: Triggered by delete button clicks.
+   * 50% Rule: Confirms, prunes maps, refreshes selects.
+   * @param {string} type - List type to delete.
+   * @param {number} [index=1] - Stack index.
+   */
+  function deleteList(type, index = 1) {
+    const map = {
+      base: { select: 'base-select', input: 'base-input', store: BASE_PRESETS },
+      negative: { select: 'neg-select', input: 'neg-input', store: NEG_PRESETS },
+      positive: { select: 'pos-select', input: 'pos-input', store: POS_PRESETS },
+      length: { select: 'length-select', input: 'length-input', store: LENGTH_PRESETS },
+      divider: { select: 'divider-select', input: 'divider-input', store: DIVIDER_PRESETS },
+      lyrics: { select: 'lyrics-select', input: 'lyrics-input', store: LYRICS_PRESETS },
+      insertion: { select: 'lyrics-insert-select', input: 'lyrics-insert-input', store: INSERT_PRESETS }
+    };
+    const cfg = map[type];
+    if (!cfg) return;
+    const selId = index === 1 ? cfg.select : `${cfg.select}-${index}`;
+    const inpId = index === 1 ? cfg.input : `${cfg.input}-${index}`;
+    const sel = document.getElementById(selId);
+    const inp = document.getElementById(inpId);
+    if (!sel || !sel.value) return;
+    const name = sel.value;
+    if (typeof confirm === 'function' && !confirm(`Delete list ${name}?`)) return;
+    LISTS.presets = LISTS.presets.filter(p => !(p.id === name && p.type === type));
+    delete cfg.store[name];
+    document.querySelectorAll(`select[id^="${cfg.select}"]`).forEach(s => {
+      const opt = s.querySelector(`option[value="${name}"]`);
+      if (opt) {
+        const wasSel = s.value === name;
+        opt.remove();
+        if (wasSel) {
+          s.selectedIndex = 0;
+          s.dispatchEvent(new Event('change'));
+        }
+      }
+    });
+    if (inp && sel.value === name) inp.value = '';
+  }
+
   const lists = {
     get NEG_PRESETS() { return NEG_PRESETS; },
     get POS_PRESETS() { return POS_PRESETS; },
@@ -901,7 +944,8 @@
     loadLists,
     exportLists,
     importLists,
-    saveList
+    saveList,
+    deleteList
   };
 
 // ======== State Management ========
@@ -2438,8 +2482,18 @@
       save.className = 'save-button icon-button';
       save.title = 'Save';
       save.innerHTML = '&#128190;';
+      save.dataset.help = 'Save current list to presets.';
       save.addEventListener('click', () => lists.saveList(type, idx));
       btnCol.appendChild(save);
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.id = `${prefix}-delete-${idx}`;
+      del.className = 'delete-button icon-button';
+      del.title = 'Delete';
+      del.innerHTML = '&#128465;';
+      del.dataset.help = 'Delete selected preset list.';
+      del.addEventListener('click', () => lists.deleteList(type, idx));
+      btnCol.appendChild(del);
       const rerollBtn = document.createElement('button');
       rerollBtn.type = 'button';
       rerollBtn.id = `${prefix}-reroll-${idx}`;
@@ -2911,6 +2965,9 @@
     document.querySelectorAll('.save-button').forEach(el => {
       if (!el.dataset.help) el.dataset.help = 'Save current list to presets.';
     });
+    document.querySelectorAll('.delete-button').forEach(el => {
+      if (!el.dataset.help) el.dataset.help = 'Delete selected preset list.';
+    });
     document.querySelectorAll('.random-button').forEach(el => {
       if (!el.dataset.help) el.dataset.help = 'Randomize order or values.';
     });
@@ -3082,6 +3139,20 @@
     if (lyricsSave) lyricsSave.addEventListener('click', () => lists.saveList('lyrics'));
     const insertSave = document.getElementById('lyrics-insert-save');
     if (insertSave) insertSave.addEventListener('click', () => lists.saveList('insertion'));
+    const baseDelete = document.getElementById('base-delete');
+    if (baseDelete) baseDelete.addEventListener('click', () => lists.deleteList('base'));
+    const posDelete = document.getElementById('pos-delete-1');
+    if (posDelete) posDelete.addEventListener('click', () => lists.deleteList('positive'));
+    const negDelete = document.getElementById('neg-delete-1');
+    if (negDelete) negDelete.addEventListener('click', () => lists.deleteList('negative'));
+    const lenDelete = document.getElementById('length-delete');
+    if (lenDelete) lenDelete.addEventListener('click', () => lists.deleteList('length'));
+    const divDelete = document.getElementById('divider-delete');
+    if (divDelete) divDelete.addEventListener('click', () => lists.deleteList('divider'));
+    const lyricsDelete = document.getElementById('lyrics-delete');
+    if (lyricsDelete) lyricsDelete.addEventListener('click', () => lists.deleteList('lyrics'));
+    const insertDelete = document.getElementById('lyrics-insert-delete');
+    if (insertDelete) insertDelete.addEventListener('click', () => lists.deleteList('insertion'));
     if (typeof window !== 'undefined') {
       window.addEventListener('beforeunload', () => storage.persist());
     }

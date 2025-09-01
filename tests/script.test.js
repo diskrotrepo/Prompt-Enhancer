@@ -28,7 +28,7 @@ const {
   computeDepthCounts
 } = utils;
 
-const { exportLists, importLists, saveList } = lists;
+const { exportLists, importLists, saveList, deleteList } = lists;
 
 const {
   setupShuffleAll,
@@ -1580,6 +1580,21 @@ describe('List persistence', () => {
     expect(preset.items).toEqual(['a', 'b']);
     const opt = document.querySelector('#lyrics-insert-select option[value="ins1"]');
     expect(opt).not.toBeNull();
+  });
+
+  test('deleteList removes preset and option', () => {
+    document.body.innerHTML = `
+      <select id="pos-select"><option value="foo">foo</option></select>
+      <textarea id="pos-input"></textarea>
+    `;
+    importLists({ presets: [{ id: 'foo', title: 'foo', type: 'positive', items: ['1'] }] });
+    global.confirm = jest.fn(() => true);
+    deleteList('positive');
+    const data = JSON.parse(exportLists());
+    const preset = data.presets.find(p => p.id === 'foo' && p.type === 'positive');
+    expect(preset).toBeUndefined();
+    const opt = document.querySelector('#pos-select option[value="foo"]');
+    expect(opt).toBeNull();
   });
 
   test('sequential save and reload', () => {

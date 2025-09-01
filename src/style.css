@@ -557,6 +557,18 @@ button {
     background: #444;
 }
 
+.delete-button {
+  background: transparent;
+  border: 1px solid #a00;
+  color: #fff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.delete-button:hover {
+  background: #600;
+}
+
 /* ===== OUTPUT SECTION ===== */
 .output h2 {
     display: flex;
