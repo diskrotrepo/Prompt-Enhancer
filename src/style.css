@@ -544,8 +544,9 @@ button {
   font-size: 1rem;
 }
 
-/* Save button styling */
-.save-button {
+/* Save and delete button styling */
+.save-button,
+.delete-button {
   background: transparent;
   border: 1px solid #888;
   color: #fff;
@@ -553,20 +554,9 @@ button {
   border-radius: 4px;
   cursor: pointer;
 }
-.save-button:hover {
-    background: #444;
-}
-
-.delete-button {
-  background: transparent;
-  border: 1px solid #a00;
-  color: #fff;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  cursor: pointer;
-}
+.save-button:hover,
 .delete-button:hover {
-  background: #600;
+  background: #444;
 }
 
 /* ===== OUTPUT SECTION ===== */

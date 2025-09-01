@@ -2490,8 +2490,9 @@
       del.id = `${prefix}-delete-${idx}`;
       del.className = 'delete-button icon-button';
       del.title = 'Delete';
-      del.innerHTML = '&#128465;';
-      del.dataset.help = 'Delete selected preset list.';
+      // Trash bin icon clarifies destructive action without extra color cues
+      del.innerHTML = '&#128465;&#65039;';
+      del.dataset.help = `Remove selected ${type} preset.`;
       del.addEventListener('click', () => lists.deleteList(type, idx));
       btnCol.appendChild(del);
       const rerollBtn = document.createElement('button');
