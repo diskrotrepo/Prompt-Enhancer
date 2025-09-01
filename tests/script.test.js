@@ -336,6 +336,30 @@ describe('Prompt building', () => {
     expect(out.positive.startsWith('a, b')).toBe(true);
   });
 
+  test('buildVersions strips existing dividers and punctuation when requested', () => {
+    const base = ['foo, ', 'and, , ', 'bar. '];
+    const pos = ['good', 'and'];
+    const out = buildVersions(
+      base,
+      [],
+      pos,
+      20,
+      false,
+      ['and'],
+      true,
+      1,
+      1,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      true
+    );
+    expect(out).toEqual({ positive: 'good foo, good bar. ', negative: 'foo, bar. ' });
+  });
+
   test('buildVersions supports modifier stacking', () => {
     const orig = Math.random;
     Math.random = jest.fn().mockReturnValue(0.999999);
