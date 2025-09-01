@@ -1678,7 +1678,7 @@ describe('List persistence', () => {
       expect(lyrInput.value).toBe('lyric');
   });
 
-  test('importLists additive merges lists', () => {
+  test('importLists additive renames conflicts', () => {
     importLists({
       presets: [
         { id: 'a', title: 'a', type: 'positive', items: ['1'] },
@@ -1695,12 +1695,16 @@ describe('List persistence', () => {
       true
     );
     const data = JSON.parse(exportLists());
-    const neg = data.presets.find(
-      p => p.id === 'b' && p.type === 'negative' && p.title === 'b'
+    const original = data.presets.find(
+      p => p.title === 'b' && p.type === 'negative'
     );
-    expect(neg.items).toEqual(['y']);
+    const renamed = data.presets.find(
+      p => p.title === 'b (1)' && p.type === 'negative'
+    );
+    expect(original.items).toEqual(['x']);
+    expect(renamed.items).toEqual(['y']);
     expect(
-      data.presets.some(p => p.id === 'c' && p.type === 'positive')
+      data.presets.some(p => p.title === 'c' && p.type === 'positive')
     ).toBe(true);
   });
 
@@ -1714,6 +1718,38 @@ describe('List persistence', () => {
     const data = JSON.parse(exportLists());
     const lists = data.presets.filter(p => p.id === 'a' && p.type === 'positive');
     expect(lists.length).toBe(2);
+  });
+
+  test('importLists additive skips identical lists regardless of order', () => {
+    importLists({ presets: [{ id: 'd', title: 'd', type: 'negative', items: ['x', 'y'] }] });
+    importLists(
+      { presets: [{ id: 'd', title: 'd', type: 'negative', items: ['y', 'x'] }] },
+      true
+    );
+    const data = JSON.parse(exportLists());
+    const matches = data.presets.filter(
+      p => p.title === 'd' && p.type === 'negative'
+    );
+    expect(matches.length).toBe(1);
+  });
+
+  test('importLists additive increments numeric suffix for conflicts', () => {
+    importLists({
+      presets: [
+        { id: 'e', title: 'e', type: 'positive', items: ['1'] },
+        { id: 'e (1)', title: 'e (1)', type: 'positive', items: ['2'] }
+      ]
+    });
+    importLists(
+      { presets: [{ id: 'e', title: 'e', type: 'positive', items: ['3'] }] },
+      true
+    );
+    const data = JSON.parse(exportLists());
+    const names = data.presets
+      .filter(p => p.type === 'positive')
+      .map(p => p.title)
+      .sort();
+    expect(names).toEqual(['e', 'e (1)', 'e (2)']);
   });
 
   test('updateStackBlocks adds buttons for extra stacks', () => {
