@@ -15,7 +15,7 @@
  *
  * Detailed Table of Contents:
  * 1. Pure Utility Functions
- *    - Parsing and manipulation helpers (parseInput, countWords, etc.)
+ *    - Parsing and manipulation helpers (parseInput, countWords, stripExistingDividers, etc.)
  *    - Core prompt building logic (applyModifierStack, buildVersions)
 * 2. List Management
 *    - Conflict resolution helpers (listsEqual, nextListName)
@@ -158,6 +158,38 @@
       .split(/[,\s]+/)
       .map(s => parseInt(s, 10))
       .filter(n => !isNaN(n));
+  }
+
+  /**
+   * Remove divider phrases and dangling punctuation from a list of items.
+   * Divider terms are stripped case-insensitively, then repeated punctuation
+   * like ", , ," collapses to a single mark.
+   * Purpose: Pre-clean lists when the user opts to strip existing dividers.
+   * Usage Example: stripExistingDividers(['a, ', 'and, ', 'b. '], ['and'])
+   *   returns ['a, ', 'b. '].
+   * 50% Rule: Regex removal, whitespace normalization, and filtering work
+   * together; comments below explain each step.
+   * @param {string[]} list - Items to cleanse.
+   * @param {string[]} divs - Divider phrases.
+   * @returns {string[]} - Cleaned items.
+   */
+  function stripExistingDividers(list, divs) {
+    if (!Array.isArray(list) || !list.length || !divs.length) return list;
+    const set = new Set(divs.map(d => d.toLowerCase()));
+    return list
+      .filter(item => {
+        const core = item.replace(/[,.!:;?\s]+/g, '').toLowerCase();
+        return core && !set.has(core);
+      })
+      .map(item => {
+        // Collapse sequential punctuation to a single mark
+        let cleaned = item.replace(/([,.;:!?])(?:\s*[,.!:;?])+\s*/g, '$1');
+        // Normalize spacing and trim
+        cleaned = cleaned.replace(/\s+/g, ' ').trim();
+        // Ensure trailing space after punctuation
+        if (/[,.!:;?]$/.test(cleaned)) cleaned += ' ';
+        return cleaned;
+      });
   }
 
   /**
@@ -463,8 +495,17 @@
     baseOrder = null,
     posOrder = null,
     negOrder = null,
-    dividerOrder = null
+    dividerOrder = null,
+    stripExisting = false
   ) {
+    if (stripExisting && dividers.length) {
+      items = stripExistingDividers(items, dividers);
+      if (Array.isArray(posMods[0])) {
+        posMods = posMods.map(list => stripExistingDividers(list, dividers));
+      } else {
+        posMods = stripExistingDividers(posMods, dividers);
+      }
+    }
     if (!items.length) {
       return { positive: '', negative: '' };
     }
@@ -608,6 +649,7 @@
     countWords,
     parseDividerInput,
     parseOrderInput,
+    stripExistingDividers,
     applyOrder,
     insertAtDepth,
     shuffle,
@@ -1569,6 +1611,7 @@
     const posOrder = collectOrders('pos', posStackOn ? posStackSize : 1);
     const negOrder = collectOrders('neg', negStackOn ? negStackSize : 1);
     const dividerOrder = utils.parseOrderInput(document.getElementById('divider-order-input')?.value || '');
+    const stripExisting = document.getElementById('divider-strip')?.checked; // Toggle removes existing dividers
     return {
       baseItems,
       negMods,
@@ -1586,7 +1629,8 @@
       negDepths,
       baseOrder,
       posOrder,
-      negOrder
+      negOrder,
+      stripExisting
     };
   }
 
@@ -1628,7 +1672,8 @@
       negDepths,
       baseOrder,
       posOrder,
-      negOrder
+      negOrder,
+      stripExisting // flag to strip dividers
     } = collectInputs();
     if (!baseItems.length) {
       alert('Please enter at least one base prompt item.');
@@ -1650,7 +1695,8 @@
       baseOrder,
       posOrder,
       negOrder,
-      dividerOrder
+      dividerOrder,
+      stripExisting // enable preprocessing
     );
     displayOutput(result);
 
@@ -2955,6 +3001,7 @@
       '[data-target="lyrics-remove-parens"]': 'Strip parentheses from lyrics before processing.',
       '[data-target="lyrics-remove-brackets"]': 'Strip brackets from lyrics before processing.',
       '[data-target="lyrics-insert-random"]': 'Randomize insertion intervals for lyric terms.',
+      '[data-target="divider-strip"]': 'Strip listed dividers from existing prompts.',
       // Inputs and lists
       '#base-select': 'Choose base prompt preset.',
       '#base-input': 'Comma or newline separated base prompts.',
