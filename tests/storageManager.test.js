@@ -64,6 +64,31 @@ describe('Storage manager', () => {
     );
   });
 
+  test('importData merges lists by default', () => {
+    const json = {
+      lists: {
+        presets: [
+          { id: 'b', title: 'b', type: 'base', items: ['z'] },
+          { id: 'c', title: 'c', type: 'base', items: ['y'] }
+        ]
+      },
+      state: {}
+    };
+    storage.importData(json);
+    const data = JSON.parse(lists.exportLists());
+    const original = data.presets.find(
+      p => p.title === 'b' && p.type === 'base'
+    );
+    const renamed = data.presets.find(
+      p => p.title === 'b (1)' && p.type === 'base'
+    );
+    expect(original.items).toEqual(['x']);
+    expect(renamed.items).toEqual(['z']);
+    expect(
+      data.presets.some(p => p.title === 'c' && p.type === 'base')
+    ).toBe(true);
+  });
+
   test('loadPersisted prefers localStorage data', () => {
     const saved = {
       lists: { presets: [{ id: 'b', title: 'b', type: 'base', items: ['y'] }] },

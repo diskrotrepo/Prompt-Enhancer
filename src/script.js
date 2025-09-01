@@ -17,9 +17,10 @@
  * 1. Pure Utility Functions
  *    - Parsing and manipulation helpers (parseInput, countWords, etc.)
  *    - Core prompt building logic (applyModifierStack, buildVersions)
- * 2. List Management
- *    - Preset loading and population (populateSelect, loadLists)
- *    - Export/import, saving and deleting lists
+* 2. List Management
+*    - Conflict resolution helpers (listsEqual, nextListName)
+*    - Preset loading and population (populateSelect, loadLists)
+*    - Export/import, saving and deleting lists
  * 3. State Management
  *    - DOM interaction for state (getVal, setVal, loadFromDOM)
  *    - Export/import state
@@ -619,9 +620,65 @@
 
 // ======== List Management ========
 // Section Purpose: Manage preset lists for modifiers, lengths, lyrics, and insertions.
-// Structures data for easy access and UI population, using 50% Rule via redundant checks and deep copies.
-// Structural Overview: Initializes preset maps from global lists, handles loading/saving/deleting.
-// Section Summary: Centralizes preset handling for reusability across UI and logic.
+// Includes helpers for conflict resolution so imports merge safely.
+// Structural Overview: Utilities handle comparisons and naming before
+// initializing preset maps and providing load/save/delete operations.
+// Section Summary: Centralizes preset handling for reusability across UI
+// and logic.
+
+  /**
+   * Determine if two item arrays contain the same elements regardless of order.
+   * Purpose: Identify duplicate presets during merges.
+   * Usage Example: listsEqual(['a', 'b'], ['b', 'a']) returns true.
+   * 50% Rule: Sorts shallow copies then compares; documented via example.
+   * @param {string[]} a - First items array.
+   * @param {string[]} b - Second items array.
+   * @returns {boolean} - True when arrays match.
+   */
+  function listsEqual(a, b) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+    const sa = a.slice().sort();
+    const sb = b.slice().sort();
+    return sa.every((v, i) => v === sb[i]);
+  }
+
+  /**
+   * Escape characters that have special meaning in regular expressions.
+   * Purpose: Safely build patterns from preset names.
+   * Usage Example: escapeRegExp('a.b') returns 'a\\.b'.
+   * 50% Rule: Simple replace; purpose and example clarify intent.
+   * @param {string} str - Raw string to escape.
+   * @returns {string} - Escaped string.
+   */
+  function escapeRegExp(str) {
+    return str.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
+  }
+
+  /**
+   * Generate a unique preset name when a conflict occurs.
+   * Numbers in parentheses increment so 'List' -> 'List (1)' -> 'List (2)'.
+   * Purpose: Preserve existing lists while importing new ones.
+   * Usage Example: nextListName('list', presets, 'positive') yields 'list (1)'.
+   * 50% Rule: Iterates to find highest suffix; comments summarize steps.
+   * @param {string} name - Desired base name.
+   * @param {Object[]} existing - Current preset collection.
+   * @param {string} type - Preset type to compare within.
+   * @returns {string} - Conflict-free name.
+   */
+  function nextListName(name, existing, type) {
+    const base = name.replace(/ \((\d+)\)$/, '');
+    const pattern = new RegExp('^' + escapeRegExp(base) + '(?: \\((\\d+)\\))?$');
+    let max = 0;
+    existing.forEach(p => {
+      if (p.type !== type) return;
+      const m = p.title.match(pattern);
+      if (m) {
+        const num = m[1] ? parseInt(m[1], 10) : 0;
+        if (num > max) max = num;
+      }
+    });
+    return `${base} (${max + 1})`;
+  }
 
   let NEG_PRESETS = {};
   let POS_PRESETS = {};
@@ -811,19 +868,19 @@
     } else {
       const existing = LISTS.presets.slice();
       obj.presets.forEach(p => {
-        const idx = existing.findIndex(
-          e => e.id === p.id && e.type === p.type && e.title === p.title
+        const items = Array.isArray(p.items) ? p.items : [];
+        const sameName = existing.filter(
+          e => e.type === p.type && e.title === p.title
         );
-        const preset = {
-          id: p.id,
-          title: p.title,
-          type: p.type,
-          items: Array.isArray(p.items) ? p.items : []
-        };
-        if (idx !== -1) {
-          existing[idx] = preset;
+        if (sameName.length) {
+          const dup = sameName.find(e => listsEqual(e.items || [], items));
+          if (!dup) {
+            const unique = nextListName(p.title, existing, p.type);
+            existing.push({ id: unique, title: unique, type: p.type, items });
+          }
         } else {
-          existing.push(preset);
+          const id = p.id || p.title;
+          existing.push({ id, title: p.title, type: p.type, items });
         }
       });
       LISTS.presets = existing;
@@ -1150,7 +1207,7 @@
       }
     }
     if (typeof data !== 'object') return;
-    if (data.lists) lists.importLists(data.lists);
+    if (data.lists) lists.importLists(data.lists, true);
     if (data.state) {
       state.importState(data.state);
       // second pass to populate elements created during import
