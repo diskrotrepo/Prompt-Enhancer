@@ -15,7 +15,7 @@
  *
  * Detailed Table of Contents:
  * 1. Pure Utility Functions
- *    - Parsing and manipulation helpers (parseInput, countWords, etc.)
+ *    - Parsing and manipulation helpers (parseInput, countWords, stripExistingDividers, etc.)
  *    - Core prompt building logic (applyModifierStack, buildVersions)
 * 2. List Management
 *    - Conflict resolution helpers (listsEqual, nextListName)
@@ -176,6 +176,38 @@
       const idx = order[i % order.length];
       return items[idx % items.length];
     });
+  }
+
+  /**
+   * Remove divider phrases from items and collapse orphaned punctuation.
+   * Purpose: Preprocess lists so existing connectors don't double up.
+   * Usage Example: stripExistingDividers(['a and b', 'and'], ['and']) returns ['a b'].
+   * 50% Rule: Uses regex removal plus punctuation cleanup; documented with example and purpose.
+   * @param {string[]} items - Items to sanitize.
+   * @param {string[]} dividers - Divider phrases to strip.
+   * @returns {string[]} - Cleaned items array.
+   */
+  function stripExistingDividers(items, dividers) {
+    if (!Array.isArray(items) || !Array.isArray(dividers) || !dividers.length)
+      return items.slice();
+    const pattern = new RegExp(
+      '\\b(' +
+        dividers
+          .map(d => escapeRegExp(d.trim()))
+          .filter(Boolean)
+          .join('|') +
+        ')\\b',
+      'gi'
+    );
+    return items
+      .map(item => {
+        let cleaned = item.replace(pattern, ' ');
+        cleaned = cleaned.replace(/([,.;:!?])\s+([,.;:!?])/g, '$2');
+        cleaned = cleaned.replace(/(^|\s)[,.;:!?]+(?=\s|$)/g, '$1');
+        cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
+        return cleaned;
+      })
+      .filter(Boolean);
   }
 
   /**
@@ -609,6 +641,7 @@
     parseDividerInput,
     parseOrderInput,
     applyOrder,
+    stripExistingDividers,
     insertAtDepth,
     shuffle,
     equalizeLength,
@@ -1512,7 +1545,7 @@
    * @returns {Object} - Input object for buildVersions.
    */
   function collectInputs() {
-    const baseItems = utils.parseInput(document.getElementById('base-input').value, true);
+    let baseItems = utils.parseInput(document.getElementById('base-input').value, true);
     function collectLists(prefix, count) {
       const result = [];
       for (let i = 1; i <= count; i++) {
@@ -1528,11 +1561,26 @@
     const negStackOn = document.getElementById('neg-stack').checked;
     const negStackSize = parseInt(document.getElementById('neg-stack-size')?.value || '1', 10);
 
-    const posMods = posStackOn ? collectLists('pos', posStackSize) : utils.parseInput(document.getElementById('pos-input').value);
+    let posMods = posStackOn
+      ? collectLists('pos', posStackSize)
+      : utils.parseInput(document.getElementById('pos-input').value);
     const negMods = negStackOn ? collectLists('neg', negStackSize) : utils.parseInput(document.getElementById('neg-input').value);
     const includePosForNeg = document.getElementById('neg-include-pos').checked;
-    const dividerMods = utils.parseDividerInput(document.getElementById('divider-input')?.value || '');
+    const dividerMods = utils.parseDividerInput(
+      document.getElementById('divider-input')?.value || ''
+    );
+    const stripExisting = document.getElementById('divider-strip')?.checked;
     const shuffleDividers = document.getElementById('divider-shuffle')?.checked;
+    if (stripExisting && dividerMods.length) {
+      baseItems = utils.stripExistingDividers(baseItems, dividerMods);
+      if (Array.isArray(posMods[0])) {
+        posMods = posMods.map(list =>
+          utils.stripExistingDividers(list, dividerMods)
+        );
+      } else {
+        posMods = utils.stripExistingDividers(posMods, dividerMods);
+      }
+    }
     const lengthSelect = document.getElementById('length-select');
     const lengthInput = document.getElementById('length-input');
     let limit = parseInt(lengthInput.value, 10);
@@ -2952,6 +3000,7 @@
       '[data-target="neg-all-hide"]': 'Show or hide all negative stacks.',
       '[data-target="neg-order-random"]': 'Randomize order of negative modifiers.',
       '[data-target="neg-advanced"]': 'Reveal advanced negative options.',
+      '[data-target="divider-strip"]': 'Strip divider phrases already present in lists.',
       '[data-target="lyrics-remove-parens"]': 'Strip parentheses from lyrics before processing.',
       '[data-target="lyrics-remove-brackets"]': 'Strip brackets from lyrics before processing.',
       '[data-target="lyrics-insert-random"]': 'Randomize insertion intervals for lyric terms.',

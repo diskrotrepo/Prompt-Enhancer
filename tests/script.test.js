@@ -23,6 +23,7 @@ const {
   parseDividerInput,
   parseOrderInput,
   applyOrder,
+  stripExistingDividers,
   insertAtDepth,
   countWords,
   computeDepthCounts
@@ -50,6 +51,8 @@ const {
   depthWatchIds,
   setupPresetListener
 } = ui;
+
+const { collectInputs } = ui;
 
 describe('Utility functions', () => {
   test('parseInput splits and trims correctly', () => {
@@ -116,9 +119,42 @@ describe('Utility functions', () => {
     expect(parseOrderInput('1, 2 3')).toEqual([1, 2, 3]);
   });
 
+  test('stripExistingDividers removes dividers and punctuation', () => {
+    const items = ['cat and dog.', 'and', ', ,', 'bird . .'];
+    const divs = ['and'];
+    expect(stripExistingDividers(items, divs)).toEqual(['cat dog.', 'bird']);
+  });
+
   test('applyOrder reorders list cycling values', () => {
     const out = applyOrder(['a', 'b', 'c'], [2, 0]);
     expect(out).toEqual(['c', 'a', 'c']);
+  });
+
+  test('collectInputs strips dividers when enabled', () => {
+    document.body.innerHTML = `
+      <textarea id="base-input">cat, and, dog</textarea>
+      <input type="checkbox" id="pos-stack">
+      <input type="number" id="pos-stack-size" value="1">
+      <input type="checkbox" id="neg-stack">
+      <input type="number" id="neg-stack-size" value="1">
+      <textarea id="pos-input">red, and, blue</textarea>
+      <textarea id="neg-input"></textarea>
+      <input type="checkbox" id="neg-include-pos">
+      <textarea id="divider-input">and</textarea>
+      <input type="checkbox" id="divider-strip" checked>
+      <input type="checkbox" id="divider-shuffle">
+      <select id="length-select"><option value="custom">c</option></select>
+      <input id="length-input" value="100">
+      <textarea id="pos-depth-input"></textarea>
+      <textarea id="neg-depth-input"></textarea>
+      <textarea id="base-order-input"></textarea>
+      <textarea id="pos-order-input"></textarea>
+      <textarea id="neg-order-input"></textarea>
+      <textarea id="divider-order-input"></textarea>
+    `;
+    const { baseItems, posMods } = collectInputs();
+    expect(baseItems).toEqual(['cat,', 'dog.']);
+    expect(posMods).toEqual(['red', 'blue']);
   });
 
   test('insertAtDepth inserts term at depth', () => {
