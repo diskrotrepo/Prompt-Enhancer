@@ -719,12 +719,18 @@
    * Purpose: Populate dropdowns with preset titles.
    * Usage: Called in loadLists to update UI selects.
    * 50% Rule: Loops with conditional selection; ensures non-empty defaults.
+   * Presets are alphabetized so scanning the list feels natural.
    * @param {HTMLSelectElement} selectEl - Select element to populate.
    * @param {Object[]} presets - Array of preset objects.
-   */
+  */
   function populateSelect(selectEl, presets) {
     selectEl.innerHTML = '';
-    presets.forEach((preset, index) => {
+    const sorted = presets
+      .slice() // clone so original order remains untouched
+      .sort((a, b) =>
+        a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }) // case-insensitive sort
+      );
+    sorted.forEach((preset, index) => {
       const option = document.createElement('option');
       option.value = preset.id;
       option.textContent = preset.title;
@@ -741,9 +747,10 @@
    * Purpose: Set up options for depth selection including presets.
    * Usage: Called in loadLists for depth selects.
    * 50% Rule: Static options plus dynamic presets; simple loop.
+   * Alphabetizes additional presets to keep menus tidy.
    * @param {HTMLSelectElement} selectEl - Select to populate.
    * @param {Object[]} presets - Preset objects.
-   */
+  */
   function populateDepthSelect(selectEl, presets) {
     if (!selectEl) return;
     selectEl.innerHTML = '';
@@ -752,7 +759,12 @@
       { id: 'append', title: 'Append' },
       { id: 'random', title: 'Random Depth' }
     ];
-    presets.forEach(p => opts.push({ id: p.id, title: p.title }));
+    const sorted = presets
+      .slice() // maintain caller array
+      .sort((a, b) =>
+        a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }) // ignore case
+      );
+    sorted.forEach(p => opts.push({ id: p.id, title: p.title }));
     opts.forEach(o => {
       const opt = document.createElement('option');
       opt.value = o.id;
@@ -767,6 +779,7 @@
    * Purpose: Load and categorize presets, update UI selects.
    * Usage: Called on init and after imports.
    * 50% Rule: Filters by type with arrays; calls populate for each.
+   * Select menus populate alphabetically via helper sort.
    * No params/returns; side-effect on global presets and UI.
    */
   function loadLists() {
@@ -891,12 +904,13 @@
   /**
    * Save the list typed into the UI back into the preset store. Prompts the
    * user for a preset name.
-   * Purpose: Persist user-entered lists as presets.
-   * Usage: Called on save button clicks.
-   * 50% Rule: Handles different types with map; updates UI.
-   * @param {string} type - List type (e.g., 'positive').
-   * @param {number} [index=1] - Stack index.
-   */
+  * Purpose: Persist user-entered lists as presets.
+  * Usage: Called on save button clicks.
+  * 50% Rule: Handles different types with map; updates UI.
+  * Adds new options in alphabetical order so lists remain sorted immediately.
+  * @param {string} type - List type (e.g., 'positive').
+  * @param {number} [index=1] - Stack index.
+  */
   function saveList(type, index = 1) {
     const map = {
       base: { select: 'base-select', input: 'base-input', store: BASE_PRESETS },
@@ -926,17 +940,25 @@
       items = utils ? utils.parseInput(inp.value) : [];
     }
     let preset = LISTS.presets.find(p => p.id === name && p.type === type);
-    if (!preset) {
+   if (!preset) {
       preset = { id: name, title: name, type, items };
       LISTS.presets.push(preset);
       const opt = document.createElement('option');
       opt.value = name;
       opt.textContent = name;
+      // Walk every matching select so stacked lists stay in sync.
       document
         .querySelectorAll(`select[id^="${cfg.select}"]`)
         .forEach(s => {
-          if (!s.querySelector(`option[value="${name}"]`)) {
-            s.appendChild(opt.cloneNode(true));
+          if (s.querySelector(`option[value="${name}"]`)) return;
+          const clone = opt.cloneNode(true); // copy for each select
+          const insertBefore = Array.from(s.querySelectorAll('option')).find(o =>
+            o.textContent.localeCompare(name, undefined, { sensitivity: 'base' }) > 0
+          );
+          if (insertBefore) {
+            s.insertBefore(clone, insertBefore); // insert to keep list sorted
+          } else {
+            s.appendChild(clone); // fallback to end if no later option
           }
         });
     } else {
