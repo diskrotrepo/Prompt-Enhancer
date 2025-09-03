@@ -904,12 +904,13 @@
   /**
    * Save the list typed into the UI back into the preset store. Prompts the
    * user for a preset name.
-   * Purpose: Persist user-entered lists as presets.
-   * Usage: Called on save button clicks.
-   * 50% Rule: Handles different types with map; updates UI.
-   * @param {string} type - List type (e.g., 'positive').
-   * @param {number} [index=1] - Stack index.
-   */
+  * Purpose: Persist user-entered lists as presets.
+  * Usage: Called on save button clicks.
+  * 50% Rule: Handles different types with map; updates UI.
+  * Adds new options in alphabetical order so lists remain sorted immediately.
+  * @param {string} type - List type (e.g., 'positive').
+  * @param {number} [index=1] - Stack index.
+  */
   function saveList(type, index = 1) {
     const map = {
       base: { select: 'base-select', input: 'base-input', store: BASE_PRESETS },
@@ -939,17 +940,25 @@
       items = utils ? utils.parseInput(inp.value) : [];
     }
     let preset = LISTS.presets.find(p => p.id === name && p.type === type);
-    if (!preset) {
+   if (!preset) {
       preset = { id: name, title: name, type, items };
       LISTS.presets.push(preset);
       const opt = document.createElement('option');
       opt.value = name;
       opt.textContent = name;
+      // Walk every matching select so stacked lists stay in sync.
       document
         .querySelectorAll(`select[id^="${cfg.select}"]`)
         .forEach(s => {
-          if (!s.querySelector(`option[value="${name}"]`)) {
-            s.appendChild(opt.cloneNode(true));
+          if (s.querySelector(`option[value="${name}"]`)) return;
+          const clone = opt.cloneNode(true); // copy for each select
+          const insertBefore = Array.from(s.querySelectorAll('option')).find(o =>
+            o.textContent.localeCompare(name, undefined, { sensitivity: 'base' }) > 0
+          );
+          if (insertBefore) {
+            s.insertBefore(clone, insertBefore); // insert to keep list sorted
+          } else {
+            s.appendChild(clone); // fallback to end if no later option
           }
         });
     } else {

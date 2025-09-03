@@ -1582,6 +1582,27 @@ describe('List persistence', () => {
     expect(opt).not.toBeNull();
   });
 
+  test('saveList inserts new preset alphabetically', () => {
+    document.body.innerHTML = `
+      <select id="pos-select"></select>
+      <textarea id="pos-input">foo,bar</textarea>
+    `;
+    importLists({
+      presets: [
+        { id: 'b', title: 'Beta', type: 'positive', items: [] },
+        { id: 'd', title: 'Delta', type: 'positive', items: [] }
+      ]
+    });
+    lists.loadLists();
+    global.prompt = jest.fn().mockReturnValue('Alpha');
+    saveList('positive');
+    const titles = Array.from(
+      document.querySelectorAll('#pos-select option')
+    ).map(o => o.textContent);
+    expect(titles).toEqual(['Alpha', 'Beta', 'Delta']);
+    expect(document.getElementById('pos-select').value).toBe('Alpha');
+  });
+
   test('deleteList removes preset and option', () => {
     document.body.innerHTML = `
       <select id="pos-select"><option value="foo">foo</option></select>
