@@ -719,12 +719,18 @@
    * Purpose: Populate dropdowns with preset titles.
    * Usage: Called in loadLists to update UI selects.
    * 50% Rule: Loops with conditional selection; ensures non-empty defaults.
+   * Presets are alphabetized so scanning the list feels natural.
    * @param {HTMLSelectElement} selectEl - Select element to populate.
    * @param {Object[]} presets - Array of preset objects.
-   */
+  */
   function populateSelect(selectEl, presets) {
     selectEl.innerHTML = '';
-    presets.forEach((preset, index) => {
+    const sorted = presets
+      .slice() // clone so original order remains untouched
+      .sort((a, b) =>
+        a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }) // case-insensitive sort
+      );
+    sorted.forEach((preset, index) => {
       const option = document.createElement('option');
       option.value = preset.id;
       option.textContent = preset.title;
@@ -741,9 +747,10 @@
    * Purpose: Set up options for depth selection including presets.
    * Usage: Called in loadLists for depth selects.
    * 50% Rule: Static options plus dynamic presets; simple loop.
+   * Alphabetizes additional presets to keep menus tidy.
    * @param {HTMLSelectElement} selectEl - Select to populate.
    * @param {Object[]} presets - Preset objects.
-   */
+  */
   function populateDepthSelect(selectEl, presets) {
     if (!selectEl) return;
     selectEl.innerHTML = '';
@@ -752,7 +759,12 @@
       { id: 'append', title: 'Append' },
       { id: 'random', title: 'Random Depth' }
     ];
-    presets.forEach(p => opts.push({ id: p.id, title: p.title }));
+    const sorted = presets
+      .slice() // maintain caller array
+      .sort((a, b) =>
+        a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }) // ignore case
+      );
+    sorted.forEach(p => opts.push({ id: p.id, title: p.title }));
     opts.forEach(o => {
       const opt = document.createElement('option');
       opt.value = o.id;
@@ -767,6 +779,7 @@
    * Purpose: Load and categorize presets, update UI selects.
    * Usage: Called on init and after imports.
    * 50% Rule: Filters by type with arrays; calls populate for each.
+   * Select menus populate alphabetically via helper sort.
    * No params/returns; side-effect on global presets and UI.
    */
   function loadLists() {

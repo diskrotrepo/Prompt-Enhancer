@@ -57,4 +57,20 @@ describe('Default list integration', () => {
     expect(opts).toEqual(['b']);
     expect(document.getElementById('base-input').value).toBe('x');
   });
+
+  test('loadLists sorts presets alphabetically', () => {
+    setupDOM();
+    // Provide intentionally unsorted presets
+    lists.importLists({
+      presets: [
+        { id: 'b', title: 'Beta', type: 'base', items: [] },
+        { id: 'a', title: 'Alpha', type: 'base', items: [] }
+      ]
+    });
+    main.loadLists();
+    const titles = Array.from(
+      document.querySelectorAll('#base-select option')
+    ).map(o => o.textContent);
+    expect(titles).toEqual(['Alpha', 'Beta']);
+  });
 });
