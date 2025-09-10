@@ -210,21 +210,24 @@ describe('Prompt building', () => {
     expect(out).toEqual({ positive: 'pos a b', negative: 'pos a b neg' });
   });
 
-  test('stacked modifiers handle prepend and append depths', () => {
+  test('stacked multi-word modifiers honor prepend and append depths', () => {
     const out = buildVersions(
       ['foo bar'],
-      ['n'],
-      [['pre'], ['post']],
-      50,
+      [['bad one'], ['worse two']],
+      [['pre one'], ['post two']],
+      60,
       false,
       [],
       true,
       2,
-      1,
+      2,
       [[0], [2]],
-      [0]
+      [[0], [2]]
     );
-    expect(out).toEqual({ positive: 'pre foo bar post, pre foo bar post', negative: 'n foo bar, n foo bar' });
+    expect(out).toEqual({
+      positive: 'pre one foo bar post two, pre one foo bar post two',
+      negative: 'bad one foo bar worse two, bad one foo bar worse two'
+    });
   });
 
   test('computeDepthCounts includes prior positive stacks', () => {

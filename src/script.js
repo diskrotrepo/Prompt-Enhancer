@@ -241,7 +241,8 @@
    * stacked so multiple sets are applied in sequence. Divider items are
    * inserted when the base list repeats. The return value is trimmed so the
    * cumulative string length does not exceed `limit`.
-   * Purpose: Core logic to apply stacked modifiers to base items.
+   * Purpose: Core logic to apply stacked modifiers to base items while
+   * tracking word counts so multi-word inserts stay ordered.
    * Usage: Internal to buildVersions; builds prompt arrays.
    * 50% Rule: Complex loop with length checks; documented via params and logic summary.
    * @param {string[]} baseItems - Base prompt items.
@@ -311,7 +312,8 @@
         const adj = depth + offset;
         if (mod) {
           term = insertAtDepth(term, mod, adj);
-          inserted.push(adj);
+          const words = utils.countWords(mod); // number of words inserted
+          for (let w = 0; w < words; w++) inserted.push(adj + w);
         }
       });
       const pieces = [];
@@ -335,7 +337,8 @@
    * Build negative versions by inserting negative modifiers into already
    * modified positive terms. This keeps divider placement consistent between
    * positive and negative outputs.
-   * Purpose: Apply negative modifiers on top of positive ones for consistency.
+   * Purpose: Apply negative modifiers on top of positive ones for consistency,
+   * accounting for word counts so multi-word inserts preserve order.
    * Usage: Internal to buildVersions when includePosForNeg is true.
    * 50% Rule: Mirrors applyModifierStack logic for negatives; example in usage.
    * @param {string[]} posTerms - Positive terms to modify.
@@ -412,7 +415,8 @@
         const adj = depth + offset;
         if (mod) {
           term = insertAtDepth(term, mod, adj);
-          inserted.push(adj);
+          const words = utils.countWords(mod); // track each inserted word
+          for (let w = 0; w < words; w++) inserted.push(adj + w);
         }
       });
       const candidate =
