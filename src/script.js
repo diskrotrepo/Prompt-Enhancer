@@ -253,6 +253,7 @@
    * @param {string[]} [dividers=[]] - Dividers to insert.
    * @param {number[]} [itemOrder=null] - Order for base items.
    * @param {number[]|number[][]} [depths=null] - Depths for insertions.
+   * @param {Array[]} [captureLog=null] - Optional log collecting inserted modifiers per accepted term.
    * @returns {string[]} - Modified items array.
    */
   function applyModifierStack(
@@ -264,7 +265,8 @@
     delimited = false,
     dividers = [],
     itemOrder = null,
-    depths = null
+    depths = null,
+    captureLog = null
   ) {
     const count = stackSize > 0 ? stackSize : 1;
     const modLists = Array.isArray(modifiers[0]) ? modifiers : Array(count).fill(modifiers);
@@ -296,6 +298,7 @@
       const needDivider = idx > 0 && idx % items.length === 0 && dividerPool.length;
       let term = items[idx % items.length];
       const inserted = [];
+      const capturedMods = [];
       orders.forEach((mods, sidx) => {
         const mod = mods[idx % mods.length];
         let depth = 0;
@@ -312,6 +315,7 @@
         if (mod) {
           term = insertAtDepth(term, mod, adj);
           inserted.push(adj);
+          if (captureLog) capturedMods.push(mod);
         }
       });
       const pieces = [];
@@ -325,6 +329,7 @@
         result.push(dividerPool[divIdx % dividerPool.length]);
         divIdx++;
       }
+      if (captureLog) captureLog.push(capturedMods);
       result.push(term);
       idx++;
     }
@@ -347,6 +352,7 @@
    * @param {string[]} [dividers=[]] - Dividers.
    * @param {number[]} [itemOrder=null] - Item order.
    * @param {number[]|number[][]} [depths=null] - Depths.
+   * @param {Array[]} [captureLog=null] - Optional log collecting inserted modifiers per accepted term.
    * @returns {string[]} - Negative terms array.
    */
   function applyNegativeOnPositive(
@@ -358,7 +364,8 @@
     delimited = false,
     dividers = [],
     itemOrder = null,
-    depths = null
+    depths = null,
+    captureLog = null
   ) {
     const count = stackSize > 0 ? stackSize : 1;
     const modLists = Array.isArray(negMods[0]) ? negMods : Array(count).fill(negMods);
@@ -397,6 +404,7 @@
       }
       let term = base;
       const inserted = [];
+      const capturedMods = [];
       orders.forEach((mods, sidx) => {
         const mod = mods[modIdx % mods.length];
         let depth = 0;
@@ -413,6 +421,7 @@
         if (mod) {
           term = insertAtDepth(term, mod, adj);
           inserted.push(adj);
+          if (captureLog) capturedMods.push(mod);
         }
       });
       const candidate =
@@ -420,6 +429,7 @@
         term;
       if (candidate.length > limit) break;
       result.push(term);
+      if (captureLog) captureLog.push(capturedMods);
       modIdx++;
     }
     return result;
@@ -446,6 +456,7 @@
    * @param {number[]|number[][]} [posOrder=null] - Positive order.
    * @param {number[]|number[][]} [negOrder=null] - Negative order.
    * @param {number[]} [dividerOrder=null] - Divider order.
+   * @param {boolean} [negAddendum=false] - Append negatives after positives instead of inserting them.
    * @returns {{positive: string, negative: string}} - Generated prompts.
    */
   function buildVersions(
@@ -463,7 +474,8 @@
     baseOrder = null,
     posOrder = null,
     negOrder = null,
-    dividerOrder = null
+    dividerOrder = null,
+    negAddendum = false
   ) {
     if (!items.length) {
       return { positive: '', negative: '' };
@@ -485,6 +497,7 @@
       posDepths
     );
     let useNegDepths = negDepths;
+    const negCapture = negAddendum ? [] : null;
     const negTerms = includePosForNeg
       ? applyNegativeOnPositive(
           posTerms,
@@ -495,7 +508,8 @@
           delimited,
           dividerPool,
           null,
-          useNegDepths
+          useNegDepths,
+          negCapture
         )
       : applyModifierStack(
           items,
@@ -506,11 +520,51 @@
           delimited,
           dividerPool,
           baseOrder,
-          negDepths
+          negDepths,
+          negCapture
         );
     const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
+    const positiveString = trimPos.join(delimited ? '' : ', ');
+    if (negAddendum && negCapture) {
+      // Count how many non-divider terms remain so capture log aligns with trimmed negatives.
+      const dividerSet = new Set(dividerPool);
+      let keptTerms = 0;
+      trimNeg.forEach(term => {
+        if (!dividerSet.has(term)) keptTerms++;
+      });
+      const capturedForTrim = negCapture.slice(0, keptTerms);
+      const negSoloList = [];
+      capturedForTrim.forEach(entry => {
+        if (Array.isArray(entry)) {
+          entry.forEach(mod => {
+            if (mod) negSoloList.push(mod);
+          });
+        } else if (entry) {
+          negSoloList.push(entry);
+        }
+      });
+      const tail = negSoloList.join(', ');
+      if (tail) {
+        if (delimited) {
+          const prefix = positiveString || '';
+          const connector = prefix && !/\s$/.test(prefix) ? ' ' : '';
+          return {
+            positive: positiveString,
+            negative: prefix + connector + tail
+          };
+        }
+        return {
+          positive: positiveString,
+          negative: positiveString ? `${positiveString}, ${tail}` : tail
+        };
+      }
+      return {
+        positive: positiveString,
+        negative: positiveString
+      };
+    }
     return {
-      positive: trimPos.join(delimited ? '' : ', '),
+      positive: positiveString,
       negative: trimNeg.join(delimited ? '' : ', ')
     };
   }
@@ -1553,6 +1607,7 @@
     const posMods = posStackOn ? collectLists('pos', posStackSize) : utils.parseInput(document.getElementById('pos-input').value);
     const negMods = negStackOn ? collectLists('neg', negStackSize) : utils.parseInput(document.getElementById('neg-input').value);
     const includePosForNeg = document.getElementById('neg-include-pos').checked;
+    const negAddendum = document.getElementById('neg-addendum')?.checked || false; // Toggle routes negatives as addendum when true.
     const dividerMods = utils.parseDividerInput(document.getElementById('divider-input')?.value || '');
     const shuffleDividers = document.getElementById('divider-shuffle')?.checked;
     const lengthSelect = document.getElementById('length-select');
@@ -1601,6 +1656,7 @@
       negStackSize,
       limit,
       includePosForNeg,
+      negAddendum,
       dividerMods,
       shuffleDividers,
       dividerOrder,
@@ -1643,6 +1699,7 @@
       negStackSize,
       limit,
       includePosForNeg,
+      negAddendum,
       dividerMods,
       shuffleDividers,
       dividerOrder,
@@ -1672,7 +1729,8 @@
       baseOrder,
       posOrder,
       negOrder,
-      dividerOrder
+      dividerOrder,
+      negAddendum
     );
     displayOutput(result);
 
@@ -2969,6 +3027,7 @@
       '[data-target="pos-all-hide"]': 'Show or hide all positive stacks.',
       '[data-target="pos-order-random"]': 'Randomize order of positive modifiers.',
       '[data-target="pos-advanced"]': 'Reveal advanced positive options.',
+      '[data-target="neg-addendum"]': 'Append negatives after the full positive prompt instead of inserting them.',
       '[data-target="neg-include-pos"]': 'Apply negatives after positive prompt.',
       '[data-target="neg-stack"]': 'Combine multiple negative lists.',
       '[data-target="neg-all-hide"]': 'Show or hide all negative stacks.',

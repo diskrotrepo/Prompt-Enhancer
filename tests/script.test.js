@@ -132,9 +132,56 @@ describe('Prompt building', () => {
     expect(out).toEqual({ positive: 'good cat, good cat', negative: 'bad cat, bad cat' });
   });
 
+  test('buildVersions addendum method appends negatives after positives', () => {
+    const out = buildVersions(
+      ['cat'],
+      ['bad'],
+      ['good'],
+      20,
+      false,
+      [],
+      true,
+      1,
+      1,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      true
+    );
+    expect(out).toEqual({
+      positive: 'good cat, good cat',
+      negative: 'good cat, good cat, bad, bad'
+    });
+  });
+
   test('buildVersions can include positive terms for negatives', () => {
     const out = buildVersions(['cat'], ['bad'], ['good'], 20, true);
     expect(out).toEqual({ positive: 'good cat', negative: 'bad good cat' });
+  });
+
+  test('buildVersions addendum respects include-positive flag', () => {
+    const out = buildVersions(
+      ['cat'],
+      ['bad'],
+      ['good'],
+      20,
+      true,
+      [],
+      true,
+      1,
+      1,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      true
+    );
+    expect(out).toEqual({ positive: 'good cat', negative: 'good cat, bad' });
   });
 
   test('buildVersions applies negative depth after positives', () => {
