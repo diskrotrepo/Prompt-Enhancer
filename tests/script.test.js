@@ -488,6 +488,26 @@ describe('Prompt building', () => {
     expect(out.negative).toBe(expectedNeg);
   });
 
+  test('buildVersions applies base order exactly once', () => {
+    const base = ['alpha', 'beta', 'gamma'];
+    const out = buildVersions(
+      base,
+      ['neg'],
+      ['pos'],
+      80,
+      false,
+      [],
+      true,
+      1,
+      1,
+      null,
+      null,
+      [2, 0, 1]
+    );
+    const firstCycle = out.positive.split(', ').slice(0, base.length);
+    expect(firstCycle).toEqual(['pos gamma', 'pos alpha', 'pos beta']);
+  });
+
   // Complex multi-stack scenario combining Unicode and nested punctuation
   test('buildVersions handles unicode and parentheses in multi-stack prompts', () => {
     const items = parseInput('First (one.) Second.', true);

@@ -439,8 +439,9 @@
    * High level builder that returns both positive and negative prompt strings.
    * It delegates to applyModifierStack and optionally applyNegativeOnPositive.
    * Purpose: Generate final positive and negative prompts from inputs.
-   * Usage Example: buildVersions(items, negMods, posMods, 1000) returns {positive: '...', negative: '...'}.
-   * 50% Rule: Orchestrates stacking and equalization; trims for limits.
+  * Usage Example: buildVersions(items, negMods, posMods, 1000) returns {positive: '...', negative: '...'}.
+  * Base order randomization is applied once up front so subsequent stacking does not square permutations.
+  * 50% Rule: Orchestrates stacking and equalization; trims for limits.
    * @param {string[]} items - Base items.
    * @param {string[]|string[][]} negMods - Negative modifiers.
    * @param {string[]|string[][]} posMods - Positive modifiers.
@@ -480,20 +481,23 @@
     if (!items.length) {
       return { positive: '', negative: '' };
     }
-    if (Array.isArray(baseOrder)) items = applyOrder(items, baseOrder);
-    const delimited = /[,.!:;?\n]\s*$/.test(items[0]);
+    // Copy base items so baseOrder randomization is applied exactly once per generation.
+    const orderedItems = Array.isArray(baseOrder)
+      ? applyOrder(items, baseOrder)
+      : items.slice();
+    const delimited = /[,.!:;?\n]\s*$/.test(orderedItems[0]);
     let dividerPool = dividers.map(d => (d.startsWith('\n') ? d : '\n' + d));
     if (Array.isArray(dividerOrder)) dividerPool = applyOrder(dividerPool, dividerOrder);
     if (dividerPool.length && shuffleDividers && !dividerOrder) shuffle(dividerPool);
     const posTerms = applyModifierStack(
-      items,
+      orderedItems,
       posMods,
       limit,
       posStackSize,
       posOrder,
       delimited,
       dividerPool,
-      baseOrder,
+      null, // Base order already baked into orderedItems; avoid double application.
       posDepths
     );
     let useNegDepths = negDepths;
@@ -512,14 +516,14 @@
           negCapture
         )
       : applyModifierStack(
-          items,
+          orderedItems,
           negMods,
           limit,
           negStackSize,
           negOrder,
           delimited,
           dividerPool,
-          baseOrder,
+          null, // Maintain the single base ordering when negatives build independently.
           negDepths,
           negCapture
         );
