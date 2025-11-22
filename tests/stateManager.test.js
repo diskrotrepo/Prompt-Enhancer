@@ -15,6 +15,8 @@ function setupDOM() {
     <input type="checkbox" id="base-shuffle">
     <select id="base-order-select"></select>
     <textarea id="base-order-input"></textarea>
+    <input id="list-delimiter-char" value=" ">
+    <input id="list-delimiter-count" value="1" type="number">
     <select id="pos-select"></select>
     <textarea id="pos-input"></textarea>
     <input type="checkbox" id="pos-shuffle">
@@ -106,6 +108,18 @@ describe('State manager integration', () => {
     state.importState(JSON.parse(json));
     expect(document.getElementById('pos-depth-input').value).toBe('1,2');
     expect(document.getElementById('neg-depth-input').value).toBe('3');
+  });
+
+  test('delimiter settings persist through export and import', () => {
+    document.getElementById('list-delimiter-char').value = '-';
+    document.getElementById('list-delimiter-count').value = '2';
+    state.loadFromDOM();
+    const json = state.exportState();
+    document.getElementById('list-delimiter-char').value = ' ';
+    document.getElementById('list-delimiter-count').value = '1';
+    state.importState(JSON.parse(json));
+    expect(document.getElementById('list-delimiter-char').value).toBe('-');
+    expect(document.getElementById('list-delimiter-count').value).toBe('2');
   });
 
   test('stacked inputs round trip through state export', () => {

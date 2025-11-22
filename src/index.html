@@ -62,6 +62,17 @@
             </div>
           </div>
         </div>
+        <div class="input-group section-delimiter">
+          <div class="label-row">
+            <label for="list-delimiter-char">List Delimiter</label>
+          </div>
+          <div class="input-row">
+            <input id="list-delimiter-char" maxlength="1" value=" " placeholder="Enter a single character (default: space)">
+          </div>
+          <div class="input-row">
+            <input id="list-delimiter-count" type="number" min="1" value="1" placeholder="Delimiter occurrences per item">
+          </div>
+        </div>
         <!-- Base prompt input section -->
         <div class="input-group section-base">
           <div class="label-row">
@@ -78,7 +89,7 @@
           </div>
           <select id="base-select"></select>
           <div class="input-row">
-            <textarea id="base-input" rows="4" placeholder="Enter comma, semicolon, or newline separated items"></textarea>
+            <textarea id="base-input" rows="4" placeholder="Enter items separated by the chosen delimiter or newlines"></textarea>
           </div>
           <select id="base-order-select"></select>
           <div class="input-row">

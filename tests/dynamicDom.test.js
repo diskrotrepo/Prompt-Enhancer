@@ -7,6 +7,10 @@ const main = require('../src/script');
 const ui = main;
 
 describe('Dynamic DOM updates', () => {
+  beforeEach(() => {
+    ui.updateListSplitSettings(',', 1);
+  });
+
   test('updateDepthContainers refreshes watchers without duplicating controls', () => {
     document.body.innerHTML = `
       <textarea id="base-input">foo</textarea>
