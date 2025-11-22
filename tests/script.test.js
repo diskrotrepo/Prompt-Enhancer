@@ -16,6 +16,8 @@ const ui = main;
 
 const {
   parseInput,
+  getListSplitSettings,
+  updateListSplitSettings,
   shuffle,
   equalizeLength,
   buildVersions,
@@ -27,6 +29,10 @@ const {
   countWords,
   computeDepthCounts
 } = utils;
+
+beforeEach(() => {
+  updateListSplitSettings(' ', 1);
+});
 
 const { exportLists, importLists, saveList, deleteList } = lists;
 
@@ -48,13 +54,40 @@ const {
   setupDepthControl,
   updateDepthContainers,
   depthWatchIds,
+  setupListDelimiterControls,
   setupPresetListener
 } = ui;
 
 describe('Utility functions', () => {
-  test('parseInput splits and trims correctly', () => {
+  beforeEach(() => {
+    updateListSplitSettings(' ', 1);
+  });
+
+  test('parseInput splits and trims using the default space delimiter', () => {
     const input = 'a, b; c\nd';
-    expect(parseInput(input)).toEqual(['a', 'b', 'c', 'd']);
+    expect(parseInput(input)).toEqual(['a,', 'b;', 'c', 'd']);
+  });
+
+  test('parseInput respects configurable delimiter choice', () => {
+    updateListSplitSettings(',', 1);
+    const input = 'a, b, c';
+    expect(parseInput(input)).toEqual(['a', 'b', 'c']);
+  });
+
+  test('parseInput splits after the configured number of delimiters', () => {
+    updateListSplitSettings(' ', 2);
+    expect(parseInput('alpha beta gamma delta')).toEqual(['alpha beta', 'gamma delta']);
+  });
+
+  test('parseInput counts delimiters per line', () => {
+    updateListSplitSettings(' ', 2);
+    expect(parseInput('one two three\nfour five')).toEqual(['one two', 'three', 'four five']);
+  });
+
+  test('updateListSplitSettings rejects invalid settings without mutating state', () => {
+    expect(() => updateListSplitSettings('', 1)).toThrow('List delimiter must be exactly one character.');
+    expect(() => updateListSplitSettings(' ', 0)).toThrow('Delimiter count must be a positive integer.');
+    expect(getListSplitSettings()).toEqual({ delimiter: ' ', groupSize: 1 });
   });
 
   test('parseInput preserves delimiters when requested', () => {
@@ -81,6 +114,7 @@ describe('Utility functions', () => {
 
   // Ensures delimiter periods inside parentheses keep closing brackets attached
   test('parseInput keeps closing brackets with prior sentence', () => {
+    updateListSplitSettings(',', 1);
     const input = 'First (one.) Second.';
     expect(parseInput(input, true)).toEqual(['First (one.) ', 'Second.']);
   });
@@ -127,6 +161,10 @@ describe('Utility functions', () => {
 });
 
 describe('Prompt building', () => {
+  beforeEach(() => {
+    updateListSplitSettings(',', 1);
+  });
+
   test('buildVersions builds positive and negative prompts', () => {
     const out = buildVersions(['cat'], ['bad'], ['good'], 20);
     expect(out).toEqual({ positive: 'good cat, good cat', negative: 'bad cat, bad cat' });
@@ -594,6 +632,25 @@ describe('Lyrics processing', () => {
 });
 
 describe('UI interactions', () => {
+  beforeEach(() => {
+    updateListSplitSettings(',', 1);
+  });
+
+  test('setupListDelimiterControls syncs delimiter settings from inputs', () => {
+    document.body.innerHTML = `
+      <input id="list-delimiter-char" value=" ">
+      <input id="list-delimiter-count" value="1" type="number">
+    `;
+    setupListDelimiterControls();
+    const charInput = document.getElementById('list-delimiter-char');
+    const countInput = document.getElementById('list-delimiter-count');
+    charInput.value = '|';
+    charInput.dispatchEvent(new Event('change'));
+    countInput.value = '3';
+    countInput.dispatchEvent(new Event('change'));
+    expect(getListSplitSettings()).toEqual({ delimiter: '|', groupSize: 3 });
+  });
+
   test('order all toggles dropdown values', () => {
     document.body.innerHTML = `
       <select id="base-order-select"><option value="canonical">c</option><option value="random">r</option></select>
@@ -786,6 +843,8 @@ describe('UI interactions', () => {
       <textarea id="pos-depth-input"></textarea>
       <textarea id="base-input">foo bar,baz</textarea>
     `;
+    updateListSplitSettings(',', 1);
+    expect(getListSplitSettings()).toEqual({ delimiter: ',', groupSize: 1 });
     setupDepthControl('pos-depth-select', 'pos-depth-input', 'base-input');
     const sel = document.getElementById('pos-depth-select');
     sel.value = 'append';
@@ -807,6 +866,7 @@ describe('UI interactions', () => {
       <textarea id="pos-input">baz qux</textarea>
       <textarea id="pos-order-input">0</textarea>
     `;
+    updateListSplitSettings(',', 1);
     setupDepthControl('pos-depth-select', 'pos-depth-input', [
       'base-input',
       'pos-input',
@@ -831,6 +891,7 @@ describe('UI interactions', () => {
       <textarea id="pos-input">good</textarea>
       <textarea id="pos-order-input">0</textarea>
     `;
+    updateListSplitSettings(',', 1);
     setupDepthControl('neg-depth-select', 'neg-depth-input', [
       'base-input',
       'neg-input',
@@ -883,6 +944,7 @@ describe('UI interactions', () => {
         <textarea id="base-input">foo bar</textarea>
         <select id="base-select"></select>
       `;
+      updateListSplitSettings(',', 1);
       setupDepthControl('neg-depth-select', 'neg-depth-input', [
         'base-input',
         'neg-input',
@@ -930,6 +992,7 @@ describe('UI interactions', () => {
       <textarea id="pos-depth-input"></textarea>
       <textarea id="base-input">foo bar,baz</textarea>
     `;
+    updateListSplitSettings(',', 1);
     setupDepthControl('pos-depth-select', 'pos-depth-input', 'base-input');
     const sel = document.getElementById('pos-depth-select');
     sel.value = 'prepend';
@@ -947,6 +1010,7 @@ describe('UI interactions', () => {
       <textarea id="pos-depth-input"></textarea>
       <textarea id="base-input">foo bar,baz</textarea>
     `;
+    updateListSplitSettings(',', 1);
     setupDepthControl('pos-depth-select', 'pos-depth-input', 'base-input');
     const sel = document.getElementById('pos-depth-select');
     sel.value = 'append';
@@ -965,6 +1029,7 @@ describe('UI interactions', () => {
       <textarea id="pos-depth-input"></textarea>
       <textarea id="base-input">foo bar,baz</textarea>
     `;
+    updateListSplitSettings(',', 1);
     setupDepthControl('pos-depth-select', 'pos-depth-input', 'base-input');
     const sel = document.getElementById('pos-depth-select');
     sel.value = 'append';
@@ -1015,6 +1080,7 @@ describe('UI interactions', () => {
       </select>
       <textarea id="pos-depth-input"></textarea>
     `;
+    updateListSplitSettings(',', 1);
     setupPresetListener('base-select', 'base-input', 'base');
     setupDepthControl('pos-depth-select', 'pos-depth-input', 'base-input');
     const depthSel = document.getElementById('pos-depth-select');
@@ -1087,6 +1153,7 @@ describe('UI interactions', () => {
         <select id="neg-depth-select"><option value="append">a</option></select>
         <div class="input-row"><textarea id="neg-depth-input"></textarea></div>
       </div>`;
+    updateListSplitSettings(',', 1);
     updateStackBlocks('pos', 2);
     updateDepthContainers('neg', 1);
     setupOrderControl('pos-order-select', 'pos-order-input', () => ['good', 'better']);
@@ -1546,6 +1613,10 @@ describe('UI interactions', () => {
   });
 
 describe('List persistence', () => {
+  beforeEach(() => {
+    updateListSplitSettings(',', 1);
+  });
+
   test('exportLists and importLists round trip', () => {
     importLists({ presets: [{ id: 'x', title: 'x', type: 'positive', items: ['1'] }] });
     const json = exportLists();

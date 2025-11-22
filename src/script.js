@@ -31,6 +31,7 @@
  *    - Input collection and output display (collectInputs, displayOutput)
  *    - Event handlers and setup (setupPresetListener, initializeUI)
  *    - Reusable id iteration (forEachId)
+ *    - List delimiter controls (getListSplitSettings, updateListSplitSettings)
  *    - Watcher utilities (depthWatchIds)
  *    - Help mode toggle and tooltip handling (setupHelpMode)
  * 6. Initialization and Exports
@@ -44,14 +45,88 @@
 // Structural Overview: Grouped utilities that avoid DOM or state changes, enabling easy testing and reuse.
 // Section Summary: Provides foundational tools for text processing and prompt generation, used throughout the app.
 
+  // Configurable delimiter settings let users split lists on any character and at any interval.
+  const listSplitConfig = {
+    delimiter: ' ',
+    groupSize: 1
+  };
+
+  /**
+   * Read the current delimiter configuration.
+   * Purpose: Share delimiter state with UI and tests without exposing mutation.
+   * Usage Example: getListSplitSettings() returns { delimiter: ' ', groupSize: 1 } by default.
+   * 50% Rule: Combines summary, example, and explicit return shape for clarity.
+   * @returns {{delimiter: string, groupSize: number}} - Copy of delimiter settings.
+   */
+  function getListSplitSettings() {
+    return { ...listSplitConfig };
+  }
+
+  /**
+   * Update the delimiter character and how many occurrences trigger a split.
+   * Purpose: Keep parsing configurable while validating input so bad states surface immediately.
+   * Usage Example: updateListSplitSettings(',', 1) re-enables comma separation; updateListSplitSettings(' ', 2) splits every
+   * other space.
+   * 50% Rule: Notes strict validation (single character, positive integer) and shows dual examples to reinforce behavior.
+   * @param {string} delimiter - Single character separator.
+   * @param {number} groupSize - How many delimiters per segment.
+   * @returns {{delimiter: string, groupSize: number}} - Updated settings snapshot.
+   */
+  function updateListSplitSettings(delimiter, groupSize) {
+    if (typeof delimiter !== 'string' || delimiter.length !== 1) {
+      throw new Error('List delimiter must be exactly one character.');
+    }
+    const frequency = Number(groupSize);
+    if (!Number.isInteger(frequency) || frequency <= 0) {
+      throw new Error('Delimiter count must be a positive integer.');
+    }
+    listSplitConfig.delimiter = delimiter;
+    listSplitConfig.groupSize = frequency;
+    return getListSplitSettings();
+  }
+
+  /**
+   * Break text into segments whenever the delimiter has been seen `groupSize` times.
+   * Purpose: Centralize repeated delimiter counting so parseInput stays readable.
+   * Usage Example: splitByDelimiterFrequency('a b c d', ' ', 2) returns ['a b', 'c d'].
+   * 50% Rule: Describes control flow (counting delimiter hits) and outcome via example and summary.
+   * @param {string} text - Raw string to slice.
+   * @param {string} delimiter - Delimiter character to watch for.
+   * @param {number} groupSize - Occurrences required before splitting.
+   * @returns {string[]} - Segments including intra-segment delimiters.
+   */
+  function splitByDelimiterFrequency(text, delimiter, groupSize) {
+    const segments = [];
+    let current = '';
+    let seen = 0;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (ch === delimiter) {
+        seen += 1;
+        if (seen < groupSize) {
+          current += ch;
+        } else {
+          segments.push(current);
+          current = '';
+          seen = 0;
+        }
+      } else {
+        current += ch;
+      }
+    }
+    segments.push(current);
+    return segments;
+  }
+
   /**
    * Split a raw text block into individual items.
    * If keepDelim is true, punctuation is preserved and a trailing period is added when missing
    * so other code can treat each string as a sentence. Closing brackets right
    * after a delimiter stay with the preceding item so parentheses like
-   * "(example.)" remain intact.
+   * "(example.)" remain intact. When keepDelim is false the configurable
+   * delimiter and grouping determine how input lines are sliced.
    * Purpose: Parse user input into arrays, handling delimiters flexibly for prompts and modifiers.
-   * Usage Example: parseInput("item1, item2.", true) returns ["item1,", "item2."].
+   * Usage Example: parseInput("item1 item2", false) returns ['item1', 'item2'] with the default space delimiter.
    * 50% Rule: Employs multiple strategies (normalization, splitting, trimming) for robust parsing; diverse methods ensure clarity.
    * @param {string} raw - Text entered by the user.
    * @param {boolean} [keepDelim=false] - Keep punctuation delimiters.
@@ -61,48 +136,68 @@
     // Check for empty input
     if (!raw) return [];
     if (!keepDelim) {
-      // Normalize delimiters to commas
-      const normalized = raw.replace(/;/g, ',').replace(/\s*,\s*/g, ',');
-      // Split, trim, and filter empty items
-      return normalized
-        .split(/[,\n]+/)
-        .map(s => s.trim())
-        .filter(Boolean);
+      const normalized = raw.replace(/\r\n/g, '\n');
+      const { delimiter, groupSize } = getListSplitSettings();
+      const lines = normalized.split('\n');
+      const items = [];
+      lines.forEach(line => {
+        splitByDelimiterFrequency(line, delimiter, groupSize)
+          .map(s => s.trim())
+          .filter(Boolean)
+          .forEach(val => items.push(val));
+      });
+      return items;
     }
     // Handle delimiter preservation
     const normalized = raw.replace(/\r\n/g, '\n');
     const delims = [',', '.', ';', ':', '!', '?', '\n'];
+    const { delimiter, groupSize } = getListSplitSettings();
     const items = [];
     let current = '';
+    let customSeen = 0;
     // Iterate through each character
     for (let i = 0; i < normalized.length; i++) {
       const ch = normalized[i];
+      const isCustom = ch === delimiter;
+      if (isCustom) customSeen += 1;
+      const reachedCustom = isCustom && customSeen === groupSize;
       current += ch;
-      if (delims.includes(ch)) {
-        let natural = /[,.!:;?\n]/.test(ch);
-        // Extend through adjacent delimiters, closing brackets, and spaces
-        while (i + 1 < normalized.length) {
-          const next = normalized[i + 1];
-          if (delims.includes(next)) {
-            if (/[,.!:;?\n]/.test(next)) natural = true;
-            current += next;
-            i++;
-            continue;
+      if (delims.includes(ch) || reachedCustom) {
+        if (reachedCustom) {
+          const trimmed = current.slice(0, -1).trimEnd();
+          if (trimmed) {
+            const finalized = /[,.!:;?\n]\s*$/.test(trimmed)
+              ? trimmed
+              : `${trimmed}. `;
+            items.push(finalized);
           }
-          if (next === ')' || next === ']' || next === '}' || next === '>') {
-            current += next;
-            i++;
-            continue;
+        } else {
+          let natural = /[,.!:;?\n]/.test(ch);
+          // Extend through adjacent delimiters, closing brackets, and spaces
+          while (i + 1 < normalized.length) {
+            const next = normalized[i + 1];
+            if (delims.includes(next)) {
+              if (/[,.!:;?\n]/.test(next)) natural = true;
+              current += next;
+              i++;
+              continue;
+            }
+            if (next === ')' || next === ']' || next === '}' || next === '>') {
+              current += next;
+              i++;
+              continue;
+            }
+            if (next === ' ' && natural) {
+              current += ' ';
+              i++;
+              continue;
+            }
+            break;
           }
-          if (next === ' ' && natural) {
-            current += ' ';
-            i++;
-            continue;
-          }
-          break;
+          items.push(current);
         }
-        items.push(current);
         current = '';
+        customSeen = 0;
       }
     }
     // Handle trailing item with period if needed
@@ -658,6 +753,9 @@
   }
 
   const utils = {
+    getListSplitSettings,
+    updateListSplitSettings,
+    splitByDelimiterFrequency,
     parseInput,
     countWords,
     parseDividerInput,
@@ -1578,6 +1676,34 @@
     const input = document.getElementById(inputId);
     if (!select || !input) return;
     select.addEventListener('change', () => applyPreset(select, input, type));
+  }
+
+  /**
+   * Wire delimiter controls to the shared parsing configuration.
+   * Purpose: Keep parseInput aligned with user-selected delimiter and frequency.
+   * Usage: Called during initializeUI once DOM is ready.
+   * 50% Rule: Documents intent, data flow (change events -> updateListSplitSettings), and error handling alert for invalid input.
+   */
+  function setupListDelimiterControls() {
+    const delimInput = document.getElementById('list-delimiter-char');
+    const countInput = document.getElementById('list-delimiter-count');
+    if (!delimInput || !countInput) return;
+
+    const applyConfig = () => {
+      try {
+        const freq = parseInt(countInput.value, 10);
+        utils.updateListSplitSettings(delimInput.value, freq);
+      } catch (err) {
+        alert(err.message);
+        const current = utils.getListSplitSettings();
+        delimInput.value = current.delimiter;
+        countInput.value = current.groupSize;
+      }
+    };
+
+    delimInput.addEventListener('change', applyConfig);
+    countInput.addEventListener('change', applyConfig);
+    applyConfig();
   }
 
   /**
@@ -3014,8 +3140,11 @@
       '[data-target="advanced-mode"]': 'Switch between simple and advanced options.',
       '[data-target="help-mode"]': 'Enable help mode; clicking reveals tooltips.',
       '#generate': 'Build prompts using current settings.',
+      '#list-delimiter-char': 'Character used to split all lists when keep-delimiter mode is off. One character only; space by default.',
+      '#list-delimiter-count': 'Number of delimiter occurrences per item. Two splits every other delimiter, three splits after the third, etc.',
       '.section-data': 'Manage stored prompt lists.',
       '.section-actions': 'Global toggles including help mode.',
+      '.section-delimiter': 'Configure the delimiter character and how often it splits list items.',
       '.section-base': 'Base prompts anchoring the concept.',
       '.section-positive': 'Positive modifiers or outputs.',
       '.section-negative': 'Negative modifiers or outputs.',
@@ -3038,18 +3167,18 @@
       '[data-target="lyrics-insert-random"]': 'Randomize insertion intervals for lyric terms.',
       // Inputs and lists
       '#base-select': 'Choose base prompt preset.',
-      '#base-input': 'Comma or newline separated base prompts.',
+      '#base-input': 'Base prompts split by the configured delimiter or by newlines.',
       '#base-order-select': 'Preset ordering for base prompts.',
       '#base-order-input': 'Manual order for base prompts.',
       'select[id^="pos-select"]': 'Choose positive list preset.',
-      'textarea[id^="pos-input"]': 'Positive modifiers separated by commas or newlines.',
+      'textarea[id^="pos-input"]': 'Positive modifiers split by the configured delimiter or by newlines.',
       'select[id^="pos-order-select"]': 'Preset ordering for positives.',
       'textarea[id^="pos-order-input"]': 'Manual order for positives.',
       'select[id^="pos-depth-select"]': 'Depth position options for positives.',
       'textarea[id^="pos-depth-input"]': 'Manual depth indices for positives.',
       '#pos-stack-size': 'Number of positive stacks.',
       'select[id^="neg-select"]': 'Choose negative list preset.',
-      'textarea[id^="neg-input"]': 'Negative modifiers separated by commas or newlines.',
+      'textarea[id^="neg-input"]': 'Negative modifiers split by the configured delimiter or by newlines.',
       'select[id^="neg-order-select"]': 'Preset ordering for negatives.',
       'textarea[id^="neg-order-input"]': 'Manual order for negatives.',
       'select[id^="neg-depth-select"]': 'Depth position options for negatives.',
@@ -3177,6 +3306,7 @@
     storage.loadPersisted();
     loadLists(); // Populate selects on first load
     applyCurrentPresets();
+    setupListDelimiterControls();
 
     setupPresetListener('neg-select', 'neg-input', 'negative');
     setupPresetListener('pos-select', 'pos-input', 'positive');
@@ -3324,6 +3454,7 @@
     updateDepthContainers,
     depthWatchIds,
     initializeUI,
+    setupListDelimiterControls,
     applyCurrentPresets,
     resetUI,
     computeDepthCounts
