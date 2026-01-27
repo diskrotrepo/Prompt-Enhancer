@@ -17,10 +17,10 @@
  * 1. Pure Utility Functions
  *    - Parsing and manipulation helpers (parseInput, countWords, etc.)
  *    - Core prompt building logic (applyModifierStack, buildVersions)
-* 2. List Management
-*    - Conflict resolution helpers (listsEqual, nextListName)
-*    - Preset loading and population (populateSelect, loadLists)
-*    - Export/import, saving and deleting lists
+ * 2. List Management
+ *    - Conflict resolution helpers (listsEqual, nextListName)
+ *    - Preset loading and population (populateSelect, loadLists, order refresh)
+ *    - Export/import, saving and deleting lists
  * 3. State Management
  *    - DOM interaction for state (getVal, setVal, loadFromDOM)
  *    - Export/import state
@@ -678,7 +678,8 @@
 // Structural Overview: Utilities handle comparisons and naming before
 // initializing preset maps and providing load/save/delete operations.
 // Section Summary: Centralizes preset handling for reusability across UI
-// and logic.
+// and logic, including order preset refresh so imports immediately affect
+// order controls.
 
   /**
    * Determine if two item arrays contain the same elements regardless of order.
@@ -833,10 +834,16 @@
    * Purpose: Load and categorize presets, update UI selects.
    * Usage: Called on init and after imports.
    * 50% Rule: Filters by type with arrays; calls populate for each.
+   * Resetting ORDER_PRESETS prevents stale order data and refreshes order
+   * dropdowns so new order lists appear immediately after import.
+   * Additive imports can preserve existing order presets when no new order
+   * entries are supplied, keeping order selects stable.
    * Select menus populate alphabetically via helper sort.
-   * No params/returns; side-effect on global presets and UI.
+   * @param {Object} [opts] - Options to control refresh behavior.
+   * @param {boolean} [opts.preserveOrder=false] - Keep existing order presets.
    */
-  function loadLists() {
+  function loadLists(opts = {}) {
+    const preserveOrder = Boolean(opts.preserveOrder);
     NEG_PRESETS = {};
     POS_PRESETS = {};
     LENGTH_PRESETS = {};
@@ -844,6 +851,8 @@
     BASE_PRESETS = {};
     LYRICS_PRESETS = {};
     INSERT_PRESETS = {};
+    // Clear order presets unless additive import wants to preserve them.
+    ORDER_PRESETS = preserveOrder ? { ...ORDER_PRESETS } : {};
     const neg = [];
     const pos = [];
     const len = [];
@@ -899,6 +908,10 @@
     if (posDepthSelect) populateDepthSelect(posDepthSelect, order);
     const negDepthSelect = document.getElementById('neg-depth-select');
     if (negDepthSelect) populateDepthSelect(negDepthSelect, order);
+    // Refresh order dropdowns so new presets are visible without a reload.
+    document
+      .querySelectorAll('[id*="-order-select"]')
+      .forEach(select => populateOrderOptions(select));
   }
 
   /** 
@@ -923,6 +936,8 @@
    */
   function importLists(obj, additive = false) {
     if (!obj || typeof obj !== 'object' || !Array.isArray(obj.presets)) return;
+    // Detect order presets to decide whether additive imports should preserve them.
+    const incomingOrder = obj.presets.some(p => p.type === 'order');
     if (!additive) {
       LISTS = {
         presets: obj.presets.map(p => ({
@@ -952,7 +967,7 @@
       });
       LISTS.presets = existing;
     }
-    loadLists();
+    loadLists({ preserveOrder: additive && !incomingOrder });
   }
 
   /**
@@ -1349,7 +1364,8 @@
 // Layers multiple setup functions and event listeners for comprehensive UI control.
 // Structural Overview: Many setup functions for buttons, toggles, etc.
 // Section Summary: Manages all DOM interactions and event binding, ensuring
-// dropdowns are populated on startup and help tooltips describe controls.
+// dropdowns stay current after list imports and copy actions fall back
+// when clipboard writes are blocked or unavailable.
 
   /** 
    * Infer the section prefix from a control id.
@@ -2286,9 +2302,9 @@
 
   /** 
    * Attach clipboard copy handlers to .copy-button elements.
-   * Purpose: Copy to clipboard.
+   * Purpose: Copy to clipboard with an execCommand fallback.
    * Usage: In initializeUI.
-   * 50% Rule: Async with feedback.
+   * 50% Rule: Async path plus fallback so copy works in more contexts.
    */
   function setupCopyButtons() {
     document.querySelectorAll('.copy-button').forEach(btn => {
@@ -2300,7 +2316,33 @@
       btn.addEventListener('click', async () => {
         try {
           const text = target.value !== undefined ? target.value : target.textContent;
-          await navigator.clipboard.writeText(text);
+          const fallbackCopy = () => {
+            // Fallback for file://, permission blocks, or missing clipboard APIs.
+            if (target.value !== undefined && typeof target.select === 'function') {
+              target.select();
+            } else {
+              const range = document.createRange();
+              range.selectNodeContents(target);
+              const selection = window.getSelection();
+              if (selection) {
+                selection.removeAllRanges();
+                selection.addRange(range);
+              }
+            }
+            document.execCommand('copy');
+            const selection = window.getSelection();
+            if (selection) selection.removeAllRanges();
+          };
+          // Prefer modern clipboard API, but fall back when missing or rejected.
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            try {
+              await navigator.clipboard.writeText(text);
+            } catch (err) {
+              fallbackCopy();
+            }
+          } else {
+            fallbackCopy();
+          }
           btn.innerHTML = '&#10003;';
           btn.classList.add('copied');
           setTimeout(() => {
@@ -2318,11 +2360,13 @@
    * Fill order dropdown with canonical, random and preset options.
    * Purpose: Populate order selects.
    * Usage: In initializeUI.
-   * 50% Rule: Static + dynamic options.
+   * 50% Rule: Static + dynamic options, preserving selection when possible.
    * @param {HTMLSelectElement} select - Select to populate.
    */
   function populateOrderOptions(select) {
     if (!select) return;
+    // Preserve selection across repopulation to avoid unexpected resets.
+    const previous = select.value;
     select.innerHTML = '';
     const opts = [
       { id: 'canonical', title: 'Canonical' },
@@ -2337,6 +2381,9 @@
       opt.textContent = o.title;
       select.appendChild(opt);
     });
+    if (previous && select.querySelector(`option[value="${previous}"]`)) {
+      select.value = previous;
+    }
   }
 
 
