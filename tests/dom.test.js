@@ -43,8 +43,8 @@ describe('Button layout', () => {
     const dom = new JSDOM(html);
     const posHide = dom.window.document.getElementById('pos-hide-1');
     const negHide = dom.window.document.getElementById('neg-hide-1');
-    expect(posHide.dataset.targets).toContain('pos-depth-input');
-    expect(negHide.dataset.targets).toContain('neg-depth-input');
+    expect(posHide.dataset.targets).toContain('pos-depth-container');
+    expect(negHide.dataset.targets).toContain('neg-depth-container');
   });
 
   // Layout adaptation: label rows should wrap so buttons never overflow their container

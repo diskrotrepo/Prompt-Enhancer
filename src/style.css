@@ -361,15 +361,6 @@ textarea {
     min-height: 10vh;
 }
 
-textarea[id^="base-order-input"],
-textarea[id^="pos-order-input"],
-textarea[id^="neg-order-input"],
-textarea[id^="divider-order-input"],
-textarea[id^="pos-depth-input"],
-textarea[id^="neg-depth-input"] {
-    min-height: 2em;
-}
-
 /* Select dropdown styling */
 select {
     width: 100%;
@@ -388,6 +379,16 @@ input[type=number] {
     border: 1px solid #444;
     padding: 0.5rem;
     margin-top: 0.5rem;
+}
+
+/* Text input styling */
+input[type=text] {
+    width: 100%;
+    background: #222;
+    color: #fff;
+    border: 1px solid #444;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
 }
 
 /* Button styling */
@@ -594,6 +595,7 @@ button {
 
 .section-data,
 .section-actions,
+.section-parsing,
 .section-divider,
 .section-base,
 .section-positive,
@@ -630,7 +632,8 @@ button {
 }
 
 .section-actions,
-.section-data {
+.section-data,
+.section-parsing {
   background: linear-gradient(45deg, rgba(80, 80, 80, 0.3), rgba(40, 40, 40, 0.3));
 }
 

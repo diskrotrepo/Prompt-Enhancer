@@ -14,7 +14,6 @@ function setupDOM() {
     <textarea id="base-input"></textarea>
     <input type="checkbox" id="base-shuffle">
     <select id="base-order-select"></select>
-    <textarea id="base-order-input"></textarea>
     <select id="pos-select"></select>
     <textarea id="pos-input"></textarea>
     <input type="checkbox" id="pos-shuffle">
@@ -27,18 +26,12 @@ function setupDOM() {
     <select id="neg-stack-size"><option value="2">2</option></select>
     <input type="checkbox" id="neg-include-pos">
     <select id="pos-order-select"></select>
-    <textarea id="pos-order-input"></textarea>
     <select id="neg-order-select"></select>
-    <textarea id="neg-order-input"></textarea>
     <select id="divider-select"></select>
     <textarea id="divider-input"></textarea>
     <input type="checkbox" id="divider-shuffle">
-    <select id="divider-order-select"></select>
-    <textarea id="divider-order-input"></textarea>
     <select id="pos-depth-select"></select>
-    <textarea id="pos-depth-input"></textarea>
     <select id="neg-depth-select"></select>
-    <textarea id="neg-depth-input"></textarea>
     <select id="length-select"></select>
     <input id="length-input">
     <select id="lyrics-select"></select>
@@ -56,13 +49,12 @@ function setupDOM() {
 function sampleLists() {
   return {
     presets: [
-      { id: 'neg', title: 'neg', type: 'negative', items: ['bad'] },
-      { id: 'pos', title: 'pos', type: 'positive', items: ['good'] },
-      { id: 'len', title: 'len', type: 'length', items: ['20'] },
-      { id: 'div', title: 'div', type: 'divider', items: ['\nfoo '] },
-      { id: 'base', title: 'base', type: 'base', items: ['cat'] },
-      { id: 'ly', title: 'ly', type: 'lyrics', items: ['la'] },
-      { id: 'ord', title: 'ord', type: 'order', items: ['0'] }
+      { id: 'neg', title: 'neg', type: 'negative', items: 'bad' },
+      { id: 'pos', title: 'pos', type: 'positive', items: 'good' },
+      { id: 'len', title: 'len', type: 'length', items: '20' },
+      { id: 'div', title: 'div', type: 'divider', items: '\nfoo ' },
+      { id: 'base', title: 'base', type: 'base', items: 'cat' },
+      { id: 'ly', title: 'ly', type: 'lyrics', items: 'la' }
     ]
   };
 }
@@ -94,18 +86,6 @@ describe('State manager integration', () => {
 
     const again = state.exportState();
     expect(again).toBe(json);
-  });
-
-  test('depth values persist through export and import', () => {
-    document.getElementById('pos-depth-input').value = '1,2';
-    document.getElementById('neg-depth-input').value = '3';
-    state.loadFromDOM();
-    const json = state.exportState();
-    document.getElementById('pos-depth-input').value = '';
-    document.getElementById('neg-depth-input').value = '';
-    state.importState(JSON.parse(json));
-    expect(document.getElementById('pos-depth-input').value).toBe('1,2');
-    expect(document.getElementById('neg-depth-input').value).toBe('3');
   });
 
   test('stacked inputs round trip through state export', () => {

@@ -15,11 +15,12 @@
  *
  * Detailed Table of Contents:
  * 1. Pure Utility Functions
- *    - Parsing and manipulation helpers (parseInput, countWords, etc.)
+ *    - Parsing + delimiter helpers (parseInput, buildDelimiterRegex, countWords)
+ *    - Ordering + depth helpers (buildOrderIndices, buildDepthValues, computeDepthCountsFrom)
  *    - Core prompt building logic (applyModifierStack, buildVersions)
  * 2. List Management
  *    - Conflict resolution helpers (listsEqual, nextListName)
- *    - Preset loading and population (populateSelect, loadLists, order refresh)
+ *    - Preset loading and population (populateSelect, loadLists, legacy normalization)
  *    - Export/import, saving and deleting lists
  * 3. State Management
  *    - DOM interaction for state (getVal, setVal, loadFromDOM)
@@ -29,9 +30,9 @@
  *    - Data persistence (persist, loadPersisted)
  * 5. UI Controls
  *    - Input collection and output display (collectInputs, displayOutput)
+ *    - Mode resolution for order/depth selects (readSelectMode, resolveStackOrders)
  *    - Event handlers and setup (setupPresetListener, initializeUI)
  *    - Reusable id iteration (forEachId)
- *    - Watcher utilities (depthWatchIds)
  *    - Help mode toggle and tooltip handling (setupHelpMode)
  * 6. Initialization and Exports
  *    - IIFE setup and module exports
@@ -45,74 +46,72 @@
 // Section Summary: Provides foundational tools for text processing and prompt generation, used throughout the app.
 
   /**
-   * Split a raw text block into individual items.
-   * If keepDelim is true, punctuation is preserved and a trailing period is added when missing
-   * so other code can treat each string as a sentence. Closing brackets right
-   * after a delimiter stay with the preceding item so parentheses like
-   * "(example.)" remain intact.
-   * Purpose: Parse user input into arrays, handling delimiters flexibly for prompts and modifiers.
-   * Usage Example: parseInput("item1, item2.", true) returns ["item1,", "item2."].
-   * 50% Rule: Employs multiple strategies (normalization, splitting, trimming) for robust parsing; diverse methods ensure clarity.
-   * @param {string} raw - Text entered by the user.
-   * @param {boolean} [keepDelim=false] - Keep punctuation delimiters.
-   * @returns {string[]} - Array of parsed items.
+   * Escape regex metacharacters in a literal string.
+   * Purpose: Safely build regex patterns for delimiters and preset-name matching.
+   * Usage Example: escapeRegExp('|') returns '\\|'.
+   * 50% Rule: Single-responsibility helper, documented by purpose + example.
+   * @param {string} value - Raw string to escape.
+   * @returns {string} - Escaped string safe for RegExp.
    */
-  function parseInput(raw, keepDelim = false) {
-    // Check for empty input
+  function escapeRegExp(value) {
+    return String(value).replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
+  }
+
+  /**
+   * Build a delimiter regex from a string or pass through an existing RegExp.
+   * Whitespace (or empty) defaults to a \s+ splitter so spaces, tabs, and newlines chunk uniformly.
+   * Purpose: Normalize delimiter choices into a single split pattern.
+   * Usage Example: buildDelimiterRegex(',') returns /,/ and buildDelimiterRegex(' ') returns /\\s+/.
+   * 50% Rule: Combines fallback logic, regex safety, and examples for clarity.
+   * @param {string|RegExp} delimiter - Delimiter string or regex.
+   * @returns {RegExp} - Regex used to split inputs.
+   */
+  function buildDelimiterRegex(delimiter) {
+    if (delimiter instanceof RegExp) return delimiter;
+    const raw = delimiter == null ? '' : String(delimiter);
+    if (!raw || raw === ' ') return /\s+/;
+    if (raw === '\n') return /\r?\n+/;
+    if (raw === '\t') return /\t+/;
+    return new RegExp(escapeRegExp(raw));
+  }
+
+  /**
+   * Split a raw text block into delimiter-terminated chunks.
+   * Delimiters are preserved on the end of each chunk whenever they appear.
+   * Purpose: Parse user input into arrays while keeping delimiter characters intact.
+   * Usage Example: parseInput("item1 item2") returns ["item1 ", "item2"].
+   * Usage Example: parseInput("item1, item2.", true) returns ["item1,", " item2."].
+   * 50% Rule: Uses regex chunking with preserved delimiters; docs emphasize no trimming.
+   * @param {string} raw - Text entered by the user.
+   * @param {boolean} [keepDelim=false] - Use sentence punctuation as the delimiter.
+   * @param {string|RegExp} [delimiter=/\\s+/] - Delimiter string or regex for non-sentence splitting.
+   * @returns {string[]} - Array of parsed chunks (delimiters preserved).
+   */
+  function parseInput(raw, keepDelim = false, delimiter = /\s+/) {
     if (!raw) return [];
-    if (!keepDelim) {
-      // Normalize delimiters to commas
-      const normalized = raw.replace(/;/g, ',').replace(/\s*,\s*/g, ',');
-      // Split, trim, and filter empty items
-      return normalized
-        .split(/[,\n]+/)
-        .map(s => s.trim())
-        .filter(Boolean);
-    }
-    // Handle delimiter preservation
     const normalized = raw.replace(/\r\n/g, '\n');
-    const delims = [',', '.', ';', ':', '!', '?', '\n'];
+    const activeDelimiter = keepDelim ? /[,.!:;?\n]+/ : delimiter;
+    const splitRe = buildDelimiterRegex(activeDelimiter);
+    const flags = splitRe.flags.includes('g') ? splitRe.flags : splitRe.flags + 'g';
+    const re = new RegExp(splitRe.source, flags);
     const items = [];
-    let current = '';
-    // Iterate through each character
-    for (let i = 0; i < normalized.length; i++) {
-      const ch = normalized[i];
-      current += ch;
-      if (delims.includes(ch)) {
-        let natural = /[,.!:;?\n]/.test(ch);
-        // Extend through adjacent delimiters, closing brackets, and spaces
-        while (i + 1 < normalized.length) {
-          const next = normalized[i + 1];
-          if (delims.includes(next)) {
-            if (/[,.!:;?\n]/.test(next)) natural = true;
-            current += next;
-            i++;
-            continue;
-          }
-          if (next === ')' || next === ']' || next === '}' || next === '>') {
-            current += next;
-            i++;
-            continue;
-          }
-          if (next === ' ' && natural) {
-            current += ' ';
-            i++;
-            continue;
-          }
-          break;
-        }
-        items.push(current);
-        current = '';
+    let lastIndex = 0;
+    let match;
+    while ((match = re.exec(normalized)) !== null) {
+      if (match[0].length === 0) {
+        re.lastIndex += 1;
+        continue;
+      }
+      const end = match.index + match[0].length;
+      if (end > lastIndex) {
+        items.push(normalized.slice(lastIndex, end));
+        lastIndex = end;
       }
     }
-    // Handle trailing item with period if needed
-    if (current) {
-      if (!/[,.!:;?\n]\s*$/.test(current)) {
-        current += '. ';
-      }
-      items.push(current);
+    if (lastIndex < normalized.length) {
+      items.push(normalized.slice(lastIndex));
     }
-    return items.filter(Boolean);
+    return items;
   }
 
   /**
@@ -131,17 +130,104 @@
   }
 
   /**
-   * Parse a textarea of divider lines.
-   * Empty lines are removed but whitespace is preserved.
-   * Purpose: Split divider input into array for prompt separation.
-   * Usage Example: parseDividerInput("line1\n\nline2") returns ["line1", "line2"].
-   * 50% Rule: Simple split and filter; documented with example and line comments.
-   * @param {string} raw - Raw divider text.
-   * @returns {string[]} - Array of non-empty lines.
+   * Build an order index array for a list when randomization is requested.
+   * Purpose: Generate order indices at generation time without storing them.
+   * Usage Example: buildOrderIndices(['a', 'b'], 'random') may return [1, 0].
+   * 50% Rule: Creates indices, then shuffles only when needed.
+   * @param {string[]} items - Items to order.
+   * @param {string} mode - Order mode string.
+   * @returns {number[]|null} - Random order indices or null for canonical/empty.
    */
-  function parseDividerInput(raw) {
-    if (!raw) return [];
-    return raw.split(/\r?\n/).filter(line => line !== '');
+  function buildOrderIndices(items, mode) {
+    if (!Array.isArray(items) || items.length === 0) return null;
+    if (mode !== 'random') return null;
+    // Index list is created fresh to avoid mutating inputs.
+    const indices = items.map((_, i) => i);
+    return shuffle(indices);
+  }
+
+  /**
+   * Apply an order array only when one is provided.
+   * Purpose: Keep canonical lists untouched while still allowing random order.
+   * Usage Example: applyOrderIfNeeded(['a', 'b'], [1, 0]) returns ['b', 'a'].
+   * 50% Rule: Guard clauses + cloning clarify intent.
+   * @param {string[]} items - Items to order.
+   * @param {number[]|null} order - Order indices or null.
+   * @returns {string[]} - Ordered items array.
+   */
+  function applyOrderIfNeeded(items, order) {
+    if (!Array.isArray(items)) return [];
+    if (!Array.isArray(order) || !order.length) return items.slice();
+    return applyOrder(items, order);
+  }
+
+  /**
+   * Build a depth array from word counts using a depth mode.
+   * Purpose: Generate prepend/append/random depth values on demand.
+   * Usage Example: buildDepthValues('append', [2, 3]) returns [2, 3].
+   * 50% Rule: Branches per mode and comments random path.
+   * @param {string} mode - Depth mode ('prepend', 'append', 'random').
+   * @param {number[]} counts - Word counts per item.
+   * @returns {number[]|null} - Depth array or null when counts are empty.
+   */
+  function buildDepthValues(mode, counts) {
+    if (!Array.isArray(counts) || counts.length === 0) return null;
+    if (mode === 'append') return counts.slice();
+    if (mode === 'random') {
+      // Random depth picks an index between 0 and the total words (inclusive).
+      return counts.map(c => Math.floor(Math.random() * (c + 1)));
+    }
+    // Default to prepend when mode is missing or unrecognized.
+    return counts.map(() => 0);
+  }
+
+  /**
+   * Sum word counts for a stack array at a specific index.
+   * Purpose: Support depth calculations that depend on stacked modifiers.
+   * Usage Example: sumStackWordsAt([['a'], ['bb']], 0) returns countWords('a') + countWords('bb').
+   * 50% Rule: Explicit modulo handling + inline guard.
+   * @param {string[][]} stacks - Array of modifier stacks.
+   * @param {number} index - Item index to evaluate.
+   * @param {number} [limit=stacks.length] - How many stacks to include.
+   * @returns {number} - Total word count.
+   */
+  function sumStackWordsAt(stacks, index, limit = stacks.length) {
+    if (!Array.isArray(stacks) || !stacks.length) return 0;
+    const max = Math.min(limit, stacks.length);
+    let total = 0;
+    for (let s = 0; s < max; s++) {
+      const mods = stacks[s];
+      if (!mods || !mods.length) continue;
+      total += countWords(mods[index % mods.length]);
+    }
+    return total;
+  }
+
+  /**
+   * Compute depth counts based on base word counts and ordered stacks.
+   * Purpose: Determine insertion endpoints for prepend/append/random depths.
+   * Usage Example: computeDepthCountsFrom([2], [['a']], 1, false, []) returns [2].
+   * 50% Rule: Combines base counts, optional positives, and prior stacks with clear steps.
+   * @param {number[]} baseCounts - Word counts for base items.
+   * @param {string[][]} stacks - Ordered modifier stacks for the same prefix.
+   * @param {number} idx - Stack index (1-based).
+   * @param {boolean} includePos - Whether to include positive stacks (negatives only).
+   * @param {string[][]} posStacks - Ordered positive stacks when includePos is true.
+   * @returns {number[]} - Depth counts for the requested stack.
+   */
+  function computeDepthCountsFrom(baseCounts, stacks, idx, includePos, posStacks) {
+    if (!Array.isArray(baseCounts) || baseCounts.length === 0) return [];
+    const stackIndex = Math.max(1, idx) - 1;
+    const mods = (Array.isArray(stacks) && stacks[stackIndex]) ? stacks[stackIndex] : [];
+    const len = (mods && mods.length) ? mods.length : baseCounts.length;
+    const counts = [];
+    for (let i = 0; i < len; i++) {
+      let total = baseCounts[i % baseCounts.length];
+      if (includePos) total += sumStackWordsAt(posStacks, i);
+      total += sumStackWordsAt(stacks, i, stackIndex);
+      counts.push(total);
+    }
+    return counts;
   }
 
   /**
@@ -179,31 +265,51 @@
   }
 
   /**
-   * Insert a term into a phrase at a given word position. Punctuation at the
-   * end is preserved and the term can be placed past the end (wraps around).
+   * Insert a term into a phrase at a given word position. Trailing delimiters
+   * are preserved so recombination can be a straight concatenation pass.
    * Purpose: Insert modifiers at specific depths in phrases.
    * Usage Example: insertAtDepth("hello world.", "beautiful", 1) returns "hello beautiful world.".
    * 50% Rule: Handles tail punctuation separately; wraps with modulo.
    * @param {string} phrase - Base phrase.
    * @param {string} term - Term to insert.
    * @param {number} depth - Word position to insert at.
+   * @param {string|RegExp} [delimiter=/\\s+/] - Delimiter used for chunk tails.
    * @returns {string} - Modified phrase.
    */
-  function insertAtDepth(phrase, term, depth) {
+  function insertAtDepth(phrase, term, depth, delimiter = /\s+/) {
     if (!term) return phrase;
-    const match = phrase.match(/([,.!:;?\n]\s*)$/);
+    const delimRe = buildDelimiterRegex(delimiter);
+    const flags = delimRe.flags.replace('g', '');
+    const headRe = new RegExp(`^(${delimRe.source})`, flags);
+    const tailRe = new RegExp(`(${delimRe.source})$`, flags);
+    let head = '';
     let tail = '';
     let body = phrase;
-    if (match) {
-      tail = match[1];
-      body = phrase.slice(0, -tail.length).trim();
-    } else {
-      body = phrase.trim();
+    const headMatch = body.match(headRe);
+    if (headMatch) {
+      head += headMatch[1];
+      body = body.slice(headMatch[1].length);
     }
+    const tailMatch = body.match(tailRe);
+    if (tailMatch) {
+      tail = tailMatch[1] + tail;
+      body = body.slice(0, -tailMatch[1].length);
+    }
+    const leadSpace = body.match(/^(\s+)/);
+    if (leadSpace) {
+      head += leadSpace[1];
+      body = body.slice(leadSpace[1].length);
+    }
+    const trailSpace = body.match(/(\s+)$/);
+    if (trailSpace) {
+      tail = trailSpace[1] + tail;
+      body = body.slice(0, -trailSpace[1].length);
+    }
+    body = body.trim();
     const words = body ? body.split(/\s+/) : [];
     const idx = depth % (words.length + 1);
     words.splice(idx, 0, term);
-    return words.join(' ') + tail;
+    return head + words.join(' ') + tail;
   }
 
   /** 
@@ -249,7 +355,7 @@
    * @param {number} limit - Max length for result.
    * @param {number} [stackSize=1] - Number of stacks.
    * @param {number[]|number[][]} [modOrders=null] - Orders for modifiers.
-   * @param {boolean} [delimited=false] - If items are delimited.
+   * @param {string|RegExp} [delimiter=/\\s+/] - Delimiter used for chunk tails.
    * @param {string[]} [dividers=[]] - Dividers to insert.
    * @param {number[]} [itemOrder=null] - Order for base items.
    * @param {number[]|number[][]} [depths=null] - Depths for insertions.
@@ -262,7 +368,7 @@
     limit,
     stackSize = 1,
     modOrders = null,
-    delimited = false,
+    delimiter = /\s+/,
     dividers = [],
     itemOrder = null,
     depths = null,
@@ -288,7 +394,8 @@
     let items = baseItems.slice();
     if (itemOrder) items = applyOrder(items, itemOrder);
     let depthPool = null;
-    if (Array.isArray(depths)) {
+    // Empty depth arrays should behave like "no depth override."
+    if (Array.isArray(depths) && depths.length) {
       depthPool = Array.isArray(depths[0]) ? depths.map(d => d.slice()) : depths.slice();
     }
     const result = [];
@@ -313,7 +420,7 @@
         const offset = inserted.filter(d => d <= depth).length;
         const adj = depth + offset;
         if (mod) {
-          term = insertAtDepth(term, mod, adj);
+          term = insertAtDepth(term, mod, adj, delimiter);
           inserted.push(adj);
           if (captureLog) capturedMods.push(mod);
         }
@@ -322,8 +429,8 @@
       if (needDivider) pieces.push(dividerPool[divIdx % dividerPool.length]);
       pieces.push(term);
       const candidate =
-        (result.length ? result.join(delimited ? '' : ', ') + (delimited ? '' : ', ') : '') +
-        pieces.join(delimited ? '' : ', ');
+        (result.length ? result.join('') : '') +
+        pieces.join('');
       if (candidate.length > limit) break;
       if (needDivider) {
         result.push(dividerPool[divIdx % dividerPool.length]);
@@ -348,7 +455,7 @@
    * @param {number} limit - Max length.
    * @param {number} [stackSize=1] - Stack size.
    * @param {number[]|number[][]} [modOrders=null] - Orders.
-   * @param {boolean} [delimited=false] - Delimited flag.
+   * @param {string|RegExp} [delimiter=/\\s+/] - Delimiter used for chunk tails.
    * @param {string[]} [dividers=[]] - Dividers.
    * @param {number[]} [itemOrder=null] - Item order.
    * @param {number[]|number[][]} [depths=null] - Depths.
@@ -361,7 +468,7 @@
     limit,
     stackSize = 1,
     modOrders = null,
-    delimited = false,
+    delimiter = /\s+/,
     dividers = [],
     itemOrder = null,
     depths = null,
@@ -389,14 +496,15 @@
     let items = posTerms.slice();
     if (itemOrder) items = applyOrder(items, itemOrder);
     let depthPool = null;
-    if (Array.isArray(depths)) {
+    // Skip depthPool when no depth values are provided.
+    if (Array.isArray(depths) && depths.length) {
       depthPool = Array.isArray(depths[0]) ? depths.map(d => d.slice()) : depths.slice();
     }
     for (let i = 0; i < items.length; i++) {
       const base = items[i];
       if (dividerSet.has(base)) {
         const candidate =
-          (result.length ? result.join(delimited ? '' : ', ') + (delimited ? '' : ', ') : '') +
+          (result.length ? result.join('') : '') +
           base;
         if (candidate.length > limit) break;
         result.push(base);
@@ -419,13 +527,13 @@
         const offset = inserted.filter(d => d <= depth).length;
         const adj = depth + offset;
         if (mod) {
-          term = insertAtDepth(term, mod, adj);
+          term = insertAtDepth(term, mod, adj, delimiter);
           inserted.push(adj);
           if (captureLog) capturedMods.push(mod);
         }
       });
       const candidate =
-        (result.length ? result.join(delimited ? '' : ', ') + (delimited ? '' : ', ') : '') +
+        (result.length ? result.join('') : '') +
         term;
       if (candidate.length > limit) break;
       result.push(term);
@@ -455,8 +563,8 @@
    * @param {number[]} [baseOrder=null] - Base order.
    * @param {number[]|number[][]} [posOrder=null] - Positive order.
    * @param {number[]|number[][]} [negOrder=null] - Negative order.
-   * @param {number[]} [dividerOrder=null] - Divider order.
    * @param {boolean} [negAddendum=false] - Append negatives after positives instead of inserting them.
+   * @param {string|RegExp} [delimiter=/\\s+/] - Delimiter used for chunk tails.
    * @returns {{positive: string, negative: string}} - Generated prompts.
    */
   function buildVersions(
@@ -474,24 +582,22 @@
     baseOrder = null,
     posOrder = null,
     negOrder = null,
-    dividerOrder = null,
-    negAddendum = false
+    negAddendum = false,
+    delimiter = /\s+/
   ) {
     if (!items.length) {
       return { positive: '', negative: '' };
     }
     if (Array.isArray(baseOrder)) items = applyOrder(items, baseOrder);
-    const delimited = /[,.!:;?\n]\s*$/.test(items[0]);
-    let dividerPool = dividers.map(d => (d.startsWith('\n') ? d : '\n' + d));
-    if (Array.isArray(dividerOrder)) dividerPool = applyOrder(dividerPool, dividerOrder);
-    if (dividerPool.length && shuffleDividers && !dividerOrder) shuffle(dividerPool);
+    let dividerPool = dividers.slice();
+    if (dividerPool.length && shuffleDividers) shuffle(dividerPool);
     const posTerms = applyModifierStack(
       items,
       posMods,
       limit,
       posStackSize,
       posOrder,
-      delimited,
+      delimiter,
       dividerPool,
       baseOrder,
       posDepths
@@ -505,7 +611,7 @@
           limit,
           negStackSize,
           negOrder,
-          delimited,
+          delimiter,
           dividerPool,
           null,
           useNegDepths,
@@ -517,14 +623,14 @@
           limit,
           negStackSize,
           negOrder,
-          delimited,
+          delimiter,
           dividerPool,
           baseOrder,
           negDepths,
           negCapture
         );
     const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
-    const positiveString = trimPos.join(delimited ? '' : ', ');
+    const positiveString = trimPos.join('');
     if (negAddendum && negCapture) {
       // Count how many non-divider terms remain so capture log aligns with trimmed negatives.
       const dividerSet = new Set(dividerPool);
@@ -543,19 +649,11 @@
           negSoloList.push(entry);
         }
       });
-      const tail = negSoloList.join(', ');
+      const tail = negSoloList.join('');
       if (tail) {
-        if (delimited) {
-          const prefix = positiveString || '';
-          const connector = prefix && !/\s$/.test(prefix) ? ' ' : '';
-          return {
-            positive: positiveString,
-            negative: prefix + connector + tail
-          };
-        }
         return {
           positive: positiveString,
-          negative: positiveString ? `${positiveString}, ${tail}` : tail
+          negative: positiveString ? positiveString + tail : tail
         };
       }
       return {
@@ -565,7 +663,7 @@
     }
     return {
       positive: positiveString,
-      negative: trimNeg.join(delimited ? '' : ', ')
+      negative: trimNeg.join('')
     };
   }
 
@@ -658,9 +756,15 @@
   }
 
   const utils = {
+    escapeRegExp,
+    buildDelimiterRegex,
     parseInput,
     countWords,
-    parseDividerInput,
+    buildOrderIndices,
+    applyOrderIfNeeded,
+    buildDepthValues,
+    sumStackWordsAt,
+    computeDepthCountsFrom,
     parseOrderInput,
     applyOrder,
     insertAtDepth,
@@ -678,35 +782,33 @@
 // Structural Overview: Utilities handle comparisons and naming before
 // initializing preset maps and providing load/save/delete operations.
 // Section Summary: Centralizes preset handling for reusability across UI
-// and logic, including order preset refresh so imports immediately affect
-// order controls.
+// and logic using string-only lists so the delimiter-based parser can treat
+// every preset consistently.
 
   /**
-   * Determine if two item arrays contain the same elements regardless of order.
-   * Purpose: Identify duplicate presets during merges.
-   * Usage Example: listsEqual(['a', 'b'], ['b', 'a']) returns true.
-   * 50% Rule: Sorts shallow copies then compares; documented via example.
-   * @param {string[]} a - First items array.
-   * @param {string[]} b - Second items array.
-   * @returns {boolean} - True when arrays match.
+   * Normalize preset items into a string for storage and comparisons.
+   * Purpose: Keep list handling predictable.
+   * Usage Example: normalizePresetItems('a, b') returns 'a, b'.
+   * 50% Rule: Explicit conversion keeps list handling consistent.
+   * @param {string|number|undefined|null} items - Raw preset items.
+   * @returns {string} - Normalized string.
    */
-  function listsEqual(a, b) {
-    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
-    const sa = a.slice().sort();
-    const sb = b.slice().sort();
-    return sa.every((v, i) => v === sb[i]);
+  function normalizePresetItems(items) {
+    if (items == null) return '';
+    return typeof items === 'string' ? items : String(items);
   }
 
   /**
-   * Escape characters that have special meaning in regular expressions.
-   * Purpose: Safely build patterns from preset names.
-   * Usage Example: escapeRegExp('a.b') returns 'a\\.b'.
-   * 50% Rule: Simple replace; purpose and example clarify intent.
-   * @param {string} str - Raw string to escape.
-   * @returns {string} - Escaped string.
+   * Determine if two preset payloads represent the same text.
+   * Purpose: Identify duplicate presets during merges.
+   * Usage Example: listsEqual('a, b', 'a, b') returns true.
+   * 50% Rule: Normalizes inputs, trims, and compares for clarity.
+   * @param {any} a - First preset items.
+   * @param {any} b - Second preset items.
+   * @returns {boolean} - True when normalized strings match.
    */
-  function escapeRegExp(str) {
-    return str.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
+  function listsEqual(a, b) {
+    return normalizePresetItems(a).trim() === normalizePresetItems(b).trim();
   }
 
   /**
@@ -742,7 +844,6 @@
   let BASE_PRESETS = {};
   let LYRICS_PRESETS = {};
   let INSERT_PRESETS = {};
-  let ORDER_PRESETS = {};
 
   let LISTS;
   /** Default presets load from `default_list.js` to keep this file lighter.
@@ -789,42 +890,11 @@
       const option = document.createElement('option');
       option.value = preset.id;
       option.textContent = preset.title;
-      if (index === 0 || (selectEl.value === '' && preset.items && preset.items.length > 0)) {
+      const hasItems = normalizePresetItems(preset.items).length > 0;
+      if (index === 0 || (selectEl.value === '' && hasItems)) {
         option.selected = true;
       }
       selectEl.appendChild(option);
-    });
-  }
-
-  /**
-   * Populate a depth selection dropdown. Depth presets allow inserting
-   * modifiers at a specific word index.
-   * Purpose: Set up options for depth selection including presets.
-   * Usage: Called in loadLists for depth selects.
-   * 50% Rule: Static options plus dynamic presets; simple loop.
-   * Alphabetizes additional presets to keep menus tidy.
-   * @param {HTMLSelectElement} selectEl - Select to populate.
-   * @param {Object[]} presets - Preset objects.
-  */
-  function populateDepthSelect(selectEl, presets) {
-    if (!selectEl) return;
-    selectEl.innerHTML = '';
-    const opts = [
-      { id: 'prepend', title: 'Prepend' },
-      { id: 'append', title: 'Append' },
-      { id: 'random', title: 'Random Depth' }
-    ];
-    const sorted = presets
-      .slice() // maintain caller array
-      .sort((a, b) =>
-        a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }) // ignore case
-      );
-    sorted.forEach(p => opts.push({ id: p.id, title: p.title }));
-    opts.forEach(o => {
-      const opt = document.createElement('option');
-      opt.value = o.id;
-      opt.textContent = o.title;
-      selectEl.appendChild(opt);
     });
   }
 
@@ -834,16 +904,11 @@
    * Purpose: Load and categorize presets, update UI selects.
    * Usage: Called on init and after imports.
    * 50% Rule: Filters by type with arrays; calls populate for each.
-   * Resetting ORDER_PRESETS prevents stale order data and refreshes order
-   * dropdowns so new order lists appear immediately after import.
-   * Additive imports can preserve existing order presets when no new order
-   * entries are supplied, keeping order selects stable.
+   * Depth/order dropdowns now only use built-in modes (no stored presets).
    * Select menus populate alphabetically via helper sort.
    * @param {Object} [opts] - Options to control refresh behavior.
-   * @param {boolean} [opts.preserveOrder=false] - Keep existing order presets.
    */
   function loadLists(opts = {}) {
-    const preserveOrder = Boolean(opts.preserveOrder);
     NEG_PRESETS = {};
     POS_PRESETS = {};
     LENGTH_PRESETS = {};
@@ -851,8 +916,6 @@
     BASE_PRESETS = {};
     LYRICS_PRESETS = {};
     INSERT_PRESETS = {};
-    // Clear order presets unless additive import wants to preserve them.
-    ORDER_PRESETS = preserveOrder ? { ...ORDER_PRESETS } : {};
     const neg = [];
     const pos = [];
     const len = [];
@@ -860,33 +923,29 @@
     const base = [];
     const lyrics = [];
     const inserts = [];
-    const order = [];
     if (LISTS.presets && Array.isArray(LISTS.presets)) {
       LISTS.presets.forEach(p => {
         if (p.type === 'negative') {
-          NEG_PRESETS[p.id] = p.items || [];
+          NEG_PRESETS[p.id] = normalizePresetItems(p.items);
           neg.push(p);
         } else if (p.type === 'positive') {
-          POS_PRESETS[p.id] = p.items || [];
+          POS_PRESETS[p.id] = normalizePresetItems(p.items);
           pos.push(p);
         } else if (p.type === 'length') {
-          LENGTH_PRESETS[p.id] = p.items || [];
+          LENGTH_PRESETS[p.id] = normalizePresetItems(p.items);
           len.push(p);
         } else if (p.type === 'divider') {
-          DIVIDER_PRESETS[p.id] = p.items || [];
+          DIVIDER_PRESETS[p.id] = normalizePresetItems(p.items);
           divs.push(p);
         } else if (p.type === 'base') {
-          BASE_PRESETS[p.id] = p.items || [];
+          BASE_PRESETS[p.id] = normalizePresetItems(p.items);
           base.push(p);
         } else if (p.type === 'lyrics') {
-          LYRICS_PRESETS[p.id] = p.items || [];
+          LYRICS_PRESETS[p.id] = normalizePresetItems(p.items);
           lyrics.push(p);
         } else if (p.type === 'insertion') {
-          INSERT_PRESETS[p.id] = p.items || [];
+          INSERT_PRESETS[p.id] = normalizePresetItems(p.items);
           inserts.push(p);
-        } else if (p.type === 'order') {
-          ORDER_PRESETS[p.id] = p.items || [];
-          order.push(p);
         }
       });
     }
@@ -904,14 +963,13 @@
     if (lyricsSelect) populateSelect(lyricsSelect, lyrics);
     const insertSelect = document.getElementById('lyrics-insert-select');
     if (insertSelect) populateSelect(insertSelect, inserts);
-    const posDepthSelect = document.getElementById('pos-depth-select');
-    if (posDepthSelect) populateDepthSelect(posDepthSelect, order);
-    const negDepthSelect = document.getElementById('neg-depth-select');
-    if (negDepthSelect) populateDepthSelect(negDepthSelect, order);
-    // Refresh order dropdowns so new presets are visible without a reload.
-    document
-      .querySelectorAll('[id*="-order-select"]')
-      .forEach(select => populateOrderOptions(select));
+    // Refresh order/depth dropdowns so standard modes remain consistent.
+    document.querySelectorAll('[id*="-order-select"]').forEach(select => {
+      populateOrderOptions(select);
+    });
+    document.querySelectorAll('[id*="-depth-select"]').forEach(select => {
+      populateDepthOptions(select);
+    });
   }
 
   /** 
@@ -936,21 +994,19 @@
    */
   function importLists(obj, additive = false) {
     if (!obj || typeof obj !== 'object' || !Array.isArray(obj.presets)) return;
-    // Detect order presets to decide whether additive imports should preserve them.
-    const incomingOrder = obj.presets.some(p => p.type === 'order');
     if (!additive) {
       LISTS = {
         presets: obj.presets.map(p => ({
           id: p.id,
           title: p.title,
           type: p.type,
-          items: Array.isArray(p.items) ? p.items : []
+          items: normalizePresetItems(p.items)
         }))
       };
     } else {
       const existing = LISTS.presets.slice();
       obj.presets.forEach(p => {
-        const items = Array.isArray(p.items) ? p.items : [];
+        const items = normalizePresetItems(p.items);
         const sameName = existing.filter(
           e => e.type === p.type && e.title === p.title
         );
@@ -967,7 +1023,9 @@
       });
       LISTS.presets = existing;
     }
-    loadLists({ preserveOrder: additive && !incomingOrder });
+    // Drop legacy order presets if present; order/depth presets are no longer stored.
+    LISTS.presets = LISTS.presets.filter(p => p.type !== 'order');
+    loadLists();
   }
 
   /**
@@ -988,8 +1046,7 @@
       length: { select: 'length-select', input: 'length-input', store: LENGTH_PRESETS },
       divider: { select: 'divider-select', input: 'divider-input', store: DIVIDER_PRESETS },
       lyrics: { select: 'lyrics-select', input: 'lyrics-input', store: LYRICS_PRESETS },
-      insertion: { select: 'lyrics-insert-select', input: 'lyrics-insert-input', store: INSERT_PRESETS },
-      order: { select: 'pos-depth-select', input: 'pos-depth-input', store: ORDER_PRESETS }
+      insertion: { select: 'lyrics-insert-select', input: 'lyrics-insert-input', store: INSERT_PRESETS }
     };
     const cfg = map[type];
     if (!cfg) return;
@@ -1000,14 +1057,7 @@
     if (!sel || !inp) return;
     const name = prompt('Enter list name', sel.value);
     if (!name) return;
-    let items;
-    if (type === 'divider') {
-      items = utils ? utils.parseDividerInput(inp.value) : [];
-    } else if (type === 'lyrics') {
-      items = [inp.value];
-    } else {
-      items = utils ? utils.parseInput(inp.value) : [];
-    }
+    const items = inp.value;
     let preset = LISTS.presets.find(p => p.id === name && p.type === type);
    if (!preset) {
       preset = { id: name, title: name, type, items };
@@ -1088,7 +1138,6 @@
     get BASE_PRESETS() { return BASE_PRESETS; },
     get LYRICS_PRESETS() { return LYRICS_PRESETS; },
     get INSERT_PRESETS() { return INSERT_PRESETS; },
-    get ORDER_PRESETS() { return ORDER_PRESETS; },
     loadLists,
     exportLists,
     importLists,
@@ -1364,8 +1413,8 @@
 // Layers multiple setup functions and event listeners for comprehensive UI control.
 // Structural Overview: Many setup functions for buttons, toggles, etc.
 // Section Summary: Manages all DOM interactions and event binding, ensuring
-// dropdowns stay current after list imports and copy actions fall back
-// when clipboard writes are blocked or unavailable.
+// dropdowns stay current after list imports while order/depth modes are
+// resolved at generation time instead of storing index arrays.
 
   /** 
    * Infer the section prefix from a control id.
@@ -1381,20 +1430,18 @@
   }
 
   /**
-   * Gather all select/input pairs that share a prefix and base id. Useful for
-   * iterating over stacked modifiers.
-   * Purpose: Collect controls for stacks.
-   * Usage: In various setups.
-   * 50% Rule: Loop until no more.
+   * Gather all select controls that share a prefix and base id.
+   * Purpose: Collect stacked order/depth selects for section-wide toggles.
+   * Usage: In setupSectionOrder and related reflection helpers.
+   * 50% Rule: Loop until no more ids are found.
    * @param {string} prefix - Section prefix.
    * @param {string} base - Base id part.
-   * @returns {Object[]} - Array of {select, input}.
+   * @returns {Object[]} - Array of {select}.
    */
   function gatherControls(prefix, base) {
     const results = [];
-    forEachId(`${prefix}-${base}-select`, (sel, idx) => {
-      const inp = document.getElementById(`${prefix}-${base}-input${idx === 1 ? '' : '-' + idx}`);
-      results.push({ select: sel, input: inp });
+    forEachId(`${prefix}-${base}-select`, sel => {
+      results.push({ select: sel });
     });
     return results;
   }
@@ -1424,117 +1471,213 @@
     }
   }
 
-  /** 
-   * Retrieve modifiers for a stack index, applying any user-supplied order.
-   * Purpose: Get ordered mods for building.
-   * Usage: In collectInputs.
-   * 50% Rule: Parses and applies order.
-   * @param {string} prefix - Prefix.
-   * @param {number} [idx=1] - Index.
-   * @returns {string[]} - Ordered modifiers.
+  /**
+   * Normalize a custom delimiter string, translating escape sequences.
+   * Purpose: Allow \n and \t in custom delimiter inputs without literal backslashes.
+   * Usage Example: normalizeCustomDelimiter('\\n') returns '\n'.
+   * 50% Rule: Keeps input handling explicit with example + intent.
+   * @param {string} value - Raw custom delimiter input.
+   * @returns {string} - Normalized delimiter.
    */
-  function getOrderedMods(prefix, idx = 1) {
-    const inp = document.getElementById(
-      `${prefix}-input${idx === 1 ? '' : '-' + idx}`
-    );
-    const mods = utils.parseInput(inp?.value || '');
-    const ordEl = document.getElementById(
-      `${prefix}-order-input${idx === 1 ? '' : '-' + idx}`
-    );
-    const ord = utils.parseOrderInput(ordEl?.value || '');
-    return ord.length ? utils.applyOrder(mods, ord) : mods;
-  }
-
-  /** 
-   * Word counts for each base prompt item.
-   * Purpose: Compute base word counts for depths.
-   * Usage: In computeDepthCounts.
-   * 50% Rule: Maps parse and count.
-   * @returns {number[]} - Array of counts.
-   */
-  function baseCounts() {
-    const baseInput = document.getElementById('base-input');
-    return utils
-      .parseInput(baseInput?.value || '', true)
-      .map(b => utils.countWords(b));
-  }
-
-  /** 
-   * How many words of positive modifiers would precede index i.
-   * Purpose: Calculate positive word impact for neg depths.
-   * Usage: In computeDepthCounts.
-   * 50% Rule: Loops over stacks.
-   * @param {number} i - Index.
-   * @returns {number} - Total words.
-   */
-  function getTotalPosWords(i) {
-    const stackOn = document.getElementById('pos-stack')?.checked;
-    const stackSize = parseInt(
-      document.getElementById('pos-stack-size')?.value || '1',
-      10
-    );
-    const count = stackOn ? stackSize : 1;
-    let total = 0;
-    for (let s = 1; s <= count; s++) {
-      const mods = getOrderedMods('pos', s);
-      if (!mods.length) continue;
-      total += utils.countWords(mods[i % mods.length]);
-    }
-    return total;
+  function normalizeCustomDelimiter(value) {
+    if (value == null) return '';
+    return String(value).replace(/\\n/g, '\n').replace(/\\t/g, '\t');
   }
 
   /**
-   * Words from earlier stacks of a section.
-   * Purpose: Calculate prior stack impact on later depths.
-   * Usage: In computeDepthCounts.
-   * 50% Rule: Iterates over existing stacks with comments.
-   * @param {string} prefix - Section prefix.
-   * @param {number} idx - Current stack index.
-   * @param {number} i - Item index.
-   * @returns {number} - Word count total.
+   * Map delimiter UI controls into a reusable parsing configuration.
+   * Purpose: Centralize delimiter parsing so every list uses the same chunking logic.
+   * Usage Example: getDelimiterConfig().regex is passed to parseInput for modifiers.
+   * 50% Rule: Summarizes intent, documents returned fields, and keeps inline comments for defaults.
+   * @returns {{mode: string, delimiter: string, regex: RegExp, joiner: string, sentenceMode: boolean}}
    */
-  function getPrevStackWords(prefix, idx, i) {
+  function getDelimiterConfig() {
+    const select = document.getElementById('delimiter-select');
+    const customInput = document.getElementById('delimiter-custom');
+    const mode = select?.value || 'whitespace';
+    let delimiter = ' '; // default to whitespace when controls are missing
+    let sentenceMode = false;
+    if (mode === 'whitespace') delimiter = ' ';
+    else if (mode === 'comma') delimiter = ',';
+    else if (mode === 'semicolon') delimiter = ';';
+    else if (mode === 'pipe') delimiter = '|';
+    else if (mode === 'newline') delimiter = '\n';
+    else if (mode === 'tab') delimiter = '\t';
+    else if (mode === 'sentence') sentenceMode = true;
+    else if (mode === 'custom') delimiter = normalizeCustomDelimiter(customInput?.value || '');
+
+    // Treat empty custom input as whitespace so parsing never stalls.
+    if (!sentenceMode && !delimiter) delimiter = ' ';
+
+    const regex = sentenceMode ? /[,.!:;?\n]+/ : utils.buildDelimiterRegex(delimiter);
+    const joiner = sentenceMode ? ' ' : buildDelimiterJoiner(delimiter);
+    return { mode, delimiter, regex, joiner, sentenceMode };
+  }
+
+  /**
+   * Choose a display joiner for presets based on delimiter.
+   * Purpose: Keep preset text readable by adding spacing when delimiters lack whitespace.
+   * Usage Example: buildDelimiterJoiner(',') returns ', '.
+   * 50% Rule: Includes fallback rules and example to reinforce behavior.
+   * @param {string} delimiter - Delimiter string.
+   * @returns {string} - Joiner for UI display.
+   */
+  function buildDelimiterJoiner(delimiter) {
+    if (!delimiter) return ' ';
+    if (delimiter === '\n') return '\n';
+    if (delimiter === '\t') return '\t';
+    if (delimiter === ' ') return ' ';
+    if (/\s/.test(delimiter)) return delimiter;
+    return `${delimiter} `;
+  }
+
+  /**
+   * Parse a base list using the active delimiter settings.
+   * Purpose: Switch between sentence punctuation mode and delimiter-preserving chunking.
+   * Usage Example: parseBaseInput('foo bar') respects the current delimiter mode.
+   * 50% Rule: Explicitly documents why base parsing differs from modifiers.
+   * @param {string} raw - Raw base input.
+   * @param {{regex: RegExp, sentenceMode: boolean}} delimiter - Delimiter config.
+   * @returns {string[]} - Parsed base items.
+   */
+  function parseBaseInput(raw, delimiter) {
+    if (delimiter.sentenceMode) return utils.parseInput(raw, true);
+    return utils.parseInput(raw, false, delimiter.regex);
+  }
+
+  /**
+   * Parse a modifier-style list using the active delimiter settings.
+   * Purpose: Standardize delimiter-preserving parsing for positives, negatives, and insertions.
+   * Usage Example: parseListInput('a|b', config) splits by the chosen delimiter.
+   * 50% Rule: Mirrors parseBaseInput with a different emphasis for clarity.
+   * @param {string} raw - Raw list input.
+   * @param {{regex: RegExp}} delimiter - Delimiter config.
+   * @returns {string[]} - Parsed items.
+   */
+  function parseListInput(raw, delimiter) {
+    return utils.parseInput(raw, false, delimiter.regex);
+  }
+
+  /**
+   * Read a select value with a fallback when missing.
+   * Purpose: Normalize mode reads for order/depth selectors.
+   * Usage Example: readSelectMode('base-order-select', 'canonical').
+   * 50% Rule: Guarded lookup plus default.
+   * @param {string} id - Select element id.
+   * @param {string} fallback - Default mode.
+   * @returns {string} - Selected value or fallback.
+   */
+  function readSelectMode(id, fallback) {
+    const el = document.getElementById(id);
+    return el ? el.value : fallback;
+  }
+
+  /**
+   * Collect select modes for a stacked control group.
+   * Purpose: Provide per-stack mode arrays for order/depth logic.
+   * Usage Example: collectSelectModes('pos', 'order', 2, 'canonical').
+   * 50% Rule: Iterates with explicit ids and inline fallback.
+   * @param {string} prefix - Section prefix.
+   * @param {string} base - Base id segment ('order' or 'depth').
+   * @param {number} count - Number of stacks.
+   * @param {string} fallback - Default mode.
+   * @returns {string[]} - Mode list.
+   */
+  function collectSelectModes(prefix, base, count, fallback) {
+    const modes = [];
+    for (let i = 1; i <= count; i++) {
+      const id = `${prefix}-${base}-select${i === 1 ? '' : '-' + i}`;
+      modes.push(readSelectMode(id, fallback));
+    }
+    return modes;
+  }
+
+  /**
+   * Parse stack inputs into arrays using the active delimiter.
+   * Purpose: Centralize stack parsing for orders and depths.
+   * Usage Example: collectStackInputs('pos', 2, config) returns two lists.
+   * 50% Rule: Iterates stack indices with inline guards.
+   * @param {string} prefix - Section prefix.
+   * @param {number} count - Stack count.
+   * @param {{regex: RegExp}} delimiter - Delimiter config.
+   * @returns {string[][]} - Parsed stacks.
+   */
+  function collectStackInputs(prefix, count, delimiter) {
+    const stacks = [];
+    for (let i = 1; i <= count; i++) {
+      const id = `${prefix}-input${i === 1 ? '' : '-' + i}`;
+      const el = document.getElementById(id);
+      stacks.push(parseListInput(el?.value || '', delimiter));
+    }
+    return stacks;
+  }
+
+  /**
+   * Resolve ephemeral order arrays and ordered stacks from mode selections.
+   * Purpose: Compute on-demand ordering without storing index arrays in the UI.
+   * Usage Example: resolveStackOrders([['a','b']], ['random']) returns orders + ordered lists.
+   * 50% Rule: Builds indices, applies them, and keeps steps explicit.
+   * @param {string[][]} stacks - Modifier stacks.
+   * @param {string[]} modes - Order modes per stack.
+   * @returns {{orders: (number[]|null)[], ordered: string[][]}} - Orders + ordered stacks.
+   */
+  function resolveStackOrders(stacks, modes) {
+    const orders = [];
+    const ordered = [];
+    const fallback = modes[0] || 'canonical';
+    stacks.forEach((items, i) => {
+      const mode = modes[i] || fallback;
+      const order = utils.buildOrderIndices(items, mode) || [];
+      orders.push(order);
+      ordered.push(utils.applyOrderIfNeeded(items, order));
+    });
+    return { orders, ordered };
+  }
+
+  /**
+   * Determine insertion depth counts using current DOM inputs and modes.
+   * Purpose: Provide depth counts for random/append/prepend calculation at generate time.
+   * Usage: Called in collectInputs and tests.
+   * 50% Rule: Builds ordered stacks, counts base words, then delegates to pure helper.
+   * @param {string} prefix - Section prefix ('pos' or 'neg').
+   * @param {number} [idx=1] - Stack index (1-based).
+   * @returns {number[]} - Depth counts.
+   */
+  function computeDepthCounts(prefix, idx = 1) {
+    const delimiter = getDelimiterConfig();
+    const baseInput = document.getElementById('base-input');
+    const baseItems = parseBaseInput(baseInput?.value || '', delimiter);
+    const baseOrderMode = readSelectMode('base-order-select', 'canonical');
+    const baseOrder = utils.buildOrderIndices(baseItems, baseOrderMode);
+    const orderedBaseItems = utils.applyOrderIfNeeded(baseItems, baseOrder);
+    const baseCounts = orderedBaseItems.map(b => utils.countWords(b));
+
     const stackOn = document.getElementById(`${prefix}-stack`)?.checked;
     const stackSize = parseInt(
       document.getElementById(`${prefix}-stack-size`)?.value || '1',
       10
     );
     const count = stackOn ? stackSize : 1;
-    let total = 0;
-    for (let s = 1; s < idx && s <= count; s++) {
-      const mods = getOrderedMods(prefix, s);
-      if (!mods.length) continue;
-      total += utils.countWords(mods[i % mods.length]);
-    }
-    return total;
-  }
+    const stacks = collectStackInputs(prefix, count, delimiter);
+    const orderModes = collectSelectModes(prefix, 'order', count, 'canonical');
+    const { ordered } = resolveStackOrders(stacks, orderModes);
 
-  /**
-   * Determine insertion depths for modifiers so negative depth calculations
-   * know where the base phrase ends.
-   * Purpose: Compute word counts for depth insertions.
-   * Usage: In setupDepthControl.
-   * 50% Rule: Includes positives if needed.
-   * @param {string} prefix - Prefix (pos/neg).
-   * @param {number} [idx=1] - Index.
-   * @returns {number[]} - Array of counts.
-   */
-  function computeDepthCounts(prefix, idx = 1) {
-    const bases = baseCounts();
-    if (!bases.length) return [];
-    const mods = getOrderedMods(prefix, idx);
     const includePos =
       prefix === 'neg' &&
       document.getElementById('neg-include-pos')?.checked;
-    const len = mods.length || bases.length;
-    const counts = [];
-    for (let i = 0; i < len; i++) {
-      let total = bases[i % bases.length];
-      if (includePos) total += getTotalPosWords(i);
-      total += getPrevStackWords(prefix, idx, i);
-      counts.push(total);
+    let posOrdered = [];
+    if (includePos) {
+      const posStackOn = document.getElementById('pos-stack')?.checked;
+      const posStackSize = parseInt(
+        document.getElementById('pos-stack-size')?.value || '1',
+        10
+      );
+      const posCount = posStackOn ? posStackSize : 1;
+      const posStacks = collectStackInputs('pos', posCount, delimiter);
+      const posOrderModes = collectSelectModes('pos', 'order', posCount, 'canonical');
+      posOrdered = resolveStackOrders(posStacks, posOrderModes).ordered;
     }
-    return counts;
+    return utils.computeDepthCountsFrom(baseCounts, ordered, idx, includePos, posOrdered);
   }
 
   /** 
@@ -1568,12 +1711,15 @@
       }
     }
     const key = selectEl.value;
-    const list = presets[key] || [];
+    const list = normalizePresetItems(presets[key]);
     if (inputEl.tagName === 'TEXTAREA') {
-      const sep = presetsOrType === 'divider' || presets === lists.DIVIDER_PRESETS ? '\n' : ', ';
-      inputEl.value = list.join(sep);
+      inputEl.value = list;
+    } else if (presetsOrType === 'length' || presets === lists.LENGTH_PRESETS) {
+      const delimiter = getDelimiterConfig();
+      const first = parseListInput(list, delimiter)[0] || list;
+      inputEl.value = first;
     } else {
-      inputEl.value = list[0] || '';
+      inputEl.value = list;
     }
     inputEl.disabled = false;
     inputEl.dispatchEvent(new Event('input'));
@@ -1598,71 +1744,71 @@
 
   /**
    * Gather all user input from the page and normalize it for buildVersions.
+   * Delimiter settings are applied so base and modifier lists split consistently.
    * Purpose: Collect and parse all form inputs.
    * Usage: In generate.
-   * 50% Rule: Handles stacking, parses all fields.
+   * 50% Rule: Handles stacking, parses all fields, and computes order/depth arrays on demand.
    * @returns {Object} - Input object for buildVersions.
    */
   function collectInputs() {
-    const baseItems = utils.parseInput(document.getElementById('base-input').value, true);
-    function collectLists(prefix, count) {
-      const result = [];
-      for (let i = 1; i <= count; i++) {
-        const id = `${prefix}-input${i === 1 ? '' : '-' + i}`;
-        const el = document.getElementById(id);
-        result.push(utils.parseInput(el?.value || ''));
-      }
-      return result;
-    }
-
+    const delimiter = getDelimiterConfig();
+    const baseEl = document.getElementById('base-input');
+    const baseItems = parseBaseInput(baseEl?.value || '', delimiter);
     const posStackOn = document.getElementById('pos-stack').checked;
     const posStackSize = parseInt(document.getElementById('pos-stack-size')?.value || '1', 10);
     const negStackOn = document.getElementById('neg-stack').checked;
     const negStackSize = parseInt(document.getElementById('neg-stack-size')?.value || '1', 10);
+    const posCount = posStackOn ? posStackSize : 1;
+    const negCount = negStackOn ? negStackSize : 1;
 
-    const posMods = posStackOn ? collectLists('pos', posStackSize) : utils.parseInput(document.getElementById('pos-input').value);
-    const negMods = negStackOn ? collectLists('neg', negStackSize) : utils.parseInput(document.getElementById('neg-input').value);
+    const posStacks = collectStackInputs('pos', posCount, delimiter);
+    const negStacks = collectStackInputs('neg', negCount, delimiter);
     const includePosForNeg = document.getElementById('neg-include-pos').checked;
     const negAddendum = document.getElementById('neg-addendum')?.checked || false; // Toggle routes negatives as addendum when true.
-    const dividerMods = utils.parseDividerInput(document.getElementById('divider-input')?.value || '');
+
+    const baseOrderMode = readSelectMode('base-order-select', 'canonical');
+    const posOrderModes = collectSelectModes('pos', 'order', posCount, 'canonical');
+    const negOrderModes = collectSelectModes('neg', 'order', negCount, 'canonical');
+    const posDepthModes = collectSelectModes('pos', 'depth', posCount, 'prepend');
+    const negDepthModes = collectSelectModes('neg', 'depth', negCount, 'prepend');
+
+    const baseOrder = utils.buildOrderIndices(baseItems, baseOrderMode);
+    const orderedBaseItems = utils.applyOrderIfNeeded(baseItems, baseOrder);
+    const baseCounts = orderedBaseItems.map(b => utils.countWords(b));
+
+    const { orders: posOrders, ordered: posOrdered } = resolveStackOrders(posStacks, posOrderModes);
+    const { orders: negOrders, ordered: negOrdered } = resolveStackOrders(negStacks, negOrderModes);
+
+    const posDepthStacks = posDepthModes.map((mode, i) => {
+      const counts = utils.computeDepthCountsFrom(baseCounts, posOrdered, i + 1, false, []);
+      return utils.buildDepthValues(mode, counts) || counts.map(() => 0);
+    });
+    const negDepthStacks = negDepthModes.map((mode, i) => {
+      const counts = utils.computeDepthCountsFrom(baseCounts, negOrdered, i + 1, includePosForNeg, posOrdered);
+      return utils.buildDepthValues(mode, counts) || counts.map(() => 0);
+    });
+
+    const posMods = posStackOn ? posStacks : posStacks[0];
+    const negMods = negStackOn ? negStacks : negStacks[0];
+    const posOrder = posStackOn ? posOrders : posOrders[0];
+    const negOrder = negStackOn ? negOrders : negOrders[0];
+    const posDepths = posStackOn ? posDepthStacks : posDepthStacks[0];
+    const negDepths = negStackOn ? negDepthStacks : negDepthStacks[0];
+
+    const dividerMods = parseListInput(document.getElementById('divider-input')?.value || '', delimiter);
     const shuffleDividers = document.getElementById('divider-shuffle')?.checked;
     const lengthSelect = document.getElementById('length-select');
     const lengthInput = document.getElementById('length-input');
     let limit = parseInt(lengthInput.value, 10);
     if (isNaN(limit) || limit <= 0) {
       const preset = lists.LENGTH_PRESETS[lengthSelect.value];
-      limit = preset ? parseInt(preset[0], 10) : 1000;
+      const first = preset ? parseListInput(preset, delimiter)[0] || preset : '';
+      const parsed = parseInt(first, 10);
+      limit = !isNaN(parsed) && parsed > 0 ? parsed : 1000;
       lengthInput.value = limit;
     }
-    function collectDepths(prefix, count) {
-      const result = [];
-      for (let i = 1; i <= count; i++) {
-        const id = `${prefix}-depth-input${i === 1 ? '' : '-' + i}`;
-        const el = document.getElementById(id);
-        result.push(utils.parseOrderInput(el?.value || ''));
-      }
-      return result;
-    }
-
-    const rawPosDepths = collectDepths('pos', posStackOn ? posStackSize : 1);
-    const posDepths = posStackOn ? rawPosDepths : rawPosDepths[0];
-    const rawNegDepths = collectDepths('neg', negStackOn ? negStackSize : 1);
-    const negDepths = negStackOn ? rawNegDepths : rawNegDepths[0];
-    const baseOrder = utils.parseOrderInput(document.getElementById('base-order-input')?.value || '');
-    function collectOrders(prefix, count) {
-      const result = [];
-      for (let i = 1; i <= count; i++) {
-        const id = `${prefix}-order-input${i === 1 ? '' : '-' + i}`;
-        const el = document.getElementById(id);
-        result.push(utils.parseOrderInput(el?.value || ''));
-      }
-      return result;
-    }
-
-    const posOrder = collectOrders('pos', posStackOn ? posStackSize : 1);
-    const negOrder = collectOrders('neg', negStackOn ? negStackSize : 1);
-    const dividerOrder = utils.parseOrderInput(document.getElementById('divider-order-input')?.value || '');
     return {
+      delimiterConfig: delimiter,
       baseItems,
       negMods,
       posMods,
@@ -1675,7 +1821,6 @@
       negAddendum,
       dividerMods,
       shuffleDividers,
-      dividerOrder,
       posDepths,
       negDepths,
       baseOrder,
@@ -1704,8 +1849,8 @@
    * 50% Rule: Calls collect, build, display; handles lyrics and insertions too.
    */
   function generate() {
-    rerollRandomOrders();
     const {
+      delimiterConfig,
       baseItems,
       negMods,
       posMods,
@@ -1718,7 +1863,6 @@
       negAddendum,
       dividerMods,
       shuffleDividers,
-      dividerOrder,
       posDepths,
       negDepths,
       baseOrder,
@@ -1745,8 +1889,8 @@
       baseOrder,
       posOrder,
       negOrder,
-      dividerOrder,
-      negAddendum
+      negAddendum,
+      delimiterConfig?.regex || /\s+/
     );
     displayOutput(result);
 
@@ -1758,7 +1902,10 @@
       const removeBrackets = document.getElementById('lyrics-remove-brackets')?.checked;
       // Insertions: list of bracketed terms, word interval, stack size, and optional randomization
       const insertInput = document.getElementById('lyrics-insert-input');
-      const insertItems = insertInput ? utils.parseInput(insertInput.value) : [];
+      const delimiter = getDelimiterConfig();
+      const insertItems = insertInput
+        ? parseListInput(insertInput?.value || '', delimiter)
+        : [];
       const intervalSel = document.getElementById('lyrics-insert-interval');
       const interval = intervalSel ? parseInt(intervalSel.value, 10) : 0;
       const stackSel = document.getElementById('lyrics-insert-stack');
@@ -1795,6 +1942,26 @@
     if (btn.dataset.on && btn.dataset.off) {
       btn.textContent = checkbox.checked ? btn.dataset.on : btn.dataset.off;
     }
+  }
+
+  /** 
+   * Show/hide custom delimiter input based on dropdown selection.
+   * Purpose: Keep delimiter UI concise while still supporting arbitrary separators.
+   * Usage: In initializeUI.
+   * 50% Rule: Event-driven update with inline state notes for clarity.
+   */
+  function setupDelimiterControls() {
+    const select = document.getElementById('delimiter-select');
+    const customRow = document.getElementById('delimiter-custom-row');
+    const customInput = document.getElementById('delimiter-custom');
+    if (!select) return;
+    const update = () => {
+      const show = select.value === 'custom';
+      if (customRow) customRow.style.display = show ? '' : 'none';
+      if (customInput) customInput.disabled = !show;
+    };
+    select.addEventListener('change', update);
+    update();
   }
 
   /** 
@@ -1928,12 +2095,6 @@
         }
         const count = stackCb.checked ? parseInt(sizeEl.value, 10) || 1 : 1;
         updateStackBlocks(cfg.prefix, count);
-        if (cfg.prefix === 'pos') {
-          const negCount = document.getElementById('neg-stack')?.checked
-            ? parseInt(document.getElementById('neg-stack-size')?.value || '1', 10)
-            : 1;
-          updateDepthContainers('neg', negCount, true);
-        }
       };
       stackCb.addEventListener('change', update);
       sizeEl.addEventListener('change', update);
@@ -2113,12 +2274,6 @@
       const adv = cb.checked;
       document.querySelectorAll(`[id^="${prefix}-order-select"]`).forEach(el => setDisplay(el, adv));
       document.querySelectorAll(`[id^="${prefix}-depth-select"]`).forEach(el => setDisplay(el, adv));
-      document.querySelectorAll(`[id^="${prefix}-order-input"]`).forEach(el => {
-        if (el.parentElement && el.parentElement.classList.contains('input-row')) setDisplay(el.parentElement, adv);
-      });
-      document.querySelectorAll(`[id^="${prefix}-depth-input"]`).forEach(el => {
-        if (el.parentElement && el.parentElement.classList.contains('input-row')) setDisplay(el.parentElement, adv);
-      });
       document.querySelectorAll(`[id^="${prefix}-order-container"]`).forEach(el => setDisplay(el, adv));
       document.querySelectorAll(`[id^="${prefix}-depth-container"]`).forEach(el => setDisplay(el, adv));
       const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
@@ -2152,12 +2307,6 @@
     const setDisplay = (el, show) => { if (el) el.style.display = show ? '' : 'none'; };
     document.querySelectorAll(`[id^="${prefix}-order-select"]`).forEach(el => setDisplay(el, adv));
     document.querySelectorAll(`[id^="${prefix}-depth-select"]`).forEach(el => setDisplay(el, adv));
-    document.querySelectorAll(`[id^="${prefix}-order-input"]`).forEach(el => {
-      if (el.parentElement && el.parentElement.classList.contains('input-row')) setDisplay(el.parentElement, adv);
-    });
-    document.querySelectorAll(`[id^="${prefix}-depth-input"]`).forEach(el => {
-      if (el.parentElement && el.parentElement.classList.contains('input-row')) setDisplay(el.parentElement, adv);
-    });
     document.querySelectorAll(`[id^="${prefix}-order-container"]`).forEach(el => setDisplay(el, adv));
     document.querySelectorAll(`[id^="${prefix}-depth-container"]`).forEach(el => setDisplay(el, adv));
     (rerollUpdaters[prefix] || []).forEach(fn => fn());
@@ -2178,17 +2327,16 @@
       'base-order-select',
       'pos-order-select',
       'neg-order-select',
-      'divider-order-select',
       'pos-depth-select',
       'neg-depth-select'
     ];
-    const textIds = [
-      'base-order-input',
-      'divider-order-input',
-      'pos-depth-input',
-      'neg-depth-input'
+    const containerIds = [
+      'base-order-container',
+      'pos-order-container',
+      'neg-order-container',
+      'pos-depth-container',
+      'neg-depth-container'
     ];
-    const containerIds = ['pos-order-container', 'neg-order-container', 'pos-depth-container', 'neg-depth-container'];
     const setDisplay = (el, show) => {
       if (!el) return;
       el.style.display = show ? '' : 'none';
@@ -2197,13 +2345,6 @@
       const adv = cb.checked;
       selectIds.forEach(id => {
         document.querySelectorAll(`[id^="${id}"]`).forEach(el => setDisplay(el, adv));
-      });
-      textIds.forEach(id => {
-        document.querySelectorAll(`[id^="${id}"]`).forEach(el => {
-          if (el.parentElement && el.parentElement.classList.contains('input-row')) {
-            setDisplay(el.parentElement, adv);
-          }
-        });
       });
       containerIds.forEach(id => {
         document.querySelectorAll(`[id^="${id}"]`).forEach(el => setDisplay(el, adv));
@@ -2357,10 +2498,10 @@
   }
 
   /** 
-   * Fill order dropdown with canonical, random and preset options.
+   * Fill order dropdown with built-in ordering modes.
    * Purpose: Populate order selects.
-   * Usage: In initializeUI.
-   * 50% Rule: Static + dynamic options, preserving selection when possible.
+   * Usage: In initializeUI and dynamic stack creation.
+   * 50% Rule: Static options + selection preservation.
    * @param {HTMLSelectElement} select - Select to populate.
    */
   function populateOrderOptions(select) {
@@ -2372,9 +2513,6 @@
       { id: 'canonical', title: 'Canonical' },
       { id: 'random', title: 'Randomized' }
     ];
-    Object.keys(lists.ORDER_PRESETS).forEach(id => {
-      opts.push({ id, title: lists.ORDER_PRESETS[id].title || id });
-    });
     opts.forEach(o => {
       const opt = document.createElement('option');
       opt.value = o.id;
@@ -2386,62 +2524,11 @@
     }
   }
 
-
-  /**
-   * Update the order textarea when the associated select or watched inputs
-   * change. Provides canonical, random and preset ordering.
-   * Purpose: Sync order input with select.
-   * Usage: In initializeUI.
-   * 50% Rule: Handles modes, shuffles.
-   * @param {string} selectId - Select id.
-   * @param {string} inputId - Input id.
-   * @param {Function} getItems - Function to get items.
-   * @param {string|string[]} watchIds - Ids to watch.
-   */
-  function setupOrderControl(selectId, inputId, getItems, watchIds) {
-    const select = document.getElementById(selectId);
-    const input = document.getElementById(inputId);
-    if (!select || !input) return;
-    const prefix = guessPrefix(selectId);
-    const update = () => {
-      const items = getItems();
-      if (select.value === 'canonical') {
-        input.value = items.map((_, i) => i).join(', ');
-      } else if (select.value === 'random') {
-        const arr = items.map((_, i) => i);
-        utils.shuffle(arr);
-        input.value = arr.join(', ');
-      } else if (lists.ORDER_PRESETS[select.value]) {
-        input.value = lists.ORDER_PRESETS[select.value].join(', ');
-      }
-      if (rerollUpdaters[prefix]) rerollUpdaters[prefix].forEach(fn => fn());
-    };
-    select.addEventListener('change', update);
-    const ids = Array.isArray(watchIds) ? watchIds : [watchIds];
-    ids.forEach(id => {
-      const src = document.getElementById(id);
-      if (src) {
-        const handler = () => {
-          if (
-            select.value === 'canonical' ||
-            select.value === 'random' ||
-            lists.ORDER_PRESETS[select.value]
-          ) {
-            update();
-          }
-        };
-        src.addEventListener('input', handler);
-        src.addEventListener('change', handler);
-      }
-    });
-    update();
-  }
-
   /** 
-   * Depth dropdown uses prepend, append and random plus presets.
+   * Depth dropdown uses prepend, append and random.
    * Purpose: Populate depth selects.
-   * Usage: In initializeUI.
-   * 50% Rule: Similar to order.
+   * Usage: In initializeUI and dynamic stack creation.
+   * 50% Rule: Static options, mirroring order patterns.
    * @param {HTMLSelectElement} select - Select.
    */
   function populateDepthOptions(select) {
@@ -2452,9 +2539,6 @@
       { id: 'append', title: 'Append' },
       { id: 'random', title: 'Random Depth' }
     ];
-    Object.keys(lists.ORDER_PRESETS).forEach(id => {
-      opts.push({ id, title: lists.ORDER_PRESETS[id].title || id });
-    });
     opts.forEach(o => {
       const opt = document.createElement('option');
       opt.value = o.id;
@@ -2463,178 +2547,11 @@
     });
   }
 
-
-  /**
-   * Like setupOrderControl but for depth values. Recomputes counts when base
-   * or modifier inputs change.
-   * Purpose: Sync depth input.
-   * Usage: In initializeUI.
-   * 50% Rule: Modes with random.
-   * @param {string} selectId - Select id.
-   * @param {string} inputId - Input id.
-   * @param {string[]} [watchIds='base-input'] - Watch ids.
-   */
-  function setupDepthControl(selectId, inputId, watchIds = 'base-input') {
-    const select = document.getElementById(selectId);
-    const input = document.getElementById(inputId);
-    if (!select || !input) return;
-    const prefix = guessPrefix(selectId);
-    const idx = (selectId.match(/-(\d+)$/) || [])[1]
-      ? parseInt(selectId.match(/-(\d+)$/)[1], 10)
-      : 1;
-    const build = mode => {
-      const counts = computeDepthCounts(prefix, idx);
-      if (!counts.length) {
-        input.value = '';
-        return;
-      }
-      if (mode === 'prepend') {
-        input.value = counts.map(() => 0).join(', ');
-        return;
-      }
-      if (mode === 'append') {
-        input.value = counts.join(', ');
-        return;
-      }
-      if (mode === 'random') {
-        const vals = counts.map(c => Math.floor(Math.random() * (c + 1)));
-        input.value = vals.join(', ');
-        return;
-      }
-      input.value = '';
-    };
-    const update = () => {
-      const val = select.value;
-      if (val === 'prepend' || val === 'append' || val === 'random') {
-        build(val);
-      } else if (lists.ORDER_PRESETS[val]) {
-        input.value = lists.ORDER_PRESETS[val].join(', ');
-      }
-      if (rerollUpdaters[prefix]) rerollUpdaters[prefix].forEach(fn => fn());
-    };
-    select.addEventListener('change', update);
-    const ids = Array.isArray(watchIds) ? watchIds : [watchIds];
-    ids.forEach(id => {
-      const src = document.getElementById(id);
-      if (src) {
-        const handler = () => {
-          if (
-            select.value === 'prepend' ||
-            select.value === 'append' ||
-            select.value === 'random' ||
-            lists.ORDER_PRESETS[select.value]
-          ) {
-            update();
-          }
-        };
-        src.addEventListener('input', handler);
-        src.addEventListener('change', handler);
-      }
-    });
-    update();
-  }
-
-  /** 
-   * Create or remove depth input blocks to match the requested stack size.
-   * Purpose: Dynamic depth controls for stacks.
-   * Usage: In updateStackBlocks.
-   * 50% Rule: Creates elements dynamically.
-   * @param {string} prefix - Prefix.
-   * @param {number} count - Number of blocks.
-   */
-  /**
-   * Build the list of ids that should trigger depth recalculation.
-   * Purpose: Centralize watcher dependencies so new inputs stay in sync.
-   * Line comments capture which elements matter when negatives include positives.
-   * 50% Rule: Documented example plus logic summary.
-   * @param {string} prefix - Section prefix.
-   * @param {number} idx - Stack index.
-   * @returns {string[]} - Array of watcher ids.
-   */
-  function depthWatchIds(prefix, idx) {
-    const list = ['base-input', 'base-select'];
-    list.push(`${prefix}-input${idx === 1 ? '' : '-' + idx}`);
-    list.push(`${prefix}-order-input${idx === 1 ? '' : '-' + idx}`);
-    if (prefix === 'neg') {
-      list.push('neg-include-pos');
-      const posCount = document.getElementById('pos-stack')?.checked
-        ? parseInt(document.getElementById('pos-stack-size')?.value || '1', 10)
-        : 1;
-      for (let p = 1; p <= posCount; p++) {
-        list.push(`pos-input${p === 1 ? '' : '-' + p}`);
-        list.push(`pos-order-input${p === 1 ? '' : '-' + p}`);
-      }
-    }
-    return list;
-  }
-
-  /**
-   * Create or remove depth input blocks to match the requested stack size.
-   * Watcher lists rely on depthWatchIds; pass refresh=true when related
-   * inputs (like positive stacks) change so existing controls rebuild watchers.
-   * Purpose: Dynamic depth controls with synchronized dependencies.
-   * 50% Rule: Loops with comments; refresh handles updates.
-   * @param {string} prefix - Prefix.
-   * @param {number} count - Number of blocks.
-   * @param {boolean} [refresh=false] - Reapply watchers on existing elements.
-   */
-  function updateDepthContainers(prefix, count, refresh = false) {
-    const container = document.getElementById(`${prefix}-depth-container`);
-    const baseId = `${prefix}-depth`;
-    if (!container) return;
-    // The first stack always owns the base depth controls. Extra stacks
-    // manage their own containers, so only one set should exist here.
-    const current = container.querySelectorAll('select').length;
-    const target = 1; // keep a single select/input pair in the base container
-
-    // Refresh mode just rebuilds watchers for existing controls without
-    // adding or removing elements. This keeps stack one stable when toggling.
-    if (refresh) {
-      for (let i = 1; i <= count; i++) {
-        const sel = document.getElementById(
-          `${baseId}-select${i === 1 ? '' : '-' + i}`
-        );
-        const ta = document.getElementById(
-          `${baseId}-input${i === 1 ? '' : '-' + i}`
-        );
-        if (sel && ta) {
-          setupDepthControl(sel.id, ta.id, depthWatchIds(prefix, i));
-        }
-      }
-      return;
-    }
-
-    // Ensure exactly one depth control exists for stack one.
-    if (current < target) {
-      const sel = document.createElement('select');
-      sel.id = `${baseId}-select`;
-      populateDepthOptions(sel);
-      container.appendChild(sel);
-      const div = document.createElement('div');
-      div.className = 'input-row';
-      const ta = document.createElement('textarea');
-      ta.id = `${baseId}-input`;
-      ta.rows = 1;
-      ta.placeholder = '0,1,2';
-      div.appendChild(ta);
-      container.appendChild(div);
-      setupDepthControl(sel.id, ta.id, depthWatchIds(prefix, 1));
-    } else if (current > target) {
-      for (let i = current; i > target; i--) {
-        const idx = i === 1 ? '' : '-' + i;
-        const sel = document.getElementById(`${baseId}-select${idx}`);
-        const ta = document.getElementById(`${baseId}-input${idx}`);
-        if (sel) sel.remove();
-        if (ta && ta.parentElement) ta.parentElement.remove();
-      }
-    }
-  }
-
   /** 
    * Generate stacked modifier blocks dynamically for positive or negative lists.
    * Purpose: Create stack UI blocks.
    * Usage: In setupStackControls.
-   * 50% Rule: Dynamic element creation.
+   * 50% Rule: Dynamic element creation with mode-only order/depth controls.
    * @param {string} prefix - Prefix (pos/neg).
    * @param {number} count - Number of blocks.
    */
@@ -2696,7 +2613,7 @@
       const hideCb = document.createElement('input');
       hideCb.type = 'checkbox';
       hideCb.id = `${prefix}-hide-${idx}`;
-      hideCb.dataset.targets = `${prefix}-input-${idx},${prefix}-order-input-${idx},${prefix}-depth-input-${idx}`;
+      hideCb.dataset.targets = `${prefix}-input-${idx},${prefix}-order-container-${idx},${prefix}-depth-container-${idx}`;
       hideCb.hidden = true;
       btnCol.appendChild(hideCb);
       const hideBtn = document.createElement('button');
@@ -2731,7 +2648,7 @@
       oLabelRow.className = 'label-row';
       const oLbl = document.createElement('label');
       oLbl.textContent = type.charAt(0).toUpperCase() + type.slice(1) + ' Ordering';
-      oLbl.setAttribute('for', `${prefix}-order-input-${idx}`);
+      oLbl.setAttribute('for', `${prefix}-order-select-${idx}`);
       oLabelRow.appendChild(oLbl);
       orderCont.appendChild(oLabelRow);
       const orderSel = document.createElement('select');
@@ -2740,14 +2657,6 @@
       const baseOrderSel = document.getElementById(`${prefix}-order-select`);
       if (baseOrderSel) orderSel.value = baseOrderSel.value;
       orderCont.appendChild(orderSel);
-      const oRow = document.createElement('div');
-      oRow.className = 'input-row';
-      const oTa = document.createElement('textarea');
-      oTa.id = `${prefix}-order-input-${idx}`;
-      oTa.rows = 1;
-      oTa.placeholder = '0,1,2';
-      oRow.appendChild(oTa);
-      orderCont.appendChild(oRow);
       block.appendChild(orderCont);
 
       const depthCont = document.createElement('div');
@@ -2756,7 +2665,7 @@
       dLabelRow.className = 'label-row';
       const dLbl = document.createElement('label');
       dLbl.textContent = type.charAt(0).toUpperCase() + type.slice(1) + ' Depth';
-      dLbl.setAttribute('for', `${prefix}-depth-input-${idx}`);
+      dLbl.setAttribute('for', `${prefix}-depth-select-${idx}`);
       dLabelRow.appendChild(dLbl);
       depthCont.appendChild(dLabelRow);
       const depthSel = document.createElement('select');
@@ -2765,21 +2674,11 @@
       const baseDepthSel = document.getElementById(`${prefix}-depth-select`);
       if (baseDepthSel) depthSel.value = baseDepthSel.value;
       depthCont.appendChild(depthSel);
-      const dRow = document.createElement('div');
-      dRow.className = 'input-row';
-      const dTa = document.createElement('textarea');
-      dTa.id = `${prefix}-depth-input-${idx}`;
-      dTa.rows = 1;
-      dTa.placeholder = '0,1,2';
-      dRow.appendChild(dTa);
-      depthCont.appendChild(dRow);
       block.appendChild(depthCont);
 
       container.appendChild(block);
       setupPresetListener(sel.id, ta.id, type);
       applyPreset(sel, ta, type);
-      setupOrderControl(orderSel.id, oTa.id, () => utils.parseInput(ta.value), ta.id);
-      setupDepthControl(depthSel.id, dTa.id, ['base-input', 'base-select']);
       setupRerollButton(rerollBtn.id, orderSel.id);
     }
     for (let i = current; i > count; i--) {
@@ -2844,81 +2743,6 @@
     if (!rerollUpdaters[prefix]) rerollUpdaters[prefix] = [];
     rerollUpdaters[prefix].push(updateState);
     updateState();
-  }
-
-  /** 
-   * Force all selects currently set to random to generate new orders.
-   * Purpose: Reroll on generate.
-   * Usage: In generate.
-   * 50% Rule: Gathers and shuffles.
-   */
-  function rerollRandomOrders() {
-
-    const baseItems = utils.parseInput(
-      document.getElementById('base-input')?.value || '',
-      true
-    );
-    const gatherItems = prefix => {
-      const arr = [];
-      forEachId(`${prefix}-input`, el => {
-        arr.push(utils.parseInput(el.value || ''));
-      });
-      return arr.length === 1 ? arr[0] : arr;
-    };
-
-    const posItems = gatherItems('pos');
-    const negItems = gatherItems('neg');
-    const divItems = utils.parseDividerInput(
-      document.getElementById('divider-input')?.value || ''
-    );
-
-    function gather(prefix, items) {
-      return gatherControls(prefix, 'order').map((pair, i) => ({
-        select: pair.select,
-        input: pair.input,
-        items: Array.isArray(items[0]) ? items[i] || items[0] : items
-      }));
-    }
-
-    const configs = [
-      ...gather('base', baseItems),
-      ...gather('pos', posItems),
-      ...gather('neg', negItems),
-      ...gather('divider', divItems)
-    ];
-
-    configs.forEach(cfg => {
-      if (cfg.select.value !== 'random') return;
-      const arr = cfg.items.map((_, i) => i);
-      utils.shuffle(arr);
-      cfg.input.value = arr.join(', ');
-      // Trigger watchers so dependent depths update
-      cfg.input.dispatchEvent(new Event('input'));
-      cfg.input.dispatchEvent(new Event('change'));
-    });
-
-    function gatherDepth(prefix) {
-      return gatherControls(prefix, 'depth');
-    }
-
-    const depthConfigs = [...gatherDepth('pos'), ...gatherDepth('neg')];
-    depthConfigs.forEach(cfg => {
-      if (!cfg.select || !cfg.input || cfg.select.value !== 'random') return;
-      const pref = guessPrefix(cfg.select.id);
-      const idx = (cfg.select.id.match(/-(\d+)$/) || [])[1]
-        ? parseInt(cfg.select.id.match(/-(\d+)$/)[1], 10)
-        : 1;
-      const counts = computeDepthCounts(pref, idx);
-      if (!counts.length) {
-        cfg.input.value = '';
-        return;
-      }
-      const vals = counts.map(c => Math.floor(Math.random() * (c + 1)));
-      cfg.input.value = vals.join(', ');
-      // Trigger watchers so dependent counts refresh
-      cfg.input.dispatchEvent(new Event('input'));
-      cfg.input.dispatchEvent(new Event('change'));
-    });
   }
 
   /** 
@@ -3063,6 +2887,7 @@
       '#generate': 'Build prompts using current settings.',
       '.section-data': 'Manage stored prompt lists.',
       '.section-actions': 'Global toggles including help mode.',
+      '.section-parsing': 'Parsing controls for list delimiters.',
       '.section-base': 'Base prompts anchoring the concept.',
       '.section-positive': 'Positive modifiers or outputs.',
       '.section-negative': 'Negative modifiers or outputs.',
@@ -3084,35 +2909,30 @@
       '[data-target="lyrics-remove-brackets"]': 'Strip brackets from lyrics before processing.',
       '[data-target="lyrics-insert-random"]': 'Randomize insertion intervals for lyric terms.',
       // Inputs and lists
+      '#delimiter-select': 'Choose how typed text is chunked (default is whitespace). Delimiters stay with chunks and outputs are concatenated directly.',
+      '#delimiter-custom': 'Custom delimiter text; supports \\n for newline and \\t for tab. Delimiters remain attached to chunks.',
       '#base-select': 'Choose base prompt preset.',
-      '#base-input': 'Comma or newline separated base prompts.',
-      '#base-order-select': 'Preset ordering for base prompts.',
-      '#base-order-input': 'Manual order for base prompts.',
+      '#base-input': 'Base prompts are chunked by the selected delimiter; delimiters stay on the chunks.',
+      '#base-order-select': 'Order mode for base prompts (canonical or randomized).',
       'select[id^="pos-select"]': 'Choose positive list preset.',
-      'textarea[id^="pos-input"]': 'Positive modifiers separated by commas or newlines.',
-      'select[id^="pos-order-select"]': 'Preset ordering for positives.',
-      'textarea[id^="pos-order-input"]': 'Manual order for positives.',
-      'select[id^="pos-depth-select"]': 'Depth position options for positives.',
-      'textarea[id^="pos-depth-input"]': 'Manual depth indices for positives.',
+      'textarea[id^="pos-input"]': 'Positive modifiers are chunked by the selected delimiter; delimiters stay on the chunks.',
+      'select[id^="pos-order-select"]': 'Ordering mode for positives; applied when generating.',
+      'select[id^="pos-depth-select"]': 'Depth mode for positives (prepend/append/random).',
       '#pos-stack-size': 'Number of positive stacks.',
       'select[id^="neg-select"]': 'Choose negative list preset.',
-      'textarea[id^="neg-input"]': 'Negative modifiers separated by commas or newlines.',
-      'select[id^="neg-order-select"]': 'Preset ordering for negatives.',
-      'textarea[id^="neg-order-input"]': 'Manual order for negatives.',
-      'select[id^="neg-depth-select"]': 'Depth position options for negatives.',
-      'textarea[id^="neg-depth-input"]': 'Manual depth indices for negatives.',
+      'textarea[id^="neg-input"]': 'Negative modifiers are chunked by the selected delimiter; delimiters stay on the chunks.',
+      'select[id^="neg-order-select"]': 'Ordering mode for negatives; applied when generating.',
+      'select[id^="neg-depth-select"]': 'Depth mode for negatives (prepend/append/random).',
       '#neg-stack-size': 'Number of negative stacks.',
       '#divider-select': 'Choose divider preset.',
-      '#divider-input': 'Divider phrases rotated between terms.',
-      '#divider-order-select': 'Preset ordering for dividers.',
-      '#divider-order-input': 'Manual order for dividers.',
+      '#divider-input': 'Divider phrases are chunked by the delimiter and inserted as-is.',
       '#length-select': 'Preset length limits.',
       '#length-input': 'Maximum allowed characters.',
       '#lyrics-select': 'Choose lyrics preset.',
       '#lyrics-input': 'Lyrics text with optional random spacing.',
       '#lyrics-space': 'Max spaces inserted between lyric words.',
       '#lyrics-insert-select': 'Choose insertion terms preset.',
-      '#lyrics-insert-input': 'Terms to inject into lyrics.',
+      '#lyrics-insert-input': 'Terms to inject into lyrics, chunked by the selected delimiter.',
       '#lyrics-insert-interval': 'Interval for lyric insertions.',
       '#lyrics-insert-stack': 'Number of terms inserted each time.'
     };
@@ -3224,6 +3044,7 @@
     storage.loadPersisted();
     loadLists(); // Populate selects on first load
     applyCurrentPresets();
+    setupDelimiterControls();
 
     setupPresetListener('neg-select', 'neg-input', 'negative');
     setupPresetListener('pos-select', 'pos-input', 'positive');
@@ -3235,55 +3056,11 @@
     populateOrderOptions(document.getElementById('base-order-select'));
     populateOrderOptions(document.getElementById('pos-order-select'));
     populateOrderOptions(document.getElementById('neg-order-select'));
-    populateOrderOptions(document.getElementById('divider-order-select'));
     populateDepthOptions(document.getElementById('pos-depth-select'));
     populateDepthOptions(document.getElementById('neg-depth-select'));
-
-    setupOrderControl(
-      'base-order-select',
-      'base-order-input',
-      () => utils.parseInput(document.getElementById('base-input').value, true),
-      ['base-input', 'base-select']
-    );
-    setupOrderControl(
-      'pos-order-select',
-      'pos-order-input',
-      () => utils.parseInput(document.getElementById('pos-input').value),
-      ['pos-input', 'pos-select']
-    );
-    setupOrderControl(
-      'neg-order-select',
-      'neg-order-input',
-      () => utils.parseInput(document.getElementById('neg-input').value),
-      ['neg-input', 'neg-select']
-    );
-    setupOrderControl(
-      'divider-order-select',
-      'divider-order-input',
-      () => utils.parseDividerInput(document.getElementById('divider-input').value || ''),
-      ['divider-input', 'divider-select']
-    );
-    setupDepthControl('pos-depth-select', 'pos-depth-input', [
-      'base-input',
-      'base-select',
-      'pos-input',
-      'pos-order-input'
-    ]);
-    setupDepthControl('neg-depth-select', 'neg-depth-input', [
-      'base-input',
-      'base-select',
-      'neg-input',
-      'neg-order-input',
-      'neg-include-pos',
-      'pos-input',
-      'pos-order-input'
-    ]);
-    updateDepthContainers('pos', 1);
-    updateDepthContainers('neg', 1);
     setupRerollButton('base-reroll', 'base-order-select');
     setupRerollButton('pos-reroll-1', 'pos-order-select');
     setupRerollButton('neg-reroll-1', 'neg-order-select');
-    setupRerollButton('divider-reroll', 'divider-order-select');
     setupAdvancedToggle();
     setupSectionHide('pos');
     setupSectionHide('neg');
@@ -3351,6 +3128,7 @@
     displayOutput,
     generate,
     updateButtonState,
+    setupDelimiterControls,
     setupToggleButtons,
     setupShuffleAll,
     setupStackControls,
@@ -3359,17 +3137,12 @@
     setupCopyButtons,
     setupDataButtons,
     setupHelpMode,
-    setupOrderControl,
-    setupDepthControl,
     setupAdvancedToggle,
     updateStackBlocks,
-    rerollRandomOrders,
     setupRerollButton,
     setupSectionHide,
     setupSectionOrder,
     setupSectionAdvanced,
-    updateDepthContainers,
-    depthWatchIds,
     initializeUI,
     applyCurrentPresets,
     resetUI,

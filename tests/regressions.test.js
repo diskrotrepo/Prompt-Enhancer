@@ -17,13 +17,8 @@ const setupBaseDom = () => {
     <select id="lyrics-insert-select"></select>
     <textarea id="lyrics-insert-input"></textarea>
     <select id="base-order-select"></select>
-    <textarea id="base-order-input"></textarea>
     <select id="pos-order-select"></select>
-    <textarea id="pos-order-input"></textarea>
     <select id="neg-order-select"></select>
-    <textarea id="neg-order-input"></textarea>
-    <select id="divider-order-select"></select>
-    <textarea id="divider-order-input"></textarea>
     <button id="generate"></button>
   `;
 };
@@ -54,47 +49,37 @@ describe('Regression coverage for list/order handling', () => {
     delete global.DEFAULT_DATA;
   });
 
-  test('loadLists clears order presets when none are provided', () => {
+  test('importLists drops order presets', () => {
     setupBaseDom();
     const main = loadModule();
     const lists = main;
     lists.importLists({
-      presets: [{ id: 'order-1', title: 'Order 1', type: 'order', items: [1, 0] }]
+      presets: [{ id: 'order-1', title: 'Order 1', type: 'order', items: '1,0' }]
     });
-    const initialOrder = JSON.parse(lists.exportLists())
+    const remaining = JSON.parse(lists.exportLists())
       .presets
-      .filter(p => p.type === 'order')
-      .map(p => p.id);
-    expect(initialOrder).toContain('order-1');
-    lists.importLists({
-      presets: [{ id: 'base-1', title: 'Base', type: 'base', items: ['x'] }]
-    });
-    const clearedOrder = JSON.parse(lists.exportLists())
-      .presets
-      .filter(p => p.type === 'order')
-      .map(p => p.id);
-    expect(clearedOrder).toHaveLength(0);
+      .filter(p => p.type === 'order');
+    expect(remaining).toHaveLength(0);
   });
 
-  test('additive imports preserve order presets when no new order entries exist', () => {
+  test('additive imports also drop order presets', () => {
     setupBaseDom();
     const main = loadModule();
     const lists = main;
     lists.importLists({
-      presets: [{ id: 'order-1', title: 'Order 1', type: 'order', items: [1, 0] }]
+      presets: [{ id: 'order-1', title: 'Order 1', type: 'order', items: '1,0' }]
     });
     lists.importLists(
-      { presets: [{ id: 'base-1', title: 'Base', type: 'base', items: ['x'] }] },
+      { presets: [{ id: 'base-1', title: 'Base', type: 'base', items: 'x' }] },
       true
     );
-    const preservedOrder = JSON.parse(lists.exportLists())
+    const remaining = JSON.parse(lists.exportLists())
       .presets
-      .filter(p => p.type === 'order')
-      .map(p => p.id);
-    expect(preservedOrder).toContain('order-1');
+      .filter(p => p.type === 'order');
+    expect(remaining).toHaveLength(0);
   });
 
-  test('importing order presets refreshes order dropdowns', () => {
+  test('order dropdowns stay built-in after import', () => {
     setupBaseDom();
     const main = loadModule();
     const lists = main;
@@ -105,10 +90,10 @@ describe('Regression coverage for list/order handling', () => {
     const initial = Array.from(select.options).map(o => o.value);
     expect(initial).toEqual(['canonical', 'random']);
     lists.importLists({
-      presets: [{ id: 'order-2', title: 'Order 2', type: 'order', items: [0, 1] }]
+      presets: [{ id: 'order-2', title: 'Order 2', type: 'order', items: '0,1' }]
     });
     const updated = Array.from(select.options).map(o => o.value);
-    expect(updated).toContain('order-2');
+    expect(updated).toEqual(['canonical', 'random']);
   });
 
   test('copy buttons fall back to execCommand when clipboard API is unavailable', async () => {

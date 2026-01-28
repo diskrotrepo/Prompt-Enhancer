@@ -12,14 +12,13 @@ function setupDOM() {
     <select id="base-select"></select>
     <textarea id="base-input"></textarea>
     <select id="pos-depth-select"></select>
-    <textarea id="pos-depth-input"></textarea>
   `;
 }
 
 describe('Storage manager', () => {
   beforeEach(() => {
     setupDOM();
-    lists.importLists({ presets: [{ id: 'b', title: 'b', type: 'base', items: ['x'] }] });
+    lists.importLists({ presets: [{ id: 'b', title: 'b', type: 'base', items: 'x' }] });
     state.loadFromDOM();
   });
 
@@ -32,19 +31,10 @@ describe('Storage manager', () => {
     expect(after).toBe(json);
   });
 
-  test('depth input preserved through exportData/importData', () => {
-    document.getElementById('pos-depth-input').value = '4';
-    const json = storage.exportData();
-    document.getElementById('pos-depth-input').value = '';
-    storage.importData(json);
-    expect(document.getElementById('pos-depth-input').value).toBe('4');
-  });
-
   test('importData keeps builtin depth options', () => {
     lists.importLists({
       presets: [
-        { id: 'ord', title: 'ord', type: 'order', items: ['0'] },
-        { id: 'b', title: 'b', type: 'base', items: ['x'] }
+        { id: 'b', title: 'b', type: 'base', items: 'x' }
       ]
     });
     const json = storage.exportData();
@@ -52,7 +42,6 @@ describe('Storage manager', () => {
       <select id="base-select"></select>
       <textarea id="base-input"></textarea>
       <select id="pos-depth-select"></select>
-      <textarea id="pos-depth-input"></textarea>
     `;
     lists.importLists({ presets: [] });
     storage.importData(json);
@@ -60,7 +49,7 @@ describe('Storage manager', () => {
       document.querySelectorAll('#pos-depth-select option')
     ).map(o => o.value);
     expect(opts).toEqual(
-      expect.arrayContaining(['prepend', 'append', 'random', 'ord'])
+      expect.arrayContaining(['prepend', 'append', 'random'])
     );
   });
 
@@ -68,8 +57,8 @@ describe('Storage manager', () => {
     const json = {
       lists: {
         presets: [
-          { id: 'b', title: 'b', type: 'base', items: ['z'] },
-          { id: 'c', title: 'c', type: 'base', items: ['y'] }
+          { id: 'b', title: 'b', type: 'base', items: 'z' },
+          { id: 'c', title: 'c', type: 'base', items: 'y' }
         ]
       },
       state: {}
@@ -82,8 +71,8 @@ describe('Storage manager', () => {
     const renamed = data.presets.find(
       p => p.title === 'b (1)' && p.type === 'base'
     );
-    expect(original.items).toEqual(['x']);
-    expect(renamed.items).toEqual(['z']);
+    expect(original.items).toBe('x');
+    expect(renamed.items).toBe('z');
     expect(
       data.presets.some(p => p.title === 'c' && p.type === 'base')
     ).toBe(true);
@@ -91,7 +80,7 @@ describe('Storage manager', () => {
 
   test('loadPersisted prefers localStorage data', () => {
     const saved = {
-      lists: { presets: [{ id: 'b', title: 'b', type: 'base', items: ['y'] }] },
+      lists: { presets: [{ id: 'b', title: 'b', type: 'base', items: 'y' }] },
       state: { 'base-input': 'y', 'base-select': 'b' }
     };
     localStorage.setItem('promptEnhancerData', JSON.stringify(saved));
@@ -107,7 +96,7 @@ describe('Storage manager', () => {
   test('loadPersisted falls back to DEFAULT_DATA', () => {
     localStorage.removeItem('promptEnhancerData');
     global.DEFAULT_DATA = {
-      lists: { presets: [{ id: 'b', title: 'b', type: 'base', items: ['z'] }] },
+      lists: { presets: [{ id: 'b', title: 'b', type: 'base', items: 'z' }] },
       state: { 'base-input': 'z', 'base-select': 'b' }
     };
     document.body.innerHTML = `
@@ -122,7 +111,7 @@ describe('Storage manager', () => {
   test('resetData clears storage and loads defaults', () => {
     localStorage.setItem('promptEnhancerData', JSON.stringify({ state: { 'base-input': 'x' } }));
     global.DEFAULT_DATA = {
-      lists: { presets: [{ id: 'b', title: 'b', type: 'base', items: ['d'] }] },
+      lists: { presets: [{ id: 'b', title: 'b', type: 'base', items: 'd' }] },
       state: { 'base-input': 'd', 'base-select': 'b' }
     };
     document.body.innerHTML = `
@@ -147,11 +136,9 @@ describe('Storage manager', () => {
           <div class="input-row"><textarea id="pos-input"></textarea></div>
           <div id="pos-order-container">
             <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-            <div class="input-row"><textarea id="pos-order-input"></textarea></div>
           </div>
           <div id="pos-depth-container">
             <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
-            <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
           </div>
         </div>
       </div>

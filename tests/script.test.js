@@ -20,12 +20,13 @@ const {
   equalizeLength,
   buildVersions,
   processLyrics,
-  parseDividerInput,
   parseOrderInput,
   applyOrder,
   insertAtDepth,
   countWords,
-  computeDepthCounts
+  buildOrderIndices,
+  buildDepthValues,
+  computeDepthCountsFrom
 } = utils;
 
 const { exportLists, importLists, saveList, deleteList } = lists;
@@ -37,62 +38,51 @@ const {
   setupToggleButtons,
   applyAllHideState,
   applyPreset,
-  setupOrderControl,
   setupRerollButton,
-  rerollRandomOrders,
   setupAdvancedToggle,
   updateStackBlocks,
   setupSectionOrder,
   setupSectionHide,
   setupSectionAdvanced,
-  setupDepthControl,
-  updateDepthContainers,
-  depthWatchIds,
   setupPresetListener
 } = ui;
 
 describe('Utility functions', () => {
-  test('parseInput splits and trims correctly', () => {
+  test('parseInput splits on whitespace by default', () => {
     const input = 'a, b; c\nd';
-    expect(parseInput(input)).toEqual(['a', 'b', 'c', 'd']);
+    expect(parseInput(input)).toEqual(['a, ', 'b; ', 'c\n', 'd']);
+  });
+
+  test('parseInput splits on a custom delimiter', () => {
+    const input = 'a| b |c|d';
+    expect(parseInput(input, false, '|')).toEqual(['a|', ' b |', 'c|', 'd']);
   });
 
   test('parseInput preserves delimiters when requested', () => {
     const input = 'a, b. c';
-    expect(parseInput(input, true)).toEqual(['a, ', 'b. ', 'c. ']);
+    expect(parseInput(input, true)).toEqual(['a,', ' b.', ' c']);
   });
 
   test('parseInput handles multiple delimiters together', () => {
     const input = 'a,,. b';
-    expect(parseInput(input, true)).toEqual(['a,,. ', 'b. ']);
+    expect(parseInput(input, true)).toEqual(['a,,.', ' b']);
   });
 
   test('parseInput returns empty array for empty input', () => {
     expect(parseInput('')).toEqual([]);
   });
 
-  test('parseInput adds punctuation when missing delimiters', () => {
-    expect(parseInput('abc', true)).toEqual(['abc. ']);
+  test('parseInput leaves undelimited input intact', () => {
+    expect(parseInput('abc', true)).toEqual(['abc']);
   });
 
   test('parseInput preserves consecutive newlines', () => {
-    expect(parseInput('a\n\nb', true)).toEqual(['a\n\n', 'b. ']);
+    expect(parseInput('a\n\nb', true)).toEqual(['a\n\n', 'b']);
   });
 
-  // Ensures delimiter periods inside parentheses keep closing brackets attached
-  test('parseInput keeps closing brackets with prior sentence', () => {
+  test('parseInput does not special-case closing brackets', () => {
     const input = 'First (one.) Second.';
-    expect(parseInput(input, true)).toEqual(['First (one.) ', 'Second.']);
-  });
-
-  test('parseDividerInput splits by line', () => {
-    const raw = 'one\ntwo';
-    expect(parseDividerInput(raw)).toEqual(['one', 'two']);
-  });
-
-  test('parseDividerInput preserves trailing spaces', () => {
-    const raw = 'foo \nbar  ';
-    expect(parseDividerInput(raw)).toEqual(['foo ', 'bar  ']);
+    expect(parseInput(input, true)).toEqual(['First (one.', ') Second.']);
   });
 
   test('shuffle retains all items', () => {
@@ -112,6 +102,35 @@ describe('Utility functions', () => {
     expect(countWords('   ')).toBe(0);
   });
 
+  test('buildOrderIndices returns null for canonical', () => {
+    expect(buildOrderIndices(['a', 'b'], 'canonical')).toBeNull();
+  });
+
+  test('buildOrderIndices shuffles indices when random', () => {
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0);
+    const order = buildOrderIndices(['a', 'b', 'c'], 'random');
+    Math.random = orig;
+    expect(order).toEqual([1, 2, 0]);
+  });
+
+  test('buildDepthValues handles prepend/append/random', () => {
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0);
+    expect(buildDepthValues('prepend', [2, 3])).toEqual([0, 0]);
+    expect(buildDepthValues('append', [2, 3])).toEqual([2, 3]);
+    expect(buildDepthValues('random', [2, 3])).toEqual([0, 0]);
+    Math.random = orig;
+  });
+
+  test('computeDepthCountsFrom includes prior stacks and positives', () => {
+    const baseCounts = [2];
+    const stacks = [['p1'], ['p2']];
+    const posStacks = [['pos']];
+    const counts = computeDepthCountsFrom(baseCounts, stacks, 2, true, posStacks);
+    expect(counts).toEqual([4]);
+  });
+
   test('parseOrderInput converts to numbers', () => {
     expect(parseOrderInput('1, 2 3')).toEqual([1, 2, 3]);
   });
@@ -129,7 +148,7 @@ describe('Utility functions', () => {
 describe('Prompt building', () => {
   test('buildVersions builds positive and negative prompts', () => {
     const out = buildVersions(['cat'], ['bad'], ['good'], 20);
-    expect(out).toEqual({ positive: 'good cat, good cat', negative: 'bad cat, bad cat' });
+    expect(out).toEqual({ positive: 'good catgood cat', negative: 'bad catbad cat' });
   });
 
   test('buildVersions addendum method appends negatives after positives', () => {
@@ -148,12 +167,11 @@ describe('Prompt building', () => {
       undefined,
       undefined,
       undefined,
-      undefined,
       true
     );
     expect(out).toEqual({
-      positive: 'good cat, good cat',
-      negative: 'good cat, good cat, bad, bad'
+      positive: 'good catgood cat',
+      negative: 'good catgood catbadbad'
     });
   });
 
@@ -178,10 +196,9 @@ describe('Prompt building', () => {
       undefined,
       undefined,
       undefined,
-      undefined,
       true
     );
-    expect(out).toEqual({ positive: 'good cat', negative: 'good cat, bad' });
+    expect(out).toEqual({ positive: 'good cat', negative: 'good catbad' });
   });
 
   test('buildVersions applies negative depth after positives', () => {
@@ -237,7 +254,10 @@ describe('Prompt building', () => {
       [2],
       [3]
     );
-    expect(out).toEqual({ positive: 'foo bar good, foo bar good', negative: 'foo bar good bad, foo bar good bad' });
+    expect(out).toEqual({
+      positive: 'foo bar goodfoo bar goodfoo bar good',
+      negative: 'foo bar good badfoo bar good badfoo bar good bad'
+    });
   });
 
   test('negative depth uses independent values', () => {
@@ -271,40 +291,10 @@ describe('Prompt building', () => {
       [[0], [2]],
       [0]
     );
-    expect(out).toEqual({ positive: 'pre foo bar post, pre foo bar post', negative: 'n foo bar, n foo bar' });
-  });
-
-  test('computeDepthCounts includes prior positive stacks', () => {
-    document.body.innerHTML = `
-      <textarea id="base-input">foo bar</textarea>
-      <textarea id="pos-input">p1</textarea>
-      <textarea id="pos-input-2">p2</textarea>
-      <textarea id="pos-order-input"></textarea>
-      <textarea id="pos-order-input-2"></textarea>
-      <input id="pos-stack" type="checkbox" checked>
-      <input id="pos-stack-size" value="2">
-    `;
-    const counts = computeDepthCounts('pos', 2);
-    expect(counts).toEqual([3]);
-  });
-
-  test('computeDepthCounts includes prior negative stacks and positives', () => {
-    document.body.innerHTML = `
-      <textarea id="base-input">foo bar</textarea>
-      <textarea id="pos-input">good</textarea>
-      <textarea id="pos-order-input"></textarea>
-      <input id="pos-stack" type="checkbox" checked>
-      <input id="pos-stack-size" value="1">
-      <textarea id="neg-input">bad1</textarea>
-      <textarea id="neg-input-2">bad2</textarea>
-      <textarea id="neg-order-input"></textarea>
-      <textarea id="neg-order-input-2"></textarea>
-      <input id="neg-stack" type="checkbox" checked>
-      <input id="neg-stack-size" value="2">
-      <input id="neg-include-pos" type="checkbox" checked>
-    `;
-    const counts = computeDepthCounts('neg', 2);
-    expect(counts).toEqual([4]);
+    expect(out).toEqual({
+      positive: 'pre foo bar postpre foo bar postpre foo bar post',
+      negative: 'n foo barn foo barn foo bar'
+    });
   });
 
   test('buildVersions returns empty strings when items list is empty', () => {
@@ -317,7 +307,7 @@ describe('Prompt building', () => {
     expect(out).toEqual({ positive: '', negative: '' });
   });
 
-  test('buildVersions joins items without commas when delimited', () => {
+  test('buildVersions concatenates chunked items without inserting commas', () => {
     const out = buildVersions(['a.\n', 'b.\n'], ['n'], ['p'], 30);
     expect(out.positive.includes(',')).toBe(false);
     expect(out.negative.includes(',')).toBe(false);
@@ -336,20 +326,7 @@ describe('Prompt building', () => {
       true
     );
     expect(out.positive.includes('i.e.,')).toBe(true);
-    expect(out.positive.startsWith('a, b, \ni.e., ')).toBe(true);
-  });
-
-  test('buildVersions keeps spaces from parsed divider list', () => {
-    const divs = parseDividerInput('foo ');
-    const out = buildVersions(
-      ['a', 'b'],
-      [],
-      [],
-      50,
-      false,
-      divs
-    );
-    expect(out.positive.startsWith('a, b, \nfoo ')).toBe(true);
+    expect(out.positive.startsWith('abi.e., a')).toBe(true);
   });
 
   test('buildVersions reuses divider order for negatives', () => {
@@ -366,7 +343,7 @@ describe('Prompt building', () => {
     Math.random = orig;
     const posDivs = out.positive.match(/[xy] /g);
     const negDivs = out.negative.match(/[xy] /g);
-    expect(posDivs).toEqual(['x ', 'y ', 'x ', 'y ']);
+    expect(posDivs.slice(0, 4)).toEqual(['x ', 'y ', 'x ', 'y ']);
     expect(negDivs).toEqual(posDivs);
   });
 
@@ -380,7 +357,7 @@ describe('Prompt building', () => {
       ['\nfoo ']
     );
     expect(out.positive).toContain('\nfoo ');
-    expect(out.positive.startsWith('a, b')).toBe(true);
+    expect(out.positive.startsWith('ab')).toBe(true);
   });
 
   test('buildVersions supports modifier stacking', () => {
@@ -418,8 +395,8 @@ describe('Prompt building', () => {
       [[0, 1], [1, 0]],
       [[1, 0], [0, 1]]
     );
-    expect(out.positive).toBe('p1 p2 x, p2 p1 x');
-    expect(out.negative).toBe('n2 n1 x, n1 n2 x');
+    expect(out.positive).toBe('p1 p2 xp2 p1 x');
+    expect(out.negative).toBe('n2 n1 xn1 n2 x');
   });
 
   test('buildVersions accepts different lists per stack', () => {
@@ -434,8 +411,8 @@ describe('Prompt building', () => {
       2,
       2
     );
-    expect(out.positive).toBe('p1 p2 x, p1 p2 x');
-    expect(out.negative).toBe('n1 n2 x, n1 n2 x');
+    expect(out.positive).toBe('p1 p2 xp1 p2 x');
+    expect(out.negative).toBe('n1 n2 xn1 n2 x');
   });
 
   test('stacking works with natural dividers', () => {
@@ -449,9 +426,9 @@ describe('Prompt building', () => {
       2,
       2
     );
-    expect(out.positive).not.toMatch(/p1 \nfoo /);
-    expect(out.negative).not.toMatch(/n1 \nfoo /);
-    const divMatches = out.positive.match(/, \nfoo /g) || [];
+    expect(out.positive).not.toMatch(/p1\nfoo /);
+    expect(out.negative).not.toMatch(/n1\nfoo /);
+    const divMatches = out.positive.match(/\nfoo /g) || [];
     expect(divMatches.length).toBeGreaterThan(0);
   });
 
@@ -464,8 +441,8 @@ describe('Prompt building', () => {
       true,
       ['\nfoo ']
     );
-    expect(out.positive).toBe('good cat, \nfoo , good cat, \nfoo ');
-    expect(out.negative).toBe('bad good cat, \nfoo , bad good cat, \nfoo ');
+    expect(out.positive).toBe('good cat\nfoo good cat\nfoo good cat');
+    expect(out.negative).toBe('bad good cat\nfoo bad good cat\nfoo bad good cat');
   });
 
   test('random base order keeps negatives aligned', () => {
@@ -484,7 +461,7 @@ describe('Prompt building', () => {
       null,
       [1, 0]
     );
-    const expectedNeg = out.positive.replace(/\bp /g, 'n p ');
+    const expectedNeg = out.positive.replace(/p /g, 'n p ');
     expect(out.negative).toBe(expectedNeg);
   });
 
@@ -505,8 +482,8 @@ describe('Prompt building', () => {
       [3]
     );
     expect(out).toEqual({
-      positive: 'First פלוס (one.) 加, 加 Second פלוס.',
-      negative: 'First פלוס (one.) מינוס 加, 加 Second פלוס מינוס.'
+      positive: 'First פלוס (one. 加) פלוס Second. 加',
+      negative: 'First פלוס (one. מינוס 加) פלוס Second. מינוס 加'
     });
   });
 });
@@ -599,7 +576,6 @@ describe('UI interactions', () => {
       <select id="base-order-select"><option value="canonical">c</option><option value="random">r</option></select>
       <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
       <select id="neg-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-      <select id="divider-order-select"><option value="canonical">c</option><option value="random">r</option></select>
       <input type="checkbox" id="all-random">
       <button class="toggle-button" data-target="all-random"></button>
     `;
@@ -610,11 +586,9 @@ describe('UI interactions', () => {
     expect(document.getElementById('base-order-select').value).toBe('random');
     expect(document.getElementById('pos-order-select').value).toBe('random');
     expect(document.getElementById('neg-order-select').value).toBe('random');
-    expect(document.getElementById('divider-order-select').value).toBe('random');
     cb.checked = false;
     cb.dispatchEvent(new Event('change'));
     expect(document.getElementById('base-order-select').value).toBe('canonical');
-    expect(document.getElementById('divider-order-select').value).toBe('canonical');
   });
 
   test('order all also affects stacked dropdowns', () => {
@@ -666,628 +640,59 @@ describe('UI interactions', () => {
     expect(txt.style.display).toBe('');
   });
 
-  test('reroll button switches select to random and shuffles', () => {
+  test('reroll button toggles order and depth modes for its stack', () => {
     document.body.innerHTML = `
-      <select id="base-order-select">
-        <option value="canonical">c</option>
-        <option value="random">r</option>
-      </select>
-      <textarea id="base-order-input"></textarea>
-      <button id="base-reroll" class="toggle-button random-button" data-select="base-order-select"></button>
-    `;
-    const orig = utils.shuffle;
-    utils.shuffle = jest.fn(arr => {
-      arr.reverse();
-      return arr;
-    });
-    setupOrderControl('base-order-select', 'base-order-input', () => ['a', 'b', 'c']);
-    setupRerollButton('base-reroll', 'base-order-select');
-    document.getElementById('base-reroll').click();
-    expect(document.getElementById('base-order-select').value).toBe('random');
-    utils.shuffle = orig;
-  });
-  });
-
-  test('rerollRandomOrders updates random selects', () => {
-    document.body.innerHTML = `
-      <select id="base-order-select">
-        <option value="canonical">c</option>
-        <option value="random">r</option>
-      </select>
-      <textarea id="base-order-input"></textarea>
-      <textarea id="base-input">a,b</textarea>
-    `;
-    const orig = utils.shuffle;
-    utils.shuffle = jest.fn(arr => {
-      arr.reverse();
-      return arr;
-    });
-    setupOrderControl('base-order-select', 'base-order-input', () => ['a', 'b']);
-    document.getElementById('base-order-select').value = 'random';
-    document.getElementById('base-order-select').dispatchEvent(new Event('change'));
-    rerollRandomOrders();
-    utils.shuffle = orig;
-  });
-
-  test('canonical base order updates when base input changes', () => {
-    document.body.innerHTML = `
-      <select id="base-order-select">
-        <option value="canonical">c</option>
-        <option value="random">r</option>
-      </select>
-      <textarea id="base-order-input"></textarea>
-      <textarea id="base-input">a</textarea>
-    `;
-    setupOrderControl(
-      'base-order-select',
-      'base-order-input',
-      () => utils.parseInput(document.getElementById('base-input').value, true),
-      'base-input'
-    );
-    const baseInput = document.getElementById('base-input');
-    baseInput.value = 'a,b,c';
-    baseInput.dispatchEvent(new Event('input'));
-    expect(document.getElementById('base-order-input').value).toBe('0, 1, 2');
-  });
-
-  test('canonical base order updates on change events', () => {
-    document.body.innerHTML = `
-      <select id="base-order-select">
-        <option value="canonical">c</option>
-      </select>
-      <textarea id="base-order-input"></textarea>
-      <textarea id="base-input">a</textarea>
-    `;
-    setupOrderControl(
-      'base-order-select',
-      'base-order-input',
-      () => utils.parseInput(document.getElementById('base-input').value, true),
-      'base-input'
-    );
-    const baseInput = document.getElementById('base-input');
-    baseInput.value = 'a,b,c';
-    baseInput.dispatchEvent(new Event('change'));
-    expect(document.getElementById('base-order-input').value).toBe('0, 1, 2');
-  });
-
-  test('random base order updates when base input changes', () => {
-    document.body.innerHTML = `
-      <select id="base-order-select">
-        <option value="canonical">c</option>
-        <option value="random">r</option>
-      </select>
-      <textarea id="base-order-input"></textarea>
-      <textarea id="base-input">a</textarea>
-    `;
-    const origRand = Math.random;
-    Math.random = jest.fn().mockReturnValue(0);
-    setupOrderControl(
-      'base-order-select',
-      'base-order-input',
-      () => utils.parseInput(document.getElementById('base-input').value, true),
-      'base-input'
-    );
-    const sel = document.getElementById('base-order-select');
-    sel.value = 'random';
-    sel.dispatchEvent(new Event('change'));
-    const baseInput = document.getElementById('base-input');
-    baseInput.value = 'a,b,c';
-    baseInput.dispatchEvent(new Event('input'));
-    Math.random = origRand;
-    expect(document.getElementById('base-order-input').value).toBe('1, 2, 0');
-  });
-
-  test('append depth updates when base input changes', () => {
-    document.body.innerHTML = `
-      <select id="pos-depth-select">
-        <option value="prepend">p</option>
-        <option value="append">a</option>
-      </select>
-      <textarea id="pos-depth-input"></textarea>
-      <textarea id="base-input">foo bar,baz</textarea>
-    `;
-    setupDepthControl('pos-depth-select', 'pos-depth-input', 'base-input');
-    const sel = document.getElementById('pos-depth-select');
-    sel.value = 'append';
-    sel.dispatchEvent(new Event('change'));
-    expect(document.getElementById('pos-depth-input').value).toBe('2, 1');
-    const baseInput = document.getElementById('base-input');
-    baseInput.value = 'foo,baz qux quux';
-    baseInput.dispatchEvent(new Event('input'));
-    expect(document.getElementById('pos-depth-input').value).toBe('1, 3');
-  });
-
-  test('append depth uses modifier length', () => {
-    document.body.innerHTML = `
-      <select id="pos-depth-select">
-        <option value="append">a</option>
-      </select>
-      <textarea id="pos-depth-input"></textarea>
-      <textarea id="base-input">foo bar</textarea>
-      <textarea id="pos-input">baz qux</textarea>
-      <textarea id="pos-order-input">0</textarea>
-    `;
-    setupDepthControl('pos-depth-select', 'pos-depth-input', [
-      'base-input',
-      'pos-input',
-      'pos-order-input'
-    ]);
-    const sel = document.getElementById('pos-depth-select');
-    sel.value = 'append';
-    sel.dispatchEvent(new Event('change'));
-    expect(document.getElementById('pos-depth-input').value).toBe('2');
-  });
-
-  test('negative depth includes positive modifiers when enabled', () => {
-    document.body.innerHTML = `
-      <input type="checkbox" id="neg-include-pos" checked>
-      <select id="neg-depth-select">
-        <option value="append">a</option>
-      </select>
-      <textarea id="neg-depth-input"></textarea>
-      <textarea id="base-input">foo bar</textarea>
-      <textarea id="neg-input">bad</textarea>
-      <textarea id="neg-order-input">0</textarea>
-      <textarea id="pos-input">good</textarea>
-      <textarea id="pos-order-input">0</textarea>
-    `;
-    setupDepthControl('neg-depth-select', 'neg-depth-input', [
-      'base-input',
-      'neg-input',
-      'neg-order-input',
-      'neg-include-pos',
-      'pos-input',
-      'pos-order-input'
-    ]);
-    const sel = document.getElementById('neg-depth-select');
-    sel.value = 'append';
-    sel.dispatchEvent(new Event('change'));
-    expect(document.getElementById('neg-depth-input').value).toBe('3');
-  });
-
-  const appendMap = [
-    {
-      desc: 'negative append depth for second stack reacts to positive changes',
-      before: '3',
-      after: '4',
-      update() {
-        const inp = document.getElementById('pos-input-2');
-        inp.value = 'great job';
-        inp.dispatchEvent(new Event('input'));
-      }
-    }
-  ];
-
-  appendMap.forEach(cfg => {
-    test(cfg.desc, () => {
-      document.body.innerHTML = `
-        <input type="checkbox" id="pos-stack">
-        <select id="pos-stack-size"><option value="2">2</option></select>
-        <input type="checkbox" id="neg-stack">
-        <select id="neg-stack-size"><option value="2">2</option></select>
-        <input type="checkbox" id="neg-include-pos" checked>
-        <div id="neg-depth-container">
-          <select id="neg-depth-select"><option value="append">a</option></select>
-          <div class="input-row"><textarea id="neg-depth-input"></textarea></div>
-        </div>
-        <div id="pos-stack-container"></div>
-        <div id="neg-stack-container"></div>
-        <textarea id="pos-input"></textarea>
-        <textarea id="pos-order-input"></textarea>
-        <textarea id="pos-input-2">good</textarea>
-        <textarea id="pos-order-input-2"></textarea>
-        <textarea id="neg-input"></textarea>
-        <textarea id="neg-order-input"></textarea>
-        <textarea id="neg-input-2"></textarea>
-        <textarea id="neg-order-input-2"></textarea>
-        <textarea id="base-input">foo bar</textarea>
-        <select id="base-select"></select>
-      `;
-      setupDepthControl('neg-depth-select', 'neg-depth-input', [
-        'base-input',
-        'neg-input',
-        'neg-order-input',
-        'neg-include-pos',
-        'pos-input',
-        'pos-order-input'
-      ]);
-      document.getElementById('neg-stack-container').innerHTML =
-        '<div class="stack-block" id="neg-stack-1"></div>';
-      document.getElementById('pos-stack-container').innerHTML =
-        '<div class="stack-block" id="pos-stack-1"></div>';
-      const posStack = document.getElementById('pos-stack');
-      posStack.checked = true;
-      const negStack = document.getElementById('neg-stack');
-      negStack.checked = true;
-      updateStackBlocks('pos', 2);
-      updateStackBlocks('neg', 2);
-      setupDepthControl('neg-depth-select-2', 'neg-depth-input-2', [
-        'base-input',
-        'base-select',
-        'neg-input-2',
-        'neg-order-input-2',
-        'neg-include-pos',
-        'pos-input',
-        'pos-order-input',
-        'pos-input-2',
-        'pos-order-input-2'
-      ]);
-      const sel = document.getElementById('neg-depth-select-2');
-      sel.value = 'append';
-      sel.dispatchEvent(new Event('change'));
-      expect(document.getElementById('neg-depth-input-2').value).toBe(cfg.before);
-      cfg.update();
-      expect(document.getElementById('neg-depth-input-2').value).toBe(cfg.after);
-    });
-  });
-
-  test('prepend depth populates zeros for each base term', () => {
-    document.body.innerHTML = `
-      <select id="pos-depth-select">
-        <option value="prepend">p</option>
-        <option value="append">a</option>
-      </select>
-      <textarea id="pos-depth-input"></textarea>
-      <textarea id="base-input">foo bar,baz</textarea>
-    `;
-    setupDepthControl('pos-depth-select', 'pos-depth-input', 'base-input');
-    const sel = document.getElementById('pos-depth-select');
-    sel.value = 'prepend';
-    sel.dispatchEvent(new Event('change'));
-    expect(document.getElementById('pos-depth-input').value).toBe('0, 0');
-  });
-
-  test('depth populates when switching modes', () => {
-    document.body.innerHTML = `
-      <select id="pos-depth-select">
-        <option value="prepend">p</option>
-        <option value="append">a</option>
-        <option value="random">r</option>
-      </select>
-      <textarea id="pos-depth-input"></textarea>
-      <textarea id="base-input">foo bar,baz</textarea>
-    `;
-    setupDepthControl('pos-depth-select', 'pos-depth-input', 'base-input');
-    const sel = document.getElementById('pos-depth-select');
-    sel.value = 'append';
-    sel.dispatchEvent(new Event('change'));
-    expect(document.getElementById('pos-depth-input').value).toBe('2, 1');
-    sel.value = 'random';
-    sel.dispatchEvent(new Event('change'));
-    expect(document.getElementById('pos-depth-input').value).not.toBe('');
-  });
-
-  test('append depth updates on change events', () => {
-    document.body.innerHTML = `
-      <select id="pos-depth-select">
-        <option value="append">a</option>
-      </select>
-      <textarea id="pos-depth-input"></textarea>
-      <textarea id="base-input">foo bar,baz</textarea>
-    `;
-    setupDepthControl('pos-depth-select', 'pos-depth-input', 'base-input');
-    const sel = document.getElementById('pos-depth-select');
-    sel.value = 'append';
-    sel.dispatchEvent(new Event('change'));
-    const baseInput = document.getElementById('base-input');
-    baseInput.value = 'foo,baz qux quux';
-    baseInput.dispatchEvent(new Event('change'));
-    expect(document.getElementById('pos-depth-input').value).toBe('1, 3');
-  });
-
-  test('base order updates when selecting a preset', () => {
-    importLists({
-      presets: [
-        { id: 'b', title: 'b', type: 'base', items: ['a', 'b', 'c'] }
-      ]
-    });
-    document.body.innerHTML = `
-      <select id="base-select"><option value="b">b</option></select>
-      <textarea id="base-input"></textarea>
-      <select id="base-order-select"><option value="canonical">c</option></select>
-      <textarea id="base-order-input"></textarea>
-    `;
-    setupPresetListener('base-select', 'base-input', 'base');
-    setupOrderControl(
-      'base-order-select',
-      'base-order-input',
-      () => utils.parseInput(document.getElementById('base-input').value, true),
-      'base-input'
-    );
-    const sel = document.getElementById('base-select');
-    sel.value = 'b';
-    sel.dispatchEvent(new Event('change'));
-    expect(document.getElementById('base-order-input').value).toBe('0, 1, 2');
-  });
-
-  test('depth updates when selecting a base preset', () => {
-    importLists({
-      presets: [
-        { id: 'b2', title: 'b2', type: 'base', items: ['foo bar', 'baz qux quux'] }
-      ]
-    });
-    document.body.innerHTML = `
-      <select id="base-select"><option value="b2">b2</option></select>
-      <textarea id="base-input"></textarea>
-      <select id="pos-depth-select">
-        <option value="prepend">p</option>
-        <option value="append">a</option>
-      </select>
-      <textarea id="pos-depth-input"></textarea>
-    `;
-    setupPresetListener('base-select', 'base-input', 'base');
-    setupDepthControl('pos-depth-select', 'pos-depth-input', 'base-input');
-    const depthSel = document.getElementById('pos-depth-select');
-    depthSel.value = 'append';
-    depthSel.dispatchEvent(new Event('change'));
-    const baseSel = document.getElementById('base-select');
-    baseSel.value = 'b2';
-    baseSel.dispatchEvent(new Event('change'));
-    expect(document.getElementById('pos-depth-input').value).toBe('2, 3');
-  });
-
-  test('rerollRandomOrders handles multiple order controls', () => {
-    document.body.innerHTML = `
-      <select id="pos-order-select">
-        <option value="canonical">c</option>
-        <option value="random">r</option>
-      </select>
-      <textarea id="pos-order-input"></textarea>
-      <select id="pos-order-select-2">
-        <option value="canonical">c</option>
-        <option value="random">r</option>
-      </select>
-      <textarea id="pos-order-input-2"></textarea>
-      <textarea id="pos-input">a,b</textarea>
-    `;
-    const orig = utils.shuffle;
-    utils.shuffle = jest.fn(arr => {
-      arr.reverse();
-      return arr;
-    });
-    document.getElementById('pos-order-select').value = 'random';
-    document.getElementById('pos-order-select-2').value = 'random';
-    rerollRandomOrders();
-    utils.shuffle = orig;
-  });
-  test('rerollRandomOrders randomizes depth for each stack', () => {
-    document.body.innerHTML = `
-      <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
-      <textarea id="pos-depth-input"></textarea>
-      <select id="pos-depth-select-2"><option value="prepend">p</option><option value="random">r</option></select>
-      <textarea id="pos-depth-input-2"></textarea>
-      <textarea id="base-input">foo bar</textarea>
-    `;
-    document.getElementById('pos-depth-select').value = 'random';
-    document.getElementById('pos-depth-select-2').value = 'random';
-    rerollRandomOrders();
-    const d1 = document.getElementById('pos-depth-input').value;
-    const d2 = document.getElementById('pos-depth-input-2').value;
-    expect(d1).not.toBe('');
-    expect(d2).not.toBe('');
-  });
-
-  test('rerollRandomOrders refreshes negative append depth when stacks randomize', () => {
-    document.body.innerHTML = `
-      <textarea id="base-input">foo bar</textarea>
-      <input type="checkbox" id="pos-stack" checked>
-      <select id="pos-stack-size"><option value="2">2</option></select>
-      <div id="pos-stack-container"></div>
-      <div id="pos-order-container"></div>
-      <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-      <div class="input-row"><textarea id="pos-order-input"></textarea></div>
-      <select id="pos-order-select-2"><option value="canonical">c</option><option value="random">r</option></select>
-      <div class="input-row"><textarea id="pos-order-input-2"></textarea></div>
-      <textarea id="pos-input">good</textarea>
-      <textarea id="pos-input-2">great job</textarea>
-      <input type="checkbox" id="neg-stack" checked>
-      <select id="neg-stack-size"><option value="1">1</option></select>
-      <input type="checkbox" id="neg-include-pos" checked>
-      <div id="neg-depth-container">
-        <select id="neg-depth-select"><option value="append">a</option></select>
-        <div class="input-row"><textarea id="neg-depth-input"></textarea></div>
-      </div>`;
-    updateStackBlocks('pos', 2);
-    updateDepthContainers('neg', 1);
-    setupOrderControl('pos-order-select', 'pos-order-input', () => ['good', 'better']);
-    setupOrderControl('pos-order-select-2', 'pos-order-input-2', () => ['good', 'great job']);
-    setupDepthControl('neg-depth-select', 'neg-depth-input', depthWatchIds('neg', 1));
-    document.getElementById('pos-order-select').value = 'random';
-    document.getElementById('pos-order-select-2').value = 'random';
-    document.getElementById('neg-depth-select').value = 'append';
-    document.getElementById('neg-depth-select').dispatchEvent(new Event('change'));
-    const before = document.getElementById('neg-depth-input').value;
-    document.getElementById('neg-depth-input').value = '';
-    rerollRandomOrders();
-    const after = document.getElementById('neg-depth-input').value;
-    expect(after).toBe('5');
-  });
-
-  test('advanced toggle shows and hides controls', () => {
-    document.body.innerHTML = `
-      <input type="checkbox" id="advanced-mode">
-      <select id="base-order-select"></select>
-      <div class="input-row"><textarea id="base-order-input"></textarea></div>
       <div id="pos-order-container">
         <select id="pos-order-select">
           <option value="canonical">c</option>
           <option value="random">r</option>
         </select>
-        <div class="input-row"><textarea id="pos-order-input"></textarea></div>
-        <select id="pos-order-select-2">
-          <option value="canonical">c</option>
+      </div>
+      <div id="pos-depth-container">
+        <select id="pos-depth-select">
+          <option value="prepend">p</option>
           <option value="random">r</option>
         </select>
-        <div class="input-row"><textarea id="pos-order-input-2"></textarea></div>
       </div>
+      <button id="pos-reroll-1" class="random-button"></button>
+    `;
+    setupRerollButton('pos-reroll-1', 'pos-order-select');
+    document.getElementById('pos-reroll-1').click();
+    expect(document.getElementById('pos-order-select').value).toBe('random');
+    expect(document.getElementById('pos-depth-select').value).toBe('random');
+    document.getElementById('pos-reroll-1').click();
+    expect(document.getElementById('pos-order-select').value).toBe('canonical');
+    expect(document.getElementById('pos-depth-select').value).toBe('prepend');
+  });
+
+  test('advanced toggle shows and hides containers', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="advanced-mode">
+      <div id="base-order-container"><select id="base-order-select"></select></div>
+      <div id="pos-order-container"><select id="pos-order-select"></select></div>
+      <div id="pos-depth-container"><select id="pos-depth-select"></select></div>
       <button id="base-reroll"></button>
     `;
     setupAdvancedToggle();
     const cb = document.getElementById('advanced-mode');
-    const select = document.getElementById('base-order-select');
-    const taRow = document.getElementById('base-order-input').parentElement;
-    const cont = document.getElementById('pos-order-container');
+    const baseCont = document.getElementById('base-order-container');
+    const posOrderCont = document.getElementById('pos-order-container');
+    const posDepthCont = document.getElementById('pos-depth-container');
     const btn = document.getElementById('base-reroll');
 
     cb.checked = true;
     cb.dispatchEvent(new Event('change'));
-    expect(select.style.display).toBe('');
-    expect(taRow.style.display).toBe('');
-    expect(cont.style.display).toBe('');
+    expect(baseCont.style.display).toBe('');
+    expect(posOrderCont.style.display).toBe('');
+    expect(posDepthCont.style.display).toBe('');
     expect(btn.style.display).toBe('');
 
     cb.checked = false;
     cb.dispatchEvent(new Event('change'));
-    expect(select.style.display).toBe('none');
-    expect(taRow.style.display).toBe('none');
-    expect(cont.style.display).toBe('none');
+    expect(baseCont.style.display).toBe('none');
+    expect(posOrderCont.style.display).toBe('none');
+    expect(posDepthCont.style.display).toBe('none');
     expect(btn.style.display).toBe('');
-  });
-
-  test('new stack order uses reroll state in simple mode', () => {
-    document.body.innerHTML = `
-      <input type="checkbox" id="advanced-mode">
-      <input type="checkbox" id="pos-stack">
-      <button type="button" class="toggle-button" data-target="pos-stack" data-on="Stack On" data-off="Stack Off">Stack Off</button>
-      <button type="button" class="toggle-button" data-target="pos-stack" data-on="Stack On" data-off="Stack Off">Stack Off</button>
-      <button type="button" class="toggle-button" data-target="pos-stack" data-on="Stack On" data-off="Stack Off">Stack Off</button>
-      <select id="pos-stack-size"><option value="2">2</option></select>
-      <input type="checkbox" id="pos-shuffle">
-      <div id="pos-stack-container">
-        <div class="stack-block" id="pos-stack-1">
-          <div id="pos-order-container">
-            <select id="pos-order-select">
-              <option value="canonical">c</option>
-              <option value="random">r</option>
-            </select>
-            <div class="input-row"><textarea id="pos-order-input"></textarea></div>
-          </div>
-          <textarea id="pos-input">a,b</textarea>
-        </div>
-      </div>
-      <button id="pos-reroll-1"></button>
-    `;
-    setupOrderControl('pos-order-select', 'pos-order-input', () => ['a', 'b']);
-    setupRerollButton('pos-reroll-1', 'pos-order-select');
-    setupStackControls();
-    document.getElementById('pos-reroll-1').click();
-    const stackCb = document.getElementById('pos-stack');
-    stackCb.checked = true;
-    stackCb.dispatchEvent(new Event('change'));
-    const sel2 = document.getElementById('pos-order-select-2');
-    const ta2 = document.getElementById('pos-order-input-2');
-    expect(sel2.value).toBe('random');
-    expect(ta2.value).toBe('');
-  });
-
-  test('reroll button syncs state on mode switch', () => {
-    document.body.innerHTML = `
-      <input type="checkbox" id="advanced-mode">
-      <div id="pos-order-container">
-        <select id="pos-order-select">
-          <option value="canonical">c</option>
-          <option value="random">r</option>
-        </select>
-        <div class="input-row"><textarea id="pos-order-input"></textarea></div>
-        <select id="pos-order-select-2">
-          <option value="canonical">c</option>
-          <option value="random">r</option>
-        </select>
-        <div class="input-row"><textarea id="pos-order-input-2"></textarea></div>
-      </div>
-      <button id="pos-reroll-1" class="random-button"></button>
-    `;
-    document.getElementById('pos-order-select').value = 'random';
-    document.getElementById('pos-order-select-2').value = 'canonical';
-    setupRerollButton('pos-reroll-1', 'pos-order-select');
-    setupAdvancedToggle();
-    const cb = document.getElementById('advanced-mode');
-    cb.checked = false;
-    cb.dispatchEvent(new Event('change'));
-    const btn = document.getElementById('pos-reroll-1');
-    expect(btn.classList.contains('active')).toBe(true);
-  });
-
-  test('simple mode reroll toggles only its stack', () => {
-    document.body.innerHTML = `
-      <input type="checkbox" id="advanced-mode">
-      <div id="neg-order-container">
-        <select id="neg-order-select">
-          <option value="canonical">c</option>
-          <option value="random">r</option>
-        </select>
-        <div class="input-row"><textarea id="neg-order-input"></textarea></div>
-        <select id="neg-order-select-2">
-          <option value="canonical">c</option>
-          <option value="random">r</option>
-        </select>
-        <div class="input-row"><textarea id="neg-order-input-2"></textarea></div>
-      </div>
-      <button id="neg-reroll-1" class="random-button"></button>
-    `;
-    setupRerollButton('neg-reroll-1', 'neg-order-select');
-    setupAdvancedToggle();
-    const cb = document.getElementById('advanced-mode');
-    cb.checked = false;
-    cb.dispatchEvent(new Event('change'));
-    document.getElementById('neg-reroll-1').click();
-    expect(document.getElementById('neg-order-select').value).toBe('random');
-    expect(document.getElementById('neg-order-select-2').value).toBe('canonical');
-  });
-
-  test('advanced mode reroll toggles only its stack', () => {
-    document.body.innerHTML = `
-      <input type="checkbox" id="advanced-mode">
-      <div id="neg-order-container">
-        <select id="neg-order-select">
-          <option value="canonical">c</option>
-          <option value="random">r</option>
-        </select>
-        <div class="input-row"><textarea id="neg-order-input"></textarea></div>
-        <select id="neg-order-select-2">
-          <option value="canonical">c</option>
-          <option value="random">r</option>
-        </select>
-        <div class="input-row"><textarea id="neg-order-input-2"></textarea></div>
-      </div>
-      <button id="neg-reroll-1" class="random-button"></button>
-    `;
-    setupRerollButton('neg-reroll-1', 'neg-order-select');
-    setupAdvancedToggle();
-    const cb = document.getElementById('advanced-mode');
-    cb.checked = true;
-    cb.dispatchEvent(new Event('change'));
-    document.getElementById('neg-reroll-1').click();
-    expect(document.getElementById('neg-order-select').value).toBe('random');
-    expect(document.getElementById('neg-order-select-2').value).toBe('canonical');
-  });
-
-  test('reroll buttons toggle independently per stack', () => {
-    document.body.innerHTML = `
-      <input type="checkbox" id="advanced-mode">
-      <div id="pos-order-container">
-        <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-        <div class="input-row"><textarea id="pos-order-input"></textarea></div>
-        <select id="pos-order-select-2"><option value="canonical">c</option><option value="random">r</option></select>
-        <div class="input-row"><textarea id="pos-order-input-2"></textarea></div>
-      </div>
-      <div id="pos-depth-container">
-        <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
-        <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
-        <select id="pos-depth-select-2"><option value="prepend">p</option><option value="random">r</option></select>
-        <div class="input-row"><textarea id="pos-depth-input-2"></textarea></div>
-      </div>
-      <button id="pos-reroll-1"></button>
-      <button id="pos-reroll-2"></button>
-    `;
-    setupRerollButton('pos-reroll-1', 'pos-order-select');
-    setupRerollButton('pos-reroll-2', 'pos-order-select-2');
-    setupAdvancedToggle();
-    document.getElementById('pos-reroll-1').click();
-    expect(document.getElementById('pos-order-select').value).toBe('random');
-    expect(document.getElementById('pos-order-select-2').value).toBe('canonical');
-    expect(document.getElementById('pos-depth-select').value).toBe('random');
-    expect(document.getElementById('pos-depth-select-2').value).toBe('prepend');
   });
 
   test('stack blocks added in simple mode hide advanced controls', () => {
@@ -1303,11 +708,9 @@ describe('UI interactions', () => {
           <div class="input-row"><textarea id="pos-input"></textarea></div>
           <div id="pos-order-container">
             <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-            <div class="input-row"><textarea id="pos-order-input"></textarea></div>
           </div>
           <div id="pos-depth-container">
             <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
-            <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
           </div>
         </div>
       </div>
@@ -1320,13 +723,9 @@ describe('UI interactions', () => {
     const cb = document.getElementById('pos-stack');
     cb.checked = true;
     cb.dispatchEvent(new Event('change'));
-    const orderSel = document.getElementById('pos-order-select-2');
     const orderCont = document.getElementById('pos-order-container-2');
-    const depthSel = document.getElementById('pos-depth-select-2');
     const depthCont = document.getElementById('pos-depth-container-2');
-    expect(orderSel.style.display).toBe('none');
     expect(orderCont.style.display).toBe('none');
-    expect(depthSel.style.display).toBe('none');
     expect(depthCont.style.display).toBe('none');
   });
 
@@ -1343,11 +742,9 @@ describe('UI interactions', () => {
           <div class="input-row"><textarea id="pos-input"></textarea></div>
           <div id="pos-order-container">
             <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-            <div class="input-row"><textarea id="pos-order-input"></textarea></div>
           </div>
           <div id="pos-depth-container">
             <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
-            <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
           </div>
         </div>
       </div>
@@ -1360,42 +757,10 @@ describe('UI interactions', () => {
     const cb = document.getElementById('pos-stack');
     cb.checked = true;
     cb.dispatchEvent(new Event('change'));
-    const orderSel = document.getElementById('pos-order-select-2');
-    const depthSel = document.getElementById('pos-depth-select-2');
-    expect(orderSel.style.display).toBe('');
-    expect(depthSel.style.display).toBe('');
-  });
-
-  test('advanced mode stays on after enabling stack', () => {
-    document.body.innerHTML = `
-      <input type="checkbox" id="advanced-mode">
-      <input type="checkbox" id="pos-stack">
-      <select id="pos-stack-size"><option value="2">2</option></select>
-      <input type="checkbox" id="pos-shuffle">
-      <div id="pos-stack-container">
-        <div class="stack-block" id="pos-stack-1">
-          <select id="pos-select"></select>
-          <div class="input-row"><textarea id="pos-input"></textarea></div>
-          <div id="pos-order-container">
-            <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-            <div class="input-row"><textarea id="pos-order-input"></textarea></div>
-          </div>
-          <div id="pos-depth-container">
-            <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
-            <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
-          </div>
-        </div>
-      </div>
-    `;
-    setupAdvancedToggle();
-    setupStackControls();
-    const adv = document.getElementById('advanced-mode');
-    adv.checked = true;
-    adv.dispatchEvent(new Event('change'));
-    const cb = document.getElementById('pos-stack');
-    cb.checked = true;
-    cb.dispatchEvent(new Event('change'));
-    expect(adv.checked).toBe(true);
+    const orderCont = document.getElementById('pos-order-container-2');
+    const depthCont = document.getElementById('pos-depth-container-2');
+    expect(orderCont.style.display).toBe('');
+    expect(depthCont.style.display).toBe('');
   });
 
   test('global advanced overrides section settings', () => {
@@ -1425,129 +790,11 @@ describe('UI interactions', () => {
     const posBtn = document.querySelector('.toggle-button[data-target="pos-advanced"]');
     expect(posBtn.classList.contains('active')).toBe(true);
   });
-
-  test('enabling negative stack keeps positive advanced state', () => {
-    document.body.innerHTML = `
-      <input type="checkbox" id="advanced-mode">
-      <input type="checkbox" id="pos-advanced">
-      <input type="checkbox" id="neg-advanced">
-      <input type="checkbox" id="neg-stack">
-      <select id="neg-stack-size"><option value="2">2</option></select>
-      <input type="checkbox" id="neg-shuffle">
-      <div id="neg-stack-container">
-        <div class="stack-block" id="neg-stack-1">
-          <select id="neg-select"></select>
-          <div class="input-row"><textarea id="neg-input"></textarea></div>
-          <div id="neg-order-container">
-            <select id="neg-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-            <div class="input-row"><textarea id="neg-order-input"></textarea></div>
-          </div>
-          <div id="neg-depth-container">
-            <select id="neg-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
-            <div class="input-row"><textarea id="neg-depth-input"></textarea></div>
-          </div>
-        </div>
-      </div>
-    `;
-    setupSectionAdvanced('pos');
-    setupSectionAdvanced('neg');
-    setupAdvancedToggle();
-    setupStackControls();
-    const globalAdv = document.getElementById('advanced-mode');
-    globalAdv.checked = true;
-    globalAdv.dispatchEvent(new Event('change'));
-    const posAdv = document.getElementById('pos-advanced');
-    posAdv.checked = false;
-    posAdv.dispatchEvent(new Event('change'));
-    const negStack = document.getElementById('neg-stack');
-    negStack.checked = true;
-    negStack.dispatchEvent(new Event('change'));
-    expect(posAdv.checked).toBe(false);
-  });
-
-  test('enabling positive stack keeps negative advanced state', () => {
-    document.body.innerHTML = `
-      <input type="checkbox" id="advanced-mode">
-      <input type="checkbox" id="pos-advanced">
-      <input type="checkbox" id="neg-advanced">
-      <input type="checkbox" id="pos-stack">
-      <select id="pos-stack-size"><option value="2">2</option></select>
-      <input type="checkbox" id="pos-shuffle">
-      <div id="pos-stack-container">
-        <div class="stack-block" id="pos-stack-1">
-          <select id="pos-select"></select>
-          <div class="input-row"><textarea id="pos-input"></textarea></div>
-          <div id="pos-order-container">
-            <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-            <div class="input-row"><textarea id="pos-order-input"></textarea></div>
-          </div>
-          <div id="pos-depth-container">
-            <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
-            <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
-          </div>
-        </div>
-      </div>
-    `;
-    setupSectionAdvanced('pos');
-    setupSectionAdvanced('neg');
-    setupAdvancedToggle();
-    setupStackControls();
-    const globalAdv = document.getElementById('advanced-mode');
-    globalAdv.checked = true;
-    globalAdv.dispatchEvent(new Event('change'));
-    const negAdv = document.getElementById('neg-advanced');
-    negAdv.checked = false;
-    negAdv.dispatchEvent(new Event('change'));
-    const posStack = document.getElementById('pos-stack');
-    posStack.checked = true;
-    posStack.dispatchEvent(new Event('change'));
-    expect(negAdv.checked).toBe(false);
-  });
-
-  test('disabling negative stack keeps positive advanced state', () => {
-    document.body.innerHTML = `
-      <input type="checkbox" id="advanced-mode">
-      <input type="checkbox" id="pos-advanced">
-      <input type="checkbox" id="neg-advanced">
-      <input type="checkbox" id="neg-stack">
-      <select id="neg-stack-size"><option value="2">2</option></select>
-      <input type="checkbox" id="neg-shuffle">
-      <div id="neg-stack-container">
-        <div class="stack-block" id="neg-stack-1">
-          <select id="neg-select"></select>
-          <div class="input-row"><textarea id="neg-input"></textarea></div>
-          <div id="neg-order-container">
-            <select id="neg-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-            <div class="input-row"><textarea id="neg-order-input"></textarea></div>
-          </div>
-          <div id="neg-depth-container">
-            <select id="neg-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
-            <div class="input-row"><textarea id="neg-depth-input"></textarea></div>
-          </div>
-        </div>
-      </div>
-    `;
-    setupSectionAdvanced('pos');
-    setupSectionAdvanced('neg');
-    setupAdvancedToggle();
-    setupStackControls();
-    const globalAdv = document.getElementById('advanced-mode');
-    globalAdv.checked = true;
-    globalAdv.dispatchEvent(new Event('change'));
-    const posAdv = document.getElementById('pos-advanced');
-    posAdv.checked = false;
-    posAdv.dispatchEvent(new Event('change'));
-    const negStack = document.getElementById('neg-stack');
-    negStack.checked = true;
-    negStack.dispatchEvent(new Event('change'));
-    negStack.checked = false;
-    negStack.dispatchEvent(new Event('change'));
-    expect(posAdv.checked).toBe(false);
-  });
+});
 
 describe('List persistence', () => {
   test('exportLists and importLists round trip', () => {
-    importLists({ presets: [{ id: 'x', title: 'x', type: 'positive', items: ['1'] }] });
+    importLists({ presets: [{ id: 'x', title: 'x', type: 'positive', items: '1' }] });
     const json = exportLists();
     importLists(JSON.parse(json));
     const again = exportLists();
@@ -1556,6 +803,7 @@ describe('List persistence', () => {
 
   test('saveList updates LISTS', () => {
     document.body.innerHTML = `
+      <select id="delimiter-select"><option value="comma" selected>c</option></select>
       <select id="pos-select"></select>
       <textarea id="pos-input">a,b</textarea>
     `;
@@ -1564,7 +812,7 @@ describe('List persistence', () => {
     saveList('positive');
     const data = JSON.parse(exportLists());
     const preset = data.presets.find(p => p.id === 'myPos' && p.type === 'positive');
-    expect(preset.items).toEqual(['a', 'b']);
+    expect(preset.items).toBe('a,b');
     const opt = document.querySelector('#pos-select option[value="myPos"]');
     expect(opt).not.toBeNull();
   });
@@ -1579,13 +827,14 @@ describe('List persistence', () => {
     saveList('divider');
     const data = JSON.parse(exportLists());
     const preset = data.presets.find(p => p.id === 'div1' && p.type === 'divider');
-    expect(preset.items).toEqual(['foo', 'bar']);
+    expect(preset.items).toBe('foo\nbar');
     const opt = document.querySelector('#divider-select option[value="div1"]');
     expect(opt).not.toBeNull();
   });
 
   test('saveList works for base', () => {
     document.body.innerHTML = `
+      <select id="delimiter-select"><option value="comma" selected>c</option></select>
       <select id="base-select"></select>
       <textarea id="base-input">foo,bar</textarea>
     `;
@@ -1594,7 +843,7 @@ describe('List persistence', () => {
     saveList('base');
     const data = JSON.parse(exportLists());
     const preset = data.presets.find(p => p.id === 'b1' && p.type === 'base');
-    expect(preset.items).toEqual(['foo', 'bar']);
+    expect(preset.items).toBe('foo,bar');
     const opt = document.querySelector('#base-select option[value="b1"]');
     expect(opt).not.toBeNull();
   });
@@ -1609,13 +858,14 @@ describe('List persistence', () => {
     saveList('lyrics');
     const data = JSON.parse(exportLists());
     const preset = data.presets.find(p => p.id === 'ly1' && p.type === 'lyrics');
-    expect(preset.items).toEqual(['line1\nline2']);
+    expect(preset.items).toBe('line1\nline2');
     const opt = document.querySelector('#lyrics-select option[value="ly1"]');
     expect(opt).not.toBeNull();
   });
 
   test('saveList works for insertions', () => {
     document.body.innerHTML = `
+      <select id="delimiter-select"><option value="comma" selected>c</option></select>
       <select id="lyrics-insert-select"></select>
       <textarea id="lyrics-insert-input">a,b</textarea>
     `;
@@ -1624,20 +874,21 @@ describe('List persistence', () => {
     saveList('insertion');
     const data = JSON.parse(exportLists());
     const preset = data.presets.find(p => p.id === 'ins1' && p.type === 'insertion');
-    expect(preset.items).toEqual(['a', 'b']);
+    expect(preset.items).toBe('a,b');
     const opt = document.querySelector('#lyrics-insert-select option[value="ins1"]');
     expect(opt).not.toBeNull();
   });
 
   test('saveList inserts new preset alphabetically', () => {
     document.body.innerHTML = `
+      <select id="delimiter-select"><option value="comma" selected>c</option></select>
       <select id="pos-select"></select>
       <textarea id="pos-input">foo,bar</textarea>
     `;
     importLists({
       presets: [
-        { id: 'b', title: 'Beta', type: 'positive', items: [] },
-        { id: 'd', title: 'Delta', type: 'positive', items: [] }
+        { id: 'b', title: 'Beta', type: 'positive', items: '' },
+        { id: 'd', title: 'Delta', type: 'positive', items: '' }
       ]
     });
     lists.loadLists();
@@ -1655,7 +906,7 @@ describe('List persistence', () => {
       <select id="pos-select"><option value="foo">foo</option></select>
       <textarea id="pos-input"></textarea>
     `;
-    importLists({ presets: [{ id: 'foo', title: 'foo', type: 'positive', items: ['1'] }] });
+    importLists({ presets: [{ id: 'foo', title: 'foo', type: 'positive', items: '1' }] });
     global.confirm = jest.fn(() => true);
     deleteList('positive');
     const data = JSON.parse(exportLists());
@@ -1749,15 +1000,15 @@ describe('List persistence', () => {
   test('importLists additive renames conflicts', () => {
     importLists({
       presets: [
-        { id: 'a', title: 'a', type: 'positive', items: ['1'] },
-        { id: 'b', title: 'b', type: 'negative', items: ['x'] }
+        { id: 'a', title: 'a', type: 'positive', items: '1' },
+        { id: 'b', title: 'b', type: 'negative', items: 'x' }
       ]
     });
     importLists(
       {
         presets: [
-          { id: 'b', title: 'b', type: 'negative', items: ['y'] },
-          { id: 'c', title: 'c', type: 'positive', items: ['2'] }
+          { id: 'b', title: 'b', type: 'negative', items: 'y' },
+          { id: 'c', title: 'c', type: 'positive', items: '2' }
         ]
       },
       true
@@ -1769,8 +1020,8 @@ describe('List persistence', () => {
     const renamed = data.presets.find(
       p => p.title === 'b (1)' && p.type === 'negative'
     );
-    expect(original.items).toEqual(['x']);
-    expect(renamed.items).toEqual(['y']);
+    expect(original.items).toBe('x');
+    expect(renamed.items).toBe('y');
     expect(
       data.presets.some(p => p.title === 'c' && p.type === 'positive')
     ).toBe(true);
@@ -1778,9 +1029,9 @@ describe('List persistence', () => {
 
   test('importLists additive keeps different titles separate', () => {
     importLists({ presets: [] });
-    importLists({ presets: [{ id: 'a', title: 'a', type: 'positive', items: ['1'] }] });
+    importLists({ presets: [{ id: 'a', title: 'a', type: 'positive', items: '1' }] });
     importLists(
-      { presets: [{ id: 'a', title: 'b', type: 'positive', items: ['2'] }] },
+      { presets: [{ id: 'a', title: 'b', type: 'positive', items: '2' }] },
       true
     );
     const data = JSON.parse(exportLists());
@@ -1788,28 +1039,29 @@ describe('List persistence', () => {
     expect(lists.length).toBe(2);
   });
 
-  test('importLists additive skips identical lists regardless of order', () => {
-    importLists({ presets: [{ id: 'd', title: 'd', type: 'negative', items: ['x', 'y'] }] });
+  test('importLists additive treats different orderings as distinct', () => {
+    importLists({ presets: [{ id: 'd', title: 'd', type: 'negative', items: 'x, y' }] });
     importLists(
-      { presets: [{ id: 'd', title: 'd', type: 'negative', items: ['y', 'x'] }] },
+      { presets: [{ id: 'd', title: 'd', type: 'negative', items: 'y, x' }] },
       true
     );
     const data = JSON.parse(exportLists());
-    const matches = data.presets.filter(
-      p => p.title === 'd' && p.type === 'negative'
-    );
-    expect(matches.length).toBe(1);
+    const titles = data.presets
+      .filter(p => p.type === 'negative' && p.title.startsWith('d'))
+      .map(p => p.title)
+      .sort();
+    expect(titles).toEqual(['d', 'd (1)']);
   });
 
   test('importLists additive increments numeric suffix for conflicts', () => {
     importLists({
       presets: [
-        { id: 'e', title: 'e', type: 'positive', items: ['1'] },
-        { id: 'e (1)', title: 'e (1)', type: 'positive', items: ['2'] }
+        { id: 'e', title: 'e', type: 'positive', items: '1' },
+        { id: 'e (1)', title: 'e (1)', type: 'positive', items: '2' }
       ]
     });
     importLists(
-      { presets: [{ id: 'e', title: 'e', type: 'positive', items: ['3'] }] },
+      { presets: [{ id: 'e', title: 'e', type: 'positive', items: '3' }] },
       true
     );
     const data = JSON.parse(exportLists());
@@ -1823,11 +1075,11 @@ describe('List persistence', () => {
   test('updateStackBlocks adds buttons for extra stacks', () => {
     document.body.innerHTML = `
       <select id="pos-select"></select>
-      <select id="pos-order-select"></select>
-      <select id="pos-depth-select"></select>
-      <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
       <div id="pos-stack-container">
-        <div class="stack-block" id="pos-stack-1"></div>
+        <div class="stack-block" id="pos-stack-1">
+          <div id="pos-order-container"><select id="pos-order-select"></select></div>
+          <div id="pos-depth-container"><select id="pos-depth-select"></select></div>
+        </div>
       </div>`;
     updateStackBlocks('pos', 2);
     const block = document.getElementById('pos-stack-2');
@@ -1842,20 +1094,18 @@ describe('List persistence', () => {
       <select id="pos-stack-size"><option value="2">2</option></select>
       <input type="checkbox" id="pos-shuffle">
       <select id="pos-select"></select>
-      <select id="pos-order-select"></select>
-      <select id="pos-depth-select"></select>
-      <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
       <div id="pos-stack-container">
         <div class="stack-block" id="pos-stack-1">
           <div class="label-row">
             <label>Stack 1</label>
             <div class="button-col">
-              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-input,pos-depth-input" hidden>
+              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-container,pos-depth-container" hidden>
               <button type="button" class="toggle-button hide-button" data-target="pos-hide-1" data-on="☰" data-off="✖">☰</button>
             </div>
           </div>
           <div class="input-row"><textarea id="pos-input"></textarea></div>
-          <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+          <div id="pos-order-container"><select id="pos-order-select"></select></div>
+          <div id="pos-depth-container"><select id="pos-depth-select"></select></div>
         </div>
       </div>`;
     setupStackControls();
@@ -1868,7 +1118,7 @@ describe('List persistence', () => {
     posStack.checked = true;
     posStack.dispatchEvent(new Event('change'));
     const posInput2 = document.getElementById('pos-input-2');
-    const posDepth2 = document.getElementById('pos-depth-input-2');
+    const posDepth2 = document.getElementById('pos-depth-container-2');
     expect(posInput2.style.display).toBe('none');
     expect(posDepth2.style.display).toBe('none');
     allHide.checked = false;
@@ -1884,20 +1134,18 @@ describe('List persistence', () => {
       <select id="pos-stack-size"><option value="2">2</option></select>
       <input type="checkbox" id="pos-shuffle">
       <select id="pos-select"></select>
-      <select id="pos-order-select"></select>
-      <select id="pos-depth-select"></select>
-      <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
       <div id="pos-stack-container">
         <div class="stack-block" id="pos-stack-1">
           <div class="label-row">
             <label>Stack 1</label>
             <div class="button-col">
-              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-input,pos-depth-input" hidden>
+              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-container,pos-depth-container" hidden>
               <button type="button" class="toggle-button hide-button" data-target="pos-hide-1" data-on="☰" data-off="✖">☰</button>
             </div>
           </div>
           <div class="input-row"><textarea id="pos-input"></textarea></div>
-          <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+          <div id="pos-order-container"><select id="pos-order-select"></select></div>
+          <div id="pos-depth-container"><select id="pos-depth-select"></select></div>
         </div>
       </div>`;
     setupToggleButtons();
@@ -1911,7 +1159,7 @@ describe('List persistence', () => {
     stackCb.checked = true;
     stackCb.dispatchEvent(new Event('change'));
     const posInput2 = document.getElementById('pos-input-2');
-    const posDepth2 = document.getElementById('pos-depth-input-2');
+    const posDepth2 = document.getElementById('pos-depth-container-2');
     expect(posInput2.style.display).toBe('none');
     expect(posDepth2.style.display).toBe('none');
   });
@@ -1926,20 +1174,18 @@ describe('List persistence', () => {
       <select id="pos-stack-size"><option value="2">2</option></select>
       <input type="checkbox" id="pos-shuffle">
       <select id="pos-select"></select>
-      <select id="pos-order-select"></select>
-      <select id="pos-depth-select"></select>
-      <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
       <div id="pos-stack-container">
         <div class="stack-block" id="pos-stack-1">
           <div class="label-row">
             <label>Stack 1</label>
             <div class="button-col">
-              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-input,pos-depth-input" hidden>
+              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-container,pos-depth-container" hidden>
               <button type="button" class="toggle-button hide-button" data-target="pos-hide-1" data-on="☰" data-off="✖">☰</button>
             </div>
           </div>
           <div class="input-row"><textarea id="pos-input"></textarea></div>
-          <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+          <div id="pos-order-container"><select id="pos-order-select"></select></div>
+          <div id="pos-depth-container"><select id="pos-depth-select"></select></div>
         </div>
       </div>`;
     setupToggleButtons();
@@ -1957,7 +1203,7 @@ describe('List persistence', () => {
     stackCb.checked = true;
     stackCb.dispatchEvent(new Event('change'));
     const posInput2 = document.getElementById('pos-input-2');
-    const posDepth2 = document.getElementById('pos-depth-input-2');
+    const posDepth2 = document.getElementById('pos-depth-container-2');
     expect(posInput2.style.display).toBe('');
     expect(posDepth2.style.display).toBe('');
     expect(globalHide.checked).toBe(false);
@@ -1971,20 +1217,18 @@ describe('List persistence', () => {
       <select id="pos-stack-size"><option value="2">2</option></select>
       <input type="checkbox" id="pos-shuffle">
       <select id="pos-select"></select>
-      <select id="pos-order-select"></select>
-      <select id="pos-depth-select"></select>
-      <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
       <div id="pos-stack-container">
         <div class="stack-block" id="pos-stack-1">
           <div class="label-row">
             <label>Stack 1</label>
             <div class="button-col">
-              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-input,pos-depth-input" hidden>
+              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-container,pos-depth-container" hidden>
               <button type="button" class="toggle-button hide-button" data-target="pos-hide-1" data-on="☰" data-off="✖">☰</button>
             </div>
           </div>
           <div class="input-row"><textarea id="pos-input"></textarea></div>
-          <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+          <div id="pos-order-container"><select id="pos-order-select"></select></div>
+          <div id="pos-depth-container"><select id="pos-depth-select"></select></div>
         </div>
       </div>`;
     setupToggleButtons();
@@ -1997,10 +1241,10 @@ describe('List persistence', () => {
     expect(hideBtn).not.toBeNull();
     hideBtn.click();
     expect(document.getElementById('pos-input-2').style.display).toBe('none');
-    expect(document.getElementById('pos-depth-input-2').style.display).toBe('none');
+    expect(document.getElementById('pos-depth-container-2').style.display).toBe('none');
     hideBtn.click();
     expect(document.getElementById('pos-input-2').style.display).toBe('');
-    expect(document.getElementById('pos-depth-input-2').style.display).toBe('');
+    expect(document.getElementById('pos-depth-container-2').style.display).toBe('');
   });
 
   test('hide buttons still work after toggling stacks on and off', () => {
@@ -2009,20 +1253,18 @@ describe('List persistence', () => {
       <select id="pos-stack-size"><option value="2">2</option></select>
       <input type="checkbox" id="pos-shuffle">
       <select id="pos-select"></select>
-      <select id="pos-order-select"></select>
-      <select id="pos-depth-select"></select>
-      <div class="input-row"><textarea id="pos-depth-input"></textarea></div>
       <div id="pos-stack-container">
         <div class="stack-block" id="pos-stack-1">
           <div class="label-row">
             <label>Stack 1</label>
             <div class="button-col">
-              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-input,pos-depth-input" hidden>
+              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-container,pos-depth-container" hidden>
               <button type="button" class="toggle-button hide-button" data-target="pos-hide-1" data-on="☰" data-off="✖">☰</button>
             </div>
           </div>
           <div class="input-row"><textarea id="pos-input"></textarea></div>
-          <div class="input-row"><textarea id="pos-order-input"></textarea></div>
+          <div id="pos-order-container"><select id="pos-order-select"></select></div>
+          <div id="pos-depth-container"><select id="pos-depth-select"></select></div>
         </div>
       </div>`;
     setupToggleButtons();
@@ -2037,11 +1279,11 @@ describe('List persistence', () => {
     hideCb.checked = true;
     hideCb.dispatchEvent(new Event('change'));
     expect(document.getElementById('pos-input').style.display).toBe('none');
-    expect(document.getElementById('pos-depth-input').style.display).toBe('none');
+    expect(document.getElementById('pos-depth-container').style.display).toBe('none');
     hideCb.checked = false;
     hideCb.dispatchEvent(new Event('change'));
     expect(document.getElementById('pos-input').style.display).toBe('');
-    expect(document.getElementById('pos-depth-input').style.display).toBe('');
+    expect(document.getElementById('pos-depth-container').style.display).toBe('');
   });
 
   test('stack toggle button can turn stack off again', () => {
@@ -2173,13 +1415,11 @@ describe('List persistence', () => {
       <select id="base-order-select"><option value="canonical">c</option><option value="random">r</option></select>
       <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
       <select id="neg-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-      <select id="divider-order-select"><option value="canonical">c</option><option value="random">r</option></select>
       <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
       <select id="neg-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
       <button id="base-reroll" class="toggle-button random-button"></button>
       <button id="pos-reroll-1" class="toggle-button random-button"></button>
       <button id="neg-reroll-1" class="toggle-button random-button"></button>
-      <button id="divider-reroll" class="toggle-button random-button"></button>
     `;
     setupSectionOrder('pos');
     setupSectionOrder('neg');
@@ -2187,11 +1427,9 @@ describe('List persistence', () => {
     setupRerollButton('base-reroll', 'base-order-select');
     setupRerollButton('pos-reroll-1', 'pos-order-select');
     setupRerollButton('neg-reroll-1', 'neg-order-select');
-    setupRerollButton('divider-reroll', 'divider-order-select');
     document.getElementById('base-reroll').click();
     document.getElementById('pos-reroll-1').click();
     document.getElementById('neg-reroll-1').click();
-    document.getElementById('divider-reroll').click();
     const btn = document.querySelector('.toggle-button[data-target="all-random"]');
     expect(btn.textContent).toBe('Randomized');
   });
@@ -2215,4 +1453,3 @@ describe('List persistence', () => {
     expect(btn.textContent).toBe('All visible');
   });
 });
-

@@ -34,11 +34,23 @@ the right edge on mobile while text buttons center on their own line.
 
 ### Depth Control Note
 
-Depth inputs rely on DOM watchers to rebuild values when related fields change.
-Negative depth selectors that include positive modifiers must watch the
-corresponding positive fields. The helper `depthWatchIds` centralizes this list;
-update it or call `updateDepthContainers` with `refresh=true` when new inputs are
-added so these watchers remain synchronized.
+Depth controls now expose mode selects only (prepend/append/random). Depth arrays
+are computed during `collectInputs` based on ordered stacks and base word counts,
+so no index arrays are stored in the DOM. When adding new depth-related inputs,
+ensure the generation-time helpers (`computeDepthCountsFrom`, `buildDepthValues`)
+receive the new stacks so negatives remain aligned with positives.
+
+### Delimiter Controls
+
+List parsing now follows the delimiter dropdown (`delimiter-select`) and optional
+custom delimiter input (`delimiter-custom`). Use `parseBaseInput`,
+`parseListInput`, and `collectStackInputs` so new logic respects the chosen
+delimiter across base/modifier/divider lists. Chunking preserves the delimiter
+at the end of each chunk, and prompt recombination is a straight concatenation
+pass (no new delimiters inserted).
+
+Preset items are stored as strings only. Legacy array formats are no longer
+normalized during load or import; update data sources to provide string items.
 
 `computeDepthCounts` now sums words from earlier stacks for both positive and
 negative sections. Random depth calculations therefore consider all preceding

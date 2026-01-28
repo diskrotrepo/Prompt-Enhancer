@@ -62,6 +62,25 @@
             </div>
           </div>
         </div>
+        <!-- Delimiter controls -->
+        <div class="input-group section-parsing">
+          <div class="label-row">
+            <label for="delimiter-select">List Delimiter</label>
+          </div>
+          <select id="delimiter-select">
+            <option value="whitespace" selected>Whitespace (default)</option>
+            <option value="comma">Comma (,)</option>
+            <option value="semicolon">Semicolon (;)</option>
+            <option value="pipe">Pipe (|)</option>
+            <option value="newline">Newline</option>
+            <option value="tab">Tab</option>
+            <option value="sentence">Sentence Punctuation (.,;:!? + newline)</option>
+            <option value="custom">Custom...</option>
+          </select>
+          <div class="input-row" id="delimiter-custom-row" style="display:none">
+            <input type="text" id="delimiter-custom" placeholder="Custom delimiter (use \\n for newline)">
+          </div>
+        </div>
         <!-- Base prompt input section -->
         <div class="input-group section-base">
           <div class="label-row">
@@ -72,17 +91,19 @@
               <button type="button" id="base-delete" class="delete-button icon-button" title="Delete" data-help="Remove base prompt list from presets.">&#128465;&#65039;</button>
               <button type="button" id="base-reroll" class="toggle-button icon-button random-button" title="Reroll">&#127922;</button>
               <button type="button" class="copy-button icon-button" data-target="base-input" title="Copy">&#128203;</button>
-              <input type="checkbox" id="base-hide" data-targets="base-input,base-order-input" hidden>
+              <input type="checkbox" id="base-hide" data-targets="base-input,base-order-container" hidden>
               <button type="button" class="toggle-button icon-button hide-button" data-target="base-hide" data-on="☰" data-off="✖">☰</button>
             </div>
           </div>
           <select id="base-select"></select>
           <div class="input-row">
-            <textarea id="base-input" rows="4" placeholder="Enter comma, semicolon, or newline separated items"></textarea>
+            <textarea id="base-input" rows="4" placeholder="Enter text; chunks keep the delimiter above"></textarea>
           </div>
-          <select id="base-order-select"></select>
-          <div class="input-row">
-            <textarea id="base-order-input" rows="1" placeholder="0,1,2"></textarea>
+          <div id="base-order-container">
+            <div class="label-row">
+              <label for="base-order-select">Base Ordering</label>
+            </div>
+            <select id="base-order-select"></select>
           </div>
         </div>
         <!-- Positive modifier selection section -->
@@ -116,7 +137,7 @@
                     <button type="button" id="pos-delete-1" class="delete-button icon-button" title="Delete" data-help="Remove positive modifier list from presets.">&#128465;&#65039;</button>
                     <button type="button" id="pos-reroll-1" class="toggle-button icon-button random-button" title="Reroll">&#127922;</button>
                     <button type="button" class="copy-button icon-button" data-target="pos-input" title="Copy">&#128203;</button>
-                    <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-input,pos-depth-input" hidden>
+                    <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-container,pos-depth-container" hidden>
                     <button type="button" class="toggle-button icon-button hide-button" data-target="pos-hide-1" data-on="☰" data-off="✖">☰</button>
                   </div>
                 </div>
@@ -124,25 +145,19 @@
                 <!-- Options will be populated dynamically from POSITIVE_LISTS -->
               </select>
               <div class="input-row">
-                <textarea id="pos-input" rows="2" placeholder="Positive modifiers"></textarea>
+                <textarea id="pos-input" rows="2" placeholder="Positive modifiers (delimiter stays on chunks)"></textarea>
               </div>
               <div id="pos-order-container">
                 <div class="label-row">
-                  <label for="pos-order-input">Positive Ordering</label>
+                  <label for="pos-order-select">Positive Ordering</label>
                 </div>
                 <select id="pos-order-select"></select>
-                <div class="input-row">
-                  <textarea id="pos-order-input" rows="1" placeholder="0,1,2"></textarea>
-                </div>
               </div>
               <div id="pos-depth-container">
                 <div class="label-row">
-                  <label for="pos-depth-input">Positive Depth</label>
+                  <label for="pos-depth-select">Positive Depth</label>
                 </div>
                 <select id="pos-depth-select"></select>
-                <div class="input-row">
-                  <textarea id="pos-depth-input" rows="1" placeholder="0,1,2"></textarea>
-                </div>
               </div>
             </div>
           </div>
@@ -182,7 +197,7 @@
                     <button type="button" id="neg-delete-1" class="delete-button icon-button" title="Delete" data-help="Remove negative modifier list from presets.">&#128465;&#65039;</button>
                     <button type="button" id="neg-reroll-1" class="toggle-button icon-button random-button" title="Reroll">&#127922;</button>
                     <button type="button" class="copy-button icon-button" data-target="neg-input" title="Copy">&#128203;</button>
-                    <input type="checkbox" id="neg-hide-1" data-targets="neg-input,neg-order-input,neg-depth-input" hidden>
+                    <input type="checkbox" id="neg-hide-1" data-targets="neg-input,neg-order-container,neg-depth-container" hidden>
                     <button type="button" class="toggle-button icon-button hide-button" data-target="neg-hide-1" data-on="☰" data-off="✖">☰</button>
                   </div>
                 </div>
@@ -190,25 +205,19 @@
                 <!-- Options will be populated dynamically from NEGATIVE_LISTS -->
               </select>
               <div class="input-row">
-                <textarea id="neg-input" rows="3" placeholder="Negative modifiers"></textarea>
+                <textarea id="neg-input" rows="3" placeholder="Negative modifiers (delimiter stays on chunks)"></textarea>
               </div>
               <div id="neg-order-container">
                 <div class="label-row">
-                  <label for="neg-order-input">Negative Ordering</label>
+                  <label for="neg-order-select">Negative Ordering</label>
                 </div>
                 <select id="neg-order-select"></select>
-                <div class="input-row">
-                  <textarea id="neg-order-input" rows="1" placeholder="0,1,2"></textarea>
-                </div>
               </div>
               <div id="neg-depth-container">
                 <div class="label-row">
-                  <label for="neg-depth-input">Negative Depth</label>
+                  <label for="neg-depth-select">Negative Depth</label>
                 </div>
                 <select id="neg-depth-select"></select>
-                <div class="input-row">
-                  <textarea id="neg-depth-input" rows="1" placeholder="0,1,2"></textarea>
-                </div>
               </div>
             </div>
           </div>
@@ -220,19 +229,15 @@
                 <input type="checkbox" id="divider-shuffle" hidden>
                 <button type="button" id="divider-save" class="save-button icon-button" title="Save">&#128190;</button>
                 <button type="button" id="divider-delete" class="delete-button icon-button" title="Delete" data-help="Remove divider list from presets.">&#128465;&#65039;</button>
-                <button type="button" id="divider-reroll" class="toggle-button icon-button random-button" title="Reroll">&#127922;</button>
+                <button type="button" id="divider-reroll" class="toggle-button icon-button random-button" data-target="divider-shuffle" title="Reroll">&#127922;</button>
                 <button type="button" class="copy-button icon-button" data-target="divider-input" title="Copy">&#128203;</button>
-                <input type="checkbox" id="divider-hide" data-targets="divider-input,divider-order-input" hidden>
+                <input type="checkbox" id="divider-hide" data-targets="divider-input" hidden>
                 <button type="button" class="toggle-button icon-button hide-button" data-target="divider-hide" data-on="☰" data-off="✖">☰</button>
               </div>
           </div>
           <select id="divider-select"></select>
           <div class="input-row">
-            <textarea id="divider-input" rows="2" placeholder="Divider phrases"></textarea>
-          </div>
-          <select id="divider-order-select"></select>
-          <div class="input-row">
-            <textarea id="divider-order-input" rows="1" placeholder="0,1,2"></textarea>
+            <textarea id="divider-input" rows="2" placeholder="Divider phrases (delimiter stays on chunks)"></textarea>
           </div>
         </div>
         <!-- Character length limit selection -->

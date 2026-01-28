@@ -5,11 +5,14 @@ if (typeof window !== 'undefined') window.__TEST__ = true;
 
 // Define default lists before loading script
 global.DEFAULT_LIST = {
-  presets: [{ id: 'b', title: 'Base', type: 'base', items: ['x'] }]
+  presets: [{ id: 'b', title: 'Base', type: 'base', items: 'x' }]
 };
 
 delete global.DEFAULT_DATA;
 
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
 const main = require('../src/script');
 
 const ui = main;
@@ -35,6 +38,11 @@ function setupDOM() {
   `;
 }
 
+function loadDefaultListFile() {
+  const code = fs.readFileSync(path.join(__dirname, '..', 'src', 'default_list.js'), 'utf8');
+  return vm.runInNewContext(code + '\nDEFAULT_LIST', {}, { filename: 'default_list.js' });
+}
+
 describe('Default list integration', () => {
   test('loadLists populates default presets', () => {
     setupDOM();
@@ -48,7 +56,7 @@ describe('Default list integration', () => {
 
   test('resetData falls back to DEFAULT_LIST', () => {
     setupDOM();
-    lists.importLists({ presets: [{ id: 'c', title: 'Custom', type: 'base', items: ['y'] }] });
+    lists.importLists({ presets: [{ id: 'c', title: 'Custom', type: 'base', items: 'y' }] });
     main.applyCurrentPresets();
     expect(document.getElementById('base-input').value).toBe('y');
     storage.resetData();
@@ -63,8 +71,8 @@ describe('Default list integration', () => {
     // Provide intentionally unsorted presets
     lists.importLists({
       presets: [
-        { id: 'b', title: 'Beta', type: 'base', items: [] },
-        { id: 'a', title: 'Alpha', type: 'base', items: [] }
+        { id: 'b', title: 'Beta', type: 'base', items: '' },
+        { id: 'a', title: 'Alpha', type: 'base', items: '' }
       ]
     });
     main.loadLists();
@@ -72,5 +80,16 @@ describe('Default list integration', () => {
       document.querySelectorAll('#base-select option')
     ).map(o => o.textContent);
     expect(titles).toEqual(['Alpha', 'Beta']);
+  });
+
+  test('default lists store items as strings and avoid double-comma separators', () => {
+    const list = loadDefaultListFile();
+    expect(list && Array.isArray(list.presets)).toBe(true);
+    list.presets.forEach(preset => {
+      expect(typeof preset.items).toBe('string');
+      if (preset.type === 'divider') {
+        expect(preset.items).not.toMatch(/,\s*,/);
+      }
+    });
   });
 });
