@@ -491,9 +491,10 @@ describe('Prompt building', () => {
 describe('End-to-end generation', () => {
   test('generate concatenates divider chunks without intersection', () => {
     document.body.innerHTML = `
-      <select id="delimiter-select">
-        <option value="whitespace" selected>Whitespace</option>
-      </select>
+      <select id="base-delimiter-select"><option value="whitespace" selected>w</option></select>
+      <select id="pos-delimiter-select"><option value="whitespace" selected>w</option></select>
+      <select id="neg-delimiter-select"><option value="whitespace" selected>w</option></select>
+      <select id="divider-delimiter-select"><option value="whitespace" selected>w</option></select>
       <textarea id="base-input">A </textarea>
       <textarea id="pos-input">P</textarea>
       <textarea id="neg-input">N</textarea>
@@ -692,7 +693,6 @@ describe('List persistence', () => {
 
   test('saveList updates LISTS', () => {
     document.body.innerHTML = `
-      <select id="delimiter-select"><option value="comma" selected>c</option></select>
       <select id="pos-select"></select>
       <textarea id="pos-input">a,b</textarea>
     `;
@@ -723,7 +723,6 @@ describe('List persistence', () => {
 
   test('saveList works for base', () => {
     document.body.innerHTML = `
-      <select id="delimiter-select"><option value="comma" selected>c</option></select>
       <select id="base-select"></select>
       <textarea id="base-input">foo,bar</textarea>
     `;
@@ -754,7 +753,6 @@ describe('List persistence', () => {
 
   test('saveList works for insertions', () => {
     document.body.innerHTML = `
-      <select id="delimiter-select"><option value="comma" selected>c</option></select>
       <select id="lyrics-insert-select"></select>
       <textarea id="lyrics-insert-input">a,b</textarea>
     `;
@@ -770,7 +768,6 @@ describe('List persistence', () => {
 
   test('saveList inserts new preset alphabetically', () => {
     document.body.innerHTML = `
-      <select id="delimiter-select"><option value="comma" selected>c</option></select>
       <select id="pos-select"></select>
       <textarea id="pos-input">foo,bar</textarea>
     `;

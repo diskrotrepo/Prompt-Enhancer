@@ -45,8 +45,11 @@ describe('Button layout', () => {
     const posHide = dom.window.document.getElementById('pos-hide-1');
     const negHide = dom.window.document.getElementById('neg-hide-1');
     expect(baseHide.dataset.targets).toContain('base-input');
+    expect(baseHide.dataset.targets).toContain('base-delimiter-select');
     expect(posHide.dataset.targets).toContain('pos-input');
+    expect(posHide.dataset.targets).toContain('pos-delimiter-select');
     expect(negHide.dataset.targets).toContain('neg-input');
+    expect(negHide.dataset.targets).toContain('neg-delimiter-select');
   });
 
   // Layout adaptation: label rows should wrap so buttons never overflow their container

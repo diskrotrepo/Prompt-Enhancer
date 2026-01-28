@@ -60,25 +60,6 @@
             </div>
           </div>
         </div>
-        <!-- Delimiter controls -->
-        <div class="input-group section-parsing">
-          <div class="label-row">
-            <label for="delimiter-select">List Delimiter</label>
-          </div>
-          <select id="delimiter-select">
-            <option value="whitespace" selected>Whitespace (default)</option>
-            <option value="comma">Comma (,)</option>
-            <option value="semicolon">Semicolon (;)</option>
-            <option value="pipe">Pipe (|)</option>
-            <option value="newline">Newline</option>
-            <option value="tab">Tab</option>
-            <option value="sentence">Sentence Punctuation (.,;:!? + newline)</option>
-            <option value="custom">Custom...</option>
-          </select>
-          <div class="input-row" id="delimiter-custom-row" style="display:none">
-            <input type="text" id="delimiter-custom" placeholder="Custom delimiter (use \\n for newline)">
-          </div>
-        </div>
         <!-- Base prompt input section -->
         <div class="input-group section-base">
           <div class="label-row">
@@ -89,13 +70,29 @@
               <button type="button" id="base-delete" class="delete-button icon-button" title="Delete" data-help="Remove base prompt list from presets.">&#128465;&#65039;</button>
               <button type="button" id="base-reroll" class="toggle-button icon-button random-button" title="Reroll">&#127922;</button>
               <button type="button" class="copy-button icon-button" data-target="base-input" title="Copy">&#128203;</button>
-              <input type="checkbox" id="base-hide" data-targets="base-input" hidden>
+              <input type="checkbox" id="base-hide" data-targets="base-input,base-delimiter-select,base-delimiter-custom-row" hidden>
               <button type="button" class="toggle-button icon-button hide-button" data-target="base-hide" data-on="☰" data-off="✖">☰</button>
             </div>
           </div>
           <select id="base-select"></select>
           <div class="input-row">
             <textarea id="base-input" rows="4" placeholder="Enter text; chunks keep the delimiter above"></textarea>
+          </div>
+          <div class="label-row">
+            <label for="base-delimiter-select">Delimiter</label>
+          </div>
+          <select id="base-delimiter-select" class="delimiter-select">
+            <option value="whitespace" selected>Whitespace (default)</option>
+            <option value="comma">Comma (,)</option>
+            <option value="semicolon">Semicolon (;)</option>
+            <option value="pipe">Pipe (|)</option>
+            <option value="newline">Newline</option>
+            <option value="tab">Tab</option>
+            <option value="sentence">Sentence Punctuation (.,;:!? + newline)</option>
+            <option value="custom">Custom...</option>
+          </select>
+          <div class="input-row delimiter-custom-row" id="base-delimiter-custom-row" style="display:none">
+            <input type="text" id="base-delimiter-custom" class="delimiter-custom" placeholder="Custom delimiter (use \\n for newline)">
           </div>
           <select id="base-order-select" hidden></select>
         </div>
@@ -128,7 +125,7 @@
                     <button type="button" id="pos-delete-1" class="delete-button icon-button" title="Delete" data-help="Remove positive modifier list from presets.">&#128465;&#65039;</button>
                     <button type="button" id="pos-reroll-1" class="toggle-button icon-button random-button" title="Reroll">&#127922;</button>
                     <button type="button" class="copy-button icon-button" data-target="pos-input" title="Copy">&#128203;</button>
-                    <input type="checkbox" id="pos-hide-1" data-targets="pos-input" hidden>
+                    <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-delimiter-select,pos-delimiter-custom-row" hidden>
                     <button type="button" class="toggle-button icon-button hide-button" data-target="pos-hide-1" data-on="☰" data-off="✖">☰</button>
                   </div>
                 </div>
@@ -137,6 +134,22 @@
               </select>
               <div class="input-row">
                 <textarea id="pos-input" rows="2" placeholder="Positive modifiers (delimiter stays on chunks)"></textarea>
+              </div>
+              <div class="label-row">
+                <label for="pos-delimiter-select">Delimiter</label>
+              </div>
+              <select id="pos-delimiter-select" class="delimiter-select">
+                <option value="whitespace" selected>Whitespace (default)</option>
+                <option value="comma">Comma (,)</option>
+                <option value="semicolon">Semicolon (;)</option>
+                <option value="pipe">Pipe (|)</option>
+                <option value="newline">Newline</option>
+                <option value="tab">Tab</option>
+                <option value="sentence">Sentence Punctuation (.,;:!? + newline)</option>
+                <option value="custom">Custom...</option>
+              </select>
+              <div class="input-row delimiter-custom-row" id="pos-delimiter-custom-row" style="display:none">
+                <input type="text" id="pos-delimiter-custom" class="delimiter-custom" placeholder="Custom delimiter (use \\n for newline)">
               </div>
               <select id="pos-order-select" hidden></select>
             </div>
@@ -175,7 +188,7 @@
                     <button type="button" id="neg-delete-1" class="delete-button icon-button" title="Delete" data-help="Remove negative modifier list from presets.">&#128465;&#65039;</button>
                     <button type="button" id="neg-reroll-1" class="toggle-button icon-button random-button" title="Reroll">&#127922;</button>
                     <button type="button" class="copy-button icon-button" data-target="neg-input" title="Copy">&#128203;</button>
-                    <input type="checkbox" id="neg-hide-1" data-targets="neg-input" hidden>
+                    <input type="checkbox" id="neg-hide-1" data-targets="neg-input,neg-delimiter-select,neg-delimiter-custom-row" hidden>
                     <button type="button" class="toggle-button icon-button hide-button" data-target="neg-hide-1" data-on="☰" data-off="✖">☰</button>
                   </div>
                 </div>
@@ -184,6 +197,22 @@
               </select>
               <div class="input-row">
                 <textarea id="neg-input" rows="3" placeholder="Negative modifiers (delimiter stays on chunks)"></textarea>
+              </div>
+              <div class="label-row">
+                <label for="neg-delimiter-select">Delimiter</label>
+              </div>
+              <select id="neg-delimiter-select" class="delimiter-select">
+                <option value="whitespace" selected>Whitespace (default)</option>
+                <option value="comma">Comma (,)</option>
+                <option value="semicolon">Semicolon (;)</option>
+                <option value="pipe">Pipe (|)</option>
+                <option value="newline">Newline</option>
+                <option value="tab">Tab</option>
+                <option value="sentence">Sentence Punctuation (.,;:!? + newline)</option>
+                <option value="custom">Custom...</option>
+              </select>
+              <div class="input-row delimiter-custom-row" id="neg-delimiter-custom-row" style="display:none">
+                <input type="text" id="neg-delimiter-custom" class="delimiter-custom" placeholder="Custom delimiter (use \\n for newline)">
               </div>
               <select id="neg-order-select" hidden></select>
             </div>
@@ -198,13 +227,29 @@
                 <button type="button" id="divider-delete" class="delete-button icon-button" title="Delete" data-help="Remove divider list from presets.">&#128465;&#65039;</button>
                 <button type="button" id="divider-reroll" class="toggle-button icon-button random-button" data-target="divider-shuffle" title="Reroll">&#127922;</button>
                 <button type="button" class="copy-button icon-button" data-target="divider-input" title="Copy">&#128203;</button>
-                <input type="checkbox" id="divider-hide" data-targets="divider-input" hidden>
+                <input type="checkbox" id="divider-hide" data-targets="divider-input,divider-delimiter-select,divider-delimiter-custom-row" hidden>
                 <button type="button" class="toggle-button icon-button hide-button" data-target="divider-hide" data-on="☰" data-off="✖">☰</button>
               </div>
           </div>
           <select id="divider-select"></select>
           <div class="input-row">
             <textarea id="divider-input" rows="2" placeholder="Divider phrases (delimiter stays on chunks)"></textarea>
+          </div>
+          <div class="label-row">
+            <label for="divider-delimiter-select">Delimiter</label>
+          </div>
+          <select id="divider-delimiter-select" class="delimiter-select">
+            <option value="whitespace" selected>Whitespace (default)</option>
+            <option value="comma">Comma (,)</option>
+            <option value="semicolon">Semicolon (;)</option>
+            <option value="pipe">Pipe (|)</option>
+            <option value="newline">Newline</option>
+            <option value="tab">Tab</option>
+            <option value="sentence">Sentence Punctuation (.,;:!? + newline)</option>
+            <option value="custom">Custom...</option>
+          </select>
+          <div class="input-row delimiter-custom-row" id="divider-delimiter-custom-row" style="display:none">
+            <input type="text" id="divider-delimiter-custom" class="delimiter-custom" placeholder="Custom delimiter (use \\n for newline)">
           </div>
         </div>
         <!-- Character length limit selection -->
@@ -278,13 +323,29 @@
                   <button type="button" id="lyrics-insert-save" class="save-button icon-button" title="Save">&#128190;</button>
                   <button type="button" id="lyrics-insert-delete" class="delete-button icon-button" title="Delete" data-help="Remove lyrics insertion list." >&#128465;&#65039;</button>
                   <button type="button" class="copy-button icon-button" data-target="lyrics-insert-input" title="Copy">&#128203;</button>
-                  <input type="checkbox" id="lyrics-insert-hide" data-targets="lyrics-insert-input,lyrics-insert-interval,lyrics-insert-stack,lyrics-insert-random" hidden>
+                  <input type="checkbox" id="lyrics-insert-hide" data-targets="lyrics-insert-input,lyrics-insert-delimiter-select,lyrics-insert-delimiter-custom-row,lyrics-insert-interval,lyrics-insert-stack,lyrics-insert-random" hidden>
                   <button type="button" class="toggle-button icon-button hide-button" data-target="lyrics-insert-hide" data-on="☰" data-off="✖">☰</button>
                 </div>
             </div>
             <select id="lyrics-insert-select"></select>
             <div class="input-row">
               <textarea id="lyrics-insert-input" rows="2" placeholder="Insert terms"></textarea>
+            </div>
+            <div class="label-row">
+              <label for="lyrics-insert-delimiter-select">Delimiter</label>
+            </div>
+            <select id="lyrics-insert-delimiter-select" class="delimiter-select">
+              <option value="whitespace" selected>Whitespace (default)</option>
+              <option value="comma">Comma (,)</option>
+              <option value="semicolon">Semicolon (;)</option>
+              <option value="pipe">Pipe (|)</option>
+              <option value="newline">Newline</option>
+              <option value="tab">Tab</option>
+              <option value="sentence">Sentence Punctuation (.,;:!? + newline)</option>
+              <option value="custom">Custom...</option>
+            </select>
+            <div class="input-row delimiter-custom-row" id="lyrics-insert-delimiter-custom-row" style="display:none">
+              <input type="text" id="lyrics-insert-delimiter-custom" class="delimiter-custom" placeholder="Custom delimiter (use \\n for newline)">
             </div>
             <div class="label-row">
               <label for="lyrics-insert-interval">Insert Every</label>

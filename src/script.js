@@ -1483,14 +1483,14 @@
 
   /**
    * Map delimiter UI controls into a reusable parsing configuration.
-   * Purpose: Centralize delimiter parsing so every list uses the same chunking logic.
-   * Usage Example: getDelimiterConfig().regex is passed to parseInput for modifiers.
+   * Purpose: Centralize delimiter parsing for a specific list.
+   * Usage Example: getDelimiterConfigFor('base').regex is passed to parseInput.
    * 50% Rule: Summarizes intent, documents returned fields, and keeps inline comments for defaults.
+   * @param {HTMLSelectElement|null} select - Delimiter select element.
+   * @param {HTMLInputElement|null} customInput - Custom delimiter input.
    * @returns {{mode: string, delimiter: string, regex: RegExp, joiner: string, sentenceMode: boolean}}
    */
-  function getDelimiterConfig() {
-    const select = document.getElementById('delimiter-select');
-    const customInput = document.getElementById('delimiter-custom');
+  function getDelimiterConfigFrom(select, customInput) {
     const mode = select?.value || 'whitespace';
     let delimiter = ' '; // default to whitespace when controls are missing
     let sentenceMode = false;
@@ -1512,6 +1512,34 @@
   }
 
   /**
+   * Resolve delimiter config using element ids.
+   * Purpose: Keep delimiter lookup consistent across lists.
+   * @param {string} selectId - Select id.
+   * @param {string} customId - Custom input id.
+   * @returns {{mode: string, delimiter: string, regex: RegExp, joiner: string, sentenceMode: boolean}}
+   */
+  function getDelimiterConfigById(selectId, customId) {
+    const select = document.getElementById(selectId);
+    const customInput = document.getElementById(customId);
+    return getDelimiterConfigFrom(select, customInput);
+  }
+
+  /**
+   * Resolve delimiter config for a list prefix (and optional stack index).
+   * Purpose: Support per-list and per-stack delimiter selection.
+   * @param {string} prefix - List prefix (base, pos, neg, divider, lyrics-insert).
+   * @param {number} [idx=1] - Stack index (1-based).
+   * @returns {{mode: string, delimiter: string, regex: RegExp, joiner: string, sentenceMode: boolean}}
+   */
+  function getDelimiterConfigFor(prefix, idx = 1) {
+    const suffix = idx > 1 ? `-${idx}` : '';
+    return getDelimiterConfigById(
+      `${prefix}-delimiter-select${suffix}`,
+      `${prefix}-delimiter-custom${suffix}`
+    );
+  }
+
+  /**
    * Choose a display joiner for presets based on delimiter.
    * Purpose: Keep preset text readable by adding spacing when delimiters lack whitespace.
    * Usage Example: buildDelimiterJoiner(',') returns ', '.
@@ -1529,6 +1557,19 @@
   }
 
   /**
+   * Extract the first integer-like token from a preset string.
+   * Purpose: Parse numeric presets without relying on delimiter settings.
+   * Usage Example: extractFirstNumber("1000, 2000") returns "1000".
+   * 50% Rule: Regex parsing keeps length presets resilient to formatting changes.
+   * @param {string} raw - Preset string.
+   * @returns {string} - First numeric token or empty string.
+   */
+  function extractFirstNumber(raw) {
+    const match = String(raw || '').match(/-?\d+/);
+    return match ? match[0] : '';
+  }
+
+  /**
    * Parse a base list using the active delimiter settings.
    * Purpose: Switch between sentence punctuation mode and delimiter-preserving chunking.
    * Usage Example: parseBaseInput('foo bar') respects the current delimiter mode.
@@ -1538,8 +1579,9 @@
    * @returns {string[]} - Parsed base items.
    */
   function parseBaseInput(raw, delimiter) {
-    if (delimiter.sentenceMode) return utils.parseInput(raw, true);
-    return utils.parseInput(raw, false, delimiter.regex);
+    const config = delimiter && delimiter.regex ? delimiter : getDelimiterConfigFrom(null, null);
+    if (config.sentenceMode) return utils.parseInput(raw, true);
+    return utils.parseInput(raw, false, config.regex);
   }
 
   /**
@@ -1552,7 +1594,8 @@
    * @returns {string[]} - Parsed items.
    */
   function parseListInput(raw, delimiter) {
-    return utils.parseInput(raw, false, delimiter.regex);
+    const config = delimiter && delimiter.regex ? delimiter : getDelimiterConfigFrom(null, null);
+    return utils.parseInput(raw, false, config.regex);
   }
 
   /**
@@ -1590,20 +1633,20 @@
   }
 
   /**
-   * Parse stack inputs into arrays using the active delimiter.
+   * Parse stack inputs into arrays using per-stack delimiters.
    * Purpose: Centralize stack parsing for orders.
-   * Usage Example: collectStackInputs('pos', 2, config) returns two lists.
+   * Usage Example: collectStackInputs('pos', 2) returns two lists.
    * 50% Rule: Iterates stack indices with inline guards.
    * @param {string} prefix - Section prefix.
    * @param {number} count - Stack count.
-   * @param {{regex: RegExp}} delimiter - Delimiter config.
    * @returns {string[][]} - Parsed stacks.
    */
-  function collectStackInputs(prefix, count, delimiter) {
+  function collectStackInputs(prefix, count) {
     const stacks = [];
     for (let i = 1; i <= count; i++) {
       const id = `${prefix}-input${i === 1 ? '' : '-' + i}`;
       const el = document.getElementById(id);
+      const delimiter = getDelimiterConfigFor(prefix, i);
       stacks.push(parseListInput(el?.value || '', delimiter));
     }
     return stacks;
@@ -1641,9 +1684,9 @@
    * @returns {number[]} - Depth counts.
    */
   function computeDepthCounts(prefix, idx = 1) {
-    const delimiter = getDelimiterConfig();
+    const baseDelimiter = getDelimiterConfigFor('base');
     const baseInput = document.getElementById('base-input');
-    const baseItems = parseBaseInput(baseInput?.value || '', delimiter);
+    const baseItems = parseBaseInput(baseInput?.value || '', baseDelimiter);
     const baseOrderMode = readSelectMode('base-order-select', 'canonical');
     const baseOrder = utils.buildOrderIndices(baseItems, baseOrderMode);
     const orderedBaseItems = utils.applyOrderIfNeeded(baseItems, baseOrder);
@@ -1655,7 +1698,7 @@
       10
     );
     const count = stackOn ? stackSize : 1;
-    const stacks = collectStackInputs(prefix, count, delimiter);
+    const stacks = collectStackInputs(prefix, count);
     const orderModes = collectSelectModes(prefix, 'order', count, 'canonical');
     const { ordered } = resolveStackOrders(stacks, orderModes);
 
@@ -1670,7 +1713,7 @@
         10
       );
       const posCount = posStackOn ? posStackSize : 1;
-      const posStacks = collectStackInputs('pos', posCount, delimiter);
+      const posStacks = collectStackInputs('pos', posCount);
       const posOrderModes = collectSelectModes('pos', 'order', posCount, 'canonical');
       posOrdered = resolveStackOrders(posStacks, posOrderModes).ordered;
     }
@@ -1712,9 +1755,8 @@
     if (inputEl.tagName === 'TEXTAREA') {
       inputEl.value = list;
     } else if (presetsOrType === 'length' || presets === lists.LENGTH_PRESETS) {
-      const delimiter = getDelimiterConfig();
-      const first = parseListInput(list, delimiter)[0] || list;
-      inputEl.value = first;
+      const first = extractFirstNumber(list);
+      inputEl.value = first || list;
     } else {
       inputEl.value = list;
     }
@@ -1748,9 +1790,9 @@
    * @returns {Object} - Input object for buildVersions.
    */
   function collectInputs() {
-    const delimiter = getDelimiterConfig();
+    const baseDelimiter = getDelimiterConfigFor('base');
     const baseEl = document.getElementById('base-input');
-    const baseItems = parseBaseInput(baseEl?.value || '', delimiter);
+    const baseItems = parseBaseInput(baseEl?.value || '', baseDelimiter);
     const posStackOn = document.getElementById('pos-stack').checked;
     const posStackSize = parseInt(document.getElementById('pos-stack-size')?.value || '1', 10);
     const negStackOn = document.getElementById('neg-stack').checked;
@@ -1758,8 +1800,8 @@
     const posCount = posStackOn ? posStackSize : 1;
     const negCount = negStackOn ? negStackSize : 1;
 
-    const posStacks = collectStackInputs('pos', posCount, delimiter);
-    const negStacks = collectStackInputs('neg', negCount, delimiter);
+    const posStacks = collectStackInputs('pos', posCount);
+    const negStacks = collectStackInputs('neg', negCount);
     const includePosForNeg = document.getElementById('neg-include-pos').checked;
     const negAddendum = document.getElementById('neg-addendum')?.checked || false; // Toggle routes negatives as addendum when true.
 
@@ -1790,20 +1832,21 @@
     const posDepths = posStackOn ? posDepthStacks : posDepthStacks[0];
     const negDepths = negStackOn ? negDepthStacks : negDepthStacks[0];
 
-    const dividerMods = parseListInput(document.getElementById('divider-input')?.value || '', delimiter);
+    const dividerDelimiter = getDelimiterConfigFor('divider');
+    const dividerMods = parseListInput(document.getElementById('divider-input')?.value || '', dividerDelimiter);
     const shuffleDividers = document.getElementById('divider-shuffle')?.checked;
     const lengthSelect = document.getElementById('length-select');
     const lengthInput = document.getElementById('length-input');
     let limit = parseInt(lengthInput.value, 10);
     if (isNaN(limit) || limit <= 0) {
       const preset = lists.LENGTH_PRESETS[lengthSelect.value];
-      const first = preset ? parseListInput(preset, delimiter)[0] || preset : '';
+      const first = extractFirstNumber(preset);
       const parsed = parseInt(first, 10);
       limit = !isNaN(parsed) && parsed > 0 ? parsed : 1000;
       lengthInput.value = limit;
     }
     return {
-      delimiterConfig: delimiter,
+      delimiterConfig: baseDelimiter,
       baseItems,
       negMods,
       posMods,
@@ -1897,9 +1940,9 @@
       const removeBrackets = document.getElementById('lyrics-remove-brackets')?.checked;
       // Insertions: list of bracketed terms, word interval, stack size, and optional randomization
       const insertInput = document.getElementById('lyrics-insert-input');
-      const delimiter = getDelimiterConfig();
+      const insertDelimiter = getDelimiterConfigFor('lyrics-insert');
       const insertItems = insertInput
-        ? parseListInput(insertInput?.value || '', delimiter)
+        ? parseListInput(insertInput?.value || '', insertDelimiter)
         : [];
       const intervalSel = document.getElementById('lyrics-insert-interval');
       const interval = intervalSel ? parseInt(intervalSel.value, 10) : 0;
@@ -1940,23 +1983,32 @@
   }
 
   /** 
-   * Show/hide custom delimiter input based on dropdown selection.
+   * Show/hide custom delimiter inputs based on per-list dropdown selection.
    * Purpose: Keep delimiter UI concise while still supporting arbitrary separators.
-   * Usage: In initializeUI.
+   * Usage: In initializeUI and dynamic stack creation.
    * 50% Rule: Event-driven update with inline state notes for clarity.
    */
-  function setupDelimiterControls() {
-    const select = document.getElementById('delimiter-select');
-    const customRow = document.getElementById('delimiter-custom-row');
-    const customInput = document.getElementById('delimiter-custom');
-    if (!select) return;
-    const update = () => {
-      const show = select.value === 'custom';
-      if (customRow) customRow.style.display = show ? '' : 'none';
-      if (customInput) customInput.disabled = !show;
-    };
-    select.addEventListener('change', update);
-    update();
+  function setupDelimiterControls(root = document) {
+    const selects = Array.from(
+      root.querySelectorAll('select[id*="-delimiter-select"]')
+    );
+    selects.forEach(select => {
+      if (select.dataset.delimiterInit) return;
+      const match = select.id.match(/^(.*)-delimiter-select(?:-(\d+))?$/);
+      if (!match) return;
+      const base = match[1];
+      const suffix = match[2] ? `-${match[2]}` : '';
+      const customRow = document.getElementById(`${base}-delimiter-custom-row${suffix}`);
+      const customInput = document.getElementById(`${base}-delimiter-custom${suffix}`);
+      const update = () => {
+        const show = select.value === 'custom';
+        if (customRow) customRow.style.display = show ? '' : 'none';
+        if (customInput) customInput.disabled = !show;
+      };
+      select.addEventListener('change', update);
+      update();
+      select.dataset.delimiterInit = 'true';
+    });
   }
 
   /** 
@@ -2389,6 +2441,38 @@
   }
 
   /** 
+   * Fill delimiter dropdown with built-in delimiter modes.
+   * Purpose: Populate per-list delimiter selects, including stacked lists.
+   * Usage: In updateStackBlocks for dynamic stacks.
+   * 50% Rule: Static options + selection preservation.
+   * @param {HTMLSelectElement} select - Select to populate.
+   */
+  function populateDelimiterOptions(select) {
+    if (!select) return;
+    const previous = select.value;
+    select.innerHTML = '';
+    const opts = [
+      { id: 'whitespace', title: 'Whitespace (default)' },
+      { id: 'comma', title: 'Comma (,)' },
+      { id: 'semicolon', title: 'Semicolon (;)' },
+      { id: 'pipe', title: 'Pipe (|)' },
+      { id: 'newline', title: 'Newline' },
+      { id: 'tab', title: 'Tab' },
+      { id: 'sentence', title: 'Sentence Punctuation (.,;:!? + newline)' },
+      { id: 'custom', title: 'Custom...' }
+    ];
+    opts.forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o.id;
+      opt.textContent = o.title;
+      select.appendChild(opt);
+    });
+    if (previous && select.querySelector(`option[value="${previous}"]`)) {
+      select.value = previous;
+    }
+  }
+
+  /** 
    * Generate stacked modifier blocks dynamically for positive or negative lists.
    * Purpose: Create stack UI blocks.
    * Usage: In setupStackControls.
@@ -2454,7 +2538,7 @@
       const hideCb = document.createElement('input');
       hideCb.type = 'checkbox';
       hideCb.id = `${prefix}-hide-${idx}`;
-      hideCb.dataset.targets = `${prefix}-input-${idx}`;
+      hideCb.dataset.targets = `${prefix}-input-${idx},${prefix}-delimiter-select-${idx},${prefix}-delimiter-custom-row-${idx}`;
       hideCb.hidden = true;
       btnCol.appendChild(hideCb);
       const hideBtn = document.createElement('button');
@@ -2482,6 +2566,38 @@
       ta.placeholder = type.charAt(0).toUpperCase() + type.slice(1) + ' modifiers';
       row.appendChild(ta);
       block.appendChild(row);
+
+      const delLabelRow = document.createElement('div');
+      delLabelRow.className = 'label-row';
+      const delLabel = document.createElement('label');
+      delLabel.textContent = 'Delimiter';
+      delLabel.setAttribute('for', `${prefix}-delimiter-select-${idx}`);
+      delLabelRow.appendChild(delLabel);
+      block.appendChild(delLabelRow);
+
+      const delSelect = document.createElement('select');
+      delSelect.id = `${prefix}-delimiter-select-${idx}`;
+      delSelect.className = 'delimiter-select';
+      populateDelimiterOptions(delSelect);
+      const baseDelSel = document.getElementById(`${prefix}-delimiter-select`);
+      if (baseDelSel && delSelect.querySelector(`option[value="${baseDelSel.value}"]`)) {
+        delSelect.value = baseDelSel.value;
+      }
+      block.appendChild(delSelect);
+
+      const delRow = document.createElement('div');
+      delRow.className = 'input-row delimiter-custom-row';
+      delRow.id = `${prefix}-delimiter-custom-row-${idx}`;
+      delRow.style.display = 'none';
+      const delInput = document.createElement('input');
+      delInput.type = 'text';
+      delInput.id = `${prefix}-delimiter-custom-${idx}`;
+      delInput.className = 'delimiter-custom';
+      delInput.placeholder = 'Custom delimiter (use \\n for newline)';
+      const baseDelInput = document.getElementById(`${prefix}-delimiter-custom`);
+      if (baseDelInput) delInput.value = baseDelInput.value;
+      delRow.appendChild(delInput);
+      block.appendChild(delRow);
 
       const orderSel = document.createElement('select');
       orderSel.id = `${prefix}-order-select-${idx}`;
@@ -2514,6 +2630,7 @@
       const block = document.getElementById(`${prefix}-stack-${i}`);
       if (block) block.remove();
     }
+    setupDelimiterControls(container);
     setupCopyButtons();
     setupHideToggles();
     setupToggleButtons();
@@ -2702,7 +2819,6 @@
       '#generate': 'Build prompts using current settings.',
       '.section-data': 'Manage stored prompt lists.',
       '.section-actions': 'Global toggles including help mode.',
-      '.section-parsing': 'Parsing controls for list delimiters.',
       '.section-base': 'Base prompts anchoring the concept.',
       '.section-positive': 'Positive modifiers or outputs.',
       '.section-negative': 'Negative modifiers or outputs.',
@@ -2722,28 +2838,28 @@
       '[data-target="lyrics-remove-brackets"]': 'Strip brackets from lyrics before processing.',
       '[data-target="lyrics-insert-random"]': 'Randomize insertion intervals for lyric terms.',
       // Inputs and lists
-      '#delimiter-select': 'Choose how typed text is chunked (default is whitespace). Delimiters stay with chunks and outputs are concatenated directly.',
-      '#delimiter-custom': 'Custom delimiter text; supports \\n for newline and \\t for tab. Delimiters remain attached to chunks.',
+      '.delimiter-select': 'Choose how this list is chunked (default is whitespace). Delimiters stay with chunks and outputs are concatenated directly.',
+      '.delimiter-custom': 'Custom delimiter text; supports \\n for newline and \\t for tab. Delimiters remain attached to chunks.',
       '#base-select': 'Choose base prompt preset.',
-      '#base-input': 'Base prompts are chunked by the selected delimiter; delimiters stay on the chunks.',
+      '#base-input': 'Base prompts are chunked by their delimiter; delimiters stay on the chunks.',
       '#base-order-select': 'Order mode for base prompts (canonical or randomized).',
       'select[id^="pos-select"]': 'Choose positive list preset.',
-      'textarea[id^="pos-input"]': 'Positive modifiers are chunked by the selected delimiter; delimiters stay on the chunks.',
+      'textarea[id^="pos-input"]': 'Positive modifiers are chunked by their delimiter; delimiters stay on the chunks.',
       'select[id^="pos-order-select"]': 'Ordering mode for positives; applied when generating.',
       '#pos-stack-size': 'Number of positive stacks.',
       'select[id^="neg-select"]': 'Choose negative list preset.',
-      'textarea[id^="neg-input"]': 'Negative modifiers are chunked by the selected delimiter; delimiters stay on the chunks.',
+      'textarea[id^="neg-input"]': 'Negative modifiers are chunked by their delimiter; delimiters stay on the chunks.',
       'select[id^="neg-order-select"]': 'Ordering mode for negatives; applied when generating.',
       '#neg-stack-size': 'Number of negative stacks.',
       '#divider-select': 'Choose divider preset.',
-      '#divider-input': 'Divider phrases are chunked by the delimiter and inserted as-is.',
+      '#divider-input': 'Divider phrases are chunked by their delimiter and inserted as-is.',
       '#length-select': 'Preset length limits.',
       '#length-input': 'Maximum allowed characters.',
       '#lyrics-select': 'Choose lyrics preset.',
       '#lyrics-input': 'Lyrics text with optional random spacing.',
       '#lyrics-space': 'Max spaces inserted between lyric words.',
       '#lyrics-insert-select': 'Choose insertion terms preset.',
-      '#lyrics-insert-input': 'Terms to inject into lyrics, chunked by the selected delimiter.',
+      '#lyrics-insert-input': 'Terms to inject into lyrics, chunked by their delimiter.',
       '#lyrics-insert-interval': 'Interval for lyric insertions.',
       '#lyrics-insert-stack': 'Number of terms inserted each time.'
     };

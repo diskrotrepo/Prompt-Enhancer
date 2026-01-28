@@ -42,12 +42,13 @@ negatives remain aligned with positives.
 
 ### Delimiter Controls
 
-List parsing now follows the delimiter dropdown (`delimiter-select`) and optional
-custom delimiter input (`delimiter-custom`). Use `parseBaseInput`,
-`parseListInput`, and `collectStackInputs` so new logic respects the chosen
-delimiter across base/modifier/divider lists. Chunking preserves the delimiter
-at the end of each chunk, and prompt recombination is a straight concatenation
-pass (no new delimiters inserted).
+Each list now owns its own delimiter dropdown (e.g., `base-delimiter-select`,
+`pos-delimiter-select`, `neg-delimiter-select`, `divider-delimiter-select`) plus
+optional custom inputs. Use `getDelimiterConfigFor`, `parseBaseInput`,
+`parseListInput`, and `collectStackInputs` so new logic respects per-list and
+per-stack delimiters. Chunking preserves the delimiter at the end of each chunk,
+and prompt recombination is a straight concatenation pass (no new delimiters
+inserted).
 
 Preset items are stored as strings only. Legacy array formats are no longer
 normalized during load or import; update data sources to provide string items.
