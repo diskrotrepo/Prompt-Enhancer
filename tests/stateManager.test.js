@@ -30,8 +30,6 @@ function setupDOM() {
     <select id="divider-select"></select>
     <textarea id="divider-input"></textarea>
     <input type="checkbox" id="divider-shuffle">
-    <select id="pos-depth-select"></select>
-    <select id="neg-depth-select"></select>
     <select id="length-select"></select>
     <input id="length-input">
     <select id="lyrics-select"></select>
@@ -68,6 +66,8 @@ describe('State manager integration', () => {
   });
 
   test('export and import round trip preserves generation', () => {
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0.1);
     ui.generate();
     const firstPos = document.getElementById('positive-output').textContent;
     const firstNeg = document.getElementById('negative-output').textContent;
@@ -86,6 +86,7 @@ describe('State manager integration', () => {
 
     const again = state.exportState();
     expect(again).toBe(json);
+    Math.random = orig;
   });
 
   test('stacked inputs round trip through state export', () => {

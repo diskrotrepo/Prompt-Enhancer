@@ -30,7 +30,7 @@
  *    - Data persistence (persist, loadPersisted)
  * 5. UI Controls
  *    - Input collection and output display (collectInputs, displayOutput)
- *    - Mode resolution for order/depth selects (readSelectMode, resolveStackOrders)
+ *    - Mode resolution for order selects (readSelectMode, resolveStackOrders)
  *    - Event handlers and setup (setupPresetListener, initializeUI)
  *    - Reusable id iteration (forEachId)
  *    - Help mode toggle and tooltip handling (setupHelpMode)
@@ -963,12 +963,9 @@
     if (lyricsSelect) populateSelect(lyricsSelect, lyrics);
     const insertSelect = document.getElementById('lyrics-insert-select');
     if (insertSelect) populateSelect(insertSelect, inserts);
-    // Refresh order/depth dropdowns so standard modes remain consistent.
+    // Refresh order dropdowns so standard modes remain consistent.
     document.querySelectorAll('[id*="-order-select"]').forEach(select => {
       populateOrderOptions(select);
-    });
-    document.querySelectorAll('[id*="-depth-select"]').forEach(select => {
-      populateDepthOptions(select);
     });
   }
 
@@ -1413,7 +1410,7 @@
 // Layers multiple setup functions and event listeners for comprehensive UI control.
 // Structural Overview: Many setup functions for buttons, toggles, etc.
 // Section Summary: Manages all DOM interactions and event binding, ensuring
-// dropdowns stay current after list imports while order/depth modes are
+// dropdowns stay current after list imports while order modes are
 // resolved at generation time instead of storing index arrays.
 
   /** 
@@ -1431,7 +1428,7 @@
 
   /**
    * Gather all select controls that share a prefix and base id.
-   * Purpose: Collect stacked order/depth selects for section-wide toggles.
+   * Purpose: Collect stacked order selects for section-wide toggles.
    * Usage: In setupSectionOrder and related reflection helpers.
    * 50% Rule: Loop until no more ids are found.
    * @param {string} prefix - Section prefix.
@@ -1560,7 +1557,7 @@
 
   /**
    * Read a select value with a fallback when missing.
-   * Purpose: Normalize mode reads for order/depth selectors.
+   * Purpose: Normalize mode reads for order selectors.
    * Usage Example: readSelectMode('base-order-select', 'canonical').
    * 50% Rule: Guarded lookup plus default.
    * @param {string} id - Select element id.
@@ -1574,11 +1571,11 @@
 
   /**
    * Collect select modes for a stacked control group.
-   * Purpose: Provide per-stack mode arrays for order/depth logic.
+   * Purpose: Provide per-stack mode arrays for order logic.
    * Usage Example: collectSelectModes('pos', 'order', 2, 'canonical').
    * 50% Rule: Iterates with explicit ids and inline fallback.
    * @param {string} prefix - Section prefix.
-   * @param {string} base - Base id segment ('order' or 'depth').
+   * @param {string} base - Base id segment ('order').
    * @param {number} count - Number of stacks.
    * @param {string} fallback - Default mode.
    * @returns {string[]} - Mode list.
@@ -1594,7 +1591,7 @@
 
   /**
    * Parse stack inputs into arrays using the active delimiter.
-   * Purpose: Centralize stack parsing for orders and depths.
+   * Purpose: Centralize stack parsing for orders.
    * Usage Example: collectStackInputs('pos', 2, config) returns two lists.
    * 50% Rule: Iterates stack indices with inline guards.
    * @param {string} prefix - Section prefix.
@@ -1636,7 +1633,7 @@
 
   /**
    * Determine insertion depth counts using current DOM inputs and modes.
-   * Purpose: Provide depth counts for random/append/prepend calculation at generate time.
+   * Purpose: Provide depth counts for random depth calculation at generate time.
    * Usage: Called in collectInputs and tests.
    * 50% Rule: Builds ordered stacks, counts base words, then delegates to pure helper.
    * @param {string} prefix - Section prefix ('pos' or 'neg').
@@ -1769,8 +1766,6 @@
     const baseOrderMode = readSelectMode('base-order-select', 'canonical');
     const posOrderModes = collectSelectModes('pos', 'order', posCount, 'canonical');
     const negOrderModes = collectSelectModes('neg', 'order', negCount, 'canonical');
-    const posDepthModes = collectSelectModes('pos', 'depth', posCount, 'prepend');
-    const negDepthModes = collectSelectModes('neg', 'depth', negCount, 'prepend');
 
     const baseOrder = utils.buildOrderIndices(baseItems, baseOrderMode);
     const orderedBaseItems = utils.applyOrderIfNeeded(baseItems, baseOrder);
@@ -1779,13 +1774,13 @@
     const { orders: posOrders, ordered: posOrdered } = resolveStackOrders(posStacks, posOrderModes);
     const { orders: negOrders, ordered: negOrdered } = resolveStackOrders(negStacks, negOrderModes);
 
-    const posDepthStacks = posDepthModes.map((mode, i) => {
+    const posDepthStacks = posOrdered.map((_, i) => {
       const counts = utils.computeDepthCountsFrom(baseCounts, posOrdered, i + 1, false, []);
-      return utils.buildDepthValues(mode, counts) || counts.map(() => 0);
+      return utils.buildDepthValues('random', counts) || counts.map(() => 0);
     });
-    const negDepthStacks = negDepthModes.map((mode, i) => {
+    const negDepthStacks = negOrdered.map((_, i) => {
       const counts = utils.computeDepthCountsFrom(baseCounts, negOrdered, i + 1, includePosForNeg, posOrdered);
-      return utils.buildDepthValues(mode, counts) || counts.map(() => 0);
+      return utils.buildDepthValues('random', counts) || counts.map(() => 0);
     });
 
     const posMods = posStackOn ? posStacks : posStacks[0];
@@ -2007,7 +2002,7 @@
   }
 
   /** 
-   * Global randomization toggle affecting all order/depth selects.
+   * Global randomization toggle affecting all order selects.
    * Purpose: Sync all to random or canonical.
    * Usage: In initializeUI.
    * 50% Rule: Reflect and update functions.
@@ -2015,14 +2010,12 @@
   function setupShuffleAll() {
     const allRandom = document.getElementById('all-random');
     if (!allRandom) return;
-    const canonicalFor = sel =>
-      sel.id.includes('-depth-select') ? 'prepend' : 'canonical';
     const reflect = () => {
       const selects = Array.from(
-        document.querySelectorAll('[id*="-order-select"], [id*="-depth-select"]')
+        document.querySelectorAll('[id*="-order-select"]')
       );
       const allRand = selects.every(s => s.value === 'random');
-      const allCan = selects.every(s => s.value === canonicalFor(s));
+      const allCan = selects.every(s => s.value === 'canonical');
       const btn = document.querySelector('.toggle-button[data-target="all-random"]');
       if (btn) {
         btn.classList.remove('active', 'indeterminate');
@@ -2032,10 +2025,10 @@
     };
     const updateAll = () => {
       const selects = Array.from(
-        document.querySelectorAll('[id*="-order-select"], [id*="-depth-select"]')
+        document.querySelectorAll('[id*="-order-select"]')
       );
       selects.forEach(sel => {
-        sel.value = allRandom.checked ? 'random' : canonicalFor(sel);
+        sel.value = allRandom.checked ? 'random' : 'canonical';
         sel.dispatchEvent(new Event('change'));
       });
       ['pos', 'neg'].forEach(p => {
@@ -2050,7 +2043,7 @@
       reflect();
     };
     allRandom.addEventListener('change', updateAll);
-    document.querySelectorAll('[id*="-order-select"], [id*="-depth-select"]').forEach(sel => {
+    document.querySelectorAll('[id*="-order-select"]').forEach(sel => {
       sel.addEventListener('change', reflect);
     });
     reflect();
@@ -2147,19 +2140,17 @@
    * 50% Rule: Every checks.
    */
   function reflectAllRandom() {
-    const canonicalFor = sel =>
-      sel.id.includes('-depth-select') ? 'prepend' : 'canonical';
     const sels = Array.from(
-      document.querySelectorAll('[id*="-order-select"], [id*="-depth-select"]')
+      document.querySelectorAll('[id*="-order-select"]')
     );
     const allRand = sels.every(s => s.value === 'random');
-    const allCan = sels.every(s => s.value === canonicalFor(s));
+    const allCan = sels.every(s => s.value === 'canonical');
     const btn = document.querySelector('.toggle-button[data-target="all-random"]');
     reflectToggleState(btn, allRand, !allCan && !allRand);
   }
 
   /** 
-   * Mirror randomization state for a section's order/depth controls.
+   * Mirror randomization state for a section's order controls.
    * Purpose: Section random reflection.
    * Usage: In setupSectionOrder.
    * 50% Rule: Every checks.
@@ -2168,30 +2159,13 @@
   function reflectSectionOrder(prefix) {
     const cb = document.getElementById(`${prefix}-order-random`);
     if (!cb) return;
-    const canonicalFor = s => (s.id.includes('-depth-select') ? 'prepend' : 'canonical');
     const sels = [
-      ...gatherControls(prefix, 'order'),
-      ...gatherControls(prefix, 'depth')
+      ...gatherControls(prefix, 'order')
     ].map(p => p.select).filter(Boolean);
     const allRand = sels.every(s => s.value === 'random');
-    const allCan = sels.every(s => s.value === canonicalFor(s));
+    const allCan = sels.every(s => s.value === 'canonical');
     const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
     reflectToggleState(btn, allRand, !allCan && !allRand);
-  }
-
-  /** 
-   * Keep the global advanced toggle consistent with per-section states.
-   * Purpose: Global advanced reflection.
-   * Usage: In setupSectionAdvanced.
-   * 50% Rule: Every checks.
-   */
-  function reflectGlobalAdvanced() {
-    const secs = Array.from(document.querySelectorAll('[id$="-advanced"]'));
-    if (!secs.length) return;
-    const allOn = secs.every(cb => cb.checked);
-    const allOff = secs.every(cb => !cb.checked);
-    const btn = document.querySelector('.toggle-button[data-target="advanced-mode"]');
-    reflectToggleState(btn, allOn, !allOff && !allOn);
   }
 
   /** 
@@ -2230,14 +2204,12 @@
   function setupSectionOrder(prefix) {
     const cb = document.getElementById(`${prefix}-order-random`);
     if (!cb) return;
-    const canonicalFor = s => (s.id.includes('-depth-select') ? 'prepend' : 'canonical');
     const update = () => {
       const sels = [
-        ...gatherControls(prefix, 'order'),
-        ...gatherControls(prefix, 'depth')
+        ...gatherControls(prefix, 'order')
       ].map(p => p.select).filter(Boolean);
       sels.forEach(s => {
-        s.value = cb.checked ? 'random' : canonicalFor(s);
+        s.value = cb.checked ? 'random' : 'canonical';
         s.dispatchEvent(new Event('change'));
       });
       reflectSectionOrder(prefix);
@@ -2249,119 +2221,11 @@
         reflectSectionOrder(prefix);
         reflectAllRandom();
       });
-      const dep = document.getElementById(`${prefix}-depth-select${idx === 1 ? '' : '-' + idx}`);
-      if (dep)
-        dep.addEventListener('change', () => {
-          reflectSectionOrder(prefix);
-          reflectAllRandom();
-        });
     });
     reflectSectionOrder(prefix);
   }
 
-  /** 
-   * Show or hide advanced options within a section.
-   * Purpose: Toggle advanced UI.
-   * Usage: In initializeUI.
-   * 50% Rule: Display toggles.
-   * @param {string} prefix - Prefix.
-   */
-  function setupSectionAdvanced(prefix) {
-    const cb = document.getElementById(`${prefix}-advanced`);
-    if (!cb) return;
-    const setDisplay = (el, show) => { if (el) el.style.display = show ? '' : 'none'; };
-    const update = () => {
-      const adv = cb.checked;
-      document.querySelectorAll(`[id^="${prefix}-order-select"]`).forEach(el => setDisplay(el, adv));
-      document.querySelectorAll(`[id^="${prefix}-depth-select"]`).forEach(el => setDisplay(el, adv));
-      document.querySelectorAll(`[id^="${prefix}-order-container"]`).forEach(el => setDisplay(el, adv));
-      document.querySelectorAll(`[id^="${prefix}-depth-container"]`).forEach(el => setDisplay(el, adv));
-      const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
-      if (btn) updateButtonState(btn, cb);
-      (rerollUpdaters[prefix] || []).forEach(fn => fn());
-    };
-    cb.addEventListener('change', () => {
-      cb.dataset.userSet = 'true';
-      update();
-      reflectGlobalAdvanced();
-    });
-    if (!cb.dataset.userSet) {
-      const globalAdv = document.getElementById('advanced-mode');
-      cb.checked = !!(globalAdv && globalAdv.checked);
-    }
-    update();
-    reflectGlobalAdvanced();
-  }
-
-  /** 
-   * Force UI refresh of advanced elements for a section.
-   * Purpose: Refresh advanced display.
-   * Usage: After stack updates.
-   * 50% Rule: Similar to update in setup.
-   * @param {string} prefix - Prefix.
-   */
-  function refreshSectionAdvanced(prefix) {
-    const cb = document.getElementById(`${prefix}-advanced`);
-    if (!cb) return;
-    const adv = cb.checked;
-    const setDisplay = (el, show) => { if (el) el.style.display = show ? '' : 'none'; };
-    document.querySelectorAll(`[id^="${prefix}-order-select"]`).forEach(el => setDisplay(el, adv));
-    document.querySelectorAll(`[id^="${prefix}-depth-select"]`).forEach(el => setDisplay(el, adv));
-    document.querySelectorAll(`[id^="${prefix}-order-container"]`).forEach(el => setDisplay(el, adv));
-    document.querySelectorAll(`[id^="${prefix}-depth-container"]`).forEach(el => setDisplay(el, adv));
-    (rerollUpdaters[prefix] || []).forEach(fn => fn());
-  }
-
   const rerollUpdaters = {};
-
-  /** 
-   * Master toggle for advanced mode, updating all sections accordingly.
-   * Purpose: Global advanced toggle.
-   * Usage: In initializeUI.
-   * 50% Rule: Updates all sections.
-   */
-  function setupAdvancedToggle() {
-    const cb = document.getElementById('advanced-mode');
-    if (!cb) return;
-    const selectIds = [
-      'base-order-select',
-      'pos-order-select',
-      'neg-order-select',
-      'pos-depth-select',
-      'neg-depth-select'
-    ];
-    const containerIds = [
-      'base-order-container',
-      'pos-order-container',
-      'neg-order-container',
-      'pos-depth-container',
-      'neg-depth-container'
-    ];
-    const setDisplay = (el, show) => {
-      if (!el) return;
-      el.style.display = show ? '' : 'none';
-    };
-    const update = () => {
-      const adv = cb.checked;
-      selectIds.forEach(id => {
-        document.querySelectorAll(`[id^="${id}"]`).forEach(el => setDisplay(el, adv));
-      });
-      containerIds.forEach(id => {
-        document.querySelectorAll(`[id^="${id}"]`).forEach(el => setDisplay(el, adv));
-      });
-      document.querySelectorAll('[id$="-advanced"]').forEach(sec => {
-        sec.checked = adv;
-        const btn = document.querySelector(`.toggle-button[data-target="${sec.id}"]`);
-        if (btn) updateButtonState(btn, sec);
-        sec.dispatchEvent(new Event('change'));
-      });
-      // Dice buttons remain visible in both modes
-      Object.values(rerollUpdaters).flat().forEach(fn => fn());
-      reflectGlobalAdvanced();
-    };
-    cb.addEventListener('change', update);
-    update();
-  }
 
   /** 
    * Attach hide buttons to inputs and synchronize the global state.
@@ -2525,33 +2389,10 @@
   }
 
   /** 
-   * Depth dropdown uses prepend, append and random.
-   * Purpose: Populate depth selects.
-   * Usage: In initializeUI and dynamic stack creation.
-   * 50% Rule: Static options, mirroring order patterns.
-   * @param {HTMLSelectElement} select - Select.
-   */
-  function populateDepthOptions(select) {
-    if (!select) return;
-    select.innerHTML = '';
-    const opts = [
-      { id: 'prepend', title: 'Prepend' },
-      { id: 'append', title: 'Append' },
-      { id: 'random', title: 'Random Depth' }
-    ];
-    opts.forEach(o => {
-      const opt = document.createElement('option');
-      opt.value = o.id;
-      opt.textContent = o.title;
-      select.appendChild(opt);
-    });
-  }
-
-  /** 
    * Generate stacked modifier blocks dynamically for positive or negative lists.
    * Purpose: Create stack UI blocks.
    * Usage: In setupStackControls.
-   * 50% Rule: Dynamic element creation with mode-only order/depth controls.
+   * 50% Rule: Dynamic element creation with mode-only order controls.
    * @param {string} prefix - Prefix (pos/neg).
    * @param {number} count - Number of blocks.
    */
@@ -2613,7 +2454,7 @@
       const hideCb = document.createElement('input');
       hideCb.type = 'checkbox';
       hideCb.id = `${prefix}-hide-${idx}`;
-      hideCb.dataset.targets = `${prefix}-input-${idx},${prefix}-order-container-${idx},${prefix}-depth-container-${idx}`;
+      hideCb.dataset.targets = `${prefix}-input-${idx}`;
       hideCb.hidden = true;
       btnCol.appendChild(hideCb);
       const hideBtn = document.createElement('button');
@@ -2642,39 +2483,27 @@
       row.appendChild(ta);
       block.appendChild(row);
 
-      const orderCont = document.createElement('div');
-      orderCont.id = `${prefix}-order-container-${idx}`;
-      const oLabelRow = document.createElement('div');
-      oLabelRow.className = 'label-row';
-      const oLbl = document.createElement('label');
-      oLbl.textContent = type.charAt(0).toUpperCase() + type.slice(1) + ' Ordering';
-      oLbl.setAttribute('for', `${prefix}-order-select-${idx}`);
-      oLabelRow.appendChild(oLbl);
-      orderCont.appendChild(oLabelRow);
       const orderSel = document.createElement('select');
       orderSel.id = `${prefix}-order-select-${idx}`;
       populateOrderOptions(orderSel);
       const baseOrderSel = document.getElementById(`${prefix}-order-select`);
       if (baseOrderSel) orderSel.value = baseOrderSel.value;
-      orderCont.appendChild(orderSel);
-      block.appendChild(orderCont);
-
-      const depthCont = document.createElement('div');
-      depthCont.id = `${prefix}-depth-container-${idx}`;
-      const dLabelRow = document.createElement('div');
-      dLabelRow.className = 'label-row';
-      const dLbl = document.createElement('label');
-      dLbl.textContent = type.charAt(0).toUpperCase() + type.slice(1) + ' Depth';
-      dLbl.setAttribute('for', `${prefix}-depth-select-${idx}`);
-      dLabelRow.appendChild(dLbl);
-      depthCont.appendChild(dLabelRow);
-      const depthSel = document.createElement('select');
-      depthSel.id = `${prefix}-depth-select-${idx}`;
-      populateDepthOptions(depthSel);
-      const baseDepthSel = document.getElementById(`${prefix}-depth-select`);
-      if (baseDepthSel) depthSel.value = baseDepthSel.value;
-      depthCont.appendChild(depthSel);
-      block.appendChild(depthCont);
+      if (prefix === 'pos' || prefix === 'neg') {
+        orderSel.hidden = true;
+        block.appendChild(orderSel);
+      } else {
+        const orderCont = document.createElement('div');
+        orderCont.id = `${prefix}-order-container-${idx}`;
+        const oLabelRow = document.createElement('div');
+        oLabelRow.className = 'label-row';
+        const oLbl = document.createElement('label');
+        oLbl.textContent = type.charAt(0).toUpperCase() + type.slice(1) + ' Ordering';
+        oLbl.setAttribute('for', orderSel.id);
+        oLabelRow.appendChild(oLbl);
+        orderCont.appendChild(oLabelRow);
+        orderCont.appendChild(orderSel);
+        block.appendChild(orderCont);
+      }
 
       container.appendChild(block);
       setupPresetListener(sel.id, ta.id, type);
@@ -2690,20 +2519,11 @@
     setupToggleButtons();
     setupSectionHide(prefix);
     setupSectionOrder(prefix);
-    setupSectionAdvanced(prefix);
-    ['pos', 'neg'].forEach(p => {
-      if (document.getElementById(`${p}-advanced`)) {
-        refreshSectionAdvanced(p);
-      } else {
-        const adv = document.getElementById('advanced-mode');
-        if (adv) adv.dispatchEvent(new Event('change'));
-      }
-    });
   }
 
   /** 
-   * Button that toggles order/depth selects between random and canonical.
-   * Purpose: Reroll random values.
+   * Button that toggles order selects between random and canonical.
+   * Purpose: Reroll ordering.
    * Usage: In updateStackBlocks.
    * 50% Rule: Toggles modes.
    * @param {string} btnId - Button id.
@@ -2712,26 +2532,23 @@
   function setupRerollButton(btnId, selectId) {
     const btn = document.getElementById(btnId);
     const select = document.getElementById(selectId);
-    const adv = document.getElementById('advanced-mode');
     if (!btn || !select) return;
     const prefix = guessPrefix(selectId);
     const idx = (selectId.match(/-(\d+)$/) || [])[1] ? parseInt(selectId.match(/-(\d+)$/)[1], 10) : 1;
     const selFor = base => document.getElementById(`${prefix}-${base}-select${idx === 1 ? '' : '-' + idx}`);
-    const gather = () => [selFor('order'), selFor('depth')].filter(Boolean);
+    const gather = () => [selFor('order')].filter(Boolean);
     const updateState = () => {
       const sels = gather();
-      const canonicalFor = s => (s.id.includes('-depth-select') ? 'prepend' : 'canonical');
       const allRand = sels.every(s => s.value === 'random');
-      const allCan = sels.every(s => s.value === canonicalFor(s));
+      const allCan = sels.every(s => s.value === 'canonical');
       reflectToggleState(btn, allRand, !allCan && !allRand);
       reflectAllRandom();
     };
     const reroll = () => {
       const sels = gather();
-      const canonicalFor = s => (s.id.includes('-depth-select') ? 'prepend' : 'canonical');
       const allRand = sels.every(s => s.value === 'random');
       sels.forEach(s => {
-        const target = allRand ? canonicalFor(s) : 'random';
+        const target = allRand ? 'canonical' : 'random';
         s.value = target;
         s.dispatchEvent(new Event('change'));
       });
@@ -2739,7 +2556,6 @@
     };
     btn.addEventListener('click', reroll);
     gather().forEach(s => s.addEventListener('change', updateState));
-    if (adv) adv.addEventListener('change', updateState);
     if (!rerollUpdaters[prefix]) rerollUpdaters[prefix] = [];
     rerollUpdaters[prefix].push(updateState);
     updateState();
@@ -2882,7 +2698,6 @@
       '#reset-data': 'Reset lists to defaults.',
       '[data-target="all-hide"]': 'Show or hide every section.',
       '[data-target="all-random"]': 'Toggle global randomization.',
-      '[data-target="advanced-mode"]': 'Switch between simple and advanced options.',
       '[data-target="help-mode"]': 'Enable help mode; clicking reveals tooltips.',
       '#generate': 'Build prompts using current settings.',
       '.section-data': 'Manage stored prompt lists.',
@@ -2898,13 +2713,11 @@
       '[data-target="pos-stack"]': 'Combine multiple positive lists.',
       '[data-target="pos-all-hide"]': 'Show or hide all positive stacks.',
       '[data-target="pos-order-random"]': 'Randomize order of positive modifiers.',
-      '[data-target="pos-advanced"]': 'Reveal advanced positive options.',
       '[data-target="neg-addendum"]': 'Append negatives after the full positive prompt instead of inserting them.',
       '[data-target="neg-include-pos"]': 'Apply negatives after positive prompt.',
       '[data-target="neg-stack"]': 'Combine multiple negative lists.',
       '[data-target="neg-all-hide"]': 'Show or hide all negative stacks.',
       '[data-target="neg-order-random"]': 'Randomize order of negative modifiers.',
-      '[data-target="neg-advanced"]': 'Reveal advanced negative options.',
       '[data-target="lyrics-remove-parens"]': 'Strip parentheses from lyrics before processing.',
       '[data-target="lyrics-remove-brackets"]': 'Strip brackets from lyrics before processing.',
       '[data-target="lyrics-insert-random"]': 'Randomize insertion intervals for lyric terms.',
@@ -2917,12 +2730,10 @@
       'select[id^="pos-select"]': 'Choose positive list preset.',
       'textarea[id^="pos-input"]': 'Positive modifiers are chunked by the selected delimiter; delimiters stay on the chunks.',
       'select[id^="pos-order-select"]': 'Ordering mode for positives; applied when generating.',
-      'select[id^="pos-depth-select"]': 'Depth mode for positives (prepend/append/random).',
       '#pos-stack-size': 'Number of positive stacks.',
       'select[id^="neg-select"]': 'Choose negative list preset.',
       'textarea[id^="neg-input"]': 'Negative modifiers are chunked by the selected delimiter; delimiters stay on the chunks.',
       'select[id^="neg-order-select"]': 'Ordering mode for negatives; applied when generating.',
-      'select[id^="neg-depth-select"]': 'Depth mode for negatives (prepend/append/random).',
       '#neg-stack-size': 'Number of negative stacks.',
       '#divider-select': 'Choose divider preset.',
       '#divider-input': 'Divider phrases are chunked by the delimiter and inserted as-is.',
@@ -3056,18 +2867,13 @@
     populateOrderOptions(document.getElementById('base-order-select'));
     populateOrderOptions(document.getElementById('pos-order-select'));
     populateOrderOptions(document.getElementById('neg-order-select'));
-    populateDepthOptions(document.getElementById('pos-depth-select'));
-    populateDepthOptions(document.getElementById('neg-depth-select'));
     setupRerollButton('base-reroll', 'base-order-select');
     setupRerollButton('pos-reroll-1', 'pos-order-select');
     setupRerollButton('neg-reroll-1', 'neg-order-select');
-    setupAdvancedToggle();
     setupSectionHide('pos');
     setupSectionHide('neg');
     setupSectionOrder('pos');
     setupSectionOrder('neg');
-    setupSectionAdvanced('pos');
-    setupSectionAdvanced('neg');
     document.getElementById('generate').addEventListener('click', generate);
 
     setupToggleButtons();
@@ -3076,7 +2882,6 @@
     setupHideToggles();
     reflectAllRandom();
     reflectAllHide();
-    reflectGlobalAdvanced();
 
     const allHide = document.getElementById('all-hide');
     if (allHide) {
@@ -3137,12 +2942,10 @@
     setupCopyButtons,
     setupDataButtons,
     setupHelpMode,
-    setupAdvancedToggle,
     updateStackBlocks,
     setupRerollButton,
     setupSectionHide,
     setupSectionOrder,
-    setupSectionAdvanced,
     initializeUI,
     applyCurrentPresets,
     resetUI,

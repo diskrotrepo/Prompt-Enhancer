@@ -38,13 +38,15 @@ describe('Button layout', () => {
     expect(reset).not.toBeNull();
   });
 
-  test('depth hide toggles include depth textbox', () => {
+  test('hide toggles include expected targets', () => {
     const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'index.html'), 'utf8');
     const dom = new JSDOM(html);
+    const baseHide = dom.window.document.getElementById('base-hide');
     const posHide = dom.window.document.getElementById('pos-hide-1');
     const negHide = dom.window.document.getElementById('neg-hide-1');
-    expect(posHide.dataset.targets).toContain('pos-depth-container');
-    expect(negHide.dataset.targets).toContain('neg-depth-container');
+    expect(baseHide.dataset.targets).toContain('base-input');
+    expect(posHide.dataset.targets).toContain('pos-input');
+    expect(negHide.dataset.targets).toContain('neg-input');
   });
 
   // Layout adaptation: label rows should wrap so buttons never overflow their container

@@ -54,8 +54,6 @@
               <button type="button" class="toggle-button" data-target="all-hide" data-on="All hidden" data-off="All visible">All visible</button>
               <input type="checkbox" id="all-random" hidden>
               <button type="button" class="toggle-button" data-target="all-random" data-on="Randomized" data-off="Canonical">Canonical</button>
-              <input type="checkbox" id="advanced-mode" hidden>
-              <button type="button" class="toggle-button" data-target="advanced-mode" data-on="Advanced" data-off="Simple">Simple</button>
               <!-- Help mode toggles tooltip explanations for UI elements -->
               <input type="checkbox" id="help-mode" hidden>
               <button type="button" class="toggle-button" data-target="help-mode" data-on="Help On" data-off="Help Off">Help Off</button>
@@ -91,7 +89,7 @@
               <button type="button" id="base-delete" class="delete-button icon-button" title="Delete" data-help="Remove base prompt list from presets.">&#128465;&#65039;</button>
               <button type="button" id="base-reroll" class="toggle-button icon-button random-button" title="Reroll">&#127922;</button>
               <button type="button" class="copy-button icon-button" data-target="base-input" title="Copy">&#128203;</button>
-              <input type="checkbox" id="base-hide" data-targets="base-input,base-order-container" hidden>
+              <input type="checkbox" id="base-hide" data-targets="base-input" hidden>
               <button type="button" class="toggle-button icon-button hide-button" data-target="base-hide" data-on="☰" data-off="✖">☰</button>
             </div>
           </div>
@@ -99,12 +97,7 @@
           <div class="input-row">
             <textarea id="base-input" rows="4" placeholder="Enter text; chunks keep the delimiter above"></textarea>
           </div>
-          <div id="base-order-container">
-            <div class="label-row">
-              <label for="base-order-select">Base Ordering</label>
-            </div>
-            <select id="base-order-select"></select>
-          </div>
+          <select id="base-order-select" hidden></select>
         </div>
         <!-- Positive modifier selection section -->
         <div class="input-group section-positive">
@@ -118,8 +111,6 @@
               <button type="button" class="toggle-button" data-target="pos-all-hide" data-on="All hidden" data-off="All visible">All visible</button>
               <input type="checkbox" id="pos-order-random" hidden>
               <button type="button" class="toggle-button" data-target="pos-order-random" data-on="Randomized" data-off="Canonical">Canonical</button>
-              <input type="checkbox" id="pos-advanced" hidden>
-              <button type="button" class="toggle-button" data-target="pos-advanced" data-on="Advanced" data-off="Simple">Simple</button>
               <input type="checkbox" id="pos-shuffle" hidden>
             </div>
           </div>
@@ -137,7 +128,7 @@
                     <button type="button" id="pos-delete-1" class="delete-button icon-button" title="Delete" data-help="Remove positive modifier list from presets.">&#128465;&#65039;</button>
                     <button type="button" id="pos-reroll-1" class="toggle-button icon-button random-button" title="Reroll">&#127922;</button>
                     <button type="button" class="copy-button icon-button" data-target="pos-input" title="Copy">&#128203;</button>
-                    <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-container,pos-depth-container" hidden>
+                    <input type="checkbox" id="pos-hide-1" data-targets="pos-input" hidden>
                     <button type="button" class="toggle-button icon-button hide-button" data-target="pos-hide-1" data-on="☰" data-off="✖">☰</button>
                   </div>
                 </div>
@@ -147,18 +138,7 @@
               <div class="input-row">
                 <textarea id="pos-input" rows="2" placeholder="Positive modifiers (delimiter stays on chunks)"></textarea>
               </div>
-              <div id="pos-order-container">
-                <div class="label-row">
-                  <label for="pos-order-select">Positive Ordering</label>
-                </div>
-                <select id="pos-order-select"></select>
-              </div>
-              <div id="pos-depth-container">
-                <div class="label-row">
-                  <label for="pos-depth-select">Positive Depth</label>
-                </div>
-                <select id="pos-depth-select"></select>
-              </div>
+              <select id="pos-order-select" hidden></select>
             </div>
           </div>
         </div>
@@ -178,8 +158,6 @@
               <button type="button" class="toggle-button" data-target="neg-all-hide" data-on="All hidden" data-off="All visible">All visible</button>
               <input type="checkbox" id="neg-order-random" hidden>
               <button type="button" class="toggle-button" data-target="neg-order-random" data-on="Randomized" data-off="Canonical">Canonical</button>
-              <input type="checkbox" id="neg-advanced" hidden>
-              <button type="button" class="toggle-button" data-target="neg-advanced" data-on="Advanced" data-off="Simple">Simple</button>
               <input type="checkbox" id="neg-shuffle" hidden>
             </div>
           </div>
@@ -197,7 +175,7 @@
                     <button type="button" id="neg-delete-1" class="delete-button icon-button" title="Delete" data-help="Remove negative modifier list from presets.">&#128465;&#65039;</button>
                     <button type="button" id="neg-reroll-1" class="toggle-button icon-button random-button" title="Reroll">&#127922;</button>
                     <button type="button" class="copy-button icon-button" data-target="neg-input" title="Copy">&#128203;</button>
-                    <input type="checkbox" id="neg-hide-1" data-targets="neg-input,neg-order-container,neg-depth-container" hidden>
+                    <input type="checkbox" id="neg-hide-1" data-targets="neg-input" hidden>
                     <button type="button" class="toggle-button icon-button hide-button" data-target="neg-hide-1" data-on="☰" data-off="✖">☰</button>
                   </div>
                 </div>
@@ -207,18 +185,7 @@
               <div class="input-row">
                 <textarea id="neg-input" rows="3" placeholder="Negative modifiers (delimiter stays on chunks)"></textarea>
               </div>
-              <div id="neg-order-container">
-                <div class="label-row">
-                  <label for="neg-order-select">Negative Ordering</label>
-                </div>
-                <select id="neg-order-select"></select>
-              </div>
-              <div id="neg-depth-container">
-                <div class="label-row">
-                  <label for="neg-depth-select">Negative Depth</label>
-                </div>
-                <select id="neg-depth-select"></select>
-              </div>
+              <select id="neg-order-select" hidden></select>
             </div>
           </div>
         </div>

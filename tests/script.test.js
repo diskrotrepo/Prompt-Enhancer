@@ -488,6 +488,38 @@ describe('Prompt building', () => {
   });
 });
 
+describe('End-to-end generation', () => {
+  test('generate concatenates divider chunks without intersection', () => {
+    document.body.innerHTML = `
+      <select id="delimiter-select">
+        <option value="whitespace" selected>Whitespace</option>
+      </select>
+      <textarea id="base-input">A </textarea>
+      <textarea id="pos-input">P</textarea>
+      <textarea id="neg-input">N</textarea>
+      <textarea id="divider-input">D </textarea>
+      <input type="checkbox" id="pos-stack">
+      <input type="checkbox" id="neg-stack">
+      <input type="checkbox" id="neg-include-pos">
+      <input type="checkbox" id="neg-addendum">
+      <input type="checkbox" id="divider-shuffle">
+      <select id="base-order-select"><option value="canonical" selected>c</option><option value="random">r</option></select>
+      <select id="pos-order-select"><option value="canonical" selected>c</option><option value="random">r</option></select>
+      <select id="neg-order-select"><option value="canonical" selected>c</option><option value="random">r</option></select>
+      <input id="length-input" value="10">
+      <pre id="positive-output"></pre>
+      <pre id="negative-output"></pre>
+    `;
+    global.alert = jest.fn();
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0);
+    ui.generate();
+    Math.random = orig;
+    expect(document.getElementById('positive-output').textContent).toBe('P A D P A ');
+    expect(document.getElementById('negative-output').textContent).toBe('N A D N A ');
+  });
+});
+
 describe('Lyrics processing', () => {
   test('processLyrics normalizes text with max 1 space', () => {
     const input = 'Hello, WORLD!\nThis is? a TEST.';
@@ -595,8 +627,6 @@ describe('UI interactions', () => {
     document.body.innerHTML = `
       <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
       <select id="pos-order-select-2"><option value="canonical">c</option><option value="random">r</option></select>
-      <select id="neg-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
-      <select id="neg-depth-select-2"><option value="prepend">p</option><option value="random">r</option></select>
       <input type="checkbox" id="all-random">
       <button class="toggle-button" data-target="all-random"></button>
     `;
@@ -606,14 +636,10 @@ describe('UI interactions', () => {
     cb.dispatchEvent(new Event('change'));
     expect(document.getElementById('pos-order-select').value).toBe('random');
     expect(document.getElementById('pos-order-select-2').value).toBe('random');
-    expect(document.getElementById('neg-depth-select').value).toBe('random');
-    expect(document.getElementById('neg-depth-select-2').value).toBe('random');
     cb.checked = false;
     cb.dispatchEvent(new Event('change'));
     expect(document.getElementById('pos-order-select').value).toBe('canonical');
     expect(document.getElementById('pos-order-select-2').value).toBe('canonical');
-    expect(document.getElementById('neg-depth-select').value).toBe('prepend');
-    expect(document.getElementById('neg-depth-select-2').value).toBe('prepend');
   });
 
   test('hide toggle does not hide sibling buttons', () => {
@@ -640,155 +666,18 @@ describe('UI interactions', () => {
     expect(txt.style.display).toBe('');
   });
 
-  test('reroll button toggles order and depth modes for its stack', () => {
-    document.body.innerHTML = `
-      <div id="pos-order-container">
-        <select id="pos-order-select">
+  test('reroll button toggles order mode for its stack', () => {
+    document.body.innerHTML = `<select id="pos-order-select">
           <option value="canonical">c</option>
           <option value="random">r</option>
         </select>
-      </div>
-      <div id="pos-depth-container">
-        <select id="pos-depth-select">
-          <option value="prepend">p</option>
-          <option value="random">r</option>
-        </select>
-      </div>
       <button id="pos-reroll-1" class="random-button"></button>
     `;
     setupRerollButton('pos-reroll-1', 'pos-order-select');
     document.getElementById('pos-reroll-1').click();
     expect(document.getElementById('pos-order-select').value).toBe('random');
-    expect(document.getElementById('pos-depth-select').value).toBe('random');
     document.getElementById('pos-reroll-1').click();
     expect(document.getElementById('pos-order-select').value).toBe('canonical');
-    expect(document.getElementById('pos-depth-select').value).toBe('prepend');
-  });
-
-  test('advanced toggle shows and hides containers', () => {
-    document.body.innerHTML = `
-      <input type="checkbox" id="advanced-mode">
-      <div id="base-order-container"><select id="base-order-select"></select></div>
-      <div id="pos-order-container"><select id="pos-order-select"></select></div>
-      <div id="pos-depth-container"><select id="pos-depth-select"></select></div>
-      <button id="base-reroll"></button>
-    `;
-    setupAdvancedToggle();
-    const cb = document.getElementById('advanced-mode');
-    const baseCont = document.getElementById('base-order-container');
-    const posOrderCont = document.getElementById('pos-order-container');
-    const posDepthCont = document.getElementById('pos-depth-container');
-    const btn = document.getElementById('base-reroll');
-
-    cb.checked = true;
-    cb.dispatchEvent(new Event('change'));
-    expect(baseCont.style.display).toBe('');
-    expect(posOrderCont.style.display).toBe('');
-    expect(posDepthCont.style.display).toBe('');
-    expect(btn.style.display).toBe('');
-
-    cb.checked = false;
-    cb.dispatchEvent(new Event('change'));
-    expect(baseCont.style.display).toBe('none');
-    expect(posOrderCont.style.display).toBe('none');
-    expect(posDepthCont.style.display).toBe('none');
-    expect(btn.style.display).toBe('');
-  });
-
-  test('stack blocks added in simple mode hide advanced controls', () => {
-    document.body.innerHTML = `
-      <input type="checkbox" id="advanced-mode">
-      <input type="checkbox" id="pos-stack">
-      <button type="button" class="toggle-button" data-target="pos-stack" data-on="Stack On" data-off="Stack Off">Stack Off</button>
-      <select id="pos-stack-size"><option value="2">2</option></select>
-      <input type="checkbox" id="pos-shuffle">
-      <div id="pos-stack-container">
-        <div class="stack-block" id="pos-stack-1">
-          <select id="pos-select"></select>
-          <div class="input-row"><textarea id="pos-input"></textarea></div>
-          <div id="pos-order-container">
-            <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-          </div>
-          <div id="pos-depth-container">
-            <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
-          </div>
-        </div>
-      </div>
-    `;
-    setupAdvancedToggle();
-    setupStackControls();
-    const adv = document.getElementById('advanced-mode');
-    adv.checked = false;
-    adv.dispatchEvent(new Event('change'));
-    const cb = document.getElementById('pos-stack');
-    cb.checked = true;
-    cb.dispatchEvent(new Event('change'));
-    const orderCont = document.getElementById('pos-order-container-2');
-    const depthCont = document.getElementById('pos-depth-container-2');
-    expect(orderCont.style.display).toBe('none');
-    expect(depthCont.style.display).toBe('none');
-  });
-
-  test('stack blocks added in advanced mode keep advanced controls', () => {
-    document.body.innerHTML = `
-      <input type="checkbox" id="advanced-mode">
-      <input type="checkbox" id="pos-stack">
-      <button type="button" class="toggle-button" data-target="pos-stack" data-on="Stack On" data-off="Stack Off">Stack Off</button>
-      <select id="pos-stack-size"><option value="2">2</option></select>
-      <input type="checkbox" id="pos-shuffle">
-      <div id="pos-stack-container">
-        <div class="stack-block" id="pos-stack-1">
-          <select id="pos-select"></select>
-          <div class="input-row"><textarea id="pos-input"></textarea></div>
-          <div id="pos-order-container">
-            <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-          </div>
-          <div id="pos-depth-container">
-            <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
-          </div>
-        </div>
-      </div>
-    `;
-    setupAdvancedToggle();
-    setupStackControls();
-    const adv = document.getElementById('advanced-mode');
-    adv.checked = true;
-    adv.dispatchEvent(new Event('change'));
-    const cb = document.getElementById('pos-stack');
-    cb.checked = true;
-    cb.dispatchEvent(new Event('change'));
-    const orderCont = document.getElementById('pos-order-container-2');
-    const depthCont = document.getElementById('pos-depth-container-2');
-    expect(orderCont.style.display).toBe('');
-    expect(depthCont.style.display).toBe('');
-  });
-
-  test('global advanced overrides section settings', () => {
-    document.body.innerHTML = `
-      <input type="checkbox" id="advanced-mode">
-      <button type="button" class="toggle-button" data-target="advanced-mode" data-on="Advanced" data-off="Simple">Simple</button>
-      <input type="checkbox" id="pos-advanced">
-      <button type="button" class="toggle-button" data-target="pos-advanced" data-on="Advanced" data-off="Simple">Simple</button>
-      <input type="checkbox" id="neg-advanced">
-      <button type="button" class="toggle-button" data-target="neg-advanced" data-on="Advanced" data-off="Simple">Simple</button>
-    `;
-    setupToggleButtons();
-    setupSectionAdvanced('pos');
-    setupSectionAdvanced('neg');
-    setupAdvancedToggle();
-    const globalCb = document.getElementById('advanced-mode');
-    globalCb.checked = true;
-    globalCb.dispatchEvent(new Event('change'));
-    const posCb = document.getElementById('pos-advanced');
-    posCb.checked = false;
-    posCb.dispatchEvent(new Event('change'));
-    globalCb.checked = false;
-    globalCb.dispatchEvent(new Event('change'));
-    globalCb.checked = true;
-    globalCb.dispatchEvent(new Event('change'));
-    expect(posCb.checked).toBe(true);
-    const posBtn = document.querySelector('.toggle-button[data-target="pos-advanced"]');
-    expect(posBtn.classList.contains('active')).toBe(true);
   });
 });
 
@@ -1076,9 +965,7 @@ describe('List persistence', () => {
     document.body.innerHTML = `
       <select id="pos-select"></select>
       <div id="pos-stack-container">
-        <div class="stack-block" id="pos-stack-1">
-          <div id="pos-order-container"><select id="pos-order-select"></select></div>
-          <div id="pos-depth-container"><select id="pos-depth-select"></select></div>
+        <div class="stack-block" id="pos-stack-1"><select id="pos-order-select"></select>
         </div>
       </div>`;
     updateStackBlocks('pos', 2);
@@ -1099,13 +986,11 @@ describe('List persistence', () => {
           <div class="label-row">
             <label>Stack 1</label>
             <div class="button-col">
-              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-container,pos-depth-container" hidden>
+              <input type="checkbox" id="pos-hide-1" data-targets="pos-input" hidden>
               <button type="button" class="toggle-button hide-button" data-target="pos-hide-1" data-on="☰" data-off="✖">☰</button>
             </div>
           </div>
-          <div class="input-row"><textarea id="pos-input"></textarea></div>
-          <div id="pos-order-container"><select id="pos-order-select"></select></div>
-          <div id="pos-depth-container"><select id="pos-depth-select"></select></div>
+          <div class="input-row"><textarea id="pos-input"></textarea></div><select id="pos-order-select"></select>
         </div>
       </div>`;
     setupStackControls();
@@ -1118,13 +1003,10 @@ describe('List persistence', () => {
     posStack.checked = true;
     posStack.dispatchEvent(new Event('change'));
     const posInput2 = document.getElementById('pos-input-2');
-    const posDepth2 = document.getElementById('pos-depth-container-2');
     expect(posInput2.style.display).toBe('none');
-    expect(posDepth2.style.display).toBe('none');
     allHide.checked = false;
     allHide.dispatchEvent(new Event('change'));
     expect(posInput2.style.display).toBe('');
-    expect(posDepth2.style.display).toBe('');
   });
 
   test('section all-hide applies to new stack blocks', () => {
@@ -1139,13 +1021,11 @@ describe('List persistence', () => {
           <div class="label-row">
             <label>Stack 1</label>
             <div class="button-col">
-              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-container,pos-depth-container" hidden>
+              <input type="checkbox" id="pos-hide-1" data-targets="pos-input" hidden>
               <button type="button" class="toggle-button hide-button" data-target="pos-hide-1" data-on="☰" data-off="✖">☰</button>
             </div>
           </div>
-          <div class="input-row"><textarea id="pos-input"></textarea></div>
-          <div id="pos-order-container"><select id="pos-order-select"></select></div>
-          <div id="pos-depth-container"><select id="pos-depth-select"></select></div>
+          <div class="input-row"><textarea id="pos-input"></textarea></div><select id="pos-order-select"></select>
         </div>
       </div>`;
     setupToggleButtons();
@@ -1159,9 +1039,7 @@ describe('List persistence', () => {
     stackCb.checked = true;
     stackCb.dispatchEvent(new Event('change'));
     const posInput2 = document.getElementById('pos-input-2');
-    const posDepth2 = document.getElementById('pos-depth-container-2');
     expect(posInput2.style.display).toBe('none');
-    expect(posDepth2.style.display).toBe('none');
   });
 
   test('global hide stays off when section toggled visible before stacking', () => {
@@ -1179,13 +1057,11 @@ describe('List persistence', () => {
           <div class="label-row">
             <label>Stack 1</label>
             <div class="button-col">
-              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-container,pos-depth-container" hidden>
+              <input type="checkbox" id="pos-hide-1" data-targets="pos-input" hidden>
               <button type="button" class="toggle-button hide-button" data-target="pos-hide-1" data-on="☰" data-off="✖">☰</button>
             </div>
           </div>
-          <div class="input-row"><textarea id="pos-input"></textarea></div>
-          <div id="pos-order-container"><select id="pos-order-select"></select></div>
-          <div id="pos-depth-container"><select id="pos-depth-select"></select></div>
+          <div class="input-row"><textarea id="pos-input"></textarea></div><select id="pos-order-select"></select>
         </div>
       </div>`;
     setupToggleButtons();
@@ -1203,9 +1079,7 @@ describe('List persistence', () => {
     stackCb.checked = true;
     stackCb.dispatchEvent(new Event('change'));
     const posInput2 = document.getElementById('pos-input-2');
-    const posDepth2 = document.getElementById('pos-depth-container-2');
     expect(posInput2.style.display).toBe('');
-    expect(posDepth2.style.display).toBe('');
     expect(globalHide.checked).toBe(false);
     const secBtn = document.querySelector('.toggle-button[data-target="pos-all-hide"]');
     expect(secBtn.classList.contains('active')).toBe(false);
@@ -1222,13 +1096,11 @@ describe('List persistence', () => {
           <div class="label-row">
             <label>Stack 1</label>
             <div class="button-col">
-              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-container,pos-depth-container" hidden>
+              <input type="checkbox" id="pos-hide-1" data-targets="pos-input" hidden>
               <button type="button" class="toggle-button hide-button" data-target="pos-hide-1" data-on="☰" data-off="✖">☰</button>
             </div>
           </div>
-          <div class="input-row"><textarea id="pos-input"></textarea></div>
-          <div id="pos-order-container"><select id="pos-order-select"></select></div>
-          <div id="pos-depth-container"><select id="pos-depth-select"></select></div>
+          <div class="input-row"><textarea id="pos-input"></textarea></div><select id="pos-order-select"></select>
         </div>
       </div>`;
     setupToggleButtons();
@@ -1241,10 +1113,8 @@ describe('List persistence', () => {
     expect(hideBtn).not.toBeNull();
     hideBtn.click();
     expect(document.getElementById('pos-input-2').style.display).toBe('none');
-    expect(document.getElementById('pos-depth-container-2').style.display).toBe('none');
     hideBtn.click();
     expect(document.getElementById('pos-input-2').style.display).toBe('');
-    expect(document.getElementById('pos-depth-container-2').style.display).toBe('');
   });
 
   test('hide buttons still work after toggling stacks on and off', () => {
@@ -1258,13 +1128,11 @@ describe('List persistence', () => {
           <div class="label-row">
             <label>Stack 1</label>
             <div class="button-col">
-              <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-order-container,pos-depth-container" hidden>
+              <input type="checkbox" id="pos-hide-1" data-targets="pos-input" hidden>
               <button type="button" class="toggle-button hide-button" data-target="pos-hide-1" data-on="☰" data-off="✖">☰</button>
             </div>
           </div>
-          <div class="input-row"><textarea id="pos-input"></textarea></div>
-          <div id="pos-order-container"><select id="pos-order-select"></select></div>
-          <div id="pos-depth-container"><select id="pos-depth-select"></select></div>
+          <div class="input-row"><textarea id="pos-input"></textarea></div><select id="pos-order-select"></select>
         </div>
       </div>`;
     setupToggleButtons();
@@ -1279,11 +1147,9 @@ describe('List persistence', () => {
     hideCb.checked = true;
     hideCb.dispatchEvent(new Event('change'));
     expect(document.getElementById('pos-input').style.display).toBe('none');
-    expect(document.getElementById('pos-depth-container').style.display).toBe('none');
     hideCb.checked = false;
     hideCb.dispatchEvent(new Event('change'));
     expect(document.getElementById('pos-input').style.display).toBe('');
-    expect(document.getElementById('pos-depth-container').style.display).toBe('');
   });
 
   test('stack toggle button can turn stack off again', () => {
@@ -1294,7 +1160,6 @@ describe('List persistence', () => {
       <input type="checkbox" id="pos-shuffle">
       <select id="pos-select"></select>
       <select id="pos-order-select"></select>
-      <select id="pos-depth-select"></select>
       <div id="pos-stack-container">
         <div class="stack-block" id="pos-stack-1"></div>
       </div>`;
@@ -1320,8 +1185,6 @@ describe('List persistence', () => {
       <button type="button" class="toggle-button" data-target="neg-order-random" data-on="Randomized" data-off="Canonical">Canonical</button>
       <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
       <select id="neg-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-      <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
-      <select id="neg-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
     `;
     setupSectionOrder('pos');
     setupSectionOrder('neg');
@@ -1340,19 +1203,20 @@ describe('List persistence', () => {
       <input type="checkbox" id="pos-order-random">
       <button type="button" class="toggle-button" data-target="pos-order-random" data-on="Randomized" data-off="Canonical">Canonical</button>
       <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-      <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+      <select id="pos-order-select-2"><option value="canonical">c</option><option value="random">r</option></select>
     `;
     setupSectionOrder('pos');
     const sel = document.getElementById('pos-order-select');
     sel.value = 'random';
     sel.dispatchEvent(new Event('change'));
-    const dsel = document.getElementById('pos-depth-select');
-    dsel.value = 'random';
-    dsel.dispatchEvent(new Event('change'));
     const btn = document.querySelector('.toggle-button[data-target="pos-order-random"]');
+    expect(btn.classList.contains('indeterminate')).toBe(true);
+    const sel2 = document.getElementById('pos-order-select-2');
+    sel2.value = 'random';
+    sel2.dispatchEvent(new Event('change'));
     expect(btn.classList.contains('active')).toBe(true);
-    dsel.value = 'prepend';
-    dsel.dispatchEvent(new Event('change'));
+    sel.value = 'canonical';
+    sel.dispatchEvent(new Event('change'));
     expect(btn.classList.contains('indeterminate')).toBe(true);
   });
 
@@ -1361,19 +1225,20 @@ describe('List persistence', () => {
       <input type="checkbox" id="pos-order-random">
       <button type="button" class="toggle-button" data-target="pos-order-random" data-on="Randomized" data-off="Canonical">Canonical</button>
       <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-      <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
+      <select id="pos-order-select-2"><option value="canonical">c</option><option value="random">r</option></select>
     `;
     setupSectionOrder('pos');
     const btn = document.querySelector('.toggle-button[data-target="pos-order-random"]');
     const sel = document.getElementById('pos-order-select');
-    const dsel = document.getElementById('pos-depth-select');
     sel.value = 'random';
     sel.dispatchEvent(new Event('change'));
-    dsel.value = 'random';
-    dsel.dispatchEvent(new Event('change'));
+    expect(btn.textContent).toBe('Canonical');
+    const sel2 = document.getElementById('pos-order-select-2');
+    sel2.value = 'random';
+    sel2.dispatchEvent(new Event('change'));
     expect(btn.textContent).toBe('Randomized');
-    dsel.value = 'prepend';
-    dsel.dispatchEvent(new Event('change'));
+    sel.value = 'canonical';
+    sel.dispatchEvent(new Event('change'));
     expect(btn.textContent).toBe('Canonical');
   });
 
@@ -1415,8 +1280,6 @@ describe('List persistence', () => {
       <select id="base-order-select"><option value="canonical">c</option><option value="random">r</option></select>
       <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
       <select id="neg-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-      <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
-      <select id="neg-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
       <button id="base-reroll" class="toggle-button random-button"></button>
       <button id="pos-reroll-1" class="toggle-button random-button"></button>
       <button id="neg-reroll-1" class="toggle-button random-button"></button>

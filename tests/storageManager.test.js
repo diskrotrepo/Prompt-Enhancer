@@ -11,7 +11,6 @@ function setupDOM() {
   document.body.innerHTML = `
     <select id="base-select"></select>
     <textarea id="base-input"></textarea>
-    <select id="pos-depth-select"></select>
   `;
 }
 
@@ -31,26 +30,21 @@ describe('Storage manager', () => {
     expect(after).toBe(json);
   });
 
-  test('importData keeps builtin depth options', () => {
+  test('importData preserves base input and preset values', () => {
     lists.importLists({
       presets: [
         { id: 'b', title: 'b', type: 'base', items: 'x' }
       ]
     });
+    document.getElementById('base-input').value = 'x';
     const json = storage.exportData();
     document.body.innerHTML = `
       <select id="base-select"></select>
       <textarea id="base-input"></textarea>
-      <select id="pos-depth-select"></select>
     `;
     lists.importLists({ presets: [] });
     storage.importData(json);
-    const opts = Array.from(
-      document.querySelectorAll('#pos-depth-select option')
-    ).map(o => o.value);
-    expect(opts).toEqual(
-      expect.arrayContaining(['prepend', 'append', 'random'])
-    );
+    expect(document.getElementById('base-input').value).toBe('x');
   });
 
   test('importData merges lists by default', () => {
@@ -134,12 +128,7 @@ describe('Storage manager', () => {
         <div class="stack-block" id="pos-stack-1">
           <select id="pos-select"></select>
           <div class="input-row"><textarea id="pos-input"></textarea></div>
-          <div id="pos-order-container">
-            <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-          </div>
-          <div id="pos-depth-container">
-            <select id="pos-depth-select"><option value="prepend">p</option><option value="random">r</option></select>
-          </div>
+          <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
         </div>
       </div>
     `;

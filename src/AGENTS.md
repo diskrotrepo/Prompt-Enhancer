@@ -34,11 +34,11 @@ the right edge on mobile while text buttons center on their own line.
 
 ### Depth Control Note
 
-Depth controls now expose mode selects only (prepend/append/random). Depth arrays
-are computed during `collectInputs` based on ordered stacks and base word counts,
-so no index arrays are stored in the DOM. When adding new depth-related inputs,
-ensure the generation-time helpers (`computeDepthCountsFrom`, `buildDepthValues`)
-receive the new stacks so negatives remain aligned with positives.
+Depth is always randomized at generation time. There are no depth selectors in
+the UI; depth arrays are computed during `collectInputs` based on ordered stacks
+and base word counts. When adding new modifier stacks, ensure the generation-time
+helpers (`computeDepthCountsFrom`, `buildDepthValues`) receive the new stacks so
+negatives remain aligned with positives.
 
 ### Delimiter Controls
 
