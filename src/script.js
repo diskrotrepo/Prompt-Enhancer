@@ -85,9 +85,10 @@
    * @param {string} raw - Text entered by the user.
    * @param {boolean} [keepDelim=false] - Use sentence punctuation as the delimiter.
    * @param {string|RegExp} [delimiter=/\\s+/] - Delimiter string or regex for non-sentence splitting.
+   * @param {number} [size=1] - How many delimiters to include per chunk.
    * @returns {string[]} - Array of parsed chunks (delimiters preserved).
    */
-  function parseInput(raw, keepDelim = false, delimiter = /\s+/) {
+  function parseInput(raw, keepDelim = false, delimiter = /\s+/, size = 1) {
     if (!raw) return [];
     const normalized = raw.replace(/\r\n/g, '\n');
     const activeDelimiter = keepDelim ? /[,.!:;?\n]+/ : delimiter;
@@ -111,7 +112,13 @@
     if (lastIndex < normalized.length) {
       items.push(normalized.slice(lastIndex));
     }
-    return items;
+    const groupSize = Math.max(1, parseInt(size, 10) || 1);
+    if (groupSize === 1) return items;
+    const grouped = [];
+    for (let i = 0; i < items.length; i += groupSize) {
+      grouped.push(items.slice(i, i + groupSize).join(''));
+    }
+    return grouped;
   }
 
   /**
@@ -265,11 +272,12 @@
   }
 
   /**
-   * Insert a term into a phrase at a given word position. Trailing delimiters
-   * are preserved so recombination can be a straight concatenation pass.
+   * Insert a term into a phrase at a given word position without injecting
+   * new whitespace. Existing separators remain untouched so recombination is
+   * still a straight concatenation pass.
    * Purpose: Insert modifiers at specific depths in phrases.
-   * Usage Example: insertAtDepth("hello world.", "beautiful", 1) returns "hello beautiful world.".
-   * 50% Rule: Handles tail punctuation separately; wraps with modulo.
+   * Usage Example: insertAtDepth("hello world.", "beautiful", 1) yields "hellobeautiful world.".
+   * 50% Rule: Preserves delimiters, computes word spans, and inserts at a boundary.
    * @param {string} phrase - Base phrase.
    * @param {string} term - Term to insert.
    * @param {number} depth - Word position to insert at.
@@ -305,11 +313,20 @@
       tail = trailSpace[1] + tail;
       body = body.slice(0, -trailSpace[1].length);
     }
-    body = body.trim();
-    const words = body ? body.split(/\s+/) : [];
-    const idx = depth % (words.length + 1);
-    words.splice(idx, 0, term);
-    return head + words.join(' ') + tail;
+    const spans = [];
+    const wordRe = /\S+/g;
+    let match;
+    while ((match = wordRe.exec(body)) !== null) {
+      spans.push([match.index, match.index + match[0].length]);
+    }
+    const count = spans.length;
+    const idx = count ? depth % (count + 1) : 0;
+    let insertAt = 0;
+    if (idx === 0) insertAt = 0;
+    else if (idx >= count) insertAt = body.length;
+    else insertAt = spans[idx - 1][1];
+    body = body.slice(0, insertAt) + term + body.slice(insertAt);
+    return head + body + tail;
   }
 
   /** 
@@ -1488,9 +1505,10 @@
    * 50% Rule: Summarizes intent, documents returned fields, and keeps inline comments for defaults.
    * @param {HTMLSelectElement|null} select - Delimiter select element.
    * @param {HTMLInputElement|null} customInput - Custom delimiter input.
+   * @param {HTMLSelectElement|null} sizeInput - Chunk size input.
    * @returns {{mode: string, delimiter: string, regex: RegExp, joiner: string, sentenceMode: boolean}}
    */
-  function getDelimiterConfigFrom(select, customInput) {
+  function getDelimiterConfigFrom(select, customInput, sizeInput) {
     const mode = select?.value || 'whitespace';
     let delimiter = ' '; // default to whitespace when controls are missing
     let sentenceMode = false;
@@ -1508,7 +1526,8 @@
 
     const regex = sentenceMode ? /[,.!:;?\n]+/ : utils.buildDelimiterRegex(delimiter);
     const joiner = sentenceMode ? ' ' : buildDelimiterJoiner(delimiter);
-    return { mode, delimiter, regex, joiner, sentenceMode };
+    const size = Math.max(1, parseInt(sizeInput?.value, 10) || 1);
+    return { mode, delimiter, regex, joiner, sentenceMode, size };
   }
 
   /**
@@ -1516,12 +1535,14 @@
    * Purpose: Keep delimiter lookup consistent across lists.
    * @param {string} selectId - Select id.
    * @param {string} customId - Custom input id.
-   * @returns {{mode: string, delimiter: string, regex: RegExp, joiner: string, sentenceMode: boolean}}
+   * @param {string} sizeId - Size input id.
+   * @returns {{mode: string, delimiter: string, regex: RegExp, joiner: string, sentenceMode: boolean, size: number}}
    */
-  function getDelimiterConfigById(selectId, customId) {
+  function getDelimiterConfigById(selectId, customId, sizeId) {
     const select = document.getElementById(selectId);
     const customInput = document.getElementById(customId);
-    return getDelimiterConfigFrom(select, customInput);
+    const sizeInput = document.getElementById(sizeId);
+    return getDelimiterConfigFrom(select, customInput, sizeInput);
   }
 
   /**
@@ -1529,13 +1550,14 @@
    * Purpose: Support per-list and per-stack delimiter selection.
    * @param {string} prefix - List prefix (base, pos, neg, divider, lyrics-insert).
    * @param {number} [idx=1] - Stack index (1-based).
-   * @returns {{mode: string, delimiter: string, regex: RegExp, joiner: string, sentenceMode: boolean}}
+   * @returns {{mode: string, delimiter: string, regex: RegExp, joiner: string, sentenceMode: boolean, size: number}}
    */
   function getDelimiterConfigFor(prefix, idx = 1) {
     const suffix = idx > 1 ? `-${idx}` : '';
     return getDelimiterConfigById(
       `${prefix}-delimiter-select${suffix}`,
-      `${prefix}-delimiter-custom${suffix}`
+      `${prefix}-delimiter-custom${suffix}`,
+      `${prefix}-delimiter-size${suffix}`
     );
   }
 
@@ -1575,13 +1597,13 @@
    * Usage Example: parseBaseInput('foo bar') respects the current delimiter mode.
    * 50% Rule: Explicitly documents why base parsing differs from modifiers.
    * @param {string} raw - Raw base input.
-   * @param {{regex: RegExp, sentenceMode: boolean}} delimiter - Delimiter config.
+   * @param {{regex: RegExp, sentenceMode: boolean, size: number}} delimiter - Delimiter config.
    * @returns {string[]} - Parsed base items.
    */
   function parseBaseInput(raw, delimiter) {
     const config = delimiter && delimiter.regex ? delimiter : getDelimiterConfigFrom(null, null);
-    if (config.sentenceMode) return utils.parseInput(raw, true);
-    return utils.parseInput(raw, false, config.regex);
+    if (config.sentenceMode) return utils.parseInput(raw, true, config.regex, config.size);
+    return utils.parseInput(raw, false, config.regex, config.size);
   }
 
   /**
@@ -1590,12 +1612,12 @@
    * Usage Example: parseListInput('a|b', config) splits by the chosen delimiter.
    * 50% Rule: Mirrors parseBaseInput with a different emphasis for clarity.
    * @param {string} raw - Raw list input.
-   * @param {{regex: RegExp}} delimiter - Delimiter config.
+   * @param {{regex: RegExp, size: number}} delimiter - Delimiter config.
    * @returns {string[]} - Parsed items.
    */
   function parseListInput(raw, delimiter) {
     const config = delimiter && delimiter.regex ? delimiter : getDelimiterConfigFrom(null, null);
-    return utils.parseInput(raw, false, config.regex);
+    return utils.parseInput(raw, false, config.regex, config.size);
   }
 
   /**
@@ -1993,7 +2015,6 @@
       root.querySelectorAll('select[id*="-delimiter-select"]')
     );
     selects.forEach(select => {
-      if (select.dataset.delimiterInit) return;
       const match = select.id.match(/^(.*)-delimiter-select(?:-(\d+))?$/);
       if (!match) return;
       const base = match[1];
@@ -2005,9 +2026,11 @@
         if (customRow) customRow.style.display = show ? '' : 'none';
         if (customInput) customInput.disabled = !show;
       };
-      select.addEventListener('change', update);
+      if (!select.dataset.delimiterInit) {
+        select.addEventListener('change', update);
+        select.dataset.delimiterInit = 'true';
+      }
       update();
-      select.dataset.delimiterInit = 'true';
     });
   }
 
@@ -2295,8 +2318,10 @@
       const elems = ids.map(id => document.getElementById(id)).filter(Boolean);
       const update = () => {
         elems.forEach(el => {
+          if (!cb.checked && el.classList.contains('delimiter-custom-row')) return;
           el.style.display = cb.checked ? 'none' : '';
         });
+        if (!cb.checked) setupDelimiterControls();
         const btn = document.querySelector(`.toggle-button[data-target="${cb.id}"]`);
         if (btn) {
           updateButtonState(btn, cb);
@@ -2538,7 +2563,7 @@
       const hideCb = document.createElement('input');
       hideCb.type = 'checkbox';
       hideCb.id = `${prefix}-hide-${idx}`;
-      hideCb.dataset.targets = `${prefix}-input-${idx},${prefix}-delimiter-select-${idx},${prefix}-delimiter-custom-row-${idx}`;
+      hideCb.dataset.targets = `${prefix}-input-${idx},${prefix}-delimiter-label-${idx},${prefix}-delimiter-select-${idx},${prefix}-delimiter-custom-row-${idx},${prefix}-delimiter-size-label-${idx},${prefix}-delimiter-size-${idx}`;
       hideCb.hidden = true;
       btnCol.appendChild(hideCb);
       const hideBtn = document.createElement('button');
@@ -2569,6 +2594,7 @@
 
       const delLabelRow = document.createElement('div');
       delLabelRow.className = 'label-row';
+      delLabelRow.id = `${prefix}-delimiter-label-${idx}`;
       const delLabel = document.createElement('label');
       delLabel.textContent = 'Delimiter';
       delLabel.setAttribute('for', `${prefix}-delimiter-select-${idx}`);
@@ -2598,6 +2624,31 @@
       if (baseDelInput) delInput.value = baseDelInput.value;
       delRow.appendChild(delInput);
       block.appendChild(delRow);
+
+      const sizeLabelRow = document.createElement('div');
+      sizeLabelRow.className = 'label-row';
+      sizeLabelRow.id = `${prefix}-delimiter-size-label-${idx}`;
+      const sizeLabel = document.createElement('label');
+      sizeLabel.textContent = 'Chunk Size';
+      sizeLabel.setAttribute('for', `${prefix}-delimiter-size-${idx}`);
+      sizeLabelRow.appendChild(sizeLabel);
+      block.appendChild(sizeLabelRow);
+
+      const sizeRow = document.createElement('div');
+      sizeRow.className = 'input-row';
+      const sizeInput = document.createElement('select');
+      sizeInput.id = `${prefix}-delimiter-size-${idx}`;
+      sizeInput.className = 'delimiter-size';
+      for (let s = 1; s <= 10; s++) {
+        const opt = document.createElement('option');
+        opt.value = String(s);
+        opt.textContent = String(s);
+        sizeInput.appendChild(opt);
+      }
+      const baseSizeInput = document.getElementById(`${prefix}-delimiter-size`);
+      if (baseSizeInput && baseSizeInput.value) sizeInput.value = baseSizeInput.value;
+      sizeRow.appendChild(sizeInput);
+      block.appendChild(sizeRow);
 
       const orderSel = document.createElement('select');
       orderSel.id = `${prefix}-order-select-${idx}`;
@@ -2840,6 +2891,7 @@
       // Inputs and lists
       '.delimiter-select': 'Choose how this list is chunked (default is whitespace). Delimiters stay with chunks and outputs are concatenated directly.',
       '.delimiter-custom': 'Custom delimiter text; supports \\n for newline and \\t for tab. Delimiters remain attached to chunks.',
+      '.delimiter-size': 'How many delimiters to include per chunk (e.g., 3 means chunk every third delimiter).',
       '#base-select': 'Choose base prompt preset.',
       '#base-input': 'Base prompts are chunked by their delimiter; delimiters stay on the chunks.',
       '#base-order-select': 'Order mode for base prompts (canonical or randomized).',

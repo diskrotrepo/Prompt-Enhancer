@@ -58,6 +58,10 @@ describe('Utility functions', () => {
     expect(parseInput(input, false, '|')).toEqual(['a|', ' b |', 'c|', 'd']);
   });
 
+  test('parseInput groups chunks by size', () => {
+    expect(parseInput('a,b,c,d', false, /,/, 2)).toEqual(['a,b,', 'c,d']);
+  });
+
   test('parseInput preserves delimiters when requested', () => {
     const input = 'a, b. c';
     expect(parseInput(input, true)).toEqual(['a,', ' b.', ' c']);
@@ -141,14 +145,27 @@ describe('Utility functions', () => {
   });
 
   test('insertAtDepth inserts term at depth', () => {
-    expect(insertAtDepth('a b c', 'x', 1)).toBe('a x b c');
+    expect(insertAtDepth('a b c', 'x', 1)).toBe('ax b c');
+  });
+
+  test('insertAtDepth preserves existing spacing without injecting new spaces', () => {
+    expect(insertAtDepth(' a  b ', 'x', 1)).toBe(' ax  b ');
+  });
+
+  test('insertAtDepth preserves delimiters without adding whitespace', () => {
+    expect(insertAtDepth('a,b,', 'x', 1, ',')).toBe('a,bx,');
   });
 });
 
 describe('Prompt building', () => {
   test('buildVersions builds positive and negative prompts', () => {
     const out = buildVersions(['cat'], ['bad'], ['good'], 20);
-    expect(out).toEqual({ positive: 'good catgood cat', negative: 'bad catbad cat' });
+    expect(out).toEqual({ positive: 'goodcatgoodcat', negative: 'badcatbadcat' });
+  });
+
+  test('buildVersions does not inject spaces when chunks are compact', () => {
+    const out = buildVersions(['ab'], ['n'], ['x'], 10);
+    expect(out).toEqual({ positive: 'xabxabxab', negative: 'nabnabnab' });
   });
 
   test('buildVersions addendum method appends negatives after positives', () => {
@@ -170,14 +187,14 @@ describe('Prompt building', () => {
       true
     );
     expect(out).toEqual({
-      positive: 'good catgood cat',
-      negative: 'good catgood catbadbad'
+      positive: 'goodcatgoodcat',
+      negative: 'goodcatgoodcatbadbad'
     });
   });
 
   test('buildVersions can include positive terms for negatives', () => {
     const out = buildVersions(['cat'], ['bad'], ['good'], 20, true);
-    expect(out).toEqual({ positive: 'good cat', negative: 'bad good cat' });
+    expect(out).toEqual({ positive: 'goodcatgoodcat', negative: 'badgoodcatbadgoodcat' });
   });
 
   test('buildVersions addendum respects include-positive flag', () => {
@@ -198,12 +215,12 @@ describe('Prompt building', () => {
       undefined,
       true
     );
-    expect(out).toEqual({ positive: 'good cat', negative: 'good catbad' });
+    expect(out).toEqual({ positive: 'goodcatgoodcat', negative: 'goodcatgoodcatbadbad' });
   });
 
   test('buildVersions applies negative depth after positives', () => {
     const out = buildVersions(['cat'], ['bad'], ['good'], 20, true, [], true, 1, 1, [1], [2]);
-    expect(out).toEqual({ positive: 'cat good', negative: 'cat good bad' });
+    expect(out).toEqual({ positive: 'catgoodcatgood', negative: 'badcatgoodbadcatgood' });
   });
 
   test('buildVersions respects depth arrays per stack', () => {
@@ -220,7 +237,7 @@ describe('Prompt building', () => {
       [[1], [2]],
       [1]
     );
-    expect(out).toEqual({ positive: 'a x b y c', negative: 'a n b c' });
+    expect(out).toEqual({ positive: 'ax b cyax b cy', negative: 'an b can b c' });
   });
 
   test('negative depth accounts for stacked positives', () => {
@@ -237,7 +254,7 @@ describe('Prompt building', () => {
       [1],
       [5]
     );
-    expect(out).toEqual({ positive: 'foo good great bar baz', negative: 'foo good great bar baz bad' });
+    expect(out).toEqual({ positive: 'foogood bargreat baz', negative: 'foogoodbad bargreat baz' });
   });
 
   test('append depths derived from computeDepthCounts place negatives last', () => {
@@ -255,8 +272,8 @@ describe('Prompt building', () => {
       [3]
     );
     expect(out).toEqual({
-      positive: 'foo bar goodfoo bar goodfoo bar good',
-      negative: 'foo bar good badfoo bar good badfoo bar good bad'
+      positive: 'foo bargoodfoo bargoodfoo bargood',
+      negative: 'badfoo bargoodbadfoo bargoodbadfoo bargood'
     });
   });
 
@@ -274,7 +291,7 @@ describe('Prompt building', () => {
       [0],
       [3]
     );
-    expect(out).toEqual({ positive: 'pos a b', negative: 'pos a b neg' });
+    expect(out).toEqual({ positive: 'posa bposa b', negative: 'negposa bnegposa b' });
   });
 
   test('stacked modifiers handle prepend and append depths', () => {
@@ -292,8 +309,8 @@ describe('Prompt building', () => {
       [0]
     );
     expect(out).toEqual({
-      positive: 'pre foo bar postpre foo bar postpre foo bar post',
-      negative: 'n foo barn foo barn foo bar'
+      positive: 'postprefoo barpostprefoo barpostprefoo bar',
+      negative: 'nfoo barnfoo barnfoo bar'
     });
   });
 
@@ -311,7 +328,7 @@ describe('Prompt building', () => {
     const out = buildVersions(['a.\n', 'b.\n'], ['n'], ['p'], 30);
     expect(out.positive.includes(',')).toBe(false);
     expect(out.negative.includes(',')).toBe(false);
-    expect(out.positive.startsWith('p a.\n')).toBe(true);
+    expect(out.positive.startsWith('pa.\n')).toBe(true);
     expect(out.positive.endsWith('\n')).toBe(true);
   });
 
@@ -375,7 +392,7 @@ describe('Prompt building', () => {
       2
     );
     Math.random = orig;
-    expect(out).toEqual({ positive: 'p1 p1 x', negative: 'n1 n1 x' });
+    expect(out).toEqual({ positive: 'p1xp1p2xp2', negative: 'n1xn1n2xn2' });
   });
 
   test('buildVersions applies separate orders per stack', () => {
@@ -395,8 +412,8 @@ describe('Prompt building', () => {
       [[0, 1], [1, 0]],
       [[1, 0], [0, 1]]
     );
-    expect(out.positive).toBe('p1 p2 xp2 p1 x');
-    expect(out.negative).toBe('n2 n1 xn1 n2 x');
+    expect(out.positive).toBe('p1xp2p2xp1p1xp2p2xp1');
+    expect(out.negative).toBe('n2xn1n1xn2n2xn1n1xn2');
   });
 
   test('buildVersions accepts different lists per stack', () => {
@@ -411,8 +428,8 @@ describe('Prompt building', () => {
       2,
       2
     );
-    expect(out.positive).toBe('p1 p2 xp1 p2 x');
-    expect(out.negative).toBe('n1 n2 xn1 n2 x');
+    expect(out.positive).toBe('p1xp2p1xp2p1xp2p1xp2');
+    expect(out.negative).toBe('n1xn2n1xn2n1xn2n1xn2');
   });
 
   test('stacking works with natural dividers', () => {
@@ -426,10 +443,8 @@ describe('Prompt building', () => {
       2,
       2
     );
-    expect(out.positive).not.toMatch(/p1\nfoo /);
-    expect(out.negative).not.toMatch(/n1\nfoo /);
-    const divMatches = out.positive.match(/\nfoo /g) || [];
-    expect(divMatches.length).toBeGreaterThan(0);
+    expect(out.positive).toContain('\nfoo ');
+    expect(out.negative).toContain('\nfoo ');
   });
 
   test('negative preserves divider placement when built on positives', () => {
@@ -441,8 +456,8 @@ describe('Prompt building', () => {
       true,
       ['\nfoo ']
     );
-    expect(out.positive).toBe('good cat\nfoo good cat\nfoo good cat');
-    expect(out.negative).toBe('bad good cat\nfoo bad good cat\nfoo bad good cat');
+    expect(out.positive).toBe('goodcat\nfoo goodcat\nfoo goodcat\nfoo ');
+    expect(out.negative).toBe('badgoodcat\nfoo badgoodcat\nfoo badgoodcat\nfoo ');
   });
 
   test('random base order keeps negatives aligned', () => {
@@ -461,7 +476,7 @@ describe('Prompt building', () => {
       null,
       [1, 0]
     );
-    const expectedNeg = out.positive.replace(/p /g, 'n p ');
+    const expectedNeg = out.positive.replace(/p/g, 'np');
     expect(out.negative).toBe(expectedNeg);
   });
 
@@ -482,8 +497,8 @@ describe('Prompt building', () => {
       [3]
     );
     expect(out).toEqual({
-      positive: 'First פלוס (one. 加) פלוס Second. 加',
-      negative: 'First פלוס (one. מינוס 加) פלוס Second. מינוס 加'
+      positive: '加Firstפלוס (one.加)פלוס Second.',
+      negative: 'מינוס加Firstפלוס (one.מינוס加)פלוס Second.'
     });
   });
 });
@@ -516,8 +531,8 @@ describe('End-to-end generation', () => {
     Math.random = jest.fn().mockReturnValue(0);
     ui.generate();
     Math.random = orig;
-    expect(document.getElementById('positive-output').textContent).toBe('P A D P A ');
-    expect(document.getElementById('negative-output').textContent).toBe('N A D N A ');
+    expect(document.getElementById('positive-output').textContent).toBe('PA D PA ');
+    expect(document.getElementById('negative-output').textContent).toBe('NA D NA ');
   });
 });
 

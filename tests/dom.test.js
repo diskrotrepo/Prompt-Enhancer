@@ -45,11 +45,20 @@ describe('Button layout', () => {
     const posHide = dom.window.document.getElementById('pos-hide-1');
     const negHide = dom.window.document.getElementById('neg-hide-1');
     expect(baseHide.dataset.targets).toContain('base-input');
+    expect(baseHide.dataset.targets).toContain('base-delimiter-label');
     expect(baseHide.dataset.targets).toContain('base-delimiter-select');
+    expect(baseHide.dataset.targets).toContain('base-delimiter-size-label');
+    expect(baseHide.dataset.targets).toContain('base-delimiter-size');
     expect(posHide.dataset.targets).toContain('pos-input');
+    expect(posHide.dataset.targets).toContain('pos-delimiter-label');
     expect(posHide.dataset.targets).toContain('pos-delimiter-select');
+    expect(posHide.dataset.targets).toContain('pos-delimiter-size-label');
+    expect(posHide.dataset.targets).toContain('pos-delimiter-size');
     expect(negHide.dataset.targets).toContain('neg-input');
+    expect(negHide.dataset.targets).toContain('neg-delimiter-label');
     expect(negHide.dataset.targets).toContain('neg-delimiter-select');
+    expect(negHide.dataset.targets).toContain('neg-delimiter-size-label');
+    expect(negHide.dataset.targets).toContain('neg-delimiter-size');
   });
 
   // Layout adaptation: label rows should wrap so buttons never overflow their container

@@ -70,7 +70,7 @@
               <button type="button" id="base-delete" class="delete-button icon-button" title="Delete" data-help="Remove base prompt list from presets.">&#128465;&#65039;</button>
               <button type="button" id="base-reroll" class="toggle-button icon-button random-button" title="Reroll">&#127922;</button>
               <button type="button" class="copy-button icon-button" data-target="base-input" title="Copy">&#128203;</button>
-              <input type="checkbox" id="base-hide" data-targets="base-input,base-delimiter-select,base-delimiter-custom-row" hidden>
+              <input type="checkbox" id="base-hide" data-targets="base-input,base-delimiter-label,base-delimiter-select,base-delimiter-custom-row,base-delimiter-size-label,base-delimiter-size" hidden>
               <button type="button" class="toggle-button icon-button hide-button" data-target="base-hide" data-on="☰" data-off="✖">☰</button>
             </div>
           </div>
@@ -78,7 +78,7 @@
           <div class="input-row">
             <textarea id="base-input" rows="4" placeholder="Enter text; chunks keep the delimiter above"></textarea>
           </div>
-          <div class="label-row">
+          <div class="label-row" id="base-delimiter-label">
             <label for="base-delimiter-select">Delimiter</label>
           </div>
           <select id="base-delimiter-select" class="delimiter-select">
@@ -93,6 +93,23 @@
           </select>
           <div class="input-row delimiter-custom-row" id="base-delimiter-custom-row" style="display:none">
             <input type="text" id="base-delimiter-custom" class="delimiter-custom" placeholder="Custom delimiter (use \\n for newline)">
+          </div>
+          <div class="label-row" id="base-delimiter-size-label">
+            <label for="base-delimiter-size">Chunk Size</label>
+          </div>
+          <div class="input-row">
+            <select id="base-delimiter-size" class="delimiter-size">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4" selected>4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+              <option value="10">10</option>
+            </select>
           </div>
           <select id="base-order-select" hidden></select>
         </div>
@@ -125,7 +142,7 @@
                     <button type="button" id="pos-delete-1" class="delete-button icon-button" title="Delete" data-help="Remove positive modifier list from presets.">&#128465;&#65039;</button>
                     <button type="button" id="pos-reroll-1" class="toggle-button icon-button random-button" title="Reroll">&#127922;</button>
                     <button type="button" class="copy-button icon-button" data-target="pos-input" title="Copy">&#128203;</button>
-                    <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-delimiter-select,pos-delimiter-custom-row" hidden>
+                    <input type="checkbox" id="pos-hide-1" data-targets="pos-input,pos-delimiter-label,pos-delimiter-select,pos-delimiter-custom-row,pos-delimiter-size-label,pos-delimiter-size" hidden>
                     <button type="button" class="toggle-button icon-button hide-button" data-target="pos-hide-1" data-on="☰" data-off="✖">☰</button>
                   </div>
                 </div>
@@ -135,7 +152,7 @@
               <div class="input-row">
                 <textarea id="pos-input" rows="2" placeholder="Positive modifiers (delimiter stays on chunks)"></textarea>
               </div>
-              <div class="label-row">
+              <div class="label-row" id="pos-delimiter-label">
                 <label for="pos-delimiter-select">Delimiter</label>
               </div>
               <select id="pos-delimiter-select" class="delimiter-select">
@@ -150,6 +167,23 @@
               </select>
               <div class="input-row delimiter-custom-row" id="pos-delimiter-custom-row" style="display:none">
                 <input type="text" id="pos-delimiter-custom" class="delimiter-custom" placeholder="Custom delimiter (use \\n for newline)">
+              </div>
+              <div class="label-row" id="pos-delimiter-size-label">
+                <label for="pos-delimiter-size">Chunk Size</label>
+              </div>
+              <div class="input-row">
+                <select id="pos-delimiter-size" class="delimiter-size">
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4" selected>4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
+                </select>
               </div>
               <select id="pos-order-select" hidden></select>
             </div>
@@ -188,7 +222,7 @@
                     <button type="button" id="neg-delete-1" class="delete-button icon-button" title="Delete" data-help="Remove negative modifier list from presets.">&#128465;&#65039;</button>
                     <button type="button" id="neg-reroll-1" class="toggle-button icon-button random-button" title="Reroll">&#127922;</button>
                     <button type="button" class="copy-button icon-button" data-target="neg-input" title="Copy">&#128203;</button>
-                    <input type="checkbox" id="neg-hide-1" data-targets="neg-input,neg-delimiter-select,neg-delimiter-custom-row" hidden>
+                    <input type="checkbox" id="neg-hide-1" data-targets="neg-input,neg-delimiter-label,neg-delimiter-select,neg-delimiter-custom-row,neg-delimiter-size-label,neg-delimiter-size" hidden>
                     <button type="button" class="toggle-button icon-button hide-button" data-target="neg-hide-1" data-on="☰" data-off="✖">☰</button>
                   </div>
                 </div>
@@ -198,7 +232,7 @@
               <div class="input-row">
                 <textarea id="neg-input" rows="3" placeholder="Negative modifiers (delimiter stays on chunks)"></textarea>
               </div>
-              <div class="label-row">
+              <div class="label-row" id="neg-delimiter-label">
                 <label for="neg-delimiter-select">Delimiter</label>
               </div>
               <select id="neg-delimiter-select" class="delimiter-select">
@@ -214,6 +248,23 @@
               <div class="input-row delimiter-custom-row" id="neg-delimiter-custom-row" style="display:none">
                 <input type="text" id="neg-delimiter-custom" class="delimiter-custom" placeholder="Custom delimiter (use \\n for newline)">
               </div>
+              <div class="label-row" id="neg-delimiter-size-label">
+                <label for="neg-delimiter-size">Chunk Size</label>
+              </div>
+              <div class="input-row">
+                <select id="neg-delimiter-size" class="delimiter-size">
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4" selected>4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
+                </select>
+              </div>
               <select id="neg-order-select" hidden></select>
             </div>
           </div>
@@ -227,7 +278,7 @@
                 <button type="button" id="divider-delete" class="delete-button icon-button" title="Delete" data-help="Remove divider list from presets.">&#128465;&#65039;</button>
                 <button type="button" id="divider-reroll" class="toggle-button icon-button random-button" data-target="divider-shuffle" title="Reroll">&#127922;</button>
                 <button type="button" class="copy-button icon-button" data-target="divider-input" title="Copy">&#128203;</button>
-                <input type="checkbox" id="divider-hide" data-targets="divider-input,divider-delimiter-select,divider-delimiter-custom-row" hidden>
+                <input type="checkbox" id="divider-hide" data-targets="divider-input,divider-delimiter-label,divider-delimiter-select,divider-delimiter-custom-row,divider-delimiter-size-label,divider-delimiter-size" hidden>
                 <button type="button" class="toggle-button icon-button hide-button" data-target="divider-hide" data-on="☰" data-off="✖">☰</button>
               </div>
           </div>
@@ -235,7 +286,7 @@
           <div class="input-row">
             <textarea id="divider-input" rows="2" placeholder="Divider phrases (delimiter stays on chunks)"></textarea>
           </div>
-          <div class="label-row">
+          <div class="label-row" id="divider-delimiter-label">
             <label for="divider-delimiter-select">Delimiter</label>
           </div>
           <select id="divider-delimiter-select" class="delimiter-select">
@@ -250,6 +301,23 @@
           </select>
           <div class="input-row delimiter-custom-row" id="divider-delimiter-custom-row" style="display:none">
             <input type="text" id="divider-delimiter-custom" class="delimiter-custom" placeholder="Custom delimiter (use \\n for newline)">
+          </div>
+          <div class="label-row" id="divider-delimiter-size-label">
+            <label for="divider-delimiter-size">Chunk Size</label>
+          </div>
+          <div class="input-row">
+            <select id="divider-delimiter-size" class="delimiter-size">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4" selected>4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+              <option value="10">10</option>
+            </select>
           </div>
         </div>
         <!-- Character length limit selection -->
@@ -323,7 +391,7 @@
                   <button type="button" id="lyrics-insert-save" class="save-button icon-button" title="Save">&#128190;</button>
                   <button type="button" id="lyrics-insert-delete" class="delete-button icon-button" title="Delete" data-help="Remove lyrics insertion list." >&#128465;&#65039;</button>
                   <button type="button" class="copy-button icon-button" data-target="lyrics-insert-input" title="Copy">&#128203;</button>
-                  <input type="checkbox" id="lyrics-insert-hide" data-targets="lyrics-insert-input,lyrics-insert-delimiter-select,lyrics-insert-delimiter-custom-row,lyrics-insert-interval,lyrics-insert-stack,lyrics-insert-random" hidden>
+                  <input type="checkbox" id="lyrics-insert-hide" data-targets="lyrics-insert-input,lyrics-insert-delimiter-label,lyrics-insert-delimiter-select,lyrics-insert-delimiter-custom-row,lyrics-insert-delimiter-size-label,lyrics-insert-delimiter-size,lyrics-insert-interval,lyrics-insert-stack,lyrics-insert-random" hidden>
                   <button type="button" class="toggle-button icon-button hide-button" data-target="lyrics-insert-hide" data-on="☰" data-off="✖">☰</button>
                 </div>
             </div>
@@ -331,7 +399,7 @@
             <div class="input-row">
               <textarea id="lyrics-insert-input" rows="2" placeholder="Insert terms"></textarea>
             </div>
-            <div class="label-row">
+            <div class="label-row" id="lyrics-insert-delimiter-label">
               <label for="lyrics-insert-delimiter-select">Delimiter</label>
             </div>
             <select id="lyrics-insert-delimiter-select" class="delimiter-select">
@@ -346,6 +414,23 @@
             </select>
             <div class="input-row delimiter-custom-row" id="lyrics-insert-delimiter-custom-row" style="display:none">
               <input type="text" id="lyrics-insert-delimiter-custom" class="delimiter-custom" placeholder="Custom delimiter (use \\n for newline)">
+            </div>
+            <div class="label-row" id="lyrics-insert-delimiter-size-label">
+              <label for="lyrics-insert-delimiter-size">Chunk Size</label>
+            </div>
+            <div class="input-row">
+              <select id="lyrics-insert-delimiter-size" class="delimiter-size">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4" selected>4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+              </select>
             </div>
             <div class="label-row">
               <label for="lyrics-insert-interval">Insert Every</label>

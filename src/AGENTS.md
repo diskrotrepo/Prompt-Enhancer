@@ -44,11 +44,11 @@ negatives remain aligned with positives.
 
 Each list now owns its own delimiter dropdown (e.g., `base-delimiter-select`,
 `pos-delimiter-select`, `neg-delimiter-select`, `divider-delimiter-select`) plus
-optional custom inputs. Use `getDelimiterConfigFor`, `parseBaseInput`,
-`parseListInput`, and `collectStackInputs` so new logic respects per-list and
-per-stack delimiters. Chunking preserves the delimiter at the end of each chunk,
-and prompt recombination is a straight concatenation pass (no new delimiters
-inserted).
+optional custom inputs and a chunk size input (`*-delimiter-size`). Use
+`getDelimiterConfigFor`, `parseBaseInput`, `parseListInput`, and
+`collectStackInputs` so new logic respects per-list and per-stack delimiters and
+sizes. Chunking preserves the delimiter at the end of each chunk, and prompt
+recombination is a straight concatenation pass (no new delimiters inserted).
 
 Preset items are stored as strings only. Legacy array formats are no longer
 normalized during load or import; update data sources to provide string items.
