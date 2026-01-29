@@ -2034,6 +2034,30 @@
     });
   }
 
+  /**
+   * Apply default chunk sizes once for older persisted states.
+   * Purpose: Migrate legacy default size values to the new default of 4.
+   * Usage: Called during initializeUI after state load.
+   * 50% Rule: Checks a hidden marker to avoid overriding user choices repeatedly.
+   * @returns {boolean} - Whether migration ran and should be persisted.
+   */
+  function applyDefaultDelimiterSizes() {
+    const marker = document.getElementById('delimiter-size-defaulted');
+    if (!marker || marker.value === 'true') return false;
+    const sizes = Array.from(document.querySelectorAll('select.delimiter-size'));
+    if (sizes.length) {
+      const allOnes = sizes.every(sel => !sel.value || sel.value === '1');
+      if (allOnes) {
+        sizes.forEach(sel => {
+          sel.value = '4';
+          sel.dispatchEvent(new Event('change'));
+        });
+      }
+    }
+    marker.value = 'true';
+    return true;
+  }
+
   /** 
    * Apply active or indeterminate classes without changing checkbox state.
    * Purpose: Reflect state visually.
@@ -3048,6 +3072,7 @@
     setupStackControls();
     setupShuffleAll();
     setupHideToggles();
+    setupDelimiterControls();
     reflectAllRandom();
     reflectAllHide();
 
@@ -3060,6 +3085,10 @@
     setupCopyButtons();
     setupDataButtons();
     setupHelpMode();
+
+    if (applyDefaultDelimiterSizes()) {
+      storage.persist();
+    }
 
     const baseSave = document.getElementById('base-save');
     if (baseSave) baseSave.addEventListener('click', () => lists.saveList('base'));
