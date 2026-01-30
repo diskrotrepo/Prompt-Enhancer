@@ -7,9 +7,10 @@ describe('scrolling policy', () => {
 
   test('only window bodies may scroll', () => {
     const autoMatches = css.match(/overflow:\s*auto;/g) || [];
-    expect(autoMatches.length).toBe(2);
+    expect(autoMatches.length).toBe(3);
     expect(css).toMatch(/\.app-window\.is-maximized\s*>\s*\.box-body[\s\S]*?overflow:\s*auto;/);
     expect(css).toMatch(/\.app-window\s*>\s*\.box-body[\s\S]*?overflow:\s*auto;/);
+    expect(css).toMatch(/\.prompt-body[\s\S]*?overflow:\s*auto;/);
     expect(css).not.toMatch(/overflow:\s*scroll;/);
     expect(css).toMatch(/\.chunk-input[\s\S]*?overflow:\s*hidden;/);
     expect(css).toMatch(/\.chunk-input[\s\S]*?resize:\s*none;/);

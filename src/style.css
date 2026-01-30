@@ -690,6 +690,18 @@ textarea,
   max-width: 260px;
 }
 
+.root-actions {
+  margin-top: auto;
+  position: sticky;
+  bottom: 0;
+  padding: 0.5rem 0 0;
+  background: linear-gradient(180deg, rgba(18, 22, 32, 0), rgba(18, 22, 32, 0.65));
+}
+
+.root-actions .add-button {
+  margin-top: 0;
+}
+
 .mix-wrapper,
 .chunk-wrapper {
   position: relative;
@@ -828,7 +840,8 @@ textarea,
 }
 
 .mix-box,
-.chunk-box {
+.chunk-box,
+.variable-box {
   padding: 0;
   border-radius: 4px;
   border: 1px solid rgba(90, 96, 112, 0.7);
@@ -858,6 +871,17 @@ textarea,
     radial-gradient(circle at 68% 30%, rgba(196, 128, 214, 0.22) 0 12px, transparent 16px),
     radial-gradient(circle at 34% 74%, rgba(168, 110, 192, 0.2) 0 14px, transparent 18px),
     linear-gradient(135deg, rgba(152, 64, 164, 0.98), rgba(94, 42, 128, 0.98));
+}
+
+.variable-box {
+  border-color: rgba(120, 178, 168, 0.9);
+  color: #ecfffb;
+  background:
+    linear-gradient(0deg, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.28)),
+    radial-gradient(circle at 12% 18%, rgba(164, 214, 206, 0.24) 0 12px, transparent 16px),
+    radial-gradient(circle at 68% 30%, rgba(132, 186, 176, 0.22) 0 12px, transparent 16px),
+    radial-gradient(circle at 34% 74%, rgba(110, 164, 154, 0.2) 0 14px, transparent 18px),
+    linear-gradient(135deg, rgba(92, 148, 138, 0.98), rgba(60, 100, 92, 0.98));
 }
 
 /* Distinct colors per mix and string to improve visual separation */
@@ -1055,6 +1079,12 @@ textarea,
   max-height: none;
 }
 
+.variable-box .box-body {
+  padding: 0.75rem;
+  overflow: visible;
+  max-height: none;
+}
+
 .control-block.is-disabled {
   opacity: 0.45;
   filter: grayscale(0.3);
@@ -1176,6 +1206,11 @@ textarea,
   border-color: rgba(206, 120, 198, 0.7);
 }
 
+.variable-box .box-header {
+  background: linear-gradient(90deg, rgba(112, 160, 150, 0.95), rgba(74, 116, 108, 0.92));
+  border-color: rgba(140, 186, 176, 0.7);
+}
+
 .mix-box .box-header,
 .chunk-box .box-header,
 .mix-box .box-header .box-title,
@@ -1188,8 +1223,20 @@ textarea,
   text-shadow: none;
 }
 
+.variable-box .box-header,
+.variable-box .box-header .box-title,
+.variable-box .box-header .icon-button,
+.variable-box .box-header .button-col button {
+  color: #06080c !important;
+  text-shadow: none;
+}
+
 .mix-box .box-body,
 .chunk-box .box-body {
+  color: #f5f7ff;
+}
+
+.variable-box .box-body {
   color: #f5f7ff;
 }
 
@@ -1200,12 +1247,23 @@ textarea,
   color: #f5f7ff;
 }
 
+.variable-box .box-body label,
+.variable-box .box-body button {
+  color: #f5f7ff;
+}
+
 .mix-box .box-body input,
 .mix-box .box-body select,
 .mix-box .box-body textarea,
 .chunk-box .box-body input,
 .chunk-box .box-body select,
 .chunk-box .box-body textarea {
+  color: #f5f7ff;
+  caret-color: #f5f7ff;
+}
+
+.variable-box .box-body select,
+.variable-box .box-body input {
   color: #f5f7ff;
   caret-color: #f5f7ff;
 }

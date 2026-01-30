@@ -98,6 +98,12 @@
     return isActive(exactBtn);
   }
 
+  function escapeSelector(value) {
+    if (typeof value !== 'string') return '';
+    if (typeof CSS !== 'undefined' && CSS.escape) return CSS.escape(value);
+    return value.replace(/["\\]/g, '\\$&');
+  }
+
   const mobileQuery =
     typeof window !== 'undefined' && typeof window.matchMedia === 'function'
       ? window.matchMedia('(max-width: 768px)')
@@ -208,7 +214,19 @@
     return buildChunkList(input?.value || '', delimiterConfig, limit, exact, randomize);
   }
 
-  function evaluateMixBox(boxEl) {
+  function evaluateVariableBox(boxEl, context) {
+    const select = boxEl.querySelector('.variable-select');
+    const targetId = select?.value || '';
+    if (!targetId) return [];
+    const root = context?.root || document;
+    const target = root.querySelector(`[data-box-id="${escapeSelector(targetId)}"]`);
+    if (!target) return [];
+    if (target.classList.contains('mix-box')) return evaluateMixBox(target, context).slice();
+    if (target.classList.contains('chunk-box')) return evaluateChunkBox(target).slice();
+    return [];
+  }
+
+  function evaluateMixBox(boxEl, context = {}) {
     const limitInput = boxEl.querySelector('.length-input');
     const randomBtn = boxEl.querySelector('.random-toggle');
     const sizeSelect = boxEl.querySelector('.delimiter-size');
@@ -220,15 +238,24 @@
     const preserve = sizeSelect?.value === 'preserve';
     const delimiterConfig = getDelimiterConfig(boxEl);
 
+    const root = context.root || boxEl.closest('.mix-root') || document;
+    const visiting = context.visiting || new Set();
+    const boxId = boxEl.dataset.boxId;
+    if (boxId) {
+      if (visiting.has(boxId)) return [];
+      visiting.add(boxId);
+    }
+
     const childContainer = boxEl.querySelector('.mix-children');
     const children = childContainer
       ? Array.from(childContainer.children)
-          .map(child => child.querySelector('.mix-box, .chunk-box'))
+          .map(child => child.querySelector('.mix-box, .chunk-box, .variable-box'))
           .filter(Boolean)
       : [];
 
     const lists = children.map(child => {
-      if (child.classList.contains('mix-box')) return evaluateMixBox(child);
+      if (child.classList.contains('mix-box')) return evaluateMixBox(child, { root, visiting });
+      if (child.classList.contains('variable-box')) return evaluateVariableBox(child, { root, visiting });
       return evaluateChunkBox(child);
     });
 
@@ -236,8 +263,11 @@
     const outputString = mixed.join('');
     if (outputEl) outputEl.textContent = outputString;
 
-    if (preserve) return mixed;
-    return buildChunkList(outputString, delimiterConfig, limit, exact, false);
+    const result = preserve
+      ? mixed
+      : buildChunkList(outputString, delimiterConfig, limit, exact, false);
+    if (boxId) visiting.delete(boxId);
+    return result;
   }
 
   function generate(rootEl) {
@@ -247,7 +277,7 @@
       .filter(child => child.classList.contains('mix-wrapper'))
       .map(wrapper => wrapper.querySelector('.mix-box'))
       .filter(Boolean);
-    mixBoxes.forEach(box => evaluateMixBox(box));
+    mixBoxes.forEach(box => evaluateMixBox(box, { root, visiting: new Set() }));
   }
 
   // ======== Box Creation ========
@@ -286,6 +316,61 @@
   function syncTextareaHeights(scope) {
     const root = scope || document;
     root.querySelectorAll('.chunk-input').forEach(autoResizeTextarea);
+  }
+
+  function getBoxTitle(box) {
+    const titleInput = box.querySelector('.box-title');
+    if (titleInput) {
+      if (typeof titleInput.value === 'string') return titleInput.value.trim() || titleInput.value;
+      return (titleInput.textContent || '').trim();
+    }
+    return box.dataset.boxId || 'Untitled';
+  }
+
+  function refreshVariableOptions(scope) {
+    const windowEl = scope?.closest?.('.app-window') || (scope?.classList?.contains?.('app-window') ? scope : null);
+    const root = windowEl?.querySelector('.mix-root') || scope?.querySelector?.('.mix-root') || document.querySelector('.mix-root') || document;
+    const templateRoot = root.closest('.window-template');
+    const sourceBoxes = Array.from(root.querySelectorAll('.mix-box, .chunk-box'))
+      .filter(box => templateRoot || !box.closest('.window-template'));
+    const sources = sourceBoxes
+      .map(box => ({
+        id: box.dataset.boxId,
+        label: `${box.classList.contains('mix-box') ? 'Mix' : 'String'}: ${getBoxTitle(box)}`
+      }))
+      .filter(entry => entry.id);
+    const selects = (windowEl || root).querySelectorAll('.variable-select');
+    selects.forEach(select => {
+      const current =
+        select.value ||
+        select.closest('.variable-box')?.dataset.targetId ||
+        '';
+      select.innerHTML = '';
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = 'Select a mix or string...';
+      select.appendChild(placeholder);
+      sources.forEach(source => {
+        const option = document.createElement('option');
+        option.value = source.id;
+        option.textContent = source.label;
+        select.appendChild(option);
+      });
+      if (current && sources.some(source => source.id === current)) {
+        select.value = current;
+      }
+      const box = select.closest('.variable-box');
+      if (box && select.value) {
+        box.dataset.targetId = select.value;
+      }
+      if (box) {
+        const title = box.querySelector('.box-title');
+        const target = sourceBoxes.find(sourceBox => sourceBox.dataset.boxId === select.value);
+        if (title) {
+          title.textContent = target ? `Copy of ${getBoxTitle(target)}` : 'Variable';
+        }
+      }
+    });
   }
 
   function createMixWrapper(config = {}, context = {}) {
@@ -331,6 +416,9 @@
           });
           childContainer.appendChild(childWrapper);
           prevColor = childWrapper.querySelector('.mix-box')?.dataset.color || prevColor;
+        } else if (child.type === 'variable') {
+          const childWrapper = createVariableWrapper(child);
+          childContainer.appendChild(childWrapper);
         } else {
           const childWrapper = createChunkWrapper(child, {
             parentColor: box.dataset.color,
@@ -379,6 +467,19 @@
     return wrapper;
   }
 
+  function createVariableWrapper(config = {}) {
+    const template = document.getElementById('variable-box-template');
+    const fragment = template.content.cloneNode(true);
+    const wrapper = fragment.querySelector('.variable-wrapper');
+    const box = fragment.querySelector('.variable-box');
+    const select = fragment.querySelector('.variable-select');
+
+    box.dataset.boxId = config.id || `var-${++idCounter}`;
+    if (config.targetId) box.dataset.targetId = config.targetId;
+    if (select && config.targetId) select.value = config.targetId;
+    return wrapper;
+  }
+
   function serializeChunkBox(box) {
     const titleInput = box.querySelector('.box-title');
     const input = box.querySelector('.chunk-input');
@@ -401,6 +502,15 @@
     };
   }
 
+  function serializeVariableBox(box) {
+    const select = box.querySelector('.variable-select');
+    return {
+      type: 'variable',
+      id: box.dataset.boxId,
+      targetId: select?.value || box.dataset.targetId || ''
+    };
+  }
+
   function serializeMixBox(box) {
     const titleInput = box.querySelector('.box-title');
     const limitInput = box.querySelector('.length-input');
@@ -411,11 +521,13 @@
     const childContainer = box.querySelector('.mix-children');
     const children = childContainer
       ? Array.from(childContainer.children)
-          .map(child => child.querySelector('.mix-box, .chunk-box'))
+          .map(child => child.querySelector('.mix-box, .chunk-box, .variable-box'))
           .filter(Boolean)
           .map(child =>
             child.classList.contains('mix-box')
               ? serializeMixBox(child)
+              : child.classList.contains('variable-box')
+              ? serializeVariableBox(child)
               : serializeChunkBox(child)
           )
       : [];
@@ -468,6 +580,7 @@
     syncCollapseButtons(root);
     root.querySelectorAll('.mix-box').forEach(updatePreserveMode);
     syncTextareaHeights(root);
+    refreshVariableOptions(root);
   }
 
   // ======== UI Helpers ========
@@ -607,6 +720,7 @@
         setupDelimiterControls(mixBox || document);
         syncCollapseButtons(mixBox || document);
         syncTextareaHeights(mixBox || document);
+        refreshVariableOptions(mixBox || document);
         return;
       }
 
@@ -623,6 +737,16 @@
         setupDelimiterControls(mixBox || document);
         syncCollapseButtons(mixBox || document);
         updatePreserveMode(mixBox || document);
+        refreshVariableOptions(mixBox || document);
+        return;
+      }
+
+      if (btn.classList.contains('add-variable-child')) {
+        const mixBox = btn.closest('.mix-box');
+        const childContainer = mixBox?.querySelector('.mix-children');
+        if (childContainer) childContainer.appendChild(createVariableWrapper());
+        syncCollapseButtons(mixBox || document);
+        refreshVariableOptions(mixBox || document);
         return;
       }
 
@@ -631,6 +755,7 @@
         if (!wrapper) return;
         wrapper.remove();
         updateEmptyState(root);
+        refreshVariableOptions(root);
         return;
       }
 
@@ -691,11 +816,27 @@
       autoResizeTextarea(textarea);
     });
 
+    root.addEventListener('input', event => {
+      const titleInput = event.target.closest('.mix-box .box-title, .chunk-box .box-title');
+      if (!titleInput) return;
+      refreshVariableOptions(root);
+    });
+
     root.addEventListener('change', event => {
       const select = event.target.closest('.delimiter-size');
       if (!select) return;
       const mixBox = select.closest('.mix-box');
       if (mixBox) updatePreserveMode(mixBox);
+    });
+
+    root.addEventListener('change', event => {
+      const variableSelect = event.target.closest('.variable-select');
+      if (!variableSelect) return;
+      const box = variableSelect.closest('.variable-box');
+      if (box) {
+        box.dataset.targetId = variableSelect.value || '';
+        refreshVariableOptions(root);
+      }
     });
   }
 
@@ -729,8 +870,26 @@
         setupDelimiterControls(scope);
         syncCollapseButtons(scope);
         updateEmptyState(root);
+        refreshVariableOptions(scope);
       });
       addEmpty.dataset.bound = 'true';
+    }
+
+    const addRoot = scope.querySelector('.add-root-mix');
+    if (addRoot && !addRoot.dataset.bound) {
+      addRoot.addEventListener('click', () => {
+        const root = scope.querySelector('.mix-root');
+        if (root) {
+          const prevChild = root.lastElementChild;
+          const prevColor = prevChild?.querySelector('.mix-box')?.dataset.color || null;
+          root.appendChild(createMixWrapper({ title: 'Mix' }, { previousColor: prevColor }));
+        }
+        setupDelimiterControls(scope);
+        syncCollapseButtons(scope);
+        updateEmptyState(root);
+        refreshVariableOptions(scope);
+      });
+      addRoot.dataset.bound = 'true';
     }
 
     const loadInput = scope.querySelector('.load-mix-file');

@@ -15,6 +15,10 @@
     {
       "id": "nested_rechunk",
       "output": "a b x "
+    },
+    {
+      "id": "variable_reference",
+      "output": "a b b "
     }
   ]
 }

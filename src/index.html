@@ -80,6 +80,9 @@
                     <div class="empty-state-text">No mixes yet.</div>
                     <button type="button" class="add-button add-empty-mix">+ Add Mix</button>
                   </div>
+                  <div class="root-actions">
+                    <button type="button" class="add-button add-root-mix">+ Add Mix</button>
+                  </div>
                 </div>
 
                 <template id="mix-box-template">
@@ -154,6 +157,7 @@
                         <div class="mix-actions">
                           <button type="button" class="add-button add-chunk-child">+ Add String</button>
                           <button type="button" class="add-button add-mix-child">+ Add Mix</button>
+                          <button type="button" class="add-button add-variable-child">+ Add Variable</button>
                         </div>
                       </div>
                     </div>
@@ -218,6 +222,28 @@
                               <option value="allow">Allow Short</option>
                             </select>
                           </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+
+                <template id="variable-box-template">
+                  <div class="variable-wrapper">
+                    <div class="variable-box box-shell" data-box-type="variable">
+                      <div class="box-header">
+                        <span class="box-title">Variable</span>
+                        <div class="button-col">
+                          <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Collapse" data-expanded="-" data-collapsed="+">-</button>
+                          <button type="button" class="delete-button icon-button remove-box" title="Remove">X</button>
+                        </div>
+                      </div>
+                      <div class="box-body">
+                        <div class="control-block">
+                          <label>Source</label>
+                          <select class="variable-select">
+                            <option value="" selected>Select a mix or string...</option>
+                          </select>
                         </div>
                       </div>
                     </div>

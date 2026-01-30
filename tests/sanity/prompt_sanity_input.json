@@ -100,6 +100,30 @@
           }
         ]
       }
+    },
+    {
+      "id": "variable_reference",
+      "description": "Variable nodes reference an existing string or mix and pass its chunks unchanged.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "id": "mix-main",
+            "title": "Main",
+            "limit": 6,
+            "exact": false,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": { "mode": "whitespace", "size": 1 },
+            "children": [
+              { "type": "chunk", "id": "chunk-a", "text": "a ", "limit": 6, "exact": false, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } },
+              { "type": "chunk", "id": "chunk-b", "text": "b ", "limit": 6, "exact": false, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } },
+              { "type": "variable", "id": "var-1", "targetId": "chunk-b" }
+            ]
+          }
+        ]
+      }
     }
   ]
 }

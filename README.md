@@ -1,6 +1,6 @@
 # Prompt Enhancer
 
-Prompt Enhancer is a modular list-mixing tool. Chunking boxes turn raw text into delimiter-preserving chunks. Mixing boxes interleave those lists to produce an output string by concatenating chunks only — no delimiter injection. Everything runs in the browser with no build step.
+Prompt Enhancer is a modular list-mixing tool. Chunking boxes turn raw text into delimiter-preserving chunks. Mixing boxes interleave those lists to produce an output string by concatenating chunks only — no delimiter injection. Variable nodes can reference any existing mix or string and forward its chunks unchanged. Everything runs in the browser with no build step.
 
 Open `src/index.html` to use the tool. Add lists inside mixing boxes, set per-box limits, and press **Generate Mixes**. You can save your configuration to a file or reload it later. On narrow screens, button rows automatically wrap so text labels stay within their section.
 
@@ -96,3 +96,6 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 
 4. **Nested rechunk behavior** — `nested_rechunk`  
    A child mix with preserve off rechunks its output before the parent mix consumes it.
+
+5. **Variable references forward chunks** — `variable_reference`  
+   Variable nodes reference a mix or string and pass its chunks upward without mutation.

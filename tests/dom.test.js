@@ -8,6 +8,7 @@ describe('New mixing layout', () => {
     const dom = new JSDOM(html);
     expect(dom.window.document.getElementById('mix-box-template')).not.toBeNull();
     expect(dom.window.document.getElementById('chunk-box-template')).not.toBeNull();
+    expect(dom.window.document.getElementById('variable-box-template')).not.toBeNull();
   });
 
   test('tab buttons exist', () => {
