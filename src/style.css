@@ -648,6 +648,11 @@ textarea,
   margin-bottom: 0;
 }
 
+.toggle-block .toggle-button {
+  width: 100%;
+  text-align: center;
+}
+
 .mix-actions {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));

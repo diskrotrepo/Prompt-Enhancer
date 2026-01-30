@@ -91,6 +91,26 @@
     return !!btn && btn.classList.contains('active');
   }
 
+  const mobileQuery =
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(max-width: 768px)')
+      : null;
+
+  function isMobileLayout() {
+    return !!(mobileQuery && mobileQuery.matches);
+  }
+
+  function applyMobileWindowState(target) {
+    if (!isMobileLayout()) return;
+    const windows = target
+      ? [target]
+      : Array.from(document.querySelectorAll('.app-window:not(.window-template)'));
+    windows.forEach(win => {
+      if (!win || win.classList.contains('is-hidden')) return;
+      win.classList.add('is-maximized');
+    });
+  }
+
   // ======== Chunking + Mixing Engine ========
 
   function buildChunkList(raw, delimiterConfig, limit, exact, randomize) {
@@ -799,6 +819,7 @@
     if (!win) return;
     win.classList.remove('is-hidden');
     win.classList.remove('is-collapsed');
+    applyMobileWindowState(win);
     zCounter += 1;
     win.style.zIndex = String(zCounter);
     currentFocusInstance = instanceId;
@@ -855,6 +876,7 @@
     clone.dataset.windowIcon = def.icon;
     clone.style.display = '';
     clone.classList.remove('is-hidden');
+    applyMobileWindowState(clone);
     clone.querySelectorAll('[data-bound]').forEach(el => el.removeAttribute('data-bound'));
     clone.querySelectorAll('[data-events-ready]').forEach(el => el.removeAttribute('data-events-ready'));
     const area = document.getElementById('window-area');
@@ -907,7 +929,11 @@
         }
         return;
       }
-      if (btn.classList.contains('maximize-toggle')) {
+    if (btn.classList.contains('maximize-toggle')) {
+        if (isMobileLayout()) {
+          win.classList.add('is-maximized');
+          return;
+        }
         win.classList.toggle('is-maximized');
         return;
       }
@@ -1183,6 +1209,17 @@
       if (win.classList.contains('window-template')) return;
       setupPromptControls(win);
     });
+    applyMobileWindowState();
+    if (mobileQuery) {
+      const handler = () => applyMobileWindowState();
+      if (typeof mobileQuery.addEventListener === 'function') {
+        mobileQuery.addEventListener('change', handler);
+      } else if (typeof mobileQuery.addListener === 'function') {
+        mobileQuery.addListener(handler);
+      }
+      window.addEventListener('resize', handler);
+      window.addEventListener('orientationchange', handler);
+    }
     if (typeof window !== 'undefined') {
       window.addEventListener('beforeunload', persist);
     }
