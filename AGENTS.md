@@ -30,3 +30,6 @@ npm test
 ```
 
 Always execute the test suite whenever you change code.
+The sanity regression lives in `tests/sanity/` and drives the real UI flow
+(loads `src/index.html` + `src/script.js`, clicks Generate). Any behavior change
+must update the sanity input/expected JSON files and the README Heuristic rule index.

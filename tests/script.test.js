@@ -324,6 +324,47 @@ describe('Prompt building', () => {
     expect(out).toEqual({ positive: '', negative: '' });
   });
 
+  test('buildVersions trims mid-chunk to hit exact limits when enabled', () => {
+    const out = buildVersions(
+      ['abc'],
+      ['n'],
+      ['p'],
+      5,
+      false,
+      [],
+      true,
+      1,
+      1,
+      null,
+      null,
+      null,
+      null,
+      null,
+      false,
+      /\s+/,
+      true
+    );
+    expect(out).toEqual({ positive: 'pabcp', negative: 'nabcn' });
+  });
+
+  test('buildVersions applies base order once', () => {
+    const out = buildVersions(
+      ['a', 'bb', 'ccc'],
+      ['n'],
+      ['p'],
+      12,
+      false,
+      [],
+      true,
+      1,
+      1,
+      null,
+      null,
+      [2, 0, 1]
+    );
+    expect(out).toEqual({ positive: 'pcccpapbb', negative: 'ncccnanbb' });
+  });
+
   test('buildVersions concatenates chunked items without inserting commas', () => {
     const out = buildVersions(['a.\n', 'b.\n'], ['n'], ['p'], 30);
     expect(out.positive.includes(',')).toBe(false);

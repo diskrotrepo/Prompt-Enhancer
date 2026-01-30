@@ -16,8 +16,8 @@
  * Detailed Table of Contents:
  * 1. Pure Utility Functions
  *    - Parsing + delimiter helpers (parseInput, buildDelimiterRegex, countWords)
- *    - Ordering + depth helpers (buildOrderIndices, buildDepthValues, computeDepthCountsFrom)
- *    - Core prompt building logic (applyModifierStack, buildVersions)
+ *    - Ordering + depth helpers (buildOrderIndices, resolveListOrder, buildDepthValues, computeDepthCountsFrom)
+ *    - Core prompt building logic (applyModifierStack, buildVersions with exact-length alignment)
  * 2. List Management
  *    - Conflict resolution helpers (listsEqual, nextListName)
  *    - Preset loading and population (populateSelect, loadLists, legacy normalization)
@@ -43,7 +43,7 @@
 // Section Purpose: Side-effect-free helpers for parsing, manipulating, and building prompts.
 // These functions are pure to ensure predictability, following the 50% Rule by combining small, reliable operations.
 // Structural Overview: Grouped utilities that avoid DOM or state changes, enabling easy testing and reuse.
-// Section Summary: Provides foundational tools for text processing and prompt generation, used throughout the app.
+// Section Summary: Provides foundational tools for text processing and prompt generation, including order resolution.
 
   /**
    * Escape regex metacharacters in a literal string.
@@ -138,9 +138,9 @@
 
   /**
    * Build an order index array for a list when randomization is requested.
-   * Purpose: Generate order indices at generation time without storing them.
+   * Purpose: Provide an index-based order for callers that want explicit mappings.
    * Usage Example: buildOrderIndices(['a', 'b'], 'random') may return [1, 0].
-   * 50% Rule: Creates indices, then shuffles only when needed.
+   * 50% Rule: Keeps index ordering isolated; UI flow now shuffles lists directly.
    * @param {string[]} items - Items to order.
    * @param {string} mode - Order mode string.
    * @returns {number[]|null} - Random order indices or null for canonical/empty.
@@ -155,7 +155,7 @@
 
   /**
    * Apply an order array only when one is provided.
-   * Purpose: Keep canonical lists untouched while still allowing random order.
+   * Purpose: Keep canonical lists untouched while still allowing explicit order mappings.
    * Usage Example: applyOrderIfNeeded(['a', 'b'], [1, 0]) returns ['b', 'a'].
    * 50% Rule: Guard clauses + cloning clarify intent.
    * @param {string[]} items - Items to order.
@@ -329,7 +329,7 @@
     return head + body + tail;
   }
 
-  /** 
+  /**
    * Randomize an array in place using Fisher-Yates.
    * Purpose: Shuffle arrays for random ordering.
    * Usage Example: shuffle([1,2,3]) might return [3,1,2].
@@ -343,6 +343,72 @@
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
     return arr;
+  }
+
+  /**
+   * Resolve ordering for a list based on a mode or explicit index mapping.
+   * Purpose: Centralize canonical vs random ordering without index bookkeeping.
+   * Usage Example: resolveListOrder(['a', 'b'], 'random').ordered returns a shuffled copy.
+   * 50% Rule: Returns a clone for canonical, a shuffled clone for random, or an explicit map when provided.
+   * @param {string[]} items - Items to order.
+   * @param {string} mode - Order mode ('canonical' or 'random').
+   * @param {number[]|null} [explicitOrder=null] - Optional explicit order indices.
+   * @returns {{ordered: string[], order: number[]|null}} - Ordered list and applied order mapping (if explicit).
+   */
+  function resolveListOrder(items, mode, explicitOrder = null) {
+    if (!Array.isArray(items)) return { ordered: [], order: null };
+    if (Array.isArray(explicitOrder) && explicitOrder.length) {
+      return { ordered: applyOrder(items, explicitOrder), order: explicitOrder.slice() };
+    }
+    if (mode === 'random') {
+      return { ordered: shuffle(items.slice()), order: null };
+    }
+    return { ordered: items.slice(), order: null };
+  }
+
+  /**
+   * Normalize stacked modifier lists with optional ordering.
+   * Purpose: Build per-stack modifier arrays once for reuse by prompt builders.
+   * Usage Example: resolveModifierStacks(['a','b'], 2, null) returns two cloned stacks.
+   * 50% Rule: Handles scalar vs stacked inputs and applies orders in one place.
+   * @param {string[]|string[][]} modifiers - Modifiers list or list of stacks.
+   * @param {number} stackSize - Number of stacks to produce.
+   * @param {number[]|number[][]|null} modOrders - Orders per stack or single order.
+   * @returns {string[][]} - Ordered stacks array.
+   */
+  function resolveModifierStacks(modifiers, stackSize, modOrders) {
+    const count = stackSize > 0 ? stackSize : 1;
+    const modLists = Array.isArray(modifiers[0]) ? modifiers : Array(count).fill(modifiers);
+    const orderedStacks = [];
+    if (Array.isArray(modOrders) && Array.isArray(modOrders[0])) {
+      for (let i = 0; i < count; i++) {
+        const mods = modLists[i % modLists.length];
+        const ord = modOrders[i % modOrders.length];
+        orderedStacks.push(ord ? applyOrder(mods, ord) : mods.slice());
+      }
+    } else {
+      for (let i = 0; i < count; i++) {
+        const mods = modLists[i % modLists.length];
+        const orderedMods = modOrders ? applyOrder(mods, modOrders) : mods.slice();
+        orderedStacks.push(orderedMods);
+      }
+    }
+    return orderedStacks;
+  }
+
+  /**
+   * Normalize depth arrays into a per-stack pool (or null when unused).
+   * Purpose: Keep depth handling consistent across modifier builders.
+   * Usage Example: normalizeDepthPool([0,1]) returns a cloned depth array.
+   * 50% Rule: Clones arrays defensively; returns null when no depth override exists.
+   * @param {number[]|number[][]|null} depths - Depth overrides.
+   * @returns {number[]|number[][]|null} - Normalized depth pool or null.
+   */
+  function normalizeDepthPool(depths) {
+    if (Array.isArray(depths) && depths.length) {
+      return Array.isArray(depths[0]) ? depths.map(d => d.slice()) : depths.slice();
+    }
+    return null;
   }
 
   /**
@@ -363,10 +429,11 @@
    * Combine base items with one or more modifier lists. Modifiers may be
    * stacked so multiple sets are applied in sequence. Divider items are
    * inserted when the base list repeats. The return value is trimmed so the
-   * cumulative string length does not exceed `limit`.
+   * cumulative string length does not exceed `limit` (or exactly meets it when
+   * trimExact is enabled).
    * Purpose: Core logic to apply stacked modifiers to base items.
    * Usage: Internal to buildVersions; builds prompt arrays.
-   * 50% Rule: Complex loop with length checks; documented via params and logic summary.
+   * 50% Rule: Complex loop with length checks; documented via params, trimming rules, and logic summary.
    * @param {string[]} baseItems - Base prompt items.
    * @param {string[]|string[][]} modifiers - Modifiers or stacked lists.
    * @param {number} limit - Max length for result.
@@ -377,6 +444,9 @@
    * @param {number[]} [itemOrder=null] - Order for base items.
    * @param {number[]|number[][]} [depths=null] - Depths for insertions.
    * @param {Array[]} [captureLog=null] - Optional log collecting inserted modifiers per accepted term.
+   * @param {boolean} [trimExact=false] - Trim mid-chunk to hit the limit exactly.
+   * @param {number} [minTerms=0] - Minimum number of terms to build (ignores limit).
+   * @param {Object|null} [meta=null] - Optional metadata sink for term counts and lengths.
    * @returns {string[]} - Modified items array.
    */
   function applyModifierStack(
@@ -389,41 +459,59 @@
     dividers = [],
     itemOrder = null,
     depths = null,
-    captureLog = null
+    captureLog = null,
+    trimExact = false,
+    minTerms = 0,
+    meta = null
   ) {
-    const count = stackSize > 0 ? stackSize : 1;
-    const modLists = Array.isArray(modifiers[0]) ? modifiers : Array(count).fill(modifiers);
-    const orders = [];
-    if (Array.isArray(modOrders) && Array.isArray(modOrders[0])) {
-      for (let i = 0; i < count; i++) {
-        const mods = modLists[i % modLists.length];
-        const ord = modOrders[i % modOrders.length];
-        orders.push(ord ? applyOrder(mods, ord) : mods.slice());
-      }
-    } else {
-      for (let i = 0; i < count; i++) {
-        const mods = modLists[i % modLists.length];
-        const orderedMods = modOrders ? applyOrder(mods, modOrders) : mods.slice();
-        orders.push(orderedMods);
-      }
-    }
+    const orders = resolveModifierStacks(modifiers, stackSize, modOrders);
     const dividerPool = dividers.slice();
     let items = baseItems.slice();
     if (itemOrder) items = applyOrder(items, itemOrder);
-    let depthPool = null;
     // Empty depth arrays should behave like "no depth override."
-    if (Array.isArray(depths) && depths.length) {
-      depthPool = Array.isArray(depths[0]) ? depths.map(d => d.slice()) : depths.slice();
-    }
+    const depthPool = normalizeDepthPool(depths);
     const result = [];
     let idx = 0;
     let divIdx = 0;
+    let currentLength = 0;
+    let termsBuilt = 0;
+    const targetTerms = Math.max(0, parseInt(minTerms, 10) || 0);
+    const enforceCount = targetTerms > 0;
+    // Helper: append a piece without exceeding the limit, optionally trimming the tail.
+    const appendPiece = (piece, kind, capturedMods) => {
+      if (!piece) return { done: false, added: false };
+      if (enforceCount) {
+        result.push(piece);
+        currentLength += piece.length;
+        if (kind === 'divider') divIdx++;
+        if (kind === 'term' && captureLog) captureLog.push(capturedMods);
+        return { done: false, added: true };
+      }
+      const remaining = limit - currentLength;
+      if (remaining <= 0) return { done: true, added: false };
+      if (piece.length <= remaining) {
+        result.push(piece);
+        currentLength += piece.length;
+        if (kind === 'divider') divIdx++;
+        if (kind === 'term' && captureLog) captureLog.push(capturedMods);
+        return { done: false, added: true };
+      }
+      if (trimExact && remaining > 0) {
+        result.push(piece.slice(0, remaining));
+        currentLength = limit;
+        if (kind === 'divider') divIdx++;
+        if (kind === 'term' && captureLog) captureLog.push(capturedMods);
+        return { done: true, added: true };
+      }
+      return { done: true, added: false };
+    };
     while (true) {
       const needDivider = idx > 0 && idx % items.length === 0 && dividerPool.length;
       let term = items[idx % items.length];
       const inserted = [];
       const capturedMods = [];
       orders.forEach((mods, sidx) => {
+        if (!mods.length) return;
         const mod = mods[idx % mods.length];
         let depth = 0;
         if (depthPool) {
@@ -442,20 +530,24 @@
           if (captureLog) capturedMods.push(mod);
         }
       });
-      const pieces = [];
-      if (needDivider) pieces.push(dividerPool[divIdx % dividerPool.length]);
-      pieces.push(term);
-      const candidate =
-        (result.length ? result.join('') : '') +
-        pieces.join('');
-      if (candidate.length > limit) break;
-      if (needDivider) {
-        result.push(dividerPool[divIdx % dividerPool.length]);
-        divIdx++;
+      const divPiece = needDivider ? dividerPool[divIdx % dividerPool.length] : '';
+      if (!trimExact && !enforceCount) {
+        const combined = (divPiece ? divPiece.length : 0) + (term ? term.length : 0);
+        if (currentLength + combined > limit) break;
       }
-      if (captureLog) captureLog.push(capturedMods);
-      result.push(term);
+      if (needDivider) {
+        const dividerRes = appendPiece(divPiece, 'divider');
+        if (dividerRes.done) break;
+      }
+      const termRes = appendPiece(term, 'term', capturedMods);
+      if (termRes.done) break;
+      termsBuilt += 1;
       idx++;
+      if (enforceCount && termsBuilt >= targetTerms) break;
+    }
+    if (meta && typeof meta === 'object') {
+      meta.termCount = termsBuilt;
+      meta.length = currentLength;
     }
     return result;
   }
@@ -477,6 +569,9 @@
    * @param {number[]} [itemOrder=null] - Item order.
    * @param {number[]|number[][]} [depths=null] - Depths.
    * @param {Array[]} [captureLog=null] - Optional log collecting inserted modifiers per accepted term.
+   * @param {boolean} [trimExact=false] - Trim mid-chunk to hit the limit exactly.
+   * @param {number} [minTerms=0] - Minimum number of terms to build (ignores limit).
+   * @param {Object|null} [meta=null] - Optional metadata sink for term counts and lengths.
    * @returns {string[]} - Negative terms array.
    */
   function applyNegativeOnPositive(
@@ -489,48 +584,60 @@
     dividers = [],
     itemOrder = null,
     depths = null,
-    captureLog = null
+    captureLog = null,
+    trimExact = false,
+    minTerms = 0,
+    meta = null
   ) {
-    const count = stackSize > 0 ? stackSize : 1;
-    const modLists = Array.isArray(negMods[0]) ? negMods : Array(count).fill(negMods);
-    const orders = [];
-    if (Array.isArray(modOrders) && Array.isArray(modOrders[0])) {
-      for (let i = 0; i < count; i++) {
-        const mods = modLists[i % modLists.length];
-        const ord = modOrders[i % modOrders.length];
-        orders.push(ord ? applyOrder(mods, ord) : mods.slice());
-      }
-    } else {
-      for (let i = 0; i < count; i++) {
-        const mods = modLists[i % modLists.length];
-        const orderedMods = modOrders ? applyOrder(mods, modOrders) : mods.slice();
-        orders.push(orderedMods);
-      }
-    }
+    const orders = resolveModifierStacks(negMods, stackSize, modOrders);
     const dividerSet = new Set(dividers);
     const result = [];
     let modIdx = 0;
     let items = posTerms.slice();
     if (itemOrder) items = applyOrder(items, itemOrder);
-    let depthPool = null;
     // Skip depthPool when no depth values are provided.
-    if (Array.isArray(depths) && depths.length) {
-      depthPool = Array.isArray(depths[0]) ? depths.map(d => d.slice()) : depths.slice();
-    }
+    const depthPool = normalizeDepthPool(depths);
+    let currentLength = 0;
+    let termsBuilt = 0;
+    const targetTerms = Math.max(0, parseInt(minTerms, 10) || 0);
+    const enforceCount = targetTerms > 0;
+    // Helper: append a piece without exceeding the limit, optionally trimming the tail.
+    const appendPiece = (piece, kind, capturedMods) => {
+      if (!piece) return { done: false, added: false };
+      if (enforceCount) {
+        result.push(piece);
+        currentLength += piece.length;
+        if (kind === 'term' && captureLog) captureLog.push(capturedMods);
+        return { done: false, added: true };
+      }
+      const remaining = limit - currentLength;
+      if (remaining <= 0) return { done: true, added: false };
+      if (piece.length <= remaining) {
+        result.push(piece);
+        currentLength += piece.length;
+        if (kind === 'term' && captureLog) captureLog.push(capturedMods);
+        return { done: false, added: true };
+      }
+      if (trimExact && remaining > 0) {
+        result.push(piece.slice(0, remaining));
+        currentLength = limit;
+        if (kind === 'term' && captureLog) captureLog.push(capturedMods);
+        return { done: true, added: true };
+      }
+      return { done: true, added: false };
+    };
     for (let i = 0; i < items.length; i++) {
       const base = items[i];
       if (dividerSet.has(base)) {
-        const candidate =
-          (result.length ? result.join('') : '') +
-          base;
-        if (candidate.length > limit) break;
-        result.push(base);
+        const divRes = appendPiece(base, 'divider');
+        if (divRes.done) break;
         continue;
       }
       let term = base;
       const inserted = [];
       const capturedMods = [];
       orders.forEach((mods, sidx) => {
+        if (!mods.length) return;
         const mod = mods[modIdx % mods.length];
         let depth = 0;
         if (depthPool) {
@@ -549,13 +656,15 @@
           if (captureLog) capturedMods.push(mod);
         }
       });
-      const candidate =
-        (result.length ? result.join('') : '') +
-        term;
-      if (candidate.length > limit) break;
-      result.push(term);
-      if (captureLog) captureLog.push(capturedMods);
+      const termRes = appendPiece(term, 'term', capturedMods);
+      if (termRes.done) break;
+      termsBuilt += 1;
       modIdx++;
+      if (enforceCount && termsBuilt >= targetTerms) break;
+    }
+    if (meta && typeof meta === 'object') {
+      meta.termCount = termsBuilt;
+      meta.length = currentLength;
     }
     return result;
   }
@@ -565,7 +674,7 @@
    * It delegates to applyModifierStack and optionally applyNegativeOnPositive.
    * Purpose: Generate final positive and negative prompts from inputs.
    * Usage Example: buildVersions(items, negMods, posMods, 1000) returns {positive: '...', negative: '...'}.
-   * 50% Rule: Orchestrates stacking and equalization; trims for limits.
+   * 50% Rule: Orchestrates stacking, equalization, and exact-length alignment when enabled.
    * @param {string[]} items - Base items.
    * @param {string[]|string[][]} negMods - Negative modifiers.
    * @param {string[]|string[][]} posMods - Positive modifiers.
@@ -582,6 +691,7 @@
    * @param {number[]|number[][]} [negOrder=null] - Negative order.
    * @param {boolean} [negAddendum=false] - Append negatives after positives instead of inserting them.
    * @param {string|RegExp} [delimiter=/\\s+/] - Delimiter used for chunk tails.
+   * @param {boolean} [trimExact=false] - Trim mid-chunk to hit the limit exactly.
    * @returns {{positive: string, negative: string}} - Generated prompts.
    */
   function buildVersions(
@@ -600,15 +710,18 @@
     posOrder = null,
     negOrder = null,
     negAddendum = false,
-    delimiter = /\s+/
+    delimiter = /\s+/,
+    trimExact = false
   ) {
     if (!items.length) {
       return { positive: '', negative: '' };
     }
-    if (Array.isArray(baseOrder)) items = applyOrder(items, baseOrder);
+    // Base ordering should be applied once (either by caller or inside stack builders).
     let dividerPool = dividers.slice();
     if (dividerPool.length && shuffleDividers) shuffle(dividerPool);
-    const posTerms = applyModifierStack(
+    const posMeta = trimExact ? {} : null;
+    const negMeta = trimExact ? {} : null;
+    let posTerms = applyModifierStack(
       items,
       posMods,
       limit,
@@ -617,11 +730,15 @@
       delimiter,
       dividerPool,
       baseOrder,
-      posDepths
+      posDepths,
+      null,
+      trimExact,
+      0,
+      posMeta
     );
     let useNegDepths = negDepths;
-    const negCapture = negAddendum ? [] : null;
-    const negTerms = includePosForNeg
+    let negCapture = negAddendum ? [] : null;
+    let negTerms = includePosForNeg
       ? applyNegativeOnPositive(
           posTerms,
           negMods,
@@ -632,7 +749,10 @@
           dividerPool,
           null,
           useNegDepths,
-          negCapture
+          negCapture,
+          trimExact,
+          0,
+          negMeta
         )
       : applyModifierStack(
           items,
@@ -644,10 +764,74 @@
           dividerPool,
           baseOrder,
           negDepths,
-          negCapture
+          negCapture,
+          trimExact,
+          0,
+          negMeta
         );
-    const [trimNeg, trimPos] = equalizeLength(negTerms, posTerms);
-    const positiveString = trimPos.join('');
+    if (trimExact) {
+      // Exact-length mode: align term counts to the longer list before slicing strings.
+      const posCount = posMeta?.termCount || 0;
+      const negCount = negMeta?.termCount || 0;
+      const targetTerms = Math.max(posCount, negCount);
+      let posRebuilt = false;
+      if (targetTerms && posCount !== targetTerms) {
+        posTerms = applyModifierStack(
+          items,
+          posMods,
+          Number.POSITIVE_INFINITY,
+          posStackSize,
+          posOrder,
+          delimiter,
+          dividerPool,
+          baseOrder,
+          posDepths,
+          null,
+          false,
+          targetTerms,
+          null
+        );
+        posRebuilt = true;
+      }
+      if (targetTerms && (posRebuilt || negCount !== targetTerms)) {
+        negCapture = negAddendum ? [] : null;
+        negTerms = includePosForNeg
+          ? applyNegativeOnPositive(
+              posTerms,
+              negMods,
+              Number.POSITIVE_INFINITY,
+              negStackSize,
+              negOrder,
+              delimiter,
+              dividerPool,
+              null,
+              useNegDepths,
+              negCapture,
+              false,
+              targetTerms,
+              null
+            )
+          : applyModifierStack(
+              items,
+              negMods,
+              Number.POSITIVE_INFINITY,
+              negStackSize,
+              negOrder,
+              delimiter,
+              dividerPool,
+              baseOrder,
+              negDepths,
+              negCapture,
+              false,
+              targetTerms,
+              null
+            );
+      }
+    }
+    const [trimNeg, trimPos] = trimExact
+      ? [negTerms, posTerms]
+      : equalizeLength(negTerms, posTerms);
+    let positiveString = trimPos.join('');
     if (negAddendum && negCapture) {
       // Count how many non-divider terms remain so capture log aligns with trimmed negatives.
       const dividerSet = new Set(dividerPool);
@@ -668,19 +852,43 @@
       });
       const tail = negSoloList.join('');
       if (tail) {
+        let negativeAddendum = positiveString ? positiveString + tail : tail;
+        if (trimExact) {
+          const targetLength = Math.min(
+            limit,
+            positiveString.length,
+            negativeAddendum.length
+          );
+          positiveString = positiveString.slice(0, targetLength);
+          negativeAddendum = negativeAddendum.slice(0, targetLength);
+        }
         return {
           positive: positiveString,
-          negative: positiveString ? positiveString + tail : tail
+          negative: negativeAddendum
         };
+      }
+      if (trimExact) {
+        const targetLength = Math.min(limit, positiveString.length);
+        positiveString = positiveString.slice(0, targetLength);
       }
       return {
         positive: positiveString,
         negative: positiveString
       };
     }
+    let negativeString = trimNeg.join('');
+    if (trimExact) {
+      const targetLength = Math.min(
+        limit,
+        positiveString.length,
+        negativeString.length
+      );
+      positiveString = positiveString.slice(0, targetLength);
+      negativeString = negativeString.slice(0, targetLength);
+    }
     return {
       positive: positiveString,
-      negative: trimNeg.join('')
+      negative: negativeString
     };
   }
 
@@ -779,6 +987,7 @@
     countWords,
     buildOrderIndices,
     applyOrderIfNeeded,
+    resolveListOrder,
     buildDepthValues,
     sumStackWordsAt,
     computeDepthCountsFrom,
@@ -787,6 +996,8 @@
     insertAtDepth,
     shuffle,
     equalizeLength,
+    resolveModifierStacks,
+    normalizeDepthPool,
     applyModifierStack,
     applyNegativeOnPositive,
     buildVersions,
@@ -1675,25 +1886,22 @@
   }
 
   /**
-   * Resolve ephemeral order arrays and ordered stacks from mode selections.
-   * Purpose: Compute on-demand ordering without storing index arrays in the UI.
-   * Usage Example: resolveStackOrders([['a','b']], ['random']) returns orders + ordered lists.
-   * 50% Rule: Builds indices, applies them, and keeps steps explicit.
+   * Resolve ordered stacks from per-stack mode selections.
+   * Purpose: Shuffle or clone stacks once, avoiding index-number bookkeeping.
+   * Usage Example: resolveStackOrders([['a','b']], ['random']).ordered returns a shuffled stack.
+   * 50% Rule: Centralizes ordering so depth counts and generation share the same sequence.
    * @param {string[][]} stacks - Modifier stacks.
    * @param {string[]} modes - Order modes per stack.
-   * @returns {{orders: (number[]|null)[], ordered: string[][]}} - Orders + ordered stacks.
+   * @returns {{ordered: string[][]}} - Ordered stacks.
    */
   function resolveStackOrders(stacks, modes) {
-    const orders = [];
     const ordered = [];
     const fallback = modes[0] || 'canonical';
     stacks.forEach((items, i) => {
       const mode = modes[i] || fallback;
-      const order = utils.buildOrderIndices(items, mode) || [];
-      orders.push(order);
-      ordered.push(utils.applyOrderIfNeeded(items, order));
+      ordered.push(utils.resolveListOrder(items, mode).ordered);
     });
-    return { orders, ordered };
+    return { ordered };
   }
 
   /**
@@ -1710,8 +1918,7 @@
     const baseInput = document.getElementById('base-input');
     const baseItems = parseBaseInput(baseInput?.value || '', baseDelimiter);
     const baseOrderMode = readSelectMode('base-order-select', 'canonical');
-    const baseOrder = utils.buildOrderIndices(baseItems, baseOrderMode);
-    const orderedBaseItems = utils.applyOrderIfNeeded(baseItems, baseOrder);
+    const orderedBaseItems = utils.resolveListOrder(baseItems, baseOrderMode).ordered;
     const baseCounts = orderedBaseItems.map(b => utils.countWords(b));
 
     const stackOn = document.getElementById(`${prefix}-stack`)?.checked;
@@ -1808,7 +2015,7 @@
    * Delimiter settings are applied so base and modifier lists split consistently.
    * Purpose: Collect and parse all form inputs.
    * Usage: In generate.
-   * 50% Rule: Handles stacking, parses all fields, and computes order/depth arrays on demand.
+   * 50% Rule: Handles stacking, parses all fields, orders lists up front, and computes depth arrays on demand.
    * @returns {Object} - Input object for buildVersions.
    */
   function collectInputs() {
@@ -1831,12 +2038,11 @@
     const posOrderModes = collectSelectModes('pos', 'order', posCount, 'canonical');
     const negOrderModes = collectSelectModes('neg', 'order', negCount, 'canonical');
 
-    const baseOrder = utils.buildOrderIndices(baseItems, baseOrderMode);
-    const orderedBaseItems = utils.applyOrderIfNeeded(baseItems, baseOrder);
+    const orderedBaseItems = utils.resolveListOrder(baseItems, baseOrderMode).ordered;
     const baseCounts = orderedBaseItems.map(b => utils.countWords(b));
 
-    const { orders: posOrders, ordered: posOrdered } = resolveStackOrders(posStacks, posOrderModes);
-    const { orders: negOrders, ordered: negOrdered } = resolveStackOrders(negStacks, negOrderModes);
+    const { ordered: posOrdered } = resolveStackOrders(posStacks, posOrderModes);
+    const { ordered: negOrdered } = resolveStackOrders(negStacks, negOrderModes);
 
     const posDepthStacks = posOrdered.map((_, i) => {
       const counts = utils.computeDepthCountsFrom(baseCounts, posOrdered, i + 1, false, []);
@@ -1847,16 +2053,15 @@
       return utils.buildDepthValues('random', counts) || counts.map(() => 0);
     });
 
-    const posMods = posStackOn ? posStacks : posStacks[0];
-    const negMods = negStackOn ? negStacks : negStacks[0];
-    const posOrder = posStackOn ? posOrders : posOrders[0];
-    const negOrder = negStackOn ? negOrders : negOrders[0];
+    const posMods = posStackOn ? posOrdered : posOrdered[0];
+    const negMods = negStackOn ? negOrdered : negOrdered[0];
     const posDepths = posStackOn ? posDepthStacks : posDepthStacks[0];
     const negDepths = negStackOn ? negDepthStacks : negDepthStacks[0];
 
     const dividerDelimiter = getDelimiterConfigFor('divider');
     const dividerMods = parseListInput(document.getElementById('divider-input')?.value || '', dividerDelimiter);
     const shuffleDividers = document.getElementById('divider-shuffle')?.checked;
+    const trimExact = document.getElementById('length-exact')?.checked || false;
     const lengthSelect = document.getElementById('length-select');
     const lengthInput = document.getElementById('length-input');
     let limit = parseInt(lengthInput.value, 10);
@@ -1869,7 +2074,7 @@
     }
     return {
       delimiterConfig: baseDelimiter,
-      baseItems,
+      baseItems: orderedBaseItems,
       negMods,
       posMods,
       posStackOn,
@@ -1883,9 +2088,7 @@
       shuffleDividers,
       posDepths,
       negDepths,
-      baseOrder,
-      posOrder,
-      negOrder
+      trimExact
     };
   }
 
@@ -1925,9 +2128,7 @@
       shuffleDividers,
       posDepths,
       negDepths,
-      baseOrder,
-      posOrder,
-      negOrder
+      trimExact
     } = collectInputs();
     if (!baseItems.length) {
       alert('Please enter at least one base prompt item.');
@@ -1946,11 +2147,12 @@
       negStackOn ? negStackSize : 1,
       posDepths,
       negDepths,
-      baseOrder,
-      posOrder,
-      negOrder,
+      null,
+      null,
+      null,
       negAddendum,
-      delimiterConfig?.regex || /\s+/
+      delimiterConfig?.regex || /\s+/,
+      trimExact
     );
     displayOutput(result);
 
@@ -2909,6 +3111,7 @@
       '[data-target="neg-stack"]': 'Combine multiple negative lists.',
       '[data-target="neg-all-hide"]': 'Show or hide all negative stacks.',
       '[data-target="neg-order-random"]': 'Randomize order of negative modifiers.',
+      '[data-target="length-exact"]': 'Trim mid-chunk so outputs hit the length limit exactly.',
       '[data-target="lyrics-remove-parens"]': 'Strip parentheses from lyrics before processing.',
       '[data-target="lyrics-remove-brackets"]': 'Strip brackets from lyrics before processing.',
       '[data-target="lyrics-insert-random"]': 'Randomize insertion intervals for lyric terms.',

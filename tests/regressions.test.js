@@ -96,6 +96,34 @@ describe('Regression coverage for list/order handling', () => {
     expect(updated).toEqual(['canonical', 'random']);
   });
 
+  test('exact length aligns include-positive negatives to longer term count', () => {
+    const main = loadModule();
+    const { buildVersions } = main;
+    const out = buildVersions(
+      ['a'],
+      ['n'],
+      ['p'],
+      10,
+      true,
+      [],
+      true,
+      1,
+      1,
+      null,
+      null,
+      null,
+      null,
+      null,
+      false,
+      /\s+/,
+      true
+    );
+    expect(out.positive).toBe('papapapapa');
+    expect(out.negative).toBe('npanpanpan');
+    expect(out.positive.length).toBe(10);
+    expect(out.negative.length).toBe(10);
+  });
+
   test('copy buttons fall back to execCommand when clipboard API is unavailable', async () => {
     setupCopyDom();
     const main = loadModule();

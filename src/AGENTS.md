@@ -40,6 +40,13 @@ and base word counts. When adding new modifier stacks, ensure the generation-tim
 helpers (`computeDepthCountsFrom`, `buildDepthValues`) receive the new stacks so
 negatives remain aligned with positives.
 
+### Order Resolution Note
+
+Order modes now resolve by shuffling list copies at generation time (see
+`resolveListOrder` and `resolveStackOrders`). Index-based order arrays are still
+supported for explicit mappings in `buildVersions`, but avoid reapplying the
+same base order twice—pass ordered lists or an order array, not both.
+
 ### Delimiter Controls
 
 Each list now owns its own delimiter dropdown (e.g., `base-delimiter-select`,
@@ -56,6 +63,14 @@ normalized during load or import; update data sources to provide string items.
 `computeDepthCounts` now sums words from earlier stacks for both positive and
 negative sections. Random depth calculations therefore consider all preceding
 modifiers when multiple stacks are active.
+
+### Length Exactness
+
+The length limit now supports an "Exact Length" toggle (`length-exact`). When
+enabled, prompt builders can trim mid-chunk to hit the character limit exactly,
+so outputs don't end early just because a chunk would overflow. If positives and
+negatives are generated independently, the builders align to the longer term
+count before slicing strings so both outputs respect the same cutoff context.
 
 ### Lyrics Insertions
 
@@ -76,3 +91,7 @@ specific descriptions so the help overlay stays informative.
 ## Testing
 
 Run the full suite with `npm test` whenever you modify code. Expand coverage whenever a bug is fixed or a new feature is added.
+
+Sanity regression lives in `tests/sanity/` and runs the real UI flow via JSDOM.
+When behavior changes, update both sanity JSON fixtures and the README Heuristic
+rule index so test intent stays explicit for future LLM passes.
