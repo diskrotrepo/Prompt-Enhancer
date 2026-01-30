@@ -979,12 +979,14 @@
   const WINDOW_DEFS = {
     prompts: { templateId: 'window-prompts-template', label: 'Prompt Enhancer', icon: 'icon-prompts' },
     audio: { templateId: 'window-audio-template', label: 'Audio Interpolator', icon: 'icon-audio' },
+    diskrot: { templateId: 'window-diskrot-template', label: '///diskrot', icon: 'icon-diskrot' },
     about: { templateId: 'window-about-template', label: 'About', icon: 'icon-about' }
   };
 
   const windowCounts = {
     prompts: 0,
     audio: 0,
+    diskrot: 0,
     about: 0
   };
 

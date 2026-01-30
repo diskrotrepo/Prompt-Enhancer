@@ -43,6 +43,11 @@
                 Audio Interpolator
               </div>
               <div class="menu-separator" role="separator"></div>
+              <div class="menu-item" data-window="diskrot" role="menuitem">
+                <span class="menu-icon icon-diskrot" aria-hidden="true"></span>
+                diskrot
+              </div>
+              <div class="menu-separator" role="separator"></div>
               <div class="menu-item" data-window="about" role="menuitem">
                 <span class="menu-icon icon-about" aria-hidden="true"></span>
                 About
@@ -286,6 +291,21 @@
               </div>
               <div class="box-body">
                 <iframe class="audio-frame" title="Audio Interpolator" src="https://diskrot.com/audio-interpolator/index.html"></iframe>
+              </div>
+              <div class="resize-handle" aria-hidden="true"></div>
+            </div>
+
+            <div id="window-diskrot-template" class="window-shell box-shell app-window diskrot-window window-template" data-template="diskrot">
+              <div class="box-header window-header">
+                <span class="box-title" aria-label="Diskrot window title">///diskrot</span>
+                <div class="button-col">
+                  <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Minimize" data-expanded="-" data-collapsed="+">-</button>
+                  <button type="button" class="toggle-button icon-button maximize-toggle" title="Maximize">□</button>
+                  <button type="button" class="delete-button icon-button remove-box" title="Close">X</button>
+                </div>
+              </div>
+              <div class="box-body">
+                <iframe class="diskrot-frame" title="Diskrot" src="https://www.diskrot.com"></iframe>
               </div>
               <div class="resize-handle" aria-hidden="true"></div>
             </div>
