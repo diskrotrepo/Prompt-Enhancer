@@ -38,6 +38,11 @@
                 Prompt Enhancer
               </div>
               <div class="menu-separator" role="separator"></div>
+              <div class="menu-item" data-window="audio" role="menuitem">
+                <span class="menu-icon icon-audio" aria-hidden="true"></span>
+                Audio Interpolator
+              </div>
+              <div class="menu-separator" role="separator"></div>
               <div class="menu-item" data-window="about" role="menuitem">
                 <span class="menu-icon icon-about" aria-hidden="true"></span>
                 About
@@ -56,11 +61,25 @@
                 </div>
               </div>
               <div class="box-body">
-                <button class="primary-action generate-button">Generate Mixes</button>
-                <div class="mix-root"></div>
-                <div class="empty-state">
-                  <div class="empty-state-text">No mixes yet.</div>
-                  <button type="button" class="add-button add-empty-mix">+ Add Mix</button>
+                <div class="prompt-menu">
+                  <button type="button" class="prompt-menu-start" aria-haspopup="true" aria-expanded="false">
+                    <span class="prompt-menu-glyph" aria-hidden="true">///</span>
+                    <span class="prompt-menu-label">file</span>
+                  </button>
+                  <div class="prompt-menu-dropdown" role="menu" aria-hidden="true">
+                    <div class="prompt-menu-item" data-action="open" role="menuitem">Open</div>
+                    <div class="prompt-menu-item" data-action="save" role="menuitem">Save</div>
+                    <div class="prompt-menu-item" data-action="quit" role="menuitem">Quit</div>
+                  </div>
+                </div>
+                <div class="prompt-body">
+                  <button type="button" class="holo-generate generate-button">GENERATE MIX</button>
+                  <input type="file" class="load-mix-file" accept="application/json" style="display:none">
+                  <div class="mix-root"></div>
+                  <div class="empty-state">
+                    <div class="empty-state-text">No mixes yet.</div>
+                    <button type="button" class="add-button add-empty-mix">+ Add Mix</button>
+                  </div>
                 </div>
 
                 <template id="mix-box-template">
@@ -214,12 +233,27 @@
               <div class="box-body">
                 <div class="input-group section-about about-card">
                   <div class="label-row">
-                    <label>a tool by daniel yosef stilman///yolkhead</label>
+                    <label>tools by daniel yosef stilman///yolkhead</label>
                   </div>
                   <p class="about-text">GitHub: <a class="about-link" href="https://github.com/daniel-stilman" target="_blank" rel="noopener noreferrer">github.com/daniel-stilman</a></p>
                   <p class="about-text">Linktree: <a class="about-link" href="https://linktr.ee/yolkhead" target="_blank" rel="noopener noreferrer">linktr.ee/yolkhead</a></p>
                   <p class="about-text">Diskrot: <a class="about-link" href="https://diskrot.com/@yolkhead" target="_blank" rel="noopener noreferrer">diskrot.com/@yolkhead</a></p>
                 </div>
+              </div>
+              <div class="resize-handle" aria-hidden="true"></div>
+            </div>
+
+            <div id="window-audio-template" class="window-shell box-shell app-window audio-window window-template" data-template="audio">
+              <div class="box-header window-header">
+                <span class="box-title" aria-label="Audio Interpolator window title">Audio Interpolator</span>
+                <div class="button-col">
+                  <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Minimize" data-expanded="-" data-collapsed="+">-</button>
+                  <button type="button" class="toggle-button icon-button maximize-toggle" title="Maximize">□</button>
+                  <button type="button" class="delete-button icon-button remove-box" title="Close">X</button>
+                </div>
+              </div>
+              <div class="box-body">
+                <iframe class="audio-frame" title="Audio Interpolator" src="https://diskrot.com/audio-interpolator/index.html"></iframe>
               </div>
               <div class="resize-handle" aria-hidden="true"></div>
             </div>

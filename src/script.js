@@ -665,15 +665,100 @@
       });
       addEmpty.dataset.bound = 'true';
     }
+
+    const loadInput = scope.querySelector('.load-mix-file');
+    const saveMix = () => {
+      const root = scope.querySelector('.mix-root');
+      if (!root) return;
+      const data = exportMixState(root);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'prompt-enhancer-mix.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    const loadMix = file => {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        let data = null;
+        try {
+          data = JSON.parse(reader.result);
+        } catch (err) {
+          return;
+        }
+        const root = scope.querySelector('.mix-root');
+        if (!root) return;
+        applyMixState(data, root);
+      };
+      reader.readAsText(file);
+    };
+
+    const menuToggle = scope.querySelector('.prompt-menu-start');
+    const menuDropdown = scope.querySelector('.prompt-menu-dropdown');
+    if (menuToggle && menuDropdown && !menuToggle.dataset.bound) {
+      const closeMenu = () => {
+        menuDropdown.classList.remove('open');
+        menuDropdown.setAttribute('aria-hidden', 'true');
+        menuToggle.setAttribute('aria-expanded', 'false');
+      };
+      const openMenu = () => {
+        menuDropdown.classList.add('open');
+        menuDropdown.setAttribute('aria-hidden', 'false');
+        menuToggle.setAttribute('aria-expanded', 'true');
+      };
+      menuToggle.addEventListener('click', event => {
+        event.stopPropagation();
+        if (menuDropdown.classList.contains('open')) {
+          closeMenu();
+        } else {
+          openMenu();
+        }
+      });
+      scope.addEventListener('click', event => {
+        if (event.target.closest('.prompt-menu')) return;
+        closeMenu();
+      });
+      menuDropdown.addEventListener('click', event => {
+        const item = event.target.closest('.prompt-menu-item');
+        if (!item) return;
+        const action = item.dataset.action;
+        if (action === 'open') {
+          loadInput?.click();
+        } else if (action === 'save') {
+          saveMix();
+        } else if (action === 'quit') {
+          const win = scope.closest('.app-window');
+          const instanceId = win?.dataset.instance;
+          if (instanceId) closeWindow(instanceId);
+        }
+        closeMenu();
+      });
+      menuToggle.dataset.bound = 'true';
+    }
+
+    if (loadInput && !loadInput.dataset.bound) {
+      loadInput.addEventListener('change', event => {
+        const file = event.target.files?.[0];
+        loadMix(file);
+        loadInput.value = '';
+      });
+      loadInput.dataset.bound = 'true';
+    }
   }
 
   const WINDOW_DEFS = {
     prompts: { templateId: 'window-prompts-template', label: 'Prompt Enhancer', icon: 'icon-prompts' },
+    audio: { templateId: 'window-audio-template', label: 'Audio Interpolator', icon: 'icon-audio' },
     about: { templateId: 'window-about-template', label: 'About', icon: 'icon-about' }
   };
 
   const windowCounts = {
     prompts: 0,
+    audio: 0,
     about: 0
   };
 
@@ -692,7 +777,7 @@
       btn.className = 'taskbar-button';
       btn.dataset.instance = instanceId;
       btn.dataset.accent = String((taskbarAccentCounter++ % TASKBAR_ACCENTS) + 1);
-      btn.innerHTML = `<span class=\"task-icon ${icon}\"></span><span class=\"task-label\">${label}</span>`;
+      btn.innerHTML = `<span class=\"task-icon ${icon}\"></span>`;
       btn.addEventListener('click', () => toggleWindow(instanceId));
       bar.appendChild(btn);
     }
@@ -775,6 +860,10 @@
     const area = document.getElementById('window-area');
     if (!area) return;
     area.appendChild(clone);
+    const computedHeight = window.getComputedStyle(clone).height;
+    if (computedHeight && !clone.style.height) {
+      clone.style.height = computedHeight;
+    }
     if (windowType === 'prompts') {
       const root = clone.querySelector('.mix-root');
       if (root) applyMixState(null, root);
@@ -844,6 +933,13 @@
     };
 
     const endDrag = () => {
+      if (dragState?.pointerId != null && dragState?.captureEl?.releasePointerCapture) {
+        try {
+          dragState.captureEl.releasePointerCapture(dragState.pointerId);
+        } catch (err) {
+          /* ignore */
+        }
+      }
       dragState = null;
       document.body?.classList.remove('is-dragging');
       document.removeEventListener('pointermove', onMove);
@@ -857,6 +953,13 @@
       const win = header.closest('.app-window');
       if (!win || win.classList.contains('is-hidden') || win.classList.contains('is-maximized')) return;
       event.preventDefault();
+      if (header.setPointerCapture) {
+        try {
+          header.setPointerCapture(event.pointerId);
+        } catch (err) {
+          /* ignore */
+        }
+      }
       const instanceId = win.dataset.instance;
       if (instanceId) focusWindow(instanceId);
       const rect = win.getBoundingClientRect();
@@ -864,7 +967,9 @@
       dragState = {
         win,
         offsetX: event.clientX - rect.left,
-        offsetY: event.clientY - rect.top
+        offsetY: event.clientY - rect.top,
+        pointerId: event.pointerId,
+        captureEl: header
       };
       document.body?.classList.add('is-dragging');
       win.style.right = 'auto';
@@ -942,11 +1047,11 @@
         openMenu();
       }
     };
-    menuBar.addEventListener('click', event => {
-      if (event.target.closest('.taskbar-button')) return;
-      toggleMenu(event);
-    });
     if (menuStart) menuStart.addEventListener('click', toggleMenu);
+    menuBar.addEventListener('click', event => {
+      if (event.target.closest('#menu-start')) return;
+      if (menu.classList.contains('open')) closeMenu();
+    });
     menu.addEventListener('click', event => {
       const item = event.target.closest('.menu-item');
       if (!item) return;
