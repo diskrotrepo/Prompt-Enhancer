@@ -1,144 +1,24 @@
 /** @jest-environment jsdom */
 
+const fs = require('fs');
+const path = require('path');
+
 global.__TEST__ = true;
-if (typeof window !== "undefined") window.__TEST__ = true;
-const main = require("../src/script");
-const lists = main;
-const state = main;
-const storage = main;
-const ui = main;
-function setupDOM() {
-  document.body.innerHTML = `
-    <select id="base-select"></select>
-    <textarea id="base-input"></textarea>
-  `;
+if (typeof window !== 'undefined') window.__TEST__ = true;
+
+const main = require('../src/script');
+
+function loadBody() {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'index.html'), 'utf8');
+  document.documentElement.innerHTML = html;
 }
 
-describe('Storage manager', () => {
-  beforeEach(() => {
-    setupDOM();
-    lists.importLists({ presets: [{ id: 'b', title: 'b', type: 'base', items: 'x' }] });
-    state.loadFromDOM();
-  });
-
-  test('exportData and importData round trip', () => {
-    const json = storage.exportData();
-    lists.importLists({ presets: [] });
-    document.getElementById('base-input').value = 'y';
-    storage.importData(json);
-    const after = storage.exportData();
-    expect(after).toBe(json);
-  });
-
-  test('importData preserves base input and preset values', () => {
-    lists.importLists({
-      presets: [
-        { id: 'b', title: 'b', type: 'base', items: 'x' }
-      ]
-    });
-    document.getElementById('base-input').value = 'x';
-    const json = storage.exportData();
-    document.body.innerHTML = `
-      <select id="base-select"></select>
-      <textarea id="base-input"></textarea>
-    `;
-    lists.importLists({ presets: [] });
-    storage.importData(json);
-    expect(document.getElementById('base-input').value).toBe('x');
-  });
-
-  test('importData merges lists by default', () => {
-    const json = {
-      lists: {
-        presets: [
-          { id: 'b', title: 'b', type: 'base', items: 'z' },
-          { id: 'c', title: 'c', type: 'base', items: 'y' }
-        ]
-      },
-      state: {}
-    };
-    storage.importData(json);
-    const data = JSON.parse(lists.exportLists());
-    const original = data.presets.find(
-      p => p.title === 'b' && p.type === 'base'
-    );
-    const renamed = data.presets.find(
-      p => p.title === 'b (1)' && p.type === 'base'
-    );
-    expect(original.items).toBe('x');
-    expect(renamed.items).toBe('z');
-    expect(
-      data.presets.some(p => p.title === 'c' && p.type === 'base')
-    ).toBe(true);
-  });
-
-  test('loadPersisted prefers localStorage data', () => {
-    const saved = {
-      lists: { presets: [{ id: 'b', title: 'b', type: 'base', items: 'y' }] },
-      state: { 'base-input': 'y', 'base-select': 'b' }
-    };
-    localStorage.setItem('promptEnhancerData', JSON.stringify(saved));
-    document.body.innerHTML = `
-      <select id="base-select"></select>
-      <textarea id="base-input"></textarea>
-    `;
-    storage.loadPersisted();
-    const txt = document.getElementById('base-input').value;
-    expect(txt).toBe('y');
-  });
-
-  test('loadPersisted falls back to DEFAULT_DATA', () => {
-    localStorage.removeItem('promptEnhancerData');
-    global.DEFAULT_DATA = {
-      lists: { presets: [{ id: 'b', title: 'b', type: 'base', items: 'z' }] },
-      state: { 'base-input': 'z', 'base-select': 'b' }
-    };
-    document.body.innerHTML = `
-      <select id="base-select"></select>
-      <textarea id="base-input"></textarea>
-    `;
-    storage.loadPersisted();
-    const txt = document.getElementById('base-input').value;
-    expect(txt).toBe('z');
-  });
-
-  test('resetData clears storage and loads defaults', () => {
-    localStorage.setItem('promptEnhancerData', JSON.stringify({ state: { 'base-input': 'x' } }));
-    global.DEFAULT_DATA = {
-      lists: { presets: [{ id: 'b', title: 'b', type: 'base', items: 'd' }] },
-      state: { 'base-input': 'd', 'base-select': 'b' }
-    };
-    document.body.innerHTML = `
-      <select id="base-select"></select>
-      <textarea id="base-input"></textarea>
-    `;
-    lists.importLists({ presets: [] });
-    storage.resetData();
-    const txt = document.getElementById('base-input').value;
-    expect(txt).toBe('d');
-    expect(localStorage.getItem('promptEnhancerData')).not.toBeNull();
-  });
-
-  test('importData populates stacked inputs', () => {
-    document.body.innerHTML = `
-      <input type="checkbox" id="pos-stack">
-      <select id="pos-stack-size"><option value="2">2</option></select>
-      <input type="checkbox" id="pos-shuffle">
-      <div id="pos-stack-container">
-        <div class="stack-block" id="pos-stack-1">
-          <select id="pos-select"></select>
-          <div class="input-row"><textarea id="pos-input"></textarea></div>
-          <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-        </div>
-      </div>
-    `;
-    ui.setupStackControls();
-    state.loadFromDOM();
-    const saved = {
-      lists: { presets: [] },
-      state: { 'pos-stack': true, 'pos-stack-size': '2', 'pos-input-2': 'extra' }
-    };
-    storage.importData(saved);
-    expect(document.getElementById('pos-input-2').value).toBe('extra');
+describe('Mix state serialization', () => {
+  test('exportMixState returns mixes array', () => {
+    loadBody();
+    main.applyMixState(null);
+    const data = main.exportMixState();
+    expect(Array.isArray(data.mixes)).toBe(true);
+    expect(data.mixes.length).toBeGreaterThan(0);
   });
 });

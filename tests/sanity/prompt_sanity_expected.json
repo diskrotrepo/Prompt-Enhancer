@@ -1,81 +1,20 @@
 {
   "cases": [
     {
-      "id": "exact_include_pos",
-      "positive": "papapapapa",
-      "negative": "npanpanpan"
+      "id": "basic_mix_divider",
+      "output": "a b d "
     },
     {
-      "id": "comma_chunk_size_two",
-      "positive": "pa, b, pc, d",
-      "negative": "na, b, nc, d"
+      "id": "random_mix_order",
+      "output": "b c a "
     },
     {
-      "id": "sentence_punctuation_mode",
-      "positive": "pHello world. pHow are you?\npNext line.",
-      "negative": "nHello world. nHow are you?\nnNext line."
+      "id": "exact_length_trim",
+      "output": "abc a"
     },
     {
-      "id": "custom_delimiter_tab",
-      "positive": "pa\tpb\tpc",
-      "negative": "na\tnb\tnc"
-    },
-    {
-      "id": "newline_chunk_size_two",
-      "positive": "pa\nb\npc\nd\n",
-      "negative": "na\nb\nnc\nd\n"
-    },
-    {
-      "id": "custom_delimiter_empty_fallback",
-      "positive": "pa pb ",
-      "negative": "na nb "
-    },
-    {
-      "id": "modifier_chunk_size_two",
-      "positive": "x, y,a  z, wb",
-      "negative": "na nb"
-    },
-    {
-      "id": "random_base_order",
-      "positive": "pb pcpa ",
-      "negative": "nb ncna "
-    },
-    {
-      "id": "random_modifier_order",
-      "positive": "ya x,b",
-      "negative": "na nb"
-    },
-    {
-      "id": "stacked_modifiers",
-      "positive": "p1xp2p1xp2p1xp2",
-      "negative": "n1xn2n1xn2n1xn2"
-    },
-    {
-      "id": "divider_shuffle",
-      "positive": "a bYa bX a b",
-      "negative": "a bYa bX a b"
-    },
-    {
-      "id": "neg_addendum",
-      "positive": "papapa",
-      "negative": "papapannn"
-    },
-    {
-      "id": "include_pos_for_neg",
-      "positive": "pcat",
-      "negative": "npcat"
-    },
-    {
-      "id": "lyrics_clean_insert",
-      "positive": "aa",
-      "negative": "aa",
-      "lyrics": "hello [z] world"
-    },
-    {
-      "id": "lyrics_random_insert",
-      "positive": "aa",
-      "negative": "aa",
-      "lyrics": "a b [x] c [x] d [x] e f"
+      "id": "nested_rechunk",
+      "output": "a b x "
     }
   ]
 }

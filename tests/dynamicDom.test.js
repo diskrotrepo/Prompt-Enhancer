@@ -1,57 +1,46 @@
 /** @jest-environment jsdom */
 
+const fs = require('fs');
+const path = require('path');
+
 global.__TEST__ = true;
 if (typeof window !== 'undefined') window.__TEST__ = true;
 
 const main = require('../src/script');
-const ui = main;
 
-describe('Dynamic DOM updates', () => {
-  test('updateStackBlocks adds and removes stacked controls', () => {
-    document.body.innerHTML = `
-      <div id="pos-stack-container">
-        <div class="stack-block" id="pos-stack-1">
-          <select id="pos-select"></select>
-          <div class="input-row"><textarea id="pos-input"></textarea></div>
-          <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-        </div>
-      </div>
-    `;
-    ui.updateStackBlocks('pos', 2);
-    expect(document.getElementById('pos-order-select-2')).not.toBeNull();
-    ui.updateStackBlocks('pos', 1);
-    expect(document.getElementById('pos-order-select-2')).toBeNull();
+function loadBody() {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'index.html'), 'utf8');
+  document.documentElement.innerHTML = html;
+}
+
+describe('Dynamic mix DOM', () => {
+  test('applyMixState builds default mix boxes', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    main.applyMixState(null, root);
+    const mixes = root.querySelectorAll('.mix-wrapper');
+    expect(mixes.length).toBe(1);
   });
 
-  test('setupShuffleAll toggles newly added selects', () => {
-    document.body.innerHTML = `
-      <input type="checkbox" id="all-random">
-      <button class="toggle-button" data-target="all-random"></button>
-      <input type="checkbox" id="pos-order-random">
-      <button class="toggle-button" data-target="pos-order-random"></button>
-      <div id="pos-stack-container">
-        <div class="stack-block" id="pos-stack-1">
-          <select id="pos-select"></select>
-          <div class="input-row"><textarea id="pos-input"></textarea></div>
-          <select id="pos-order-select"><option value="canonical">c</option><option value="random">r</option></select>
-        </div>
-      </div>
-    `;
-    ui.setupSectionOrder('pos');
-    ui.setupShuffleAll();
-    ui.updateStackBlocks('pos', 2);
-    ui.setupSectionOrder('pos');
-    ui.setupShuffleAll();
-    const cb = document.getElementById('all-random');
-    cb.checked = true;
-    cb.dispatchEvent(new Event('change'));
-    expect(document.getElementById('pos-order-select').value).toBe('random');
-    expect(document.getElementById('pos-order-select-2').value).toBe('random');
-    ui.updateStackBlocks('pos', 1);
-    ui.setupShuffleAll();
-    cb.checked = false;
-    cb.dispatchEvent(new Event('change'));
-    expect(document.getElementById('pos-order-select').value).toBe('canonical');
-    expect(document.getElementById('pos-order-select-2')).toBeNull();
+  test('applyMixState supports nested mixes', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    main.applyMixState({
+      mixes: [
+        {
+          type: 'mix',
+          title: 'Parent',
+          children: [
+            { type: 'chunk', text: 'a ' },
+            {
+              type: 'mix',
+              title: 'Child',
+              children: [ { type: 'chunk', text: 'b ' } ]
+            }
+          ]
+        }
+      ]
+    });
+    expect(root.querySelectorAll('.mix-box').length).toBe(2);
   });
 });
