@@ -91,6 +91,13 @@
     return !!btn && btn.classList.contains('active');
   }
 
+  function readExactMode(boxEl) {
+    const select = boxEl.querySelector('.length-mode');
+    if (select) return select.value !== 'allow';
+    const exactBtn = boxEl.querySelector('.exact-toggle');
+    return isActive(exactBtn);
+  }
+
   const mobileQuery =
     typeof window !== 'undefined' && typeof window.matchMedia === 'function'
       ? window.matchMedia('(max-width: 768px)')
@@ -193,10 +200,9 @@
   function evaluateChunkBox(boxEl) {
     const input = boxEl.querySelector('.chunk-input');
     const limitInput = boxEl.querySelector('.length-input');
-    const exactBtn = boxEl.querySelector('.exact-toggle');
     const randomBtn = boxEl.querySelector('.random-toggle');
     const limit = readNumber(limitInput, 1000);
-    const exact = isActive(exactBtn);
+    const exact = readExactMode(boxEl);
     const randomize = isActive(randomBtn);
     const delimiterConfig = getDelimiterConfig(boxEl);
     return buildChunkList(input?.value || '', delimiterConfig, limit, exact, randomize);
@@ -204,13 +210,12 @@
 
   function evaluateMixBox(boxEl) {
     const limitInput = boxEl.querySelector('.length-input');
-    const exactBtn = boxEl.querySelector('.exact-toggle');
     const randomBtn = boxEl.querySelector('.random-toggle');
     const sizeSelect = boxEl.querySelector('.delimiter-size');
     const outputEl = boxEl.querySelector('.mix-output-text');
 
     const limit = readNumber(limitInput, 1000);
-    const exact = isActive(exactBtn);
+    const exact = readExactMode(boxEl);
     const randomize = isActive(randomBtn);
     const preserve = sizeSelect?.value === 'preserve';
     const delimiterConfig = getDelimiterConfig(boxEl);
@@ -251,8 +256,16 @@
   const MIX_COLOR_VARIANTS = 6;
   const CHUNK_COLOR_VARIANTS = 6;
 
-  function pickRandomVariant(max) {
-    return String(Math.floor(Math.random() * max) + 1);
+  function pickRandomVariant(max, avoid = []) {
+    const avoidSet = new Set((Array.isArray(avoid) ? avoid : [avoid]).filter(Boolean).map(String));
+    if (avoidSet.size >= max) return String(Math.floor(Math.random() * max) + 1);
+    let choice = String(Math.floor(Math.random() * max) + 1);
+    let attempts = 0;
+    while (avoidSet.has(choice) && attempts < max * 4) {
+      choice = String(Math.floor(Math.random() * max) + 1);
+      attempts += 1;
+    }
+    return choice;
   }
 
   function initToggleButton(btn, force) {
@@ -275,23 +288,26 @@
     root.querySelectorAll('.chunk-input').forEach(autoResizeTextarea);
   }
 
-  function createMixWrapper(config = {}) {
+  function createMixWrapper(config = {}, context = {}) {
     const template = document.getElementById('mix-box-template');
     const fragment = template.content.cloneNode(true);
     const wrapper = fragment.querySelector('.mix-wrapper');
     const box = fragment.querySelector('.mix-box');
     const titleInput = fragment.querySelector('.box-title');
     const limitInput = fragment.querySelector('.length-input');
-    const exactBtn = fragment.querySelector('.exact-toggle');
     const randomBtn = fragment.querySelector('.random-toggle');
+    const lengthMode = fragment.querySelector('.length-mode');
     const delimiterSelect = fragment.querySelector('.delimiter-select');
     const delimiterCustom = fragment.querySelector('.delimiter-custom');
     const delimiterSize = fragment.querySelector('.delimiter-size');
 
     box.dataset.boxId = config.id || `mix-${++idCounter}`;
-    box.dataset.color = String(config.color || pickRandomVariant(MIX_COLOR_VARIANTS));
+    box.dataset.color = String(
+      config.color || pickRandomVariant(MIX_COLOR_VARIANTS, [context.parentColor, context.previousColor])
+    );
     if (titleInput) titleInput.value = config.title || 'Mix';
     if (limitInput) limitInput.value = config.limit || 1000;
+    if (lengthMode) lengthMode.value = config.exact === false ? 'allow' : 'exact';
     if (delimiterSelect && config.delimiter?.mode) delimiterSelect.value = config.delimiter.mode;
     if (delimiterCustom) delimiterCustom.value = config.delimiter?.custom || '';
     if (delimiterSize) {
@@ -302,16 +318,26 @@
       }
     }
 
-    initToggleButton(exactBtn, config.exact !== false);
     initToggleButton(randomBtn, !!config.randomize);
 
     const childContainer = fragment.querySelector('.mix-children');
     if (Array.isArray(config.children)) {
+      let prevColor = null;
       config.children.forEach(child => {
         if (child.type === 'mix') {
-          childContainer.appendChild(createMixWrapper(child));
+          const childWrapper = createMixWrapper(child, {
+            parentColor: box.dataset.color,
+            previousColor: prevColor
+          });
+          childContainer.appendChild(childWrapper);
+          prevColor = childWrapper.querySelector('.mix-box')?.dataset.color || prevColor;
         } else {
-          childContainer.appendChild(createChunkWrapper(child));
+          const childWrapper = createChunkWrapper(child, {
+            parentColor: box.dataset.color,
+            previousColor: prevColor
+          });
+          childContainer.appendChild(childWrapper);
+          prevColor = childWrapper.querySelector('.chunk-box')?.dataset.color || prevColor;
         }
       });
     }
@@ -321,7 +347,7 @@
     return wrapper;
   }
 
-  function createChunkWrapper(config = {}) {
+  function createChunkWrapper(config = {}, context = {}) {
     const template = document.getElementById('chunk-box-template');
     const fragment = template.content.cloneNode(true);
     const wrapper = fragment.querySelector('.chunk-wrapper');
@@ -329,22 +355,24 @@
     const titleInput = fragment.querySelector('.box-title');
     const input = fragment.querySelector('.chunk-input');
     const limitInput = fragment.querySelector('.length-input');
-    const exactBtn = fragment.querySelector('.exact-toggle');
     const randomBtn = fragment.querySelector('.random-toggle');
+    const lengthMode = fragment.querySelector('.length-mode');
     const delimiterSelect = fragment.querySelector('.delimiter-select');
     const delimiterCustom = fragment.querySelector('.delimiter-custom');
     const delimiterSize = fragment.querySelector('.delimiter-size');
 
     box.dataset.boxId = config.id || `chunk-${++idCounter}`;
-    box.dataset.color = String(config.color || pickRandomVariant(CHUNK_COLOR_VARIANTS));
+    box.dataset.color = String(
+      config.color || pickRandomVariant(CHUNK_COLOR_VARIANTS, [context.parentColor, context.previousColor])
+    );
     if (titleInput) titleInput.value = config.title || 'String';
     if (input) input.value = config.text || '';
     if (limitInput) limitInput.value = config.limit || 1000;
+    if (lengthMode) lengthMode.value = config.exact === false ? 'allow' : 'exact';
     if (delimiterSelect && config.delimiter?.mode) delimiterSelect.value = config.delimiter.mode;
     if (delimiterCustom) delimiterCustom.value = config.delimiter?.custom || '';
     if (delimiterSize && config.delimiter?.size) delimiterSize.value = String(config.delimiter.size);
 
-    initToggleButton(exactBtn, config.exact !== false);
     initToggleButton(randomBtn, !!config.randomize);
 
     syncTextareaHeights(wrapper);
@@ -355,7 +383,6 @@
     const titleInput = box.querySelector('.box-title');
     const input = box.querySelector('.chunk-input');
     const limitInput = box.querySelector('.length-input');
-    const exactBtn = box.querySelector('.exact-toggle');
     const randomBtn = box.querySelector('.random-toggle');
     const delimiter = getDelimiterConfig(box);
     return {
@@ -364,7 +391,7 @@
       title: titleInput?.value || 'String',
       text: input?.value || '',
       limit: readNumber(limitInput, 1000),
-      exact: isActive(exactBtn),
+      exact: readExactMode(box),
       randomize: isActive(randomBtn),
       delimiter: {
         mode: delimiter.mode,
@@ -377,7 +404,6 @@
   function serializeMixBox(box) {
     const titleInput = box.querySelector('.box-title');
     const limitInput = box.querySelector('.length-input');
-    const exactBtn = box.querySelector('.exact-toggle');
     const randomBtn = box.querySelector('.random-toggle');
     const delimiter = getDelimiterConfig(box);
     const sizeSelect = box.querySelector('.delimiter-size');
@@ -398,7 +424,7 @@
       id: box.dataset.boxId,
       title: titleInput?.value || 'Mix',
       limit: readNumber(limitInput, 1000),
-      exact: isActive(exactBtn),
+      exact: readExactMode(box),
       preserve,
       randomize: isActive(randomBtn),
       delimiter: {
@@ -430,7 +456,12 @@
       : [
           { type: 'mix', title: 'Mix', children: [] }
         ];
-    mixes.forEach(cfg => root.appendChild(createMixWrapper(cfg)));
+    let prevColor = null;
+    mixes.forEach(cfg => {
+      const wrapper = createMixWrapper(cfg, { previousColor: prevColor });
+      root.appendChild(wrapper);
+      prevColor = wrapper.querySelector('.mix-box')?.dataset.color || prevColor;
+    });
     updateEmptyState(root);
 
     setupDelimiterControls(root);
@@ -566,7 +597,13 @@
       if (btn.classList.contains('add-chunk-child')) {
         const mixBox = btn.closest('.mix-box');
         const childContainer = mixBox?.querySelector('.mix-children');
-        if (childContainer) childContainer.appendChild(createChunkWrapper());
+        if (childContainer) {
+          const prevChild = childContainer.lastElementChild;
+          const prevColor = prevChild?.querySelector('.mix-box, .chunk-box')?.dataset.color || null;
+          childContainer.appendChild(
+            createChunkWrapper({}, { parentColor: mixBox?.dataset.color, previousColor: prevColor })
+          );
+        }
         setupDelimiterControls(mixBox || document);
         syncCollapseButtons(mixBox || document);
         syncTextareaHeights(mixBox || document);
@@ -576,7 +613,13 @@
       if (btn.classList.contains('add-mix-child')) {
         const mixBox = btn.closest('.mix-box');
         const childContainer = mixBox?.querySelector('.mix-children');
-        if (childContainer) childContainer.appendChild(createMixWrapper({ title: 'Mix' }));
+        if (childContainer) {
+          const prevChild = childContainer.lastElementChild;
+          const prevColor = prevChild?.querySelector('.mix-box, .chunk-box')?.dataset.color || null;
+          childContainer.appendChild(
+            createMixWrapper({ title: 'Mix' }, { parentColor: mixBox?.dataset.color, previousColor: prevColor })
+          );
+        }
         setupDelimiterControls(mixBox || document);
         syncCollapseButtons(mixBox || document);
         updatePreserveMode(mixBox || document);
@@ -678,7 +721,11 @@
     if (addEmpty && !addEmpty.dataset.bound) {
       addEmpty.addEventListener('click', () => {
         const root = scope.querySelector('.mix-root');
-        if (root) root.appendChild(createMixWrapper({ title: 'Mix' }));
+        if (root) {
+          const prevChild = root.lastElementChild;
+          const prevColor = prevChild?.querySelector('.mix-box')?.dataset.color || null;
+          root.appendChild(createMixWrapper({ title: 'Mix' }, { previousColor: prevColor }));
+        }
         setupDelimiterControls(scope);
         syncCollapseButtons(scope);
         updateEmptyState(root);

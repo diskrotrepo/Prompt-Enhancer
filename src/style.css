@@ -651,6 +651,10 @@ textarea,
 .toggle-block .toggle-button {
   width: 100%;
   text-align: center;
+  min-height: 0;
+  height: 34px;
+  padding: 0 0.5rem;
+  line-height: 1;
 }
 
 .mix-actions {
@@ -1320,7 +1324,8 @@ textarea,
   width: 100%;
   margin-top: 0.5rem;
   padding: 0.45rem 0.7rem;
-  border-radius: 4px;
+  border-radius: 0;
+  min-height: 36px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: linear-gradient(180deg, rgba(45, 50, 58, 0.9), rgba(28, 32, 38, 0.9));
   color: #fff;
@@ -1701,7 +1706,7 @@ button {
 
 .prompt-menu-dropdown {
   position: absolute;
-  top: calc(100% + 4px);
+  top: 100%;
   left: 0;
   display: none;
   flex-direction: column;
@@ -1787,7 +1792,8 @@ button {
     border: 1px solid rgba(255, 255, 255, 0.12);
     color: #fff;
     padding: 0.25rem 0.5rem;
-    border-radius: 4px;
+    border-radius: 0;
+    min-height: 36px;
     cursor: pointer;
     transition: background 0.3s;
     box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.08), inset -1px -1px 0 rgba(0, 0, 0, 0.6);
