@@ -1084,6 +1084,169 @@
     });
   }
 
+  function resolveHelpContent(target, scope) {
+    if (!target) return null;
+    let helpEl = target.closest('[data-help], [data-help-detail], [data-help-key]');
+    if (!helpEl) {
+      const container = target.closest('.control-block, .input-row, .mix-output, .chunk-output');
+      if (container) {
+        helpEl = container.querySelector('[data-help], [data-help-detail], [data-help-key]');
+      }
+    }
+    if (!helpEl || (scope && !scope.contains(helpEl))) return null;
+    const shortText =
+      (helpEl.dataset.help || '').trim() ||
+      (helpEl.getAttribute('aria-label') || '').trim() ||
+      (helpEl.getAttribute('title') || '').trim() ||
+      (helpEl.textContent || '').trim();
+    const detailText = (helpEl.dataset.helpDetail || '').trim();
+    const fallbackDetail = detailText || (shortText ? `${shortText} (More detail coming soon.)` : 'No extra help is available yet.');
+    return {
+      short: shortText || 'Help',
+      detail: fallbackDetail,
+      element: helpEl
+    };
+  }
+
+  function getHelpPopover(win) {
+    if (!win) return null;
+    let popover = win.querySelector('.help-popover');
+    if (!popover) {
+      popover = document.createElement('div');
+      popover.className = 'help-popover is-hidden';
+      popover.setAttribute('role', 'dialog');
+      popover.setAttribute('aria-hidden', 'true');
+      popover.setAttribute('aria-live', 'polite');
+      popover.innerHTML = `
+        <div class="help-popover-header">
+          <span class="help-popover-title">Help</span>
+          <button type="button" class="help-close" aria-label="Close help">×</button>
+        </div>
+        <div class="help-popover-short"></div>
+        <div class="help-popover-detail"></div>
+      `;
+      win.appendChild(popover);
+    }
+    return popover;
+  }
+
+  function positionHelpPopover(popover, win, clientX, clientY) {
+    if (!popover || !win) return;
+    const rect = win.getBoundingClientRect();
+    let x = clientX - rect.left + 12;
+    let y = clientY - rect.top + 12;
+    popover.style.left = `${x}px`;
+    popover.style.top = `${y}px`;
+    const popWidth = popover.offsetWidth;
+    const popHeight = popover.offsetHeight;
+    const maxX = rect.width - popWidth - 12;
+    const maxY = rect.height - popHeight - 12;
+    x = Math.max(12, Math.min(x, maxX));
+    y = Math.max(12, Math.min(y, maxY));
+    popover.style.left = `${x}px`;
+    popover.style.top = `${y}px`;
+  }
+
+  function setupHelpMode(win) {
+    if (!win || win.dataset.helpReady) return;
+    const helpBtn = win.querySelector('.help-toggle');
+    if (!helpBtn) return;
+    win.dataset.helpReady = 'true';
+    const popover = getHelpPopover(win);
+    const shortEl = popover?.querySelector('.help-popover-short');
+    const detailEl = popover?.querySelector('.help-popover-detail');
+    const closeBtn = popover?.querySelector('.help-close');
+
+    const setHelpActive = active => {
+      win.classList.toggle('help-active', active);
+      helpBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      if (!active && popover) {
+        popover.classList.add('is-hidden');
+        popover.setAttribute('aria-hidden', 'true');
+      }
+    };
+
+    const showHelp = (target, event) => {
+      if (!popover) return;
+      const info = resolveHelpContent(target, win);
+      if (!info) return;
+      if (shortEl) shortEl.textContent = info.short;
+      if (detailEl) detailEl.textContent = info.detail;
+      popover.classList.remove('is-hidden');
+      popover.setAttribute('aria-hidden', 'false');
+      positionHelpPopover(popover, win, event.clientX, event.clientY);
+    };
+
+    helpBtn.addEventListener('click', event => {
+      event.stopPropagation();
+      setHelpActive(!win.classList.contains('help-active'));
+    });
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', event => {
+        event.stopPropagation();
+        if (popover) {
+          popover.classList.add('is-hidden');
+          popover.setAttribute('aria-hidden', 'true');
+        }
+      });
+    }
+
+    win.addEventListener(
+      'pointerdown',
+      event => {
+        if (!win.classList.contains('help-active')) return;
+        if (event.target.closest('.help-toggle, .help-popover')) return;
+        if (event.target.closest('.window-header')) return;
+        event.preventDefault();
+        event.stopPropagation();
+      },
+      true
+    );
+
+    win.addEventListener(
+      'mousedown',
+      event => {
+        if (!win.classList.contains('help-active')) return;
+        if (event.target.closest('.help-toggle, .help-popover')) return;
+        if (event.target.closest('.window-header')) return;
+        event.preventDefault();
+        event.stopPropagation();
+      },
+      true
+    );
+
+    win.addEventListener(
+      'click',
+      event => {
+        if (!win.classList.contains('help-active')) return;
+        if (event.target.closest('.help-toggle')) return;
+        if (event.target.closest('.window-header')) return;
+        if (event.target.closest('.help-popover')) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        showHelp(event.target, event);
+      },
+      true
+    );
+
+    win.addEventListener(
+      'keydown',
+      event => {
+        if (!win.classList.contains('help-active')) return;
+        if (event.key === 'Escape') {
+          setHelpActive(false);
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+      },
+      true
+    );
+  }
+
   function getNumericChunkSize(sizeSelect) {
     if (!sizeSelect) return 1;
     const raw = sizeSelect.value;
@@ -1609,6 +1772,8 @@
       });
       loadInput.dataset.bound = 'true';
     }
+
+    setupHelpMode(win || scope);
   }
 
   const WINDOW_DEFS = {

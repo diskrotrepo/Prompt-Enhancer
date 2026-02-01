@@ -771,6 +771,7 @@ textarea,
     linear-gradient(135deg, rgba(44, 60, 82, 0.98), rgba(30, 40, 58, 0.98));
   height: min(78vh, 720px);
   min-height: 360px;
+  position: relative;
 }
 
 .prompt-window .box-header {
@@ -1857,6 +1858,100 @@ button {
   border: 1px solid rgba(80, 84, 92, 0.7);
   box-shadow: 0 10px 18px rgba(0, 0, 0, 0.35);
   z-index: 4;
+}
+
+.prompt-menu-spacer {
+  flex: 1 1 auto;
+}
+
+.help-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 0.85rem;
+  background: transparent;
+  border: none;
+  border-left: 1px solid rgba(80, 84, 92, 0.45);
+  color: #0b0d12;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.6rem;
+  cursor: pointer;
+}
+
+.help-toggle:hover {
+  background: rgba(245, 247, 252, 0.9);
+}
+
+.help-toggle[aria-pressed="true"] {
+  background: rgba(40, 46, 60, 0.25);
+  color: #0b0d12;
+}
+
+.prompt-window.help-active .prompt-body,
+.prompt-window.help-active .prompt-menu,
+.prompt-window.help-active .mix-box .box-header,
+.prompt-window.help-active .chunk-box .box-header,
+.prompt-window.help-active .variable-box .box-header {
+  cursor: help;
+}
+
+.prompt-window.help-active .help-toggle {
+  cursor: pointer;
+}
+
+.help-popover {
+  position: absolute;
+  top: 60px;
+  left: 20px;
+  width: min(320px, 80%);
+  background: rgba(15, 18, 26, 0.95);
+  border: 1px solid rgba(130, 138, 158, 0.6);
+  border-radius: 10px;
+  padding: 0.75rem 0.85rem 0.85rem;
+  color: #f7f8fb;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+  z-index: 6;
+}
+
+.help-popover.is-hidden {
+  display: none;
+}
+
+.help-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.help-popover-title {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.help-close {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.help-popover-short {
+  font-weight: 700;
+  font-size: 0.72rem;
+  margin-bottom: 0.4rem;
+}
+
+.help-popover-detail {
+  font-size: 0.65rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .prompt-menu-dropdown.open {
