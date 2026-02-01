@@ -96,6 +96,7 @@
                       <div class="box-header">
                         <input type="text" class="box-title" value="Mix">
                         <div class="button-col">
+                          <button type="button" class="copy-button icon-button copy-output" title="Copy output" data-help="Copy the current mix output to the clipboard.">&#128203;</button>
                           <button type="button" class="toggle-button icon-button random-button random-toggle" title="Randomize list order">&#127922;</button>
                           <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Collapse" data-expanded="-" data-collapsed="+">-</button>
                           <button type="button" class="delete-button icon-button remove-box" title="Remove">X</button>
@@ -105,9 +106,6 @@
                         <div class="mix-output">
                           <div class="label-row">
                             <label>Output</label>
-                            <span class="button-col">
-                              <button type="button" class="copy-button icon-button copy-output" title="Copy">&#128203;</button>
-                            </span>
                           </div>
                           <div class="input-row">
                             <pre class="mix-output-text">output will appear here</pre>
@@ -180,6 +178,7 @@
                       <div class="box-header">
                         <input type="text" class="box-title" value="String" aria-label="String title">
                         <div class="button-col">
+                          <button type="button" class="copy-button icon-button copy-input" title="Copy string" data-help="Copy this string input to the clipboard.">&#128203;</button>
                           <button type="button" class="toggle-button icon-button random-button random-toggle" title="Randomize chunks">&#127922;</button>
                           <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Collapse" data-expanded="-" data-collapsed="+">-</button>
                           <button type="button" class="delete-button icon-button remove-box" title="Remove">X</button>
@@ -188,6 +187,14 @@
                       <div class="box-body">
                         <div class="input-row">
                           <textarea class="chunk-input" rows="3" placeholder="Enter string"></textarea>
+                        </div>
+                        <div class="chunk-output">
+                          <div class="label-row">
+                            <label>Output</label>
+                          </div>
+                          <div class="input-row">
+                            <pre class="chunk-output-text">output will appear here</pre>
+                          </div>
                         </div>
                         <div class="chunk-controls">
                           <div class="control-block">

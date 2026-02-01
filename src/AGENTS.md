@@ -100,6 +100,12 @@ tooltips when users click elements. Lists and input boxes also need coverage;
 avoid vague text. When new buttons or sections are added, provide concise,
 specific descriptions so the help overlay stays informative.
 
+### String Output
+
+String boxes now include an Output panel that mirrors the generated chunk list
+(including randomization and length mode). The header copy button copies this
+output, not the raw input text.
+
 ### File Naming
 
 Prompt menu **Save** reuses the current file name (prompting if none exists),

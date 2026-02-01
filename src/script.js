@@ -7,7 +7,7 @@
   // - Box evaluation
   // - Box creation + state serialization
   // - UI helpers + event wiring
-  // - Window management + data load/save
+  // - Window management + data load/save (locks initial window width)
   // - Initialization
 
   // ======== Utilities ========
@@ -281,13 +281,24 @@
     const input = boxEl.querySelector('.chunk-input');
     const limitInput = boxEl.querySelector('.length-input');
     const randomBtn = boxEl.querySelector('.random-toggle');
+    const outputEl = boxEl.querySelector('.chunk-output-text');
     const limit = readNumber(limitInput, 1000);
     const exact = readExactMode(boxEl);
     const singlePass = readSinglePassMode(boxEl);
     const randomize = isActive(randomBtn);
     const randomizeFirst = readRandomFirstMode(boxEl);
     const delimiterConfig = getDelimiterConfig(boxEl);
-    return buildChunkList(input?.value || '', delimiterConfig, limit, exact, randomize, singlePass, randomizeFirst);
+    const result = buildChunkList(
+      input?.value || '',
+      delimiterConfig,
+      limit,
+      exact,
+      randomize,
+      singlePass,
+      randomizeFirst
+    );
+    if (outputEl) outputEl.textContent = result.join('');
+    return result;
   }
 
   function evaluateVariableBox(boxEl, context) {
@@ -825,6 +836,40 @@
     emptyState.style.display = hasMixes ? 'none' : 'flex';
   }
 
+  // Copy helper shared by mix output + string input buttons.
+  function copyTextWithFeedback(text, btn) {
+    if (!btn) return;
+    const signalCopied = () => {
+      btn.classList.add('copied');
+      const previousTitle = btn.title;
+      const previousLabel = btn.dataset.originalLabel || btn.textContent;
+      btn.dataset.originalLabel = previousLabel;
+      btn.title = 'Copied!';
+      btn.textContent = '✓';
+      clearTimeout(btn._copyTimeout);
+      btn._copyTimeout = setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.title = previousTitle;
+        btn.textContent = previousLabel;
+      }, 900);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(signalCopied).catch(() => {});
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        signalCopied();
+      } catch (err) {
+        /* ignore */
+      }
+      ta.remove();
+    }
+  }
+
   function toggleButton(btn) {
     if (!btn) return;
     if (btn.disabled || btn.classList.contains('disabled') || btn.getAttribute('aria-disabled') === 'true') return;
@@ -908,35 +953,19 @@
         const output = box?.querySelector('.mix-output-text');
         if (!output) return;
         const text = output.textContent || '';
-        const signalCopied = () => {
-          btn.classList.add('copied');
-          const previousTitle = btn.title;
-          const previousLabel = btn.dataset.originalLabel || btn.textContent;
-          btn.dataset.originalLabel = previousLabel;
-          btn.title = 'Copied!';
-          btn.textContent = '✓';
-          clearTimeout(btn._copyTimeout);
-          btn._copyTimeout = setTimeout(() => {
-            btn.classList.remove('copied');
-            btn.title = previousTitle;
-            btn.textContent = previousLabel;
-          }, 900);
-        };
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).then(signalCopied).catch(() => {});
-        } else {
-          const ta = document.createElement('textarea');
-          ta.value = text;
-          document.body.appendChild(ta);
-          ta.select();
-          try {
-            document.execCommand('copy');
-            signalCopied();
-          } catch (err) {
-            /* ignore */
-          }
-          ta.remove();
-        }
+        copyTextWithFeedback(text, btn);
+        return;
+      }
+
+      if (btn.classList.contains('copy-input')) {
+        const box = btn.closest('.chunk-box');
+        if (!box) return;
+        // Refresh output so randomization + limits are reflected before copying.
+        evaluateChunkBox(box);
+        const output = box.querySelector('.chunk-output-text');
+        const fallback = box.querySelector('.chunk-input');
+        const text = output?.textContent || fallback?.value || '';
+        copyTextWithFeedback(text, btn);
         return;
       }
 
@@ -1282,6 +1311,11 @@
     if (computedHeight && !clone.style.height) {
       clone.style.height = computedHeight;
     }
+    const computedWidth = window.getComputedStyle(clone).width;
+    if (computedWidth && !clone.style.width) {
+      // Lock the initial width so long outputs do not auto-expand the window.
+      clone.style.width = computedWidth;
+    }
     if (windowType === 'prompts') {
       const root = clone.querySelector('.mix-root');
       if (root) applyMixState(null, root);
@@ -1603,6 +1637,11 @@
 
     document.querySelectorAll('.app-window').forEach(win => {
       if (win.classList.contains('window-template')) return;
+      const computedWidth = window.getComputedStyle(win).width;
+      if (computedWidth && !win.style.width) {
+        // Existing windows get a fixed width once to prevent first-run expansion.
+        win.style.width = computedWidth;
+      }
       setupPromptControls(win);
     });
     applyMobileWindowState();
