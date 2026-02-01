@@ -44,6 +44,9 @@ function runSanityCase(testCase) {
   const randomFirstDisabled = !!(randomFirstToggle?.disabled || randomFirstToggle?.classList.contains('disabled'));
   const lengthLimitDisabled = !!mixBox?.querySelector('.length-input')?.disabled;
   const windowTitle = window.document.querySelector('.prompt-window .window-header .box-title')?.textContent || '';
+  const colorMode = mixBox?.dataset?.colorMode || '';
+  const colorValue = mixBox?.dataset?.colorValue || '';
+  const colorPreset = mixBox?.dataset?.colorPreset || '';
   return {
     id: testCase.id,
     output,
@@ -51,7 +54,10 @@ function runSanityCase(testCase) {
     preserve,
     randomFirstDisabled,
     lengthLimitDisabled,
-    windowTitle
+    windowTitle,
+    colorMode,
+    colorValue,
+    colorPreset
   };
 }
 
@@ -84,6 +90,15 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'windowTitle')) {
         expect(result.windowTitle).toBe(expected.windowTitle);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'colorMode')) {
+        expect(result.colorMode).toBe(expected.colorMode);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'colorValue')) {
+        expect(result.colorValue).toBe(expected.colorValue);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'colorPreset')) {
+        expect(result.colorPreset).toBe(expected.colorPreset);
       }
     });
   });

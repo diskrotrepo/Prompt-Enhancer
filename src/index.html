@@ -97,6 +97,7 @@
                         <input type="text" class="box-title" value="Mix">
                         <div class="button-col">
                           <button type="button" class="copy-button icon-button copy-output" title="Copy output" data-help="Copy the current mix output to the clipboard.">&#128203;</button>
+                          <button type="button" class="toggle-button icon-button color-toggle" title="Color" data-help="Open the color panel to pick a custom color or preset.">&#127912;</button>
                           <button type="button" class="toggle-button icon-button random-button random-toggle" title="Randomize list order">&#127922;</button>
                           <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Collapse" data-expanded="-" data-collapsed="+">-</button>
                           <button type="button" class="delete-button icon-button remove-box" title="Remove">X</button>
@@ -109,6 +110,19 @@
                           </div>
                           <div class="input-row">
                             <pre class="mix-output-text">output will appear here</pre>
+                          </div>
+                        </div>
+                        <div class="color-controls is-hidden">
+                          <div class="label-row">
+                            <label>Color</label>
+                          </div>
+                          <div class="input-row color-row">
+                            <select class="color-preset-select" data-help="Select Auto, a preset, or Custom to set the box color."></select>
+                            <input type="color" class="color-custom-input" value="#f2aa48" aria-label="Custom color" data-help="Pick any color to apply to this box.">
+                          </div>
+                          <div class="input-row color-row">
+                            <input type="text" class="color-preset-name" placeholder="Preset name" data-help="Name a custom color preset so it can be reused.">
+                            <button type="button" class="add-button save-color-preset" data-help="Save the current custom color as a named preset.">Save Preset</button>
                           </div>
                         </div>
                         <div class="mix-controls">
@@ -179,6 +193,7 @@
                         <input type="text" class="box-title" value="String" aria-label="String title">
                         <div class="button-col">
                           <button type="button" class="copy-button icon-button copy-input" title="Copy string" data-help="Copy this string input to the clipboard.">&#128203;</button>
+                          <button type="button" class="toggle-button icon-button color-toggle" title="Color" data-help="Open the color panel to pick a custom color or preset.">&#127912;</button>
                           <button type="button" class="toggle-button icon-button random-button random-toggle" title="Randomize chunks">&#127922;</button>
                           <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Collapse" data-expanded="-" data-collapsed="+">-</button>
                           <button type="button" class="delete-button icon-button remove-box" title="Remove">X</button>
@@ -194,6 +209,19 @@
                           </div>
                           <div class="input-row">
                             <pre class="chunk-output-text">output will appear here</pre>
+                          </div>
+                        </div>
+                        <div class="color-controls is-hidden">
+                          <div class="label-row">
+                            <label>Color</label>
+                          </div>
+                          <div class="input-row color-row">
+                            <select class="color-preset-select" data-help="Select Auto, a preset, or Custom to set the box color."></select>
+                            <input type="color" class="color-custom-input" value="#ec78d6" aria-label="Custom color" data-help="Pick any color to apply to this box.">
+                          </div>
+                          <div class="input-row color-row">
+                            <input type="text" class="color-preset-name" placeholder="Preset name" data-help="Name a custom color preset so it can be reused.">
+                            <button type="button" class="add-button save-color-preset" data-help="Save the current custom color as a named preset.">Save Preset</button>
                           </div>
                         </div>
                         <div class="chunk-controls">

@@ -6,6 +6,29 @@
       "random": 0
     },
     {
+      "id": "color_custom_state",
+      "description": "Custom colors persist on mix boxes.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Color Mix",
+            "limit": 6,
+            "exact": false,
+            "preserve": true,
+            "randomize": false,
+            "colorMode": "custom",
+            "colorValue": "#ff3366",
+            "delimiter": { "mode": "whitespace", "size": 1 },
+            "children": [
+              { "type": "chunk", "text": "a ", "limit": 6, "exact": false, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "basic_mix_divider",
       "description": "Three chunk lists mixed in canonical order without delimiter injection.",
       "random": 0,

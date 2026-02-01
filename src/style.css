@@ -1414,6 +1414,46 @@ textarea,
   width: 100%;
 }
 
+.color-controls {
+  margin: 0 0 0.75rem;
+  padding: 0.55rem;
+  border-radius: 4px;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  background: rgba(8, 10, 14, 0.45);
+}
+
+.color-controls.is-hidden {
+  display: none;
+}
+
+.color-controls .label-row {
+  width: 100%;
+  margin-bottom: 0.35rem;
+}
+
+.color-controls .color-row {
+  gap: 0.5rem;
+}
+
+.color-controls .color-preset-select {
+  flex: 1 1 auto;
+  min-width: 140px;
+}
+
+.color-controls .color-custom-input {
+  width: 48px;
+  height: 34px;
+  padding: 0;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+}
+
+.color-controls .color-preset-name {
+  flex: 1 1 auto;
+  min-width: 140px;
+}
+
 .chunk-controls {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

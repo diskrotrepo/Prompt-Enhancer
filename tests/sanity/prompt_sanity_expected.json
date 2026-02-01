@@ -10,6 +10,13 @@
       "windowTitle": "Prompt Enhancer"
     },
     {
+      "id": "color_custom_state",
+      "output": "a a a ",
+      "colorMode": "custom",
+      "colorValue": "#ff3366",
+      "colorPreset": ""
+    },
+    {
       "id": "basic_mix_divider",
       "output": "a b d "
     },

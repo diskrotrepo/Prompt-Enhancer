@@ -106,6 +106,13 @@ String boxes now include an Output panel that mirrors the generated chunk list
 (including randomization and length mode). The header copy button copies this
 output, not the raw input text.
 
+### Box Colors
+
+Mix and String boxes now support per-box color customization. The header color
+button opens a panel with Auto/Custom modes, preset selection, and a Save Preset
+flow. Custom presets are serialized with mix state so they can be reused across
+boxes and sessions.
+
 ### File Naming
 
 Prompt menu **Save** reuses the current file name (prompting if none exists),

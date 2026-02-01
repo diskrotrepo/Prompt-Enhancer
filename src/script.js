@@ -2,7 +2,7 @@
   'use strict';
 
   // Table of contents:
-  // - Utilities + shared readers
+  // - Utilities + shared readers (including color preset helpers)
   // - Chunking + mixing engine (single-pass + random first chunk offset)
   // - Box evaluation
   // - Box creation + state serialization
@@ -151,6 +151,243 @@
     if (typeof value !== 'string') return '';
     if (typeof CSS !== 'undefined' && CSS.escape) return CSS.escape(value);
     return value.replace(/["\\]/g, '\\$&');
+  }
+
+  // Color presets are shared across boxes; custom entries are user-defined and serialized.
+  const DEFAULT_COLOR_PRESETS = [
+    { id: 'sunset', name: 'Sunset', color: '#f2aa48' },
+    { id: 'citrus', name: 'Citrus', color: '#aae060' },
+    { id: 'coral', name: 'Coral', color: '#f28878' },
+    { id: 'gold', name: 'Gold', color: '#f2d266' },
+    { id: 'sage', name: 'Sage', color: '#bcce60' },
+    { id: 'rose', name: 'Rose', color: '#e67058' },
+    { id: 'orchid', name: 'Orchid', color: '#ec78d6' },
+    { id: 'amethyst', name: 'Amethyst', color: '#c878f6' }
+  ];
+
+  const MIX_AUTO_COLORS = ['#f2aa48', '#aae060', '#f28878', '#f2d266', '#bcce60', '#e67058'];
+  const CHUNK_AUTO_COLORS = ['#ec78d6', '#c878f6', '#dc62dc', '#b660d6', '#e468b2', '#ac5ac2'];
+
+  let customColorPresets = [];
+
+  function normalizeHexColor(value) {
+    if (typeof value !== 'string') return '';
+    const trimmed = value.trim().toLowerCase();
+    if (/^#[0-9a-f]{3}$/.test(trimmed)) {
+      return `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`;
+    }
+    if (/^#[0-9a-f]{6}$/.test(trimmed)) return trimmed;
+    return '';
+  }
+
+  function slugifyPresetName(value) {
+    if (typeof value !== 'string') return '';
+    return value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  function getAllColorPresets() {
+    return [...DEFAULT_COLOR_PRESETS, ...customColorPresets];
+  }
+
+  function loadColorPresets(state) {
+    const raw = Array.isArray(state?.colorPresets) ? state.colorPresets : [];
+    customColorPresets = raw
+      .map(entry => ({
+        id: slugifyPresetName(entry?.name || entry?.id || ''),
+        name: typeof entry?.name === 'string' ? entry.name.trim() : '',
+        color: normalizeHexColor(entry?.color)
+      }))
+      .filter(entry => entry.id && entry.name && entry.color);
+  }
+
+  function exportColorPresets() {
+    return customColorPresets.map(entry => ({
+      id: entry.id,
+      name: entry.name,
+      color: entry.color
+    }));
+  }
+
+  function upsertCustomPreset(name, color) {
+    const cleanName = typeof name === 'string' ? name.trim() : '';
+    const cleanColor = normalizeHexColor(color);
+    if (!cleanName || !cleanColor) return null;
+    const id = slugifyPresetName(cleanName) || `preset-${Date.now()}`;
+    const existing = customColorPresets.find(entry => entry.id === id);
+    if (existing) {
+      existing.name = cleanName;
+      existing.color = cleanColor;
+      return existing;
+    }
+    const preset = { id, name: cleanName, color: cleanColor };
+    customColorPresets.push(preset);
+    return preset;
+  }
+
+  function getPresetById(id) {
+    if (!id) return null;
+    return getAllColorPresets().find(entry => entry.id === id) || null;
+  }
+
+  function getAutoColorHex(box) {
+    const autoColor = parseInt(box?.dataset?.autoColor, 10);
+    const index = Number.isFinite(autoColor) ? Math.max(0, autoColor - 1) : 0;
+    if (box?.classList?.contains('mix-box')) return MIX_AUTO_COLORS[index] || MIX_AUTO_COLORS[0];
+    if (box?.classList?.contains('chunk-box')) return CHUNK_AUTO_COLORS[index] || CHUNK_AUTO_COLORS[0];
+    return MIX_AUTO_COLORS[0];
+  }
+
+  function rgbFromHex(hex) {
+    const clean = normalizeHexColor(hex);
+    if (!clean) return { r: 0, g: 0, b: 0 };
+    const num = parseInt(clean.slice(1), 16);
+    return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+  }
+
+  function clampByte(value) {
+    return Math.max(0, Math.min(255, Math.round(value)));
+  }
+
+  function shiftRgb(rgb, amount) {
+    return {
+      r: clampByte(rgb.r + amount),
+      g: clampByte(rgb.g + amount),
+      b: clampByte(rgb.b + amount)
+    };
+  }
+
+  function rgbaString(rgb, alpha) {
+    return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+  }
+
+  function clearCustomBoxStyles(box) {
+    if (!box) return;
+    const header = box.querySelector('.box-header');
+    box.style.borderColor = '';
+    box.style.background = '';
+    if (header) {
+      header.style.background = '';
+      header.style.borderColor = '';
+    }
+  }
+
+  // Apply a gradient skin for a custom color so the box still matches the existing UI style.
+  function applyCustomBoxStyles(box, hex) {
+    if (!box) return;
+    const header = box.querySelector('.box-header');
+    const base = rgbFromHex(hex);
+    const light = shiftRgb(base, 36);
+    const lighter = shiftRgb(base, 60);
+    const mid = shiftRgb(base, 12);
+    const dark = shiftRgb(base, -50);
+    const darker = shiftRgb(base, -90);
+
+    box.style.borderColor = rgbaString(base, 0.9);
+    box.style.background = `
+      linear-gradient(0deg, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.28)),
+      radial-gradient(circle at 14% 18%, ${rgbaString(lighter, 0.28)} 0 12px, transparent 16px),
+      radial-gradient(circle at 70% 28%, ${rgbaString(light, 0.24)} 0 12px, transparent 16px),
+      radial-gradient(circle at 34% 72%, ${rgbaString(mid, 0.22)} 0 14px, transparent 18px),
+      linear-gradient(135deg, ${rgbaString(dark, 0.98)}, ${rgbaString(darker, 0.98)})
+    `;
+
+    if (header) {
+      header.style.background = `linear-gradient(90deg, ${rgbaString(lighter, 0.95)}, ${rgbaString(base, 0.92)})`;
+      header.style.borderColor = rgbaString(light, 0.75);
+    }
+  }
+
+  // Switch between auto, preset, or custom colors while keeping the original auto variant on hand.
+  function setBoxColorMode(box, mode, value) {
+    if (!box) return;
+    const autoColor = box.dataset.autoColor || box.dataset.color || '';
+    if (mode === 'auto') {
+      box.dataset.colorMode = 'auto';
+      box.dataset.color = autoColor;
+      delete box.dataset.colorValue;
+      delete box.dataset.colorPreset;
+      clearCustomBoxStyles(box);
+      return;
+    }
+    if (mode === 'preset') {
+      const preset = getPresetById(value);
+      if (!preset) {
+        // Preset missing? Fall back to auto rather than leaving stale colors.
+        setBoxColorMode(box, 'auto');
+        return;
+      }
+      box.dataset.colorMode = 'preset';
+      box.dataset.colorPreset = preset.id;
+      box.dataset.colorValue = preset.color;
+      box.dataset.color = 'custom';
+      applyCustomBoxStyles(box, preset.color);
+      return;
+    }
+    const clean = normalizeHexColor(value);
+    if (!clean) {
+      setBoxColorMode(box, 'auto');
+      return;
+    }
+    box.dataset.colorMode = 'custom';
+    box.dataset.colorValue = clean;
+    delete box.dataset.colorPreset;
+    box.dataset.color = 'custom';
+    applyCustomBoxStyles(box, clean);
+  }
+
+  function syncColorControls(box) {
+    if (!box) return;
+    const select = box.querySelector('.color-preset-select');
+    const colorInput = box.querySelector('.color-custom-input');
+    const mode = box.dataset.colorMode || 'auto';
+    const value = box.dataset.colorValue || '';
+    const presetId = box.dataset.colorPreset || '';
+    if (select) {
+      if (mode === 'preset' && presetId) {
+        select.value = presetId;
+      } else if (mode === 'custom') {
+        select.value = 'custom';
+      } else {
+        select.value = 'auto';
+      }
+    }
+    if (colorInput) {
+      if (mode === 'custom' && value) {
+        colorInput.value = value;
+      } else if (mode === 'preset' && value) {
+        colorInput.value = value;
+      } else {
+        colorInput.value = getAutoColorHex(box);
+      }
+    }
+  }
+
+  function refreshColorPresetSelects(scope) {
+    const root = scope || document;
+    const presets = getAllColorPresets();
+    root.querySelectorAll('.color-preset-select').forEach(select => {
+      const box = select.closest('.mix-box, .chunk-box');
+      select.innerHTML = '';
+      const autoOption = document.createElement('option');
+      autoOption.value = 'auto';
+      autoOption.textContent = 'Auto';
+      select.appendChild(autoOption);
+      const customOption = document.createElement('option');
+      customOption.value = 'custom';
+      customOption.textContent = 'Custom...';
+      select.appendChild(customOption);
+      presets.forEach(preset => {
+        const option = document.createElement('option');
+        option.value = preset.id;
+        option.textContent = preset.name;
+        select.appendChild(option);
+      });
+      syncColorControls(box);
+    });
   }
 
   const mobileQuery =
@@ -480,6 +717,8 @@
     box.dataset.color = String(
       config.color || pickRandomVariant(MIX_COLOR_VARIANTS, [context.parentColor, context.previousColor])
     );
+    box.dataset.autoColor = box.dataset.color;
+    box.dataset.colorMode = 'auto';
     if (titleInput) titleInput.value = config.title || 'Mix';
     if (limitInput) limitInput.value = config.limit || 1000;
     if (lengthMode) {
@@ -503,6 +742,15 @@
 
     initToggleButton(randomBtn, !!config.randomize);
     initToggleButton(randomFirstBtn, config.randomFirst !== false);
+    if (config.colorMode === 'custom' && config.colorValue) {
+      setBoxColorMode(box, 'custom', config.colorValue);
+    } else if (config.colorMode === 'preset' && config.colorPreset) {
+      setBoxColorMode(box, 'preset', config.colorPreset);
+    } else if (config.colorMode === 'auto') {
+      setBoxColorMode(box, 'auto');
+    } else if (config.colorValue) {
+      setBoxColorMode(box, 'custom', config.colorValue);
+    }
 
     const childContainer = fragment.querySelector('.mix-children');
     if (Array.isArray(config.children)) {
@@ -532,6 +780,7 @@
     updatePreserveMode(box);
     updateLengthModeState(box);
     syncTextareaHeights(wrapper);
+    syncColorControls(box);
     return wrapper;
   }
 
@@ -554,6 +803,8 @@
     box.dataset.color = String(
       config.color || pickRandomVariant(CHUNK_COLOR_VARIANTS, [context.parentColor, context.previousColor])
     );
+    box.dataset.autoColor = box.dataset.color;
+    box.dataset.colorMode = 'auto';
     if (titleInput) titleInput.value = config.title || 'String';
     if (input) input.value = config.text || '';
     if (limitInput) limitInput.value = config.limit || 1000;
@@ -572,9 +823,19 @@
 
     initToggleButton(randomBtn, !!config.randomize);
     initToggleButton(randomFirstBtn, config.randomFirst !== false);
+    if (config.colorMode === 'custom' && config.colorValue) {
+      setBoxColorMode(box, 'custom', config.colorValue);
+    } else if (config.colorMode === 'preset' && config.colorPreset) {
+      setBoxColorMode(box, 'preset', config.colorPreset);
+    } else if (config.colorMode === 'auto') {
+      setBoxColorMode(box, 'auto');
+    } else if (config.colorValue) {
+      setBoxColorMode(box, 'custom', config.colorValue);
+    }
 
     syncTextareaHeights(wrapper);
     updateLengthModeState(box);
+    syncColorControls(box);
     return wrapper;
   }
 
@@ -591,12 +852,23 @@
     return wrapper;
   }
 
+  function getBoxColorState(box) {
+    const autoColor = box?.dataset?.autoColor || box?.dataset?.color || '';
+    return {
+      autoColor,
+      mode: box?.dataset?.colorMode || 'auto',
+      value: box?.dataset?.colorValue || '',
+      preset: box?.dataset?.colorPreset || ''
+    };
+  }
+
   function serializeChunkBox(box) {
     const titleInput = box.querySelector('.box-title');
     const input = box.querySelector('.chunk-input');
     const limitInput = box.querySelector('.length-input');
     const randomBtn = box.querySelector('.random-toggle');
     const delimiter = getDelimiterConfig(box);
+    const colorState = getBoxColorState(box);
     return {
       type: 'chunk',
       id: box.dataset.boxId,
@@ -606,6 +878,10 @@
       exact: readExactMode(box),
       singlePass: readSinglePassMode(box),
       randomFirst: readRandomFirstMode(box),
+      color: colorState.autoColor,
+      colorMode: colorState.mode,
+      colorValue: colorState.value,
+      colorPreset: colorState.preset,
       randomize: isActive(randomBtn),
       delimiter: {
         mode: delimiter.mode,
@@ -631,6 +907,7 @@
     const delimiter = getDelimiterConfig(box);
     const sizeSelect = box.querySelector('.delimiter-size');
     const preserve = sizeSelect?.value === 'preserve';
+    const colorState = getBoxColorState(box);
     const childContainer = box.querySelector('.mix-children');
     const children = childContainer
       ? Array.from(childContainer.children)
@@ -652,6 +929,10 @@
       exact: readExactMode(box),
       singlePass: readSinglePassMode(box),
       randomFirst: readRandomFirstMode(box),
+      color: colorState.autoColor,
+      colorMode: colorState.mode,
+      colorValue: colorState.value,
+      colorPreset: colorState.preset,
       preserve,
       randomize: isActive(randomBtn),
       delimiter: {
@@ -671,13 +952,17 @@
       .map(wrapper => wrapper.querySelector('.mix-box'))
       .filter(Boolean)
       .map(box => serializeMixBox(box));
-    return { mixes };
+    return {
+      mixes,
+      colorPresets: exportColorPresets()
+    };
   }
 
   function applyMixState(state, rootEl) {
     const root = rootEl || document.querySelector('.mix-root');
     if (!root) return;
     root.innerHTML = '';
+    loadColorPresets(state);
     const mixes = Array.isArray(state?.mixes) && state.mixes.length
       ? state.mixes
       : [
@@ -695,6 +980,7 @@
     syncCollapseButtons(root);
     root.querySelectorAll('.mix-box').forEach(updatePreserveMode);
     root.querySelectorAll('.mix-box, .chunk-box').forEach(updateLengthModeState);
+    refreshColorPresetSelects(root);
     syncTextareaHeights(root);
     refreshVariableOptions(root);
   }
@@ -900,6 +1186,7 @@
         setupDelimiterControls(mixBox || document);
         syncCollapseButtons(mixBox || document);
         syncTextareaHeights(mixBox || document);
+        refreshColorPresetSelects(mixBox || document);
         refreshVariableOptions(mixBox || document);
         return;
       }
@@ -917,6 +1204,7 @@
         setupDelimiterControls(mixBox || document);
         syncCollapseButtons(mixBox || document);
         updatePreserveMode(mixBox || document);
+        refreshColorPresetSelects(mixBox || document);
         refreshVariableOptions(mixBox || document);
         return;
       }
@@ -926,6 +1214,7 @@
         const childContainer = mixBox?.querySelector('.mix-children');
         if (childContainer) childContainer.appendChild(createVariableWrapper());
         syncCollapseButtons(mixBox || document);
+        refreshColorPresetSelects(mixBox || document);
         refreshVariableOptions(mixBox || document);
         return;
       }
@@ -948,6 +1237,15 @@
         return;
       }
 
+      if (btn.classList.contains('color-toggle')) {
+        const box = btn.closest('.mix-box, .chunk-box');
+        const panel = box?.querySelector('.color-controls');
+        if (!panel) return;
+        const isHidden = panel.classList.toggle('is-hidden');
+        btn.classList.toggle('active', !isHidden);
+        return;
+      }
+
       if (btn.classList.contains('copy-output')) {
         const box = btn.closest('.mix-box');
         const output = box?.querySelector('.mix-output-text');
@@ -966,6 +1264,20 @@
         const fallback = box.querySelector('.chunk-input');
         const text = output?.textContent || fallback?.value || '';
         copyTextWithFeedback(text, btn);
+        return;
+      }
+
+      if (btn.classList.contains('save-color-preset')) {
+        const box = btn.closest('.mix-box, .chunk-box');
+        if (!box) return;
+        const nameInput = box.querySelector('.color-preset-name');
+        const colorInput = box.querySelector('.color-custom-input');
+        const preset = upsertCustomPreset(nameInput?.value || '', colorInput?.value || '');
+        if (!preset) return;
+        if (nameInput) nameInput.value = '';
+        refreshColorPresetSelects(root);
+        setBoxColorMode(box, 'preset', preset.id);
+        syncColorControls(box);
         return;
       }
 
@@ -1001,6 +1313,22 @@
     });
 
     root.addEventListener('change', event => {
+      const select = event.target.closest('.color-preset-select');
+      if (!select) return;
+      const box = select.closest('.mix-box, .chunk-box');
+      if (!box) return;
+      if (select.value === 'auto') {
+        setBoxColorMode(box, 'auto');
+      } else if (select.value === 'custom') {
+        const colorInput = box.querySelector('.color-custom-input');
+        setBoxColorMode(box, 'custom', colorInput?.value || getAutoColorHex(box));
+      } else {
+        setBoxColorMode(box, 'preset', select.value);
+      }
+      syncColorControls(box);
+    });
+
+    root.addEventListener('change', event => {
       const variableSelect = event.target.closest('.variable-select');
       if (!variableSelect) return;
       const box = variableSelect.closest('.variable-box');
@@ -1008,6 +1336,17 @@
         box.dataset.targetId = variableSelect.value || '';
         refreshVariableOptions(root);
       }
+    });
+
+    root.addEventListener('input', event => {
+      const colorInput = event.target.closest('.color-custom-input');
+      if (!colorInput) return;
+      const box = colorInput.closest('.mix-box, .chunk-box');
+      if (!box) return;
+      setBoxColorMode(box, 'custom', colorInput.value);
+      const select = box.querySelector('.color-preset-select');
+      if (select) select.value = 'custom';
+      syncColorControls(box);
     });
   }
 
@@ -1058,6 +1397,7 @@
         setupDelimiterControls(scope);
         syncCollapseButtons(scope);
         updateEmptyState(root);
+        refreshColorPresetSelects(scope);
         refreshVariableOptions(scope);
       });
       addEmpty.dataset.bound = 'true';
@@ -1075,6 +1415,7 @@
         setupDelimiterControls(scope);
         syncCollapseButtons(scope);
         updateEmptyState(root);
+        refreshColorPresetSelects(scope);
         refreshVariableOptions(scope);
       });
       addRoot.dataset.bound = 'true';
