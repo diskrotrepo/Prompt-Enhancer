@@ -479,7 +479,7 @@ textarea,
 #window-area {
   position: relative;
   min-height: calc(100vh - var(--taskbar-height) - var(--taskbar-padding));
-  padding: 1.5rem;
+  padding: 0;
 }
 
 .app-window {
@@ -771,7 +771,6 @@ textarea,
     linear-gradient(135deg, rgba(44, 60, 82, 0.98), rgba(30, 40, 58, 0.98));
   height: min(78vh, 720px);
   min-height: 360px;
-  position: relative;
 }
 
 .prompt-window .box-header {

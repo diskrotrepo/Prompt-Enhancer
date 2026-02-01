@@ -119,10 +119,32 @@
     return arr;
   }
 
+  function readChunkSize(boxEl) {
+    const sizeSelect = boxEl?.querySelector?.('.delimiter-size');
+    const customInput = boxEl?.querySelector?.('.delimiter-size-custom');
+    if (!sizeSelect) return 1;
+    const raw = sizeSelect.value;
+    if (raw === 'custom') {
+      const customValue = parseInt(customInput?.value, 10);
+      if (!isNaN(customValue) && customValue > 0) {
+        sizeSelect.dataset.lastNumeric = String(customValue);
+        return customValue;
+      }
+    }
+    if (raw && raw !== 'preserve') {
+      const parsed = parseInt(raw, 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        sizeSelect.dataset.lastNumeric = String(parsed);
+        return parsed;
+      }
+    }
+    const fallback = parseInt(sizeSelect.dataset.lastNumeric || '', 10);
+    return !isNaN(fallback) && fallback > 0 ? fallback : 1;
+  }
+
   function getDelimiterConfig(boxEl) {
     const select = boxEl.querySelector('.delimiter-select');
     const customInput = boxEl.querySelector('.delimiter-custom');
-    const sizeInput = boxEl.querySelector('.delimiter-size');
     const mode = select ? select.value : 'whitespace';
     let delimiter = ' ';
     if (mode === 'whitespace') delimiter = ' ';
@@ -135,7 +157,7 @@
     const sentenceMode = mode === 'sentence';
     if (!sentenceMode && !delimiter) delimiter = ' ';
     const regex = sentenceMode ? /[,.!:;?\n]+/ : buildDelimiterRegex(delimiter);
-    const size = Math.max(1, parseInt(sizeInput?.value || '1', 10) || 1);
+    const size = Math.max(1, readChunkSize(boxEl));
     return { mode, delimiter, regex, size, sentenceMode };
   }
 
@@ -751,6 +773,7 @@
     const delimiterSelect = fragment.querySelector('.delimiter-select');
     const delimiterCustom = fragment.querySelector('.delimiter-custom');
     const delimiterSize = fragment.querySelector('.delimiter-size');
+    const delimiterSizeCustom = fragment.querySelector('.delimiter-size-custom');
 
     box.dataset.boxId = config.id || `mix-${++idCounter}`;
     box.dataset.color = String(
@@ -775,7 +798,14 @@
       if (config.preserve) {
         delimiterSize.value = 'preserve';
       } else if (config.delimiter?.size) {
-        delimiterSize.value = String(config.delimiter.size);
+        const sizeValue = String(config.delimiter.size);
+        const optionValues = Array.from(delimiterSize.options).map(option => option.value);
+        if (optionValues.includes(sizeValue)) {
+          delimiterSize.value = sizeValue;
+        } else {
+          delimiterSize.value = 'custom';
+          if (delimiterSizeCustom) delimiterSizeCustom.value = sizeValue;
+        }
       }
     }
 
@@ -817,6 +847,7 @@
     }
 
     updatePreserveMode(box);
+    setupSizeControls(wrapper);
     updateFirstChunkBehaviorLabels(box);
     updateLengthModeState(box);
     syncTextareaHeights(wrapper);
@@ -859,7 +890,16 @@
     }
     if (delimiterSelect && config.delimiter?.mode) delimiterSelect.value = config.delimiter.mode;
     if (delimiterCustom) delimiterCustom.value = config.delimiter?.custom || '';
-    if (delimiterSize && config.delimiter?.size) delimiterSize.value = String(config.delimiter.size);
+    if (delimiterSize && config.delimiter?.size) {
+      const sizeValue = String(config.delimiter.size);
+      const optionValues = Array.from(delimiterSize.options).map(option => option.value);
+      if (optionValues.includes(sizeValue)) {
+        delimiterSize.value = sizeValue;
+      } else {
+        delimiterSize.value = 'custom';
+        if (delimiterSizeCustom) delimiterSizeCustom.value = sizeValue;
+      }
+    }
 
     initToggleButton(randomBtn, !!config.randomize);
     if (firstChunkSelect) firstChunkSelect.value = getFirstChunkBehaviorConfig(config);
@@ -874,6 +914,7 @@
     }
 
     syncTextareaHeights(wrapper);
+    setupSizeControls(wrapper);
     updateLengthModeState(box);
     updateFirstChunkBehaviorLabels(box);
     syncColorControls(box);
@@ -1018,6 +1059,7 @@
     updateEmptyState(root);
 
     setupDelimiterControls(root);
+    setupSizeControls(root);
     syncCollapseButtons(root);
     root.querySelectorAll('.mix-box').forEach(updatePreserveMode);
     root.querySelectorAll('.mix-box, .chunk-box').forEach(updateLengthModeState);
@@ -1093,7 +1135,7 @@
     if (block.querySelector('.length-input') && readSinglePassMode(box)) {
       return 'Disabled because Exactly Once outputs each chunk one time and ignores length limits.';
     }
-    if (block.querySelector('.delimiter-select, .delimiter-custom, .first-chunk-select')) {
+    if (block.querySelector('.delimiter-select, .delimiter-custom, .delimiter-size, .delimiter-size-custom, .first-chunk-select')) {
       const sizeSelect = box?.querySelector('.delimiter-size');
       if (sizeSelect?.value === 'preserve') {
         return 'Disabled because Preserve chunks skips rechunking at this level.';
@@ -1261,32 +1303,44 @@
     );
   }
 
-  function getNumericChunkSize(sizeSelect) {
-    if (!sizeSelect) return 1;
-    const raw = sizeSelect.value;
-    if (raw && raw !== 'preserve') {
-      const parsed = parseInt(raw, 10);
-      if (!isNaN(parsed) && parsed > 0) {
-        sizeSelect.dataset.lastNumeric = String(parsed);
-        return parsed;
-      }
-    }
-    const fallback = parseInt(sizeSelect.dataset.lastNumeric || '', 10);
-    return !isNaN(fallback) && fallback > 0 ? fallback : 1;
-  }
-
   function updateFirstChunkBehaviorLabels(boxEl) {
     if (!boxEl) return;
     const select = boxEl.querySelector('.first-chunk-select');
     if (!select) return;
-    const sizeSelect = boxEl.querySelector('.delimiter-size');
-    const size = getNumericChunkSize(sizeSelect);
+    const size = readChunkSize(boxEl);
     const sizeOption = select.querySelector(`option[value="${FIRST_CHUNK_BEHAVIORS.SIZE}"]`);
     const betweenOption = select.querySelector(`option[value="${FIRST_CHUNK_BEHAVIORS.BETWEEN}"]`);
     const randomStartOption = select.querySelector(`option[value="${FIRST_CHUNK_BEHAVIORS.RANDOM_START}"]`);
     if (sizeOption) sizeOption.textContent = `Size ${size}`;
     if (betweenOption) betweenOption.textContent = `Between 1 - ${size}`;
     if (randomStartOption) randomStartOption.textContent = `Size ${size}, random start location`;
+  }
+
+  function setupSizeControls(root) {
+    const scope = root || document;
+    scope.querySelectorAll('.delimiter-size').forEach(select => {
+      let customRow = null;
+      if (select.nextElementSibling?.classList?.contains('delimiter-size-custom-row')) {
+        customRow = select.nextElementSibling;
+      } else {
+        const parent = select.parentElement;
+        if (parent) {
+          customRow = parent.querySelector(':scope > .delimiter-size-custom-row');
+        }
+      }
+      const customInput = customRow?.querySelector('.delimiter-size-custom');
+      const toggle = () => {
+        if (!customRow) return;
+        const isCustom = select.value === 'custom';
+        customRow.style.display = isCustom ? 'block' : 'none';
+        if (!isCustom && customInput) customInput.value = '';
+      };
+      if (!select.dataset.sizeInit) {
+        select.addEventListener('change', toggle);
+        select.dataset.sizeInit = 'true';
+      }
+      toggle();
+    });
   }
 
   function updatePreserveMode(boxEl) {
@@ -1300,6 +1354,8 @@
     const delimiterBlock = delimiterSelect?.closest('.control-block') || delimiterSelect?.parentElement;
     const firstChunkSelect = boxEl.querySelector('.first-chunk-select');
     const firstChunkBlock = firstChunkSelect?.closest('.control-block');
+    const sizeCustomRow = boxEl.querySelector('.delimiter-size-custom-row');
+    const sizeCustomInput = boxEl.querySelector('.delimiter-size-custom');
 
     if (delimiterSelect) delimiterSelect.disabled = preserve;
     if (customInput) customInput.disabled = preserve;
@@ -1311,6 +1367,10 @@
       }
     }
     if (delimiterBlock) delimiterBlock.classList.toggle('is-disabled', preserve);
+    if (sizeCustomInput) sizeCustomInput.disabled = preserve;
+    if (sizeCustomRow && preserve) {
+      sizeCustomRow.style.display = 'none';
+    }
     if (firstChunkSelect) {
       // Preserve chunks skips rechunking, so lock the first-chunk behavior to size.
       if (preserve) {
@@ -1330,7 +1390,10 @@
       }
     }
     if (firstChunkBlock) firstChunkBlock.classList.toggle('is-disabled', preserve);
-    if (!preserve) setupDelimiterControls(boxEl);
+    if (!preserve) {
+      setupDelimiterControls(boxEl);
+      setupSizeControls(boxEl);
+    }
     updateFirstChunkBehaviorLabels(boxEl);
   }
 
@@ -1433,6 +1496,7 @@
           );
         }
         setupDelimiterControls(mixBox || document);
+        setupSizeControls(mixBox || document);
         syncCollapseButtons(mixBox || document);
         syncTextareaHeights(mixBox || document);
         refreshColorPresetSelects(mixBox || document);
@@ -1451,6 +1515,7 @@
           );
         }
         setupDelimiterControls(mixBox || document);
+        setupSizeControls(mixBox || document);
         syncCollapseButtons(mixBox || document);
         updatePreserveMode(mixBox || document);
         refreshColorPresetSelects(mixBox || document);
@@ -1550,13 +1615,15 @@
     root.addEventListener('change', event => {
       const select = event.target.closest('.delimiter-size');
       if (!select) return;
+      const chunkBox = select.closest('.chunk-box');
+      if (chunkBox) {
+        updateFirstChunkBehaviorLabels(chunkBox);
+        return;
+      }
       const mixBox = select.closest('.mix-box');
       if (mixBox) {
         updatePreserveMode(mixBox);
-        return;
       }
-      const chunkBox = select.closest('.chunk-box');
-      if (chunkBox) updateFirstChunkBehaviorLabels(chunkBox);
     });
 
     root.addEventListener('change', event => {
@@ -1601,6 +1668,13 @@
       const select = box.querySelector('.color-preset-select');
       if (select) select.value = 'custom';
       syncColorControls(box);
+    });
+
+    root.addEventListener('input', event => {
+      const sizeInput = event.target.closest('.delimiter-size-custom');
+      if (!sizeInput) return;
+      const box = sizeInput.closest('.mix-box, .chunk-box');
+      if (box) updateFirstChunkBehaviorLabels(box);
     });
   }
 
@@ -1649,6 +1723,7 @@
           root.appendChild(createMixWrapper({ title: 'Mix' }, { previousColor: prevColor }));
         }
         setupDelimiterControls(scope);
+        setupSizeControls(scope);
         syncCollapseButtons(scope);
         updateEmptyState(root);
         refreshColorPresetSelects(scope);
@@ -1667,6 +1742,7 @@
           root.appendChild(createMixWrapper({ title: 'Mix' }, { previousColor: prevColor }));
         }
         setupDelimiterControls(scope);
+        setupSizeControls(scope);
         syncCollapseButtons(scope);
         updateEmptyState(root);
         refreshColorPresetSelects(scope);
@@ -1881,6 +1957,47 @@
     return top;
   }
 
+  function getTopWindow() {
+    const windows = Array.from(document.querySelectorAll('.app-window'))
+      .filter(win => !win.classList.contains('window-template') && !win.classList.contains('is-hidden'));
+    if (!windows.length) return null;
+    let top = windows[0];
+    let topZ = Number(top.style.zIndex || 0);
+    windows.slice(1).forEach(win => {
+      const z = Number(win.style.zIndex || 0);
+      if (z >= topZ) {
+        top = win;
+        topZ = z;
+      }
+    });
+    return top;
+  }
+
+  function positionNewWindow(win) {
+    const area = document.getElementById('window-area');
+    if (!area || !win) return;
+    const bounds = area.getBoundingClientRect();
+    const winRect = win.getBoundingClientRect();
+    const computed = window.getComputedStyle(win);
+    const winWidth = winRect.width || parseFloat(computed.width) || 480;
+    const winHeight = winRect.height || parseFloat(computed.height) || 360;
+    const offsetStep = 28;
+    const windows = Array.from(document.querySelectorAll('.app-window'))
+      .filter(el => !el.classList.contains('window-template'));
+    const index = Math.max(0, windows.length - 1);
+    const offset = (index % 6) * offsetStep;
+    let x = 24 + offset;
+    let y = 24 + offset;
+    const maxX = Math.max(0, bounds.width - winWidth - 12);
+    const maxY = Math.max(0, bounds.height - winHeight - 12);
+    x = Math.max(0, Math.min(x, maxX));
+    y = Math.max(0, Math.min(y, maxY));
+    win.style.left = `${x}px`;
+    win.style.top = `${y}px`;
+    win.style.right = 'auto';
+    win.style.bottom = 'auto';
+  }
+
   function openWindow(windowType) {
     const def = WINDOW_DEFS[windowType];
     if (!def) return;
@@ -1913,6 +2030,12 @@
       // Lock the initial width so long outputs do not auto-expand the window.
       clone.style.width = computedWidth;
     }
+    positionNewWindow(clone);
+    const schedule =
+      (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function')
+        ? window.requestAnimationFrame
+        : fn => setTimeout(fn, 0);
+    schedule(() => positionNewWindow(clone));
     if (windowType === 'prompts') {
       const root = clone.querySelector('.mix-root');
       if (root) applyMixState(null, root);
@@ -2224,6 +2347,7 @@
     setupTabs();
     if (!loadPersisted()) applyMixState(null, document.querySelector('.mix-root'));
     setupDelimiterControls(document);
+    setupSizeControls(document);
     setupUIEvents();
     setupWindowControls();
     setupWindowDrag();
