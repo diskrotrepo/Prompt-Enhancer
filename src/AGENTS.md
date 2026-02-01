@@ -66,9 +66,9 @@ modifiers when multiple stacks are active.
 
 ### Length Exactness
 
-The Length Mode select offers **Split Final Chunk**, **Concat Final Chunk**, and
+The Length Mode select offers **Split Final Chunk**, **Delete Final Chunk**, and
 **Exactly Once**. Split Final Chunk trims mid-chunk to hit the character limit
-exactly, while Concat Final Chunk stops without splitting if the next chunk
+exactly, while Delete Final Chunk drops the next chunk if it would overflow.
 would overflow. Exactly Once outputs each chunk one time and disables the length
 limit input so the limit is treated as irrelevant.
 New boxes default to **Exactly Once** so fresh mixes emit each chunk once unless
