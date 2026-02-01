@@ -1878,6 +1878,8 @@ button {
   letter-spacing: 0.12em;
   font-size: 0.6rem;
   cursor: pointer;
+  position: relative;
+  z-index: 6;
 }
 
 .help-toggle:hover {
@@ -1912,7 +1914,7 @@ button {
   padding: 0.75rem 0.85rem 0.85rem;
   color: #f7f8fb;
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
-  z-index: 6;
+  z-index: 8;
 }
 
 .help-popover.is-hidden {
@@ -1952,6 +1954,21 @@ button {
   font-size: 0.65rem;
   line-height: 1.5;
   color: rgba(255, 255, 255, 0.82);
+}
+
+.help-overlay {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  z-index: 5;
+}
+
+.help-overlay.is-hidden {
+  display: none;
+}
+
+.prompt-window > .box-body {
+  position: relative;
 }
 
 .prompt-menu-dropdown.open {

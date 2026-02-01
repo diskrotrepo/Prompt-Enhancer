@@ -1084,6 +1084,24 @@
     });
   }
 
+  function getDisabledReason(helpEl) {
+    const block = helpEl?.closest?.('.control-block, .input-row');
+    if (!block) return '';
+    const disabledInput = block.querySelector('input:disabled, select:disabled, textarea:disabled');
+    if (!disabledInput) return '';
+    const box = helpEl.closest('.mix-box, .chunk-box');
+    if (block.querySelector('.length-input') && readSinglePassMode(box)) {
+      return 'Disabled because Exactly Once outputs each chunk one time and ignores length limits.';
+    }
+    if (block.querySelector('.delimiter-select, .delimiter-custom, .first-chunk-select')) {
+      const sizeSelect = box?.querySelector('.delimiter-size');
+      if (sizeSelect?.value === 'preserve') {
+        return 'Disabled because Preserve chunks skips rechunking at this level.';
+      }
+    }
+    return 'Disabled because of the current settings.';
+  }
+
   function resolveHelpContent(target, scope) {
     if (!target) return null;
     let helpEl = target.closest('[data-help], [data-help-detail], [data-help-key]');
@@ -1101,9 +1119,15 @@
       (helpEl.textContent || '').trim();
     const detailText = (helpEl.dataset.helpDetail || '').trim();
     const fallbackDetail = detailText || (shortText ? `${shortText} (More detail coming soon.)` : 'No extra help is available yet.');
+    const disabledReason = getDisabledReason(helpEl);
+    const detail = disabledReason
+      ? detailText
+        ? `${detailText} ${disabledReason}`
+        : disabledReason
+      : fallbackDetail;
     return {
       short: shortText || 'Help',
-      detail: fallbackDetail,
+      detail,
       element: helpEl
     };
   }
@@ -1153,6 +1177,7 @@
     if (!helpBtn) return;
     win.dataset.helpReady = 'true';
     const popover = getHelpPopover(win);
+    const overlay = win.querySelector('.help-overlay');
     const shortEl = popover?.querySelector('.help-popover-short');
     const detailEl = popover?.querySelector('.help-popover-detail');
     const closeBtn = popover?.querySelector('.help-close');
@@ -1160,6 +1185,10 @@
     const setHelpActive = active => {
       win.classList.toggle('help-active', active);
       helpBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      if (overlay) {
+        overlay.classList.toggle('is-hidden', !active);
+        overlay.setAttribute('aria-hidden', active ? 'false' : 'true');
+      }
       if (!active && popover) {
         popover.classList.add('is-hidden');
         popover.setAttribute('aria-hidden', 'true');
@@ -1192,45 +1221,30 @@
       });
     }
 
-    win.addEventListener(
-      'pointerdown',
-      event => {
-        if (!win.classList.contains('help-active')) return;
-        if (event.target.closest('.help-toggle, .help-popover')) return;
-        if (event.target.closest('.window-header')) return;
-        event.preventDefault();
-        event.stopPropagation();
-      },
-      true
-    );
+    if (overlay && !overlay.dataset.bound) {
+      const pickTarget = event => {
+        overlay.style.pointerEvents = 'none';
+        const target = document.elementFromPoint(event.clientX, event.clientY);
+        overlay.style.pointerEvents = '';
+        return target;
+      };
 
-    win.addEventListener(
-      'mousedown',
-      event => {
+      overlay.addEventListener('pointerdown', event => {
         if (!win.classList.contains('help-active')) return;
-        if (event.target.closest('.help-toggle, .help-popover')) return;
-        if (event.target.closest('.window-header')) return;
         event.preventDefault();
         event.stopPropagation();
-      },
-      true
-    );
+      });
 
-    win.addEventListener(
-      'click',
-      event => {
+      overlay.addEventListener('click', event => {
         if (!win.classList.contains('help-active')) return;
-        if (event.target.closest('.help-toggle')) return;
-        if (event.target.closest('.window-header')) return;
-        if (event.target.closest('.help-popover')) {
-          return;
-        }
         event.preventDefault();
         event.stopPropagation();
-        showHelp(event.target, event);
-      },
-      true
-    );
+        const target = pickTarget(event);
+        if (!target || target.closest('.help-toggle, .help-popover, .window-header')) return;
+        showHelp(target, event);
+      });
+      overlay.dataset.bound = 'true';
+    }
 
     win.addEventListener(
       'keydown',
