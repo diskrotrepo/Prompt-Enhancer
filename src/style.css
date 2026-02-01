@@ -445,7 +445,7 @@ textarea,
 }
 
 .window-header {
-  cursor: move;
+  cursor: default;
 }
 
 .icon-prompts {

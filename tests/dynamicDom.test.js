@@ -43,4 +43,24 @@ describe('Dynamic mix DOM', () => {
     });
     expect(root.querySelectorAll('.mix-box').length).toBe(2);
   });
+
+  test('preserve chunks disables random-first toggle', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    main.applyMixState(null, root);
+    const toggle = root.querySelector('.mix-box .random-first-toggle');
+    expect(toggle).not.toBeNull();
+    expect(toggle.disabled).toBe(true);
+    expect(toggle.classList.contains('active')).toBe(false);
+  });
+
+  test('new boxes default to exactly-once length mode', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    main.applyMixState({ mixes: [{ type: 'mix', title: 'Default', children: [{ type: 'chunk', text: 'a ' }] }] }, root);
+    const mixMode = root.querySelector('.mix-box .length-mode');
+    const chunkMode = root.querySelector('.chunk-box .length-mode');
+    expect(mixMode?.value).toBe('exact-once');
+    expect(chunkMode?.value).toBe('exact-once');
+  });
 });

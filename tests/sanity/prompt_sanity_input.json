@@ -1,6 +1,11 @@
 {
   "cases": [
     {
+      "id": "default_ui_state",
+      "description": "Default UI state on first load without an explicit mix state.",
+      "random": 0
+    },
+    {
       "id": "basic_mix_divider",
       "description": "Three chunk lists mixed in canonical order without delimiter injection.",
       "random": 0,
@@ -62,6 +67,74 @@
             "delimiter": { "mode": "whitespace", "size": 1 },
             "children": [
               { "type": "chunk", "text": "abc ", "limit": 5, "exact": true, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "exact_once_length",
+      "description": "Exact once stops after a single pass instead of repeating chunks.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Exact Once",
+            "limit": 10,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": { "mode": "whitespace", "size": 1 },
+            "children": [
+              { "type": "chunk", "text": "a b ", "limit": 10, "exact": true, "singlePass": true, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "exact_once_variable_mix",
+      "description": "Exact once with variables stops after one pass through the mix order.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Exact Once Variables",
+            "limit": 20,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": { "mode": "whitespace", "size": 1 },
+            "children": [
+              { "type": "chunk", "id": "chunk-a", "text": "a ", "limit": 20, "exact": true, "singlePass": true, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } },
+              { "type": "chunk", "id": "chunk-b", "text": "b ", "limit": 20, "exact": true, "singlePass": true, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } },
+              { "type": "variable", "id": "var-1", "targetId": "chunk-b" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "random_first_off",
+      "description": "Random-first chunk sizing off keeps chunk boundaries stable before mixing.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Random First Off",
+            "limit": 24,
+            "exact": false,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": { "mode": "whitespace", "size": 1 },
+            "children": [
+              { "type": "chunk", "text": "a1 a2 a3 a4 ", "limit": 24, "exact": false, "randomFirst": false, "randomize": false, "delimiter": { "mode": "whitespace", "size": 2 } },
+              { "type": "chunk", "text": "b1 b2 b3 b4 ", "limit": 24, "exact": false, "randomFirst": false, "randomize": false, "delimiter": { "mode": "whitespace", "size": 2 } }
             ]
           }
         ]

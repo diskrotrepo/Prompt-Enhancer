@@ -66,11 +66,23 @@ modifiers when multiple stacks are active.
 
 ### Length Exactness
 
-The length limit now supports an "Exact Length" toggle (`length-exact`). When
-enabled, prompt builders can trim mid-chunk to hit the character limit exactly,
-so outputs don't end early just because a chunk would overflow. If positives and
-negatives are generated independently, the builders align to the longer term
-count before slicing strings so both outputs respect the same cutoff context.
+The Length Mode select offers **Split Final Chunk**, **Concat Final Chunk**, and
+**Exactly Once**. Split Final Chunk trims mid-chunk to hit the character limit
+exactly, while Concat Final Chunk stops without splitting if the next chunk
+would overflow. Exactly Once outputs each chunk one time and disables the length
+limit input so the limit is treated as irrelevant.
+New boxes default to **Exactly Once** so fresh mixes emit each chunk once unless
+the user opts into repeat-length behavior.
+
+### Chunk Offset
+
+When chunk sizes are greater than 1, the first chunk uses a randomized size
+between 1 and the configured chunk size. Subsequent chunks follow the normal
+fixed size, which keeps repeat cycles from slicing on identical boundaries.
+This offset is controlled by the **Randomize First Chunk Size** toggle (default
+on) so users can lock deterministic chunk boundaries if needed.
+When a mix is set to **Preserve chunks**, the random-first toggle is forced off
+and disabled because no rechunking occurs in that mode.
 
 ### Lyrics Insertions
 
@@ -87,6 +99,15 @@ Help Mode uses `data-help` attributes or the `helpMap` in `script.js` to show
 tooltips when users click elements. Lists and input boxes also need coverage;
 avoid vague text. When new buttons or sections are added, provide concise,
 specific descriptions so the help overlay stays informative.
+
+### File Naming
+
+Prompt menu **Save** reuses the current file name (prompting if none exists),
+while **Save As** always prompts for a new name. Loaded or saved names replace
+the prompt window title so users can see the active file at a glance. The title
+omits a trailing `.json` extension for cleaner window labels, and Save As
+auto-appends `.json` to download names when users omit it. Save As prompts for
+the bare title (no `.json` shown in the input).
 
 ## Testing
 

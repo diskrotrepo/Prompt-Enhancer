@@ -72,9 +72,9 @@
                     <span class="prompt-menu-label">file</span>
                   </button>
                   <div class="prompt-menu-dropdown" role="menu" aria-hidden="true">
-                    <div class="prompt-menu-item" data-action="open" role="menuitem">Open</div>
-                    <div class="prompt-menu-item" data-action="save" role="menuitem">Save</div>
-                    <div class="prompt-menu-item" data-action="quit" role="menuitem">Quit</div>
+                    <div class="prompt-menu-item" data-action="open" role="menuitem" data-help="Load a saved prompt enhancer JSON file.">Open</div>
+                    <div class="prompt-menu-item" data-action="save" role="menuitem" data-help="Save using the current file name, or prompt for one if none is set.">Save</div>
+                    <div class="prompt-menu-item" data-action="save-as" role="menuitem" data-help="Choose a new file name and save the current prompt enhancer state.">Save As</div>
                   </div>
                 </div>
                 <div class="prompt-body">
@@ -146,15 +146,20 @@
                               <option value="10">10</option>
                             </select>
                           </div>
+                          <div class="control-block toggle-block">
+                            <label>Randomize First Chunk Size</label>
+                            <button type="button" class="toggle-button random-first-toggle active" data-on="On" data-off="Off" data-help="Randomize the size of the first grouped chunk (1 to the chunk size) to offset repeat boundaries.">On</button>
+                          </div>
                           <div class="control-block">
                             <label>Length Limit</label>
-                            <input type="number" class="length-input" value="1000" min="1">
+                            <input type="number" class="length-input" value="1000" min="1" data-help="Maximum total output length unless Exactly Once is enabled.">
                           </div>
                           <div class="control-block toggle-block">
                             <label>Length Mode</label>
-                            <select class="length-mode">
-                              <option value="exact" selected>Exact Length</option>
-                              <option value="allow">Allow Short</option>
+                            <select class="length-mode" data-help="Split final chunk trims to the limit, Concat final chunk stops before splitting, Exactly once outputs each chunk one time and ignores the limit.">
+                              <option value="exact">Split Final Chunk</option>
+                              <option value="exact-once" selected>Exactly Once</option>
+                              <option value="allow">Concat Final Chunk</option>
                             </select>
                           </div>
                         </div>
@@ -216,15 +221,20 @@
                               <option value="10">10</option>
                             </select>
                           </div>
+                          <div class="control-block toggle-block">
+                            <label>Randomize First Chunk Size</label>
+                            <button type="button" class="toggle-button random-first-toggle active" data-on="On" data-off="Off" data-help="Randomize the size of the first grouped chunk (1 to the chunk size) to offset repeat boundaries.">On</button>
+                          </div>
                           <div class="control-block">
                             <label>Length Limit</label>
-                            <input type="number" class="length-input" value="1000" min="1">
+                            <input type="number" class="length-input" value="1000" min="1" data-help="Maximum total output length unless Exactly Once is enabled.">
                           </div>
                           <div class="control-block toggle-block">
                             <label>Length Mode</label>
-                            <select class="length-mode">
-                              <option value="exact" selected>Exact Length</option>
-                              <option value="allow">Allow Short</option>
+                            <select class="length-mode" data-help="Split final chunk trims to the limit, Concat final chunk stops before splitting, Exactly once outputs each chunk one time and ignores the limit.">
+                              <option value="exact">Split Final Chunk</option>
+                              <option value="exact-once" selected>Exactly Once</option>
+                              <option value="allow">Concat Final Chunk</option>
                             </select>
                           </div>
                         </div>

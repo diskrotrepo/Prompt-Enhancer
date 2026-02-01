@@ -19,9 +19,27 @@ describe('Chunking + mixing engine', () => {
     expect(parseInput('a b ')).toEqual(['a ', 'b ']);
   });
 
+  test('parseInput offsets the first grouped chunk size', () => {
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0.6);
+    const parsed = parseInput('a b c d ', false, /\s+/, 3);
+    Math.random = orig;
+    expect(parsed).toEqual(['a b ', 'c d ']);
+  });
+
+  test('parseInput keeps fixed grouping when randomization is off', () => {
+    const parsed = parseInput('a b c d ', false, /\s+/, 2, false);
+    expect(parsed).toEqual(['a b ', 'c d ']);
+  });
+
   test('buildChunkList repeats chunks to reach limit', () => {
     const list = buildChunkList('a ', { regex: /\s+/, size: 1, sentenceMode: false }, 4, false, false);
     expect(list.join('')).toBe('a a ');
+  });
+
+  test('buildChunkList single-pass stops after one traversal', () => {
+    const list = buildChunkList('a b ', { regex: /\s+/, size: 1, sentenceMode: false }, 10, true, false, true);
+    expect(list.join('')).toBe('a b ');
   });
 
   test('buildChunkList trims when exact length is on', () => {
@@ -48,6 +66,11 @@ describe('Chunking + mixing engine', () => {
     const mixed = mixChunkLists([['a '], ['b '], ['c ']], 6, false, true);
     Math.random = orig;
     expect(mixed.join('')).toBe('b c a ');
+  });
+
+  test('mixChunkLists single-pass stops after one cycle', () => {
+    const mixed = mixChunkLists([['a '], ['b ']], 100, false, false, true);
+    expect(mixed.join('')).toBe('a b ');
   });
 });
 

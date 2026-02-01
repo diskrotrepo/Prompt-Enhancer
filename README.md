@@ -88,14 +88,26 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
    Chunk lists are interleaved without delimiter injection, yielding `a b d` for
    three lists in canonical order.
 
-2. **Randomized list order per cycle** — `random_mix_order`  
+2. **Default UI state** — `default_ui_state`  
+   Fresh loads default to Exactly Once, Preserve Chunks, a disabled length input, and the Prompt Enhancer window title.
+
+3. **Randomized list order per cycle** — `random_mix_order`  
    Mixing order changes per cycle when randomization is enabled (RNG stubbed).
 
-3. **Exact length trimming** — `exact_length_trim`  
+4. **Exact length trimming** — `exact_length_trim`  
    Exact length trims the final chunk rather than injecting new delimiters.
 
-4. **Nested rechunk behavior** — `nested_rechunk`  
-   A child mix with preserve off rechunks its output before the parent mix consumes it.
+5. **Exact once single-pass** — `exact_once_length`  
+   Exact once halts after one pass, so long limits do not repeat chunks.
 
-5. **Variable references forward chunks** — `variable_reference`  
+6. **Exact once variables** — `exact_once_variable_mix`  
+   Variable nodes still respect exact-once mixing, so they only appear once per pass.
+
+7. **Random-first toggle off** — `random_first_off`  
+   Disabling random-first chunk sizing keeps chunk boundaries aligned before mixing.
+
+8. **Nested rechunk behavior** — `nested_rechunk`  
+   A child mix with preserve off rechunks its output before the parent mix consumes it, including the offset first chunk.
+
+9. **Variable references forward chunks** — `variable_reference`  
    Variable nodes reference a mix or string and pass its chunks upward without mutation.

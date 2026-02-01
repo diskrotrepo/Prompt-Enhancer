@@ -1,6 +1,15 @@
 {
   "cases": [
     {
+      "id": "default_ui_state",
+      "output": "",
+      "lengthMode": "exact-once",
+      "preserve": true,
+      "randomFirstDisabled": true,
+      "lengthLimitDisabled": true,
+      "windowTitle": "Prompt Enhancer"
+    },
+    {
       "id": "basic_mix_divider",
       "output": "a b d "
     },
@@ -13,8 +22,20 @@
       "output": "abc a"
     },
     {
+      "id": "exact_once_length",
+      "output": "a b "
+    },
+    {
+      "id": "exact_once_variable_mix",
+      "output": "a b b "
+    },
+    {
+      "id": "random_first_off",
+      "output": "a1 a2 b1 b2 a3 a4 b3 b4 "
+    },
+    {
       "id": "nested_rechunk",
-      "output": "a b x "
+      "output": "a x b "
     },
     {
       "id": "variable_reference",

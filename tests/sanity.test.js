@@ -36,8 +36,23 @@ function runSanityCase(testCase) {
   }
   window.PromptMixer.generate(root);
 
-  const output = window.document.querySelector('.mix-box .mix-output-text')?.textContent || '';
-  return { id: testCase.id, output };
+  const mixBox = window.document.querySelector('.mix-box');
+  const output = mixBox?.querySelector('.mix-output-text')?.textContent || '';
+  const lengthMode = mixBox?.querySelector('.length-mode')?.value || '';
+  const preserve = mixBox?.querySelector('.delimiter-size')?.value === 'preserve';
+  const randomFirstToggle = mixBox?.querySelector('.random-first-toggle');
+  const randomFirstDisabled = !!(randomFirstToggle?.disabled || randomFirstToggle?.classList.contains('disabled'));
+  const lengthLimitDisabled = !!mixBox?.querySelector('.length-input')?.disabled;
+  const windowTitle = window.document.querySelector('.prompt-window .window-header .box-title')?.textContent || '';
+  return {
+    id: testCase.id,
+    output,
+    lengthMode,
+    preserve,
+    randomFirstDisabled,
+    lengthLimitDisabled,
+    windowTitle
+  };
 }
 
 describe('Sanity regression via real UI flow', () => {
@@ -55,6 +70,21 @@ describe('Sanity regression via real UI flow', () => {
         throw new Error(`Missing expected output for sanity case: ${result.id}`);
       }
       expect(result.output).toBe(expected.output);
+      if (Object.prototype.hasOwnProperty.call(expected, 'lengthMode')) {
+        expect(result.lengthMode).toBe(expected.lengthMode);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'preserve')) {
+        expect(result.preserve).toBe(expected.preserve);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'randomFirstDisabled')) {
+        expect(result.randomFirstDisabled).toBe(expected.randomFirstDisabled);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'lengthLimitDisabled')) {
+        expect(result.lengthLimitDisabled).toBe(expected.lengthLimitDisabled);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'windowTitle')) {
+        expect(result.windowTitle).toBe(expected.windowTitle);
+      }
     });
   });
 });

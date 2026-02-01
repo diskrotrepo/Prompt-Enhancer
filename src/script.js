@@ -1,6 +1,15 @@
 (() => {
   'use strict';
 
+  // Table of contents:
+  // - Utilities + shared readers
+  // - Chunking + mixing engine (single-pass + random first chunk offset)
+  // - Box evaluation
+  // - Box creation + state serialization
+  // - UI helpers + event wiring
+  // - Window management + data load/save
+  // - Initialization
+
   // ======== Utilities ========
 
   function escapeRegExp(string) {
@@ -16,7 +25,8 @@
     return new RegExp(escapeRegExp(raw));
   }
 
-  function parseInput(raw, keepDelim = false, delimiter = /\s+/, size = 1) {
+  // Split raw text into delimiter-preserving chunks, with optional first-group randomization to offset cycles.
+  function parseInput(raw, keepDelim = false, delimiter = /\s+/, size = 1, randomizeFirst = true) {
     if (!raw) return [];
     const normalized = raw.replace(/\r\n/g, '\n');
     const activeDelimiter = keepDelim ? /[,.!:;?\n]+/ : delimiter;
@@ -41,10 +51,19 @@
       items.push(normalized.slice(lastIndex));
     }
     const groupSize = Math.max(1, parseInt(size, 10) || 1);
-    if (groupSize === 1) return items;
+    if (groupSize === 1 || items.length <= 1) return items;
     const grouped = [];
-    for (let i = 0; i < items.length; i += groupSize) {
-      grouped.push(items.slice(i, i + groupSize).join(''));
+    if (!randomizeFirst) {
+      for (let i = 0; i < items.length; i += groupSize) {
+        grouped.push(items.slice(i, i + groupSize).join(''));
+      }
+    } else {
+      const firstGroupSize = Math.min(items.length, Math.floor(Math.random() * groupSize) + 1);
+      // The first chunk is shorter on purpose to keep slice points from lining up every cycle.
+      grouped.push(items.slice(0, firstGroupSize).join(''));
+      for (let i = firstGroupSize; i < items.length; i += groupSize) {
+        grouped.push(items.slice(i, i + groupSize).join(''));
+      }
     }
     return grouped;
   }
@@ -52,6 +71,22 @@
   function normalizeCustomDelimiter(value) {
     if (!value) return '';
     return value.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+  }
+
+  // File names are user-entered; trim whitespace and keep the chosen label intact.
+  function normalizeFileName(value) {
+    if (typeof value !== 'string') return '';
+    return value.trim();
+  }
+
+  function stripJsonExtension(fileName) {
+    if (typeof fileName !== 'string') return '';
+    return fileName.replace(/\.json$/i, '');
+  }
+
+  function ensureJsonExtension(fileName) {
+    if (typeof fileName !== 'string') return '';
+    return /\.json$/i.test(fileName) ? fileName : `${fileName}.json`;
   }
 
   function shuffle(arr) {
@@ -98,6 +133,20 @@
     return isActive(exactBtn);
   }
 
+  // "Exact once" is encoded in the length mode select to avoid adding extra toggles.
+  function readSinglePassMode(boxEl) {
+    const select = boxEl.querySelector('.length-mode');
+    if (!select) return false;
+    return select.value === 'exact-once';
+  }
+
+  // First-chunk randomization lives on its own toggle so users can lock the slice points.
+  function readRandomFirstMode(boxEl) {
+    const toggle = boxEl.querySelector('.random-first-toggle');
+    if (!toggle) return true;
+    return isActive(toggle);
+  }
+
   function escapeSelector(value) {
     if (typeof value !== 'string') return '';
     if (typeof CSS !== 'undefined' && CSS.escape) return CSS.escape(value);
@@ -125,17 +174,39 @@
   }
 
   // ======== Chunking + Mixing Engine ========
+  // Single-pass length modes avoid repetition, and first-chunk offsets keep slice points varied.
 
-  function buildChunkList(raw, delimiterConfig, limit, exact, randomize) {
+  function buildChunkList(raw, delimiterConfig, limit, exact, randomize, singlePass = false, randomizeFirst = true) {
     const config = delimiterConfig || { regex: /\s+/, size: 1, sentenceMode: false };
-    const chunks = parseInput(raw || '', config.sentenceMode, config.regex, config.size);
+    const chunks = parseInput(raw || '', config.sentenceMode, config.regex, config.size, randomizeFirst);
     const base = chunks.filter(chunk => chunk.length > 0);
     if (!base.length) return [];
     const ordered = randomize ? shuffle(base.slice()) : base.slice();
-    const max = Math.max(0, parseInt(limit, 10) || 0);
+    const max = singlePass
+      ? Number.POSITIVE_INFINITY
+      : Math.max(0, parseInt(limit, 10) || 0);
     if (!max) return [];
     const out = [];
     let length = 0;
+    if (singlePass) {
+      // Single-pass output never wraps; the limit is ignored so chunks emit once.
+      for (let idx = 0; idx < ordered.length && length < max; idx += 1) {
+        const chunk = ordered[idx];
+        if (!chunk) continue;
+        const remaining = max - length;
+        if (chunk.length <= remaining) {
+          out.push(chunk);
+          length += chunk.length;
+          continue;
+        }
+        if (exact && remaining > 0) {
+          out.push(chunk.slice(0, remaining));
+          length = max;
+        }
+        break;
+      }
+      return out;
+    }
     let idx = 0;
     while (length < max) {
       const chunk = ordered[idx % ordered.length];
@@ -159,13 +230,15 @@
     return out;
   }
 
-  function mixChunkLists(lists, limit, exact, randomize) {
+  function mixChunkLists(lists, limit, exact, randomize, singlePass = false) {
     const sources = lists
       .filter(list => Array.isArray(list) && list.length)
       .map(list => list.filter(chunk => chunk.length > 0))
       .filter(list => list.length);
     if (!sources.length) return [];
-    const max = Math.max(0, parseInt(limit, 10) || 0);
+    const max = singlePass
+      ? Number.POSITIVE_INFINITY
+      : Math.max(0, parseInt(limit, 10) || 0);
     if (!max) return [];
     const positions = sources.map(() => 0);
     const out = [];
@@ -178,8 +251,9 @@
       for (const idx of order) {
         const list = sources[idx];
         if (!list.length) continue;
-        const pos = positions[idx] % list.length;
-        const chunk = list[pos];
+        const pos = positions[idx];
+        if (singlePass && pos >= list.length) continue;
+        const chunk = list[singlePass ? pos : pos % list.length];
         positions[idx] = pos + 1;
         if (!chunk) continue;
         const remaining = max - length;
@@ -209,9 +283,11 @@
     const randomBtn = boxEl.querySelector('.random-toggle');
     const limit = readNumber(limitInput, 1000);
     const exact = readExactMode(boxEl);
+    const singlePass = readSinglePassMode(boxEl);
     const randomize = isActive(randomBtn);
+    const randomizeFirst = readRandomFirstMode(boxEl);
     const delimiterConfig = getDelimiterConfig(boxEl);
-    return buildChunkList(input?.value || '', delimiterConfig, limit, exact, randomize);
+    return buildChunkList(input?.value || '', delimiterConfig, limit, exact, randomize, singlePass, randomizeFirst);
   }
 
   function evaluateVariableBox(boxEl, context) {
@@ -234,7 +310,9 @@
 
     const limit = readNumber(limitInput, 1000);
     const exact = readExactMode(boxEl);
+    const singlePass = readSinglePassMode(boxEl);
     const randomize = isActive(randomBtn);
+    const randomizeFirst = readRandomFirstMode(boxEl);
     const preserve = sizeSelect?.value === 'preserve';
     const delimiterConfig = getDelimiterConfig(boxEl);
 
@@ -259,13 +337,13 @@
       return evaluateChunkBox(child);
     });
 
-    const mixed = mixChunkLists(lists, limit, exact, randomize);
+    const mixed = mixChunkLists(lists, limit, exact, randomize, singlePass);
     const outputString = mixed.join('');
     if (outputEl) outputEl.textContent = outputString;
 
     const result = preserve
       ? mixed
-      : buildChunkList(outputString, delimiterConfig, limit, exact, false);
+      : buildChunkList(outputString, delimiterConfig, limit, exact, false, singlePass, randomizeFirst);
     if (boxId) visiting.delete(boxId);
     return result;
   }
@@ -336,7 +414,7 @@
     const sources = sourceBoxes
       .map(box => ({
         id: box.dataset.boxId,
-        label: `${box.classList.contains('mix-box') ? 'Mix' : 'String'}: ${getBoxTitle(box)}`
+        label: `${getBoxTitle(box)}`
       }))
       .filter(entry => entry.id);
     const selects = (windowEl || root).querySelectorAll('.variable-select');
@@ -382,6 +460,7 @@
     const limitInput = fragment.querySelector('.length-input');
     const randomBtn = fragment.querySelector('.random-toggle');
     const lengthMode = fragment.querySelector('.length-mode');
+    const randomFirstBtn = fragment.querySelector('.random-first-toggle');
     const delimiterSelect = fragment.querySelector('.delimiter-select');
     const delimiterCustom = fragment.querySelector('.delimiter-custom');
     const delimiterSize = fragment.querySelector('.delimiter-size');
@@ -392,7 +471,15 @@
     );
     if (titleInput) titleInput.value = config.title || 'Mix';
     if (limitInput) limitInput.value = config.limit || 1000;
-    if (lengthMode) lengthMode.value = config.exact === false ? 'allow' : 'exact';
+    if (lengthMode) {
+      lengthMode.value = config.singlePass
+        ? 'exact-once'
+        : config.exact === false
+        ? 'allow'
+        : config.exact === true
+        ? 'exact'
+        : 'exact-once';
+    }
     if (delimiterSelect && config.delimiter?.mode) delimiterSelect.value = config.delimiter.mode;
     if (delimiterCustom) delimiterCustom.value = config.delimiter?.custom || '';
     if (delimiterSize) {
@@ -404,6 +491,7 @@
     }
 
     initToggleButton(randomBtn, !!config.randomize);
+    initToggleButton(randomFirstBtn, config.randomFirst !== false);
 
     const childContainer = fragment.querySelector('.mix-children');
     if (Array.isArray(config.children)) {
@@ -431,6 +519,7 @@
     }
 
     updatePreserveMode(box);
+    updateLengthModeState(box);
     syncTextareaHeights(wrapper);
     return wrapper;
   }
@@ -445,6 +534,7 @@
     const limitInput = fragment.querySelector('.length-input');
     const randomBtn = fragment.querySelector('.random-toggle');
     const lengthMode = fragment.querySelector('.length-mode');
+    const randomFirstBtn = fragment.querySelector('.random-first-toggle');
     const delimiterSelect = fragment.querySelector('.delimiter-select');
     const delimiterCustom = fragment.querySelector('.delimiter-custom');
     const delimiterSize = fragment.querySelector('.delimiter-size');
@@ -456,14 +546,24 @@
     if (titleInput) titleInput.value = config.title || 'String';
     if (input) input.value = config.text || '';
     if (limitInput) limitInput.value = config.limit || 1000;
-    if (lengthMode) lengthMode.value = config.exact === false ? 'allow' : 'exact';
+    if (lengthMode) {
+      lengthMode.value = config.singlePass
+        ? 'exact-once'
+        : config.exact === false
+        ? 'allow'
+        : config.exact === true
+        ? 'exact'
+        : 'exact-once';
+    }
     if (delimiterSelect && config.delimiter?.mode) delimiterSelect.value = config.delimiter.mode;
     if (delimiterCustom) delimiterCustom.value = config.delimiter?.custom || '';
     if (delimiterSize && config.delimiter?.size) delimiterSize.value = String(config.delimiter.size);
 
     initToggleButton(randomBtn, !!config.randomize);
+    initToggleButton(randomFirstBtn, config.randomFirst !== false);
 
     syncTextareaHeights(wrapper);
+    updateLengthModeState(box);
     return wrapper;
   }
 
@@ -493,6 +593,8 @@
       text: input?.value || '',
       limit: readNumber(limitInput, 1000),
       exact: readExactMode(box),
+      singlePass: readSinglePassMode(box),
+      randomFirst: readRandomFirstMode(box),
       randomize: isActive(randomBtn),
       delimiter: {
         mode: delimiter.mode,
@@ -537,6 +639,8 @@
       title: titleInput?.value || 'Mix',
       limit: readNumber(limitInput, 1000),
       exact: readExactMode(box),
+      singlePass: readSinglePassMode(box),
+      randomFirst: readRandomFirstMode(box),
       preserve,
       randomize: isActive(randomBtn),
       delimiter: {
@@ -579,6 +683,7 @@
     setupDelimiterControls(root);
     syncCollapseButtons(root);
     root.querySelectorAll('.mix-box').forEach(updatePreserveMode);
+    root.querySelectorAll('.mix-box, .chunk-box').forEach(updateLengthModeState);
     syncTextareaHeights(root);
     refreshVariableOptions(root);
   }
@@ -650,6 +755,7 @@
     const customRow = boxEl.querySelector('.delimiter-custom-row');
     const customInput = boxEl.querySelector('.delimiter-custom');
     const delimiterBlock = delimiterSelect?.closest('.control-block') || delimiterSelect?.parentElement;
+    const randomFirstBtn = boxEl.querySelector('.random-first-toggle');
 
     if (delimiterSelect) delimiterSelect.disabled = preserve;
     if (customInput) customInput.disabled = preserve;
@@ -661,7 +767,35 @@
       }
     }
     if (delimiterBlock) delimiterBlock.classList.toggle('is-disabled', preserve);
+    if (randomFirstBtn) {
+      // Preserve chunks skips rechunking, so lock the random-first toggle off.
+      if (preserve) {
+        randomFirstBtn.dataset.prevActive = randomFirstBtn.classList.contains('active') ? 'true' : 'false';
+        initToggleButton(randomFirstBtn, false);
+        randomFirstBtn.classList.add('disabled');
+        randomFirstBtn.disabled = true;
+        randomFirstBtn.setAttribute('aria-disabled', 'true');
+      } else {
+        randomFirstBtn.classList.remove('disabled');
+        randomFirstBtn.disabled = false;
+        randomFirstBtn.setAttribute('aria-disabled', 'false');
+        if (randomFirstBtn.dataset.prevActive) {
+          initToggleButton(randomFirstBtn, randomFirstBtn.dataset.prevActive === 'true');
+          delete randomFirstBtn.dataset.prevActive;
+        }
+      }
+    }
     if (!preserve) setupDelimiterControls(boxEl);
+  }
+
+  // Length mode drives whether the length input is active (Exactly Once disables it).
+  function updateLengthModeState(boxEl) {
+    if (!boxEl) return;
+    const lengthInput = boxEl.querySelector('.length-input');
+    const lengthBlock = lengthInput?.closest('.control-block');
+    const singlePass = readSinglePassMode(boxEl);
+    if (lengthInput) lengthInput.disabled = singlePass;
+    if (lengthBlock) lengthBlock.classList.toggle('is-disabled', singlePass);
   }
 
   function setCollapseButton(btn, collapsed) {
@@ -693,6 +827,7 @@
 
   function toggleButton(btn) {
     if (!btn) return;
+    if (btn.disabled || btn.classList.contains('disabled') || btn.getAttribute('aria-disabled') === 'true') return;
     btn.classList.toggle('active');
     if (btn.dataset.on && btn.dataset.off) {
       btn.textContent = btn.classList.contains('active') ? btn.dataset.on : btn.dataset.off;
@@ -830,6 +965,13 @@
     });
 
     root.addEventListener('change', event => {
+      const select = event.target.closest('.length-mode');
+      if (!select) return;
+      const box = select.closest('.mix-box, .chunk-box');
+      if (box) updateLengthModeState(box);
+    });
+
+    root.addEventListener('change', event => {
       const variableSelect = event.target.closest('.variable-select');
       if (!variableSelect) return;
       const box = variableSelect.closest('.variable-box');
@@ -850,6 +992,23 @@
   function setupPromptControls(windowEl) {
     const scope = windowEl || document;
     if (scope.closest?.('.window-template')) return;
+    const win = scope.closest?.('.app-window') || (scope.classList?.contains?.('app-window') ? scope : null);
+    const windowTitle = win?.querySelector('.window-header .box-title') || null;
+    if (win && !win.dataset.defaultTitle && windowTitle) {
+      win.dataset.defaultTitle = windowTitle.textContent || 'Prompt Enhancer';
+    }
+    const getFileName = () => (win?.dataset.fileName || '');
+    const setFileName = fileName => {
+      if (!win || !windowTitle) return;
+      const normalized = normalizeFileName(fileName);
+      if (normalized) {
+        win.dataset.fileName = normalized;
+        windowTitle.textContent = stripJsonExtension(normalized) || normalized;
+      } else {
+        delete win.dataset.fileName;
+        windowTitle.textContent = win.dataset.defaultTitle || 'Prompt Enhancer';
+      }
+    };
     const generateBtn = scope.querySelector('.generate-button');
     if (generateBtn && !generateBtn.dataset.bound) {
       generateBtn.addEventListener('click', () => {
@@ -893,7 +1052,8 @@
     }
 
     const loadInput = scope.querySelector('.load-mix-file');
-    const saveMix = () => {
+    // File naming is per-window: Save reuses the stored name; Save As prompts and updates the title.
+    const downloadMix = fileName => {
       const root = scope.querySelector('.mix-root');
       if (!root) return;
       const data = exportMixState(root);
@@ -901,9 +1061,34 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'prompt-enhancer-mix.json';
+      a.download = fileName;
       a.click();
       URL.revokeObjectURL(url);
+    };
+
+    const promptForFileName = () => {
+      if (typeof window === 'undefined' || typeof window.prompt !== 'function') return '';
+      const currentName = getFileName();
+      const suggestion = stripJsonExtension(currentName) || 'prompt-enhancer-mix';
+      const response = window.prompt('Save as...', suggestion);
+      return normalizeFileName(response);
+    };
+
+    const saveMixAs = () => {
+      const nextName = promptForFileName();
+      if (!nextName) return;
+      const canonicalName = ensureJsonExtension(nextName);
+      setFileName(canonicalName);
+      downloadMix(canonicalName);
+    };
+
+    const saveMix = () => {
+      const currentName = getFileName();
+      if (!currentName) {
+        saveMixAs();
+        return;
+      }
+      downloadMix(currentName);
     };
 
     const loadMix = file => {
@@ -919,6 +1104,7 @@
         const root = scope.querySelector('.mix-root');
         if (!root) return;
         applyMixState(data, root);
+        if (file?.name) setFileName(file.name);
       };
       reader.readAsText(file);
     };
@@ -948,18 +1134,20 @@
         if (event.target.closest('.prompt-menu')) return;
         closeMenu();
       });
+      // Prompt menu actions mirror visible items (open/save/save as).
       menuDropdown.addEventListener('click', event => {
         const item = event.target.closest('.prompt-menu-item');
         if (!item) return;
         const action = item.dataset.action;
         if (action === 'open') {
+          // Open uses the hidden file input.
           loadInput?.click();
         } else if (action === 'save') {
+          // Save exports the current mix state as JSON.
           saveMix();
-        } else if (action === 'quit') {
-          const win = scope.closest('.app-window');
-          const instanceId = win?.dataset.instance;
-          if (instanceId) closeWindow(instanceId);
+        } else if (action === 'save-as') {
+          // Save As always prompts for a new name.
+          saveMixAs();
         }
         closeMenu();
       });
