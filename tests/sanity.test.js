@@ -40,8 +40,8 @@ function runSanityCase(testCase) {
   const output = mixBox?.querySelector('.mix-output-text')?.textContent || '';
   const lengthMode = mixBox?.querySelector('.length-mode')?.value || '';
   const preserve = mixBox?.querySelector('.delimiter-size')?.value === 'preserve';
-  const randomFirstToggle = mixBox?.querySelector('.random-first-toggle');
-  const randomFirstDisabled = !!(randomFirstToggle?.disabled || randomFirstToggle?.classList.contains('disabled'));
+  const firstChunkSelect = mixBox?.querySelector('.first-chunk-select');
+  const firstChunkDisabled = !!(firstChunkSelect?.disabled || firstChunkSelect?.classList.contains('disabled'));
   const lengthLimitDisabled = !!mixBox?.querySelector('.length-input')?.disabled;
   const windowTitle = window.document.querySelector('.prompt-window .window-header .box-title')?.textContent || '';
   const colorMode = mixBox?.dataset?.colorMode || '';
@@ -52,7 +52,7 @@ function runSanityCase(testCase) {
     output,
     lengthMode,
     preserve,
-    randomFirstDisabled,
+    firstChunkDisabled,
     lengthLimitDisabled,
     windowTitle,
     colorMode,
@@ -82,8 +82,8 @@ describe('Sanity regression via real UI flow', () => {
       if (Object.prototype.hasOwnProperty.call(expected, 'preserve')) {
         expect(result.preserve).toBe(expected.preserve);
       }
-      if (Object.prototype.hasOwnProperty.call(expected, 'randomFirstDisabled')) {
-        expect(result.randomFirstDisabled).toBe(expected.randomFirstDisabled);
+      if (Object.prototype.hasOwnProperty.call(expected, 'firstChunkDisabled')) {
+        expect(result.firstChunkDisabled).toBe(expected.firstChunkDisabled);
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'lengthLimitDisabled')) {
         expect(result.lengthLimitDisabled).toBe(expected.lengthLimitDisabled);

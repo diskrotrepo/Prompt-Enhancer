@@ -27,7 +27,7 @@ describe('Mix state roundtrip', () => {
           limit: 12,
           exact: true,
           singlePass: true,
-          randomFirst: false,
+          firstChunkBehavior: 'size',
           color: '2',
           colorMode: 'preset',
           colorPreset: 'storm',
@@ -36,8 +36,8 @@ describe('Mix state roundtrip', () => {
           randomize: false,
           delimiter: { mode: 'whitespace', size: 1 },
           children: [
-            { type: 'chunk', text: 'a ', limit: 12, exact: true, singlePass: true, randomFirst: false, colorMode: 'custom', colorValue: '#112233', randomize: false, delimiter: { mode: 'whitespace', size: 1 } },
-            { type: 'chunk', text: 'b ', limit: 12, exact: true, singlePass: true, randomFirst: false, randomize: false, delimiter: { mode: 'whitespace', size: 1 } }
+            { type: 'chunk', text: 'a ', limit: 12, exact: true, singlePass: true, firstChunkBehavior: 'size', colorMode: 'custom', colorValue: '#112233', randomize: false, delimiter: { mode: 'whitespace', size: 1 } },
+            { type: 'chunk', text: 'b ', limit: 12, exact: true, singlePass: true, firstChunkBehavior: 'size', randomize: false, delimiter: { mode: 'whitespace', size: 1 } }
           ]
         }
       ]
@@ -52,9 +52,9 @@ describe('Mix state roundtrip', () => {
     expect(exported.mixes[0].colorPreset).toBe('storm');
     expect(exported.mixes[0].children[0].colorMode).toBe('custom');
     expect(exported.mixes[0].singlePass).toBe(true);
-    expect(exported.mixes[0].randomFirst).toBe(false);
+    expect(exported.mixes[0].firstChunkBehavior).toBe('size');
     expect(exported.mixes[0].children[0].singlePass).toBe(true);
-    expect(exported.mixes[0].children[0].randomFirst).toBe(false);
+    expect(exported.mixes[0].children[0].firstChunkBehavior).toBe('size');
     const root = document.querySelector('.mix-root');
     main.applyMixState(exported, root);
     expect(root.querySelectorAll('.chunk-box').length).toBe(2);

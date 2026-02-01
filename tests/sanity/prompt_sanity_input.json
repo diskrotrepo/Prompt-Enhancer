@@ -156,8 +156,8 @@
             "randomize": false,
             "delimiter": { "mode": "whitespace", "size": 1 },
             "children": [
-              { "type": "chunk", "text": "a1 a2 a3 a4 ", "limit": 24, "exact": false, "randomFirst": false, "randomize": false, "delimiter": { "mode": "whitespace", "size": 2 } },
-              { "type": "chunk", "text": "b1 b2 b3 b4 ", "limit": 24, "exact": false, "randomFirst": false, "randomize": false, "delimiter": { "mode": "whitespace", "size": 2 } }
+              { "type": "chunk", "text": "a1 a2 a3 a4 ", "limit": 24, "exact": false, "firstChunkBehavior": "size", "randomize": false, "delimiter": { "mode": "whitespace", "size": 2 } },
+              { "type": "chunk", "text": "b1 b2 b3 b4 ", "limit": 24, "exact": false, "firstChunkBehavior": "size", "randomize": false, "delimiter": { "mode": "whitespace", "size": 2 } }
             ]
           }
         ]

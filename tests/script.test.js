@@ -27,9 +27,17 @@ describe('Chunking + mixing engine', () => {
     expect(parsed).toEqual(['a b ', 'c d ']);
   });
 
-  test('parseInput keeps fixed grouping when randomization is off', () => {
-    const parsed = parseInput('a b c d ', false, /\s+/, 2, false);
+  test('parseInput keeps fixed grouping when first chunk behavior is size', () => {
+    const parsed = parseInput('a b c d ', false, /\s+/, 2, 'size');
     expect(parsed).toEqual(['a b ', 'c d ']);
+  });
+
+  test('parseInput rotates when first chunk behavior is random-start', () => {
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0.5);
+    const parsed = parseInput('a b c d ', false, /\s+/, 2, 'random-start');
+    Math.random = orig;
+    expect(parsed).toEqual(['c d ', 'a b ']);
   });
 
   test('buildChunkList repeats chunks to reach limit', () => {

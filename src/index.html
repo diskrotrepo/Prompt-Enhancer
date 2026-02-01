@@ -158,9 +158,13 @@
                               <option value="10">10</option>
                             </select>
                           </div>
-                          <div class="control-block toggle-block">
-                            <label>Randomize First Chunk Size</label>
-                            <button type="button" class="toggle-button random-first-toggle active" data-on="On" data-off="Off" data-help="Randomize the size of the first grouped chunk (1 to the chunk size) to offset repeat boundaries.">On</button>
+                          <div class="control-block">
+                            <label>First Chunk Behavior</label>
+                            <select class="first-chunk-select" data-help="Choose how the first chunk is cut: Size X (fixed), Between 1 - X (random size), or Size X with a random start offset that cycles through the prompt.">
+                              <option value="size">Size X</option>
+                              <option value="between" selected>Between 1 - X</option>
+                              <option value="random-start">Size X, random start location</option>
+                            </select>
                           </div>
                           <div class="control-block">
                             <label>Length Limit</label>
@@ -256,9 +260,13 @@
                               <option value="10">10</option>
                             </select>
                           </div>
-                          <div class="control-block toggle-block">
-                            <label>Randomize First Chunk Size</label>
-                            <button type="button" class="toggle-button random-first-toggle active" data-on="On" data-off="Off" data-help="Randomize the size of the first grouped chunk (1 to the chunk size) to offset repeat boundaries.">On</button>
+                          <div class="control-block">
+                            <label>First Chunk Behavior</label>
+                            <select class="first-chunk-select" data-help="Choose how the first chunk is cut: Size X (fixed), Between 1 - X (random size), or Size X with a random start offset that cycles through the prompt.">
+                              <option value="size">Size X</option>
+                              <option value="between" selected>Between 1 - X</option>
+                              <option value="random-start">Size X, random start location</option>
+                            </select>
                           </div>
                           <div class="control-block">
                             <label>Length Limit</label>

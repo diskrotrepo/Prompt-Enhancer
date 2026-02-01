@@ -3,7 +3,7 @@
 
   // Table of contents:
   // - Utilities + shared readers (including color preset helpers)
-  // - Chunking + mixing engine (single-pass + random first chunk offset)
+  // - Chunking + mixing engine (single-pass + first chunk behavior)
   // - Box evaluation
   // - Box creation + state serialization
   // - UI helpers + event wiring
@@ -25,8 +25,22 @@
     return new RegExp(escapeRegExp(raw));
   }
 
-  // Split raw text into delimiter-preserving chunks, with optional first-group randomization to offset cycles.
-  function parseInput(raw, keepDelim = false, delimiter = /\s+/, size = 1, randomizeFirst = true) {
+  const FIRST_CHUNK_BEHAVIORS = {
+    SIZE: 'size',
+    BETWEEN: 'between',
+    RANDOM_START: 'random-start'
+  };
+
+  function coerceFirstChunkBehavior(value) {
+    if (value === false) return FIRST_CHUNK_BEHAVIORS.SIZE;
+    if (value === true) return FIRST_CHUNK_BEHAVIORS.BETWEEN;
+    if (value === FIRST_CHUNK_BEHAVIORS.SIZE) return FIRST_CHUNK_BEHAVIORS.SIZE;
+    if (value === FIRST_CHUNK_BEHAVIORS.RANDOM_START) return FIRST_CHUNK_BEHAVIORS.RANDOM_START;
+    return FIRST_CHUNK_BEHAVIORS.BETWEEN;
+  }
+
+  // Split raw text into delimiter-preserving chunks, with optional first-chunk behavior to offset cycles.
+  function parseInput(raw, keepDelim = false, delimiter = /\s+/, size = 1, firstChunkBehavior = FIRST_CHUNK_BEHAVIORS.BETWEEN) {
     if (!raw) return [];
     const normalized = raw.replace(/\r\n/g, '\n');
     const activeDelimiter = keepDelim ? /[,.!:;?\n]+/ : delimiter;
@@ -51,18 +65,26 @@
       items.push(normalized.slice(lastIndex));
     }
     const groupSize = Math.max(1, parseInt(size, 10) || 1);
-    if (groupSize === 1 || items.length <= 1) return items;
+    const behavior = coerceFirstChunkBehavior(firstChunkBehavior);
+    let orderedItems = items.slice();
+    if (behavior === FIRST_CHUNK_BEHAVIORS.RANDOM_START && orderedItems.length > 1) {
+      const startIndex = Math.floor(Math.random() * orderedItems.length);
+      if (startIndex > 0) {
+        orderedItems = orderedItems.slice(startIndex).concat(orderedItems.slice(0, startIndex));
+      }
+    }
+    if (groupSize === 1 || orderedItems.length <= 1) return orderedItems;
     const grouped = [];
-    if (!randomizeFirst) {
-      for (let i = 0; i < items.length; i += groupSize) {
-        grouped.push(items.slice(i, i + groupSize).join(''));
+    if (behavior === FIRST_CHUNK_BEHAVIORS.BETWEEN) {
+      const firstGroupSize = Math.min(orderedItems.length, Math.floor(Math.random() * groupSize) + 1);
+      // The first chunk is shorter on purpose to keep slice points from lining up every cycle.
+      grouped.push(orderedItems.slice(0, firstGroupSize).join(''));
+      for (let i = firstGroupSize; i < orderedItems.length; i += groupSize) {
+        grouped.push(orderedItems.slice(i, i + groupSize).join(''));
       }
     } else {
-      const firstGroupSize = Math.min(items.length, Math.floor(Math.random() * groupSize) + 1);
-      // The first chunk is shorter on purpose to keep slice points from lining up every cycle.
-      grouped.push(items.slice(0, firstGroupSize).join(''));
-      for (let i = firstGroupSize; i < items.length; i += groupSize) {
-        grouped.push(items.slice(i, i + groupSize).join(''));
+      for (let i = 0; i < orderedItems.length; i += groupSize) {
+        grouped.push(orderedItems.slice(i, i + groupSize).join(''));
       }
     }
     return grouped;
@@ -140,11 +162,20 @@
     return select.value === 'exact-once';
   }
 
-  // First-chunk randomization lives on its own toggle so users can lock the slice points.
-  function readRandomFirstMode(boxEl) {
+  function readFirstChunkBehavior(boxEl) {
+    const select = boxEl.querySelector('.first-chunk-select');
+    if (select) return coerceFirstChunkBehavior(select.value);
     const toggle = boxEl.querySelector('.random-first-toggle');
-    if (!toggle) return true;
-    return isActive(toggle);
+    if (toggle) return isActive(toggle) ? FIRST_CHUNK_BEHAVIORS.BETWEEN : FIRST_CHUNK_BEHAVIORS.SIZE;
+    return FIRST_CHUNK_BEHAVIORS.BETWEEN;
+  }
+
+  function getFirstChunkBehaviorConfig(config) {
+    if (!config) return FIRST_CHUNK_BEHAVIORS.BETWEEN;
+    if (config.firstChunkBehavior) return coerceFirstChunkBehavior(config.firstChunkBehavior);
+    if (config.randomFirst === false) return FIRST_CHUNK_BEHAVIORS.SIZE;
+    if (config.randomFirst === true) return FIRST_CHUNK_BEHAVIORS.BETWEEN;
+    return FIRST_CHUNK_BEHAVIORS.BETWEEN;
   }
 
   function escapeSelector(value) {
@@ -413,9 +444,17 @@
   // ======== Chunking + Mixing Engine ========
   // Single-pass length modes avoid repetition, and first-chunk offsets keep slice points varied.
 
-  function buildChunkList(raw, delimiterConfig, limit, exact, randomize, singlePass = false, randomizeFirst = true) {
+  function buildChunkList(
+    raw,
+    delimiterConfig,
+    limit,
+    exact,
+    randomize,
+    singlePass = false,
+    firstChunkBehavior = FIRST_CHUNK_BEHAVIORS.BETWEEN
+  ) {
     const config = delimiterConfig || { regex: /\s+/, size: 1, sentenceMode: false };
-    const chunks = parseInput(raw || '', config.sentenceMode, config.regex, config.size, randomizeFirst);
+    const chunks = parseInput(raw || '', config.sentenceMode, config.regex, config.size, firstChunkBehavior);
     const base = chunks.filter(chunk => chunk.length > 0);
     if (!base.length) return [];
     const ordered = randomize ? shuffle(base.slice()) : base.slice();
@@ -523,7 +562,7 @@
     const exact = readExactMode(boxEl);
     const singlePass = readSinglePassMode(boxEl);
     const randomize = isActive(randomBtn);
-    const randomizeFirst = readRandomFirstMode(boxEl);
+    const firstChunkBehavior = readFirstChunkBehavior(boxEl);
     const delimiterConfig = getDelimiterConfig(boxEl);
     const result = buildChunkList(
       input?.value || '',
@@ -532,7 +571,7 @@
       exact,
       randomize,
       singlePass,
-      randomizeFirst
+      firstChunkBehavior
     );
     if (outputEl) outputEl.textContent = result.join('');
     return result;
@@ -560,7 +599,7 @@
     const exact = readExactMode(boxEl);
     const singlePass = readSinglePassMode(boxEl);
     const randomize = isActive(randomBtn);
-    const randomizeFirst = readRandomFirstMode(boxEl);
+    const firstChunkBehavior = readFirstChunkBehavior(boxEl);
     const preserve = sizeSelect?.value === 'preserve';
     const delimiterConfig = getDelimiterConfig(boxEl);
 
@@ -591,7 +630,7 @@
 
     const result = preserve
       ? mixed
-      : buildChunkList(outputString, delimiterConfig, limit, exact, false, singlePass, randomizeFirst);
+      : buildChunkList(outputString, delimiterConfig, limit, exact, false, singlePass, firstChunkBehavior);
     if (boxId) visiting.delete(boxId);
     return result;
   }
@@ -708,7 +747,7 @@
     const limitInput = fragment.querySelector('.length-input');
     const randomBtn = fragment.querySelector('.random-toggle');
     const lengthMode = fragment.querySelector('.length-mode');
-    const randomFirstBtn = fragment.querySelector('.random-first-toggle');
+    const firstChunkSelect = fragment.querySelector('.first-chunk-select');
     const delimiterSelect = fragment.querySelector('.delimiter-select');
     const delimiterCustom = fragment.querySelector('.delimiter-custom');
     const delimiterSize = fragment.querySelector('.delimiter-size');
@@ -741,7 +780,7 @@
     }
 
     initToggleButton(randomBtn, !!config.randomize);
-    initToggleButton(randomFirstBtn, config.randomFirst !== false);
+    if (firstChunkSelect) firstChunkSelect.value = getFirstChunkBehaviorConfig(config);
     if (config.colorMode === 'custom' && config.colorValue) {
       setBoxColorMode(box, 'custom', config.colorValue);
     } else if (config.colorMode === 'preset' && config.colorPreset) {
@@ -778,6 +817,7 @@
     }
 
     updatePreserveMode(box);
+    updateFirstChunkBehaviorLabels(box);
     updateLengthModeState(box);
     syncTextareaHeights(wrapper);
     syncColorControls(box);
@@ -794,7 +834,7 @@
     const limitInput = fragment.querySelector('.length-input');
     const randomBtn = fragment.querySelector('.random-toggle');
     const lengthMode = fragment.querySelector('.length-mode');
-    const randomFirstBtn = fragment.querySelector('.random-first-toggle');
+    const firstChunkSelect = fragment.querySelector('.first-chunk-select');
     const delimiterSelect = fragment.querySelector('.delimiter-select');
     const delimiterCustom = fragment.querySelector('.delimiter-custom');
     const delimiterSize = fragment.querySelector('.delimiter-size');
@@ -822,7 +862,7 @@
     if (delimiterSize && config.delimiter?.size) delimiterSize.value = String(config.delimiter.size);
 
     initToggleButton(randomBtn, !!config.randomize);
-    initToggleButton(randomFirstBtn, config.randomFirst !== false);
+    if (firstChunkSelect) firstChunkSelect.value = getFirstChunkBehaviorConfig(config);
     if (config.colorMode === 'custom' && config.colorValue) {
       setBoxColorMode(box, 'custom', config.colorValue);
     } else if (config.colorMode === 'preset' && config.colorPreset) {
@@ -835,6 +875,7 @@
 
     syncTextareaHeights(wrapper);
     updateLengthModeState(box);
+    updateFirstChunkBehaviorLabels(box);
     syncColorControls(box);
     return wrapper;
   }
@@ -877,7 +918,7 @@
       limit: readNumber(limitInput, 1000),
       exact: readExactMode(box),
       singlePass: readSinglePassMode(box),
-      randomFirst: readRandomFirstMode(box),
+      firstChunkBehavior: readFirstChunkBehavior(box),
       color: colorState.autoColor,
       colorMode: colorState.mode,
       colorValue: colorState.value,
@@ -928,7 +969,7 @@
       limit: readNumber(limitInput, 1000),
       exact: readExactMode(box),
       singlePass: readSinglePassMode(box),
-      randomFirst: readRandomFirstMode(box),
+      firstChunkBehavior: readFirstChunkBehavior(box),
       color: colorState.autoColor,
       colorMode: colorState.mode,
       colorValue: colorState.value,
@@ -1043,6 +1084,34 @@
     });
   }
 
+  function getNumericChunkSize(sizeSelect) {
+    if (!sizeSelect) return 1;
+    const raw = sizeSelect.value;
+    if (raw && raw !== 'preserve') {
+      const parsed = parseInt(raw, 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        sizeSelect.dataset.lastNumeric = String(parsed);
+        return parsed;
+      }
+    }
+    const fallback = parseInt(sizeSelect.dataset.lastNumeric || '', 10);
+    return !isNaN(fallback) && fallback > 0 ? fallback : 1;
+  }
+
+  function updateFirstChunkBehaviorLabels(boxEl) {
+    if (!boxEl) return;
+    const select = boxEl.querySelector('.first-chunk-select');
+    if (!select) return;
+    const sizeSelect = boxEl.querySelector('.delimiter-size');
+    const size = getNumericChunkSize(sizeSelect);
+    const sizeOption = select.querySelector(`option[value="${FIRST_CHUNK_BEHAVIORS.SIZE}"]`);
+    const betweenOption = select.querySelector(`option[value="${FIRST_CHUNK_BEHAVIORS.BETWEEN}"]`);
+    const randomStartOption = select.querySelector(`option[value="${FIRST_CHUNK_BEHAVIORS.RANDOM_START}"]`);
+    if (sizeOption) sizeOption.textContent = `Size ${size}`;
+    if (betweenOption) betweenOption.textContent = `Between 1 - ${size}`;
+    if (randomStartOption) randomStartOption.textContent = `Size ${size}, random start location`;
+  }
+
   function updatePreserveMode(boxEl) {
     if (!boxEl) return;
     const sizeSelect = boxEl.querySelector('.delimiter-size');
@@ -1052,7 +1121,8 @@
     const customRow = boxEl.querySelector('.delimiter-custom-row');
     const customInput = boxEl.querySelector('.delimiter-custom');
     const delimiterBlock = delimiterSelect?.closest('.control-block') || delimiterSelect?.parentElement;
-    const randomFirstBtn = boxEl.querySelector('.random-first-toggle');
+    const firstChunkSelect = boxEl.querySelector('.first-chunk-select');
+    const firstChunkBlock = firstChunkSelect?.closest('.control-block');
 
     if (delimiterSelect) delimiterSelect.disabled = preserve;
     if (customInput) customInput.disabled = preserve;
@@ -1064,25 +1134,27 @@
       }
     }
     if (delimiterBlock) delimiterBlock.classList.toggle('is-disabled', preserve);
-    if (randomFirstBtn) {
-      // Preserve chunks skips rechunking, so lock the random-first toggle off.
+    if (firstChunkSelect) {
+      // Preserve chunks skips rechunking, so lock the first-chunk behavior to size.
       if (preserve) {
-        randomFirstBtn.dataset.prevActive = randomFirstBtn.classList.contains('active') ? 'true' : 'false';
-        initToggleButton(randomFirstBtn, false);
-        randomFirstBtn.classList.add('disabled');
-        randomFirstBtn.disabled = true;
-        randomFirstBtn.setAttribute('aria-disabled', 'true');
+        if (!firstChunkSelect.dataset.prevValue) {
+          firstChunkSelect.dataset.prevValue = firstChunkSelect.value;
+        }
+        firstChunkSelect.value = FIRST_CHUNK_BEHAVIORS.SIZE;
+        firstChunkSelect.disabled = true;
+        firstChunkSelect.setAttribute('aria-disabled', 'true');
       } else {
-        randomFirstBtn.classList.remove('disabled');
-        randomFirstBtn.disabled = false;
-        randomFirstBtn.setAttribute('aria-disabled', 'false');
-        if (randomFirstBtn.dataset.prevActive) {
-          initToggleButton(randomFirstBtn, randomFirstBtn.dataset.prevActive === 'true');
-          delete randomFirstBtn.dataset.prevActive;
+        firstChunkSelect.disabled = false;
+        firstChunkSelect.setAttribute('aria-disabled', 'false');
+        if (firstChunkSelect.dataset.prevValue) {
+          firstChunkSelect.value = firstChunkSelect.dataset.prevValue;
+          delete firstChunkSelect.dataset.prevValue;
         }
       }
     }
+    if (firstChunkBlock) firstChunkBlock.classList.toggle('is-disabled', preserve);
     if (!preserve) setupDelimiterControls(boxEl);
+    updateFirstChunkBehaviorLabels(boxEl);
   }
 
   // Length mode drives whether the length input is active (Exactly Once disables it).
@@ -1302,7 +1374,12 @@
       const select = event.target.closest('.delimiter-size');
       if (!select) return;
       const mixBox = select.closest('.mix-box');
-      if (mixBox) updatePreserveMode(mixBox);
+      if (mixBox) {
+        updatePreserveMode(mixBox);
+        return;
+      }
+      const chunkBox = select.closest('.chunk-box');
+      if (chunkBox) updateFirstChunkBehaviorLabels(chunkBox);
     });
 
     root.addEventListener('change', event => {

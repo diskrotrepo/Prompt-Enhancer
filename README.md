@@ -106,8 +106,8 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 7. **Exact once variables** — `exact_once_variable_mix`  
    Variable nodes still respect exact-once mixing, so they only appear once per pass.
 
-8. **Random-first toggle off** — `random_first_off`  
-   Disabling random-first chunk sizing keeps chunk boundaries aligned before mixing.
+8. **First chunk behavior: size** — `random_first_off`  
+   Using a fixed first chunk size keeps chunk boundaries aligned before mixing.
 
 9. **Nested rechunk behavior** — `nested_rechunk`  
    A child mix with preserve off rechunks its output before the parent mix consumes it, including the offset first chunk.

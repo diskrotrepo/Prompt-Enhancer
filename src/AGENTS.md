@@ -74,15 +74,14 @@ limit input so the limit is treated as irrelevant.
 New boxes default to **Exactly Once** so fresh mixes emit each chunk once unless
 the user opts into repeat-length behavior.
 
-### Chunk Offset
+### First Chunk Behavior
 
-When chunk sizes are greater than 1, the first chunk uses a randomized size
-between 1 and the configured chunk size. Subsequent chunks follow the normal
-fixed size, which keeps repeat cycles from slicing on identical boundaries.
-This offset is controlled by the **Randomize First Chunk Size** toggle (default
-on) so users can lock deterministic chunk boundaries if needed.
-When a mix is set to **Preserve chunks**, the random-first toggle is forced off
-and disabled because no rechunking occurs in that mode.
+Use the **First Chunk Behavior** select to control how rechunking offsets are
+created. **Size X** keeps fixed-size grouping, **Between 1 - X** randomizes the
+first chunk size, and **Size X, random start location** rotates the prompt to
+start at a random offset before grouping.
+When a mix is set to **Preserve chunks**, the first-chunk select is locked to
+**Size X** and disabled because no rechunking occurs in that mode.
 
 ### Lyrics Insertions
 

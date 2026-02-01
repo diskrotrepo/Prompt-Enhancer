@@ -5,7 +5,7 @@
       "output": "",
       "lengthMode": "exact-once",
       "preserve": true,
-      "randomFirstDisabled": true,
+      "firstChunkDisabled": true,
       "lengthLimitDisabled": true,
       "windowTitle": "Prompt Enhancer"
     },

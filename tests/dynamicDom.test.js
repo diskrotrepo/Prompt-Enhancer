@@ -44,14 +44,14 @@ describe('Dynamic mix DOM', () => {
     expect(root.querySelectorAll('.mix-box').length).toBe(2);
   });
 
-  test('preserve chunks disables random-first toggle', () => {
+  test('preserve chunks disables first-chunk select', () => {
     loadBody();
     const root = document.querySelector('.mix-root');
     main.applyMixState(null, root);
-    const toggle = root.querySelector('.mix-box .random-first-toggle');
-    expect(toggle).not.toBeNull();
-    expect(toggle.disabled).toBe(true);
-    expect(toggle.classList.contains('active')).toBe(false);
+    const select = root.querySelector('.mix-box .first-chunk-select');
+    expect(select).not.toBeNull();
+    expect(select.disabled).toBe(true);
+    expect(select.value).toBe('size');
   });
 
   test('new boxes default to exactly-once length mode', () => {
