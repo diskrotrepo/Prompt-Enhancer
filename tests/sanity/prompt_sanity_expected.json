@@ -41,12 +41,128 @@
       "output": "a1 a2 b1 b2 a3 a4 b3 b4 "
     },
     {
+      "id": "custom_chunk_size",
+      "output": "",
+      "lengthMode": "allow"
+    },
+    {
       "id": "nested_rechunk",
       "output": "a x b "
     },
     {
       "id": "variable_reference",
       "output": "a b b "
+    },
+    {
+      "id": "delimiter_whitespace",
+      "output": "a x b x c x "
+    },
+    {
+      "id": "delimiter_comma",
+      "output": "a,x b,x c,x "
+    },
+    {
+      "id": "delimiter_semicolon",
+      "output": "a;x b;x c;x "
+    },
+    {
+      "id": "delimiter_pipe",
+      "output": "a|x b|x c|x "
+    },
+    {
+      "id": "delimiter_newline",
+      "output": "a\nx b\nx c\nx "
+    },
+    {
+      "id": "delimiter_tab",
+      "output": "a\tx b\tx c\tx "
+    },
+    {
+      "id": "delimiter_sentence",
+      "output": "A.x B!x C?x "
+    },
+    {
+      "id": "delimiter_custom_newline",
+      "output": "a\nx b\nx c\nx "
+    },
+    {
+      "id": "delimiter_custom_tab",
+      "output": "a\tx b\tx c\tx "
+    },
+    {
+      "id": "delimiter_custom_empty",
+      "output": "a x b x c x "
+    },
+    {
+      "id": "preserve_off_enables_controls",
+      "output": "a b ",
+      "preserve": false,
+      "firstChunkDisabled": false
+    },
+    {
+      "id": "first_chunk_between",
+      "output": "a1 b1 b2 a2 a3 b3 b4 a4 "
+    },
+    {
+      "id": "first_chunk_random_start",
+      "output": "a3 a4 b1 b2 a1 a2 b3 b4 "
+    },
+    {
+      "id": "delete_final_chunk",
+      "output": "abc ",
+      "lengthMode": "allow"
+    },
+    {
+      "id": "random_chunk_order",
+      "output": "b c a "
+    },
+    {
+      "id": "rechunk_no_random",
+      "output": "b1 a1 b2 a2 b3 a3 b4 a4 "
+    },
+    {
+      "id": "variable_cycle_guard",
+      "output": "a "
+    },
+    {
+      "id": "copy_output_behavior",
+      "output": "abc ",
+      "chunkOutput": "abc ",
+      "mixCopiedText": "abc ",
+      "chunkCopiedText": "abc "
+    },
+    {
+      "id": "color_preset_shared",
+      "output": "a ",
+      "colorMode": "preset",
+      "colorValue": "#445566",
+      "colorPreset": "storm",
+      "chunkColorMode": "preset",
+      "chunkColorValue": "#445566",
+      "chunkColorPreset": "storm"
+    },
+    {
+      "id": "color_preset_missing",
+      "output": "a ",
+      "colorMode": "auto",
+      "colorValue": "",
+      "colorPreset": ""
+    },
+    {
+      "id": "prompt_menu_save_flow",
+      "output": "",
+      "windowTitle": "second",
+      "promptCount": 2,
+      "downloadNames": [
+        "first.json",
+        "first.json",
+        "second.json"
+      ]
+    },
+    {
+      "id": "local_storage_load",
+      "output": "p ",
+      "lengthMode": "exact-once"
     }
   ]
 }

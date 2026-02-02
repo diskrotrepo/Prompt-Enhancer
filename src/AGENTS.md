@@ -128,3 +128,4 @@ Run the full suite with `npm test` whenever you modify code. Expand coverage whe
 Sanity regression lives in `tests/sanity/` and runs the real UI flow via JSDOM.
 When behavior changes, update both sanity JSON fixtures and the README Heuristic
 rule index so test intent stays explicit for future LLM passes.
+Treat heuristics as living specs: every new rule or behavior update needs a matching sanity fixture plus an entry in the README index.

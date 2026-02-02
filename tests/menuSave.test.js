@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { JSDOM } = require('jsdom');
+const { createDom, registerDomCleanup } = require('./helpers/dom');
 
 const ROOT = path.join(__dirname, '..');
 const HTML_PATH = path.join(ROOT, 'src', 'index.html');
@@ -10,7 +10,7 @@ const SCRIPT_PATH = path.join(ROOT, 'src', 'script.js');
 
 function setupDom() {
   const html = fs.readFileSync(HTML_PATH, 'utf8');
-  const dom = new JSDOM(html, { runScripts: 'dangerously', url: 'http://localhost' });
+  const dom = createDom(html, { runScripts: 'dangerously', url: 'http://localhost' });
   const { window } = dom;
   window.alert = () => {};
   if (!window.URL) window.URL = {};
@@ -66,3 +66,5 @@ describe('Prompt menu save flows', () => {
     expect(titleEl?.textContent).toBe('second');
   });
 });
+// Centralized JSDOM teardown keeps tests from leaking handles.
+registerDomCleanup();

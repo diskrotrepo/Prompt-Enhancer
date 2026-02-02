@@ -18,6 +18,7 @@ Directives for LLMs:
 - Ensure AGENTS.md files reflect new structures.
 - Use diverse phrasing to communicate changes to future LLM instances, increasing success probability.
 
+Heuristics discipline: whenever behavior changes or grows, expand the README Heuristic rule index and add/adjust matching sanity fixtures so the documentation and regression coverage stay in lockstep.
 
 For development details see `src/AGENTS.md`.
 

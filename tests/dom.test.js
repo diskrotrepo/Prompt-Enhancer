@@ -1,11 +1,14 @@
 const fs = require('fs');
 const path = require('path');
-const { JSDOM } = require('jsdom');
+const { createDom, registerDomCleanup } = require('./helpers/dom');
+
+// Centralized JSDOM teardown keeps tests from leaking handles.
+registerDomCleanup();
 
 describe('New mixing layout', () => {
   test('mix and chunk templates exist', () => {
     const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'index.html'), 'utf8');
-    const dom = new JSDOM(html);
+    const dom = createDom(html);
     expect(dom.window.document.getElementById('mix-box-template')).not.toBeNull();
     expect(dom.window.document.getElementById('chunk-box-template')).not.toBeNull();
     expect(dom.window.document.getElementById('variable-box-template')).not.toBeNull();
@@ -13,7 +16,7 @@ describe('New mixing layout', () => {
 
   test('tab buttons exist', () => {
     const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'index.html'), 'utf8');
-    const dom = new JSDOM(html);
+    const dom = createDom(html);
     const menu = dom.window.document.getElementById('menu-bar');
     const glyph = dom.window.document.getElementById('menu-start');
     const prompts = dom.window.document.getElementById('window-prompts-template');

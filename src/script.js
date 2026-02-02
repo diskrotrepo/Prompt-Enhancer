@@ -5,7 +5,7 @@
   // - Utilities + shared readers (including color preset helpers)
   // - Chunking + mixing engine (single-pass + first chunk behavior)
   // - Box evaluation
-  // - Box creation + state serialization
+  // - Box creation + state serialization (hydrates custom size/length controls)
   // - UI helpers + event wiring
   // - Window management + data load/save (locks initial window width)
   // - Initialization
@@ -855,6 +855,7 @@
     return wrapper;
   }
 
+  // Build a chunk box from saved state, including custom chunk sizes for save/load fidelity.
   function createChunkWrapper(config = {}, context = {}) {
     const template = document.getElementById('chunk-box-template');
     const fragment = template.content.cloneNode(true);
@@ -869,6 +870,7 @@
     const delimiterSelect = fragment.querySelector('.delimiter-select');
     const delimiterCustom = fragment.querySelector('.delimiter-custom');
     const delimiterSize = fragment.querySelector('.delimiter-size');
+    const delimiterSizeCustom = fragment.querySelector('.delimiter-size-custom');
 
     box.dataset.boxId = config.id || `chunk-${++idCounter}`;
     box.dataset.color = String(
@@ -897,6 +899,7 @@
         delimiterSize.value = sizeValue;
       } else {
         delimiterSize.value = 'custom';
+        // Custom sizes live in the numeric input; restore it so size roundtrips.
         if (delimiterSizeCustom) delimiterSizeCustom.value = sizeValue;
       }
     }

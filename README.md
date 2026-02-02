@@ -81,36 +81,79 @@ NODE
 
 ## Heuristic rule index
 
+### Sanity cases (fixtures)
+
 Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 `tests/sanity/prompt_sanity_expected.json`. Update this list whenever behavior changes.
 
-1. **Basic mix ordering with preserved delimiters** — `basic_mix_divider`  
-   Chunk lists are interleaved without delimiter injection, yielding `a b d` for
-   three lists in canonical order.
+#### Core defaults + ordering
 
-2. **Default UI state** — `default_ui_state`  
-   Fresh loads default to Exactly Once, Preserve Chunks, a disabled length input, and the Prompt Enhancer window title.
+- **Basic mix ordering with preserved delimiters** — `basic_mix_divider`
+- **Default UI state** — `default_ui_state`
 
-3. **Custom color state** — `color_custom_state`  
-   Mix boxes can persist a custom color selection via saved state.
+#### Delimiter modes
 
-4. **Randomized list order per cycle** — `random_mix_order`  
-   Mixing order changes per cycle when randomization is enabled (RNG stubbed).
+- **Whitespace delimiter** — `delimiter_whitespace`
+- **Comma delimiter** — `delimiter_comma`
+- **Semicolon delimiter** — `delimiter_semicolon`
+- **Pipe delimiter** — `delimiter_pipe`
+- **Newline delimiter** — `delimiter_newline`
+- **Tab delimiter** — `delimiter_tab`
+- **Sentence punctuation delimiter** — `delimiter_sentence`
+- **Custom delimiter with `\n`** — `delimiter_custom_newline`
+- **Custom delimiter with `\t`** — `delimiter_custom_tab`
+- **Custom delimiter fallback (empty input)** — `delimiter_custom_empty`
 
-5. **Exact length trimming** — `exact_length_trim`  
-   Exact length trims the final chunk rather than injecting new delimiters.
+#### Chunk sizing + first-chunk behavior
 
-6. **Exact once single-pass** — `exact_once_length`  
-   Exact once halts after one pass, so long limits do not repeat chunks.
+- **Fixed chunk size grouping** — `random_first_off`
+- **Custom chunk sizes persist** — `custom_chunk_size`
+- **First chunk Between 1 - X** — `first_chunk_between`
+- **First chunk random start** — `first_chunk_random_start`
 
-7. **Exact once variables** — `exact_once_variable_mix`  
-   Variable nodes still respect exact-once mixing, so they only appear once per pass.
+#### Preserve + rechunking
 
-8. **First chunk behavior: size** — `random_first_off`  
-   Using a fixed first chunk size keeps chunk boundaries aligned before mixing.
+- **Preserve chunks off enables controls** — `preserve_off_enables_controls`
+- **Nested rechunk behavior** — `nested_rechunk`
+- **Rechunk pass not randomized** — `rechunk_no_random`
 
-9. **Nested rechunk behavior** — `nested_rechunk`  
-   A child mix with preserve off rechunks its output before the parent mix consumes it, including the offset first chunk.
+#### Length modes
 
-10. **Variable references forward chunks** — `variable_reference`  
-   Variable nodes reference a mix or string and pass its chunks upward without mutation.
+- **Split Final Chunk** — `exact_length_trim`
+- **Delete Final Chunk** — `delete_final_chunk`
+- **Exactly Once** — `exact_once_length`
+
+#### Randomization scope
+
+- **Mix list order shuffle** — `random_mix_order`
+- **Chunk list shuffle** — `random_chunk_order`
+
+#### Variables
+
+- **Variable references forward chunks** — `variable_reference`
+- **Exactly Once variables** — `exact_once_variable_mix`
+- **Variable cycle guard** — `variable_cycle_guard`
+
+#### Output + copy behavior
+
+- **Copy buttons use generated output** — `copy_output_behavior`
+
+#### Color presets
+
+- **Custom color state** — `color_custom_state`
+- **Preset shared across boxes** — `color_preset_shared`
+- **Missing preset fallback** — `color_preset_missing`
+
+#### File + persistence
+
+- **Prompt menu save flow** — `prompt_menu_save_flow`
+- **Local storage load** — `local_storage_load`
+
+- **Color presets**  
+  Custom color presets are global across boxes, persist in saved state, and missing preset ids fall back to Auto on load.
+
+- **File save/load semantics**  
+  Save reuses the current file name (prompting if unset). Save As always prompts, appends `.json` when missing, and updates the window title (title omits the `.json` suffix).
+
+- **Local persistence**  
+  The app stores state in localStorage on unload and reloads it on startup when available.

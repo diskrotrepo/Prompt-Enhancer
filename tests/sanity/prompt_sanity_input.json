@@ -20,9 +20,22 @@
             "randomize": false,
             "colorMode": "custom",
             "colorValue": "#ff3366",
-            "delimiter": { "mode": "whitespace", "size": 1 },
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
             "children": [
-              { "type": "chunk", "text": "a ", "limit": 6, "exact": false, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } }
+              {
+                "type": "chunk",
+                "text": "a ",
+                "limit": 6,
+                "exact": false,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
             ]
           }
         ]
@@ -41,11 +54,44 @@
             "exact": false,
             "preserve": true,
             "randomize": false,
-            "delimiter": { "mode": "whitespace", "size": 1 },
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
             "children": [
-              { "type": "chunk", "text": "a ", "limit": 6, "exact": false, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } },
-              { "type": "chunk", "text": "b ", "limit": 6, "exact": false, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } },
-              { "type": "chunk", "text": "d ", "limit": 6, "exact": false, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } }
+              {
+                "type": "chunk",
+                "text": "a ",
+                "limit": 6,
+                "exact": false,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "b ",
+                "limit": 6,
+                "exact": false,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "d ",
+                "limit": 6,
+                "exact": false,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
             ]
           }
         ]
@@ -64,11 +110,44 @@
             "exact": false,
             "preserve": true,
             "randomize": true,
-            "delimiter": { "mode": "whitespace", "size": 1 },
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
             "children": [
-              { "type": "chunk", "text": "a ", "limit": 6, "exact": false, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } },
-              { "type": "chunk", "text": "b ", "limit": 6, "exact": false, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } },
-              { "type": "chunk", "text": "c ", "limit": 6, "exact": false, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } }
+              {
+                "type": "chunk",
+                "text": "a ",
+                "limit": 6,
+                "exact": false,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "b ",
+                "limit": 6,
+                "exact": false,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "c ",
+                "limit": 6,
+                "exact": false,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
             ]
           }
         ]
@@ -87,9 +166,22 @@
             "exact": true,
             "preserve": true,
             "randomize": false,
-            "delimiter": { "mode": "whitespace", "size": 1 },
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
             "children": [
-              { "type": "chunk", "text": "abc ", "limit": 5, "exact": true, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } }
+              {
+                "type": "chunk",
+                "text": "abc ",
+                "limit": 5,
+                "exact": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
             ]
           }
         ]
@@ -109,9 +201,23 @@
             "singlePass": true,
             "preserve": true,
             "randomize": false,
-            "delimiter": { "mode": "whitespace", "size": 1 },
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
             "children": [
-              { "type": "chunk", "text": "a b ", "limit": 10, "exact": true, "singlePass": true, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } }
+              {
+                "type": "chunk",
+                "text": "a b ",
+                "limit": 10,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
             ]
           }
         ]
@@ -131,11 +237,42 @@
             "singlePass": true,
             "preserve": true,
             "randomize": false,
-            "delimiter": { "mode": "whitespace", "size": 1 },
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
             "children": [
-              { "type": "chunk", "id": "chunk-a", "text": "a ", "limit": 20, "exact": true, "singlePass": true, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } },
-              { "type": "chunk", "id": "chunk-b", "text": "b ", "limit": 20, "exact": true, "singlePass": true, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } },
-              { "type": "variable", "id": "var-1", "targetId": "chunk-b" }
+              {
+                "type": "chunk",
+                "id": "chunk-a",
+                "text": "a ",
+                "limit": 20,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "id": "chunk-b",
+                "text": "b ",
+                "limit": 20,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "variable",
+                "id": "var-1",
+                "targetId": "chunk-b"
+              }
             ]
           }
         ]
@@ -154,10 +291,70 @@
             "exact": false,
             "preserve": true,
             "randomize": false,
-            "delimiter": { "mode": "whitespace", "size": 1 },
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
             "children": [
-              { "type": "chunk", "text": "a1 a2 a3 a4 ", "limit": 24, "exact": false, "firstChunkBehavior": "size", "randomize": false, "delimiter": { "mode": "whitespace", "size": 2 } },
-              { "type": "chunk", "text": "b1 b2 b3 b4 ", "limit": 24, "exact": false, "firstChunkBehavior": "size", "randomize": false, "delimiter": { "mode": "whitespace", "size": 2 } }
+              {
+                "type": "chunk",
+                "text": "a1 a2 a3 a4 ",
+                "limit": 24,
+                "exact": false,
+                "firstChunkBehavior": "size",
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 2
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "b1 b2 b3 b4 ",
+                "limit": 24,
+                "exact": false,
+                "firstChunkBehavior": "size",
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 2
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "custom_chunk_size",
+      "description": "Custom chunk sizes load from state and affect length mode output.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Custom Size",
+            "limit": 6,
+            "exact": false,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a b c d e f ",
+                "limit": 6,
+                "exact": false,
+                "firstChunkBehavior": "size",
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 12
+                }
+              }
             ]
           }
         ]
@@ -176,7 +373,10 @@
             "exact": false,
             "preserve": true,
             "randomize": false,
-            "delimiter": { "mode": "whitespace", "size": 1 },
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
             "children": [
               {
                 "type": "mix",
@@ -185,13 +385,46 @@
                 "exact": false,
                 "preserve": false,
                 "randomize": false,
-                "delimiter": { "mode": "whitespace", "size": 2 },
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 2
+                },
                 "children": [
-                  { "type": "chunk", "text": "a ", "limit": 4, "exact": false, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } },
-                  { "type": "chunk", "text": "b ", "limit": 4, "exact": false, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } }
+                  {
+                    "type": "chunk",
+                    "text": "a ",
+                    "limit": 4,
+                    "exact": false,
+                    "randomize": false,
+                    "delimiter": {
+                      "mode": "whitespace",
+                      "size": 1
+                    }
+                  },
+                  {
+                    "type": "chunk",
+                    "text": "b ",
+                    "limit": 4,
+                    "exact": false,
+                    "randomize": false,
+                    "delimiter": {
+                      "mode": "whitespace",
+                      "size": 1
+                    }
+                  }
                 ]
               },
-              { "type": "chunk", "text": "x ", "limit": 6, "exact": false, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } }
+              {
+                "type": "chunk",
+                "text": "x ",
+                "limit": 6,
+                "exact": false,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
             ]
           }
         ]
@@ -211,11 +444,1015 @@
             "exact": false,
             "preserve": true,
             "randomize": false,
-            "delimiter": { "mode": "whitespace", "size": 1 },
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
             "children": [
-              { "type": "chunk", "id": "chunk-a", "text": "a ", "limit": 6, "exact": false, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } },
-              { "type": "chunk", "id": "chunk-b", "text": "b ", "limit": 6, "exact": false, "randomize": false, "delimiter": { "mode": "whitespace", "size": 1 } },
-              { "type": "variable", "id": "var-1", "targetId": "chunk-b" }
+              {
+                "type": "chunk",
+                "id": "chunk-a",
+                "text": "a ",
+                "limit": 6,
+                "exact": false,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "id": "chunk-b",
+                "text": "b ",
+                "limit": 6,
+                "exact": false,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "variable",
+                "id": "var-1",
+                "targetId": "chunk-b"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "delimiter_whitespace",
+      "description": "Whitespace delimiter splits into word chunks and interleaves with another list.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Whitespace Delimiter",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a b c ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "x x x ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "delimiter_comma",
+      "description": "Comma delimiter splits chunks including commas.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Comma Delimiter",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a,b,c,",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "comma",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "x x x ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "delimiter_semicolon",
+      "description": "Semicolon delimiter splits chunks including semicolons.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Semicolon Delimiter",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a;b;c;",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "semicolon",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "x x x ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "delimiter_pipe",
+      "description": "Pipe delimiter splits chunks including pipes.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Pipe Delimiter",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a|b|c|",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "pipe",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "x x x ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "delimiter_newline",
+      "description": "Newline delimiter splits chunks on line breaks.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Newline Delimiter",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a\nb\nc\n",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "newline",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "x x x ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "delimiter_tab",
+      "description": "Tab delimiter splits chunks on tabs.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Tab Delimiter",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a\tb\tc\t",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "tab",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "x x x ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "delimiter_sentence",
+      "description": "Sentence punctuation delimiter keeps punctuation attached to chunks.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Sentence Delimiter",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "A.B!C?",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "sentence",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "x x x ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "delimiter_custom_newline",
+      "description": "Custom delimiter with \\n splits on newlines.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Custom Newline",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a\nb\nc\n",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "custom",
+                  "custom": "\\n",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "x x x ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "delimiter_custom_tab",
+      "description": "Custom delimiter with \\t splits on tabs.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Custom Tab",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a\tb\tc\t",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "custom",
+                  "custom": "\\t",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "x x x ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "delimiter_custom_empty",
+      "description": "Empty custom delimiter falls back to whitespace.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Custom Empty",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a b c ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "custom",
+                  "custom": "",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "x x x ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "preserve_off_enables_controls",
+      "description": "Preserve chunks off re-enables delimiter and first-chunk controls.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Preserve Off",
+            "limit": 20,
+            "exact": true,
+            "singlePass": true,
+            "preserve": false,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a b ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "first_chunk_between",
+      "description": "Between 1 - X randomizes the first chunk size.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "First Chunk Between",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a1 a2 a3 a4 ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "firstChunkBehavior": "between",
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 2
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "b1 b2 b3 b4 ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "firstChunkBehavior": "size",
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 2
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "first_chunk_random_start",
+      "description": "Random start rotates the list before chunking.",
+      "random": 0.5,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "First Chunk Random Start",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a1 a2 a3 a4 ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "firstChunkBehavior": "random-start",
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 2
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "b1 b2 b3 b4 ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "firstChunkBehavior": "size",
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 2
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "delete_final_chunk",
+      "description": "Delete Final Chunk drops would-overflow chunks.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Delete Final Chunk",
+            "limit": 5,
+            "exact": false,
+            "singlePass": false,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "abc ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "random_chunk_order",
+      "description": "Chunk randomization shuffles the chunk list once per generation.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Random Chunk Order",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a b c ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": true,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "rechunk_no_random",
+      "description": "Rechunking uses the mixed output order without additional randomization.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Rechunk No Random",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": false,
+            "randomize": true,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 2
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a1 a2 a3 a4 ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "b1 b2 b3 b4 ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "variable_cycle_guard",
+      "description": "Variable cycles are skipped to avoid infinite recursion.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "id": "mix-cycle",
+            "title": "Variable Cycle",
+            "limit": 20,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a ",
+                "limit": 20,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "variable",
+                "id": "var-cycle",
+                "targetId": "mix-cycle"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "copy_output_behavior",
+      "description": "Copy buttons use generated output, not raw input.",
+      "random": 0,
+      "actions": [
+        {
+          "type": "openPromptsWindow"
+        },
+        {
+          "type": "copyMixOutput"
+        },
+        {
+          "type": "copyChunkOutput"
+        }
+      ],
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Copy Output",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "abc def ",
+                "limit": 4,
+                "exact": true,
+                "singlePass": false,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "color_preset_shared",
+      "description": "Custom color presets apply across mix and chunk boxes.",
+      "random": 0,
+      "state": {
+        "colorPresets": [
+          {
+            "id": "storm",
+            "name": "Storm",
+            "color": "#445566"
+          }
+        ],
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Preset Mix",
+            "limit": 6,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "colorMode": "preset",
+            "colorPreset": "storm",
+            "colorValue": "#445566",
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a ",
+                "limit": 6,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "colorMode": "preset",
+                "colorPreset": "storm",
+                "colorValue": "#445566",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "color_preset_missing",
+      "description": "Missing preset ids fall back to auto colors.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Missing Preset",
+            "limit": 6,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "colorMode": "preset",
+            "colorPreset": "ghost",
+            "colorValue": "#123456",
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a ",
+                "limit": 6,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "prompt_menu_save_flow",
+      "description": "Prompt menu Save and Save As reuse or prompt for names and update the title.",
+      "random": 0,
+      "promptResponses": [
+        "first",
+        "second"
+      ],
+      "actions": [
+        {
+          "type": "openPromptsWindow"
+        },
+        {
+          "type": "menuSave"
+        },
+        {
+          "type": "menuSave"
+        },
+        {
+          "type": "menuSaveAs"
+        }
+      ]
+    },
+    {
+      "id": "local_storage_load",
+      "description": "Persisted mix data loads on startup before defaults.",
+      "random": 0,
+      "persistedState": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Persisted",
+            "limit": 6,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "p ",
+                "limit": 6,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
             ]
           }
         ]
