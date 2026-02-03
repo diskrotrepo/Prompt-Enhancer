@@ -16,12 +16,15 @@
     return String(string).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
+  // Build a delimiter regex that matches a single delimiter unit at a time.
+  // Chunk size groups multiple delimiter units explicitly instead of collapsing runs here.
   function buildDelimiterRegex(delimiter) {
     if (delimiter instanceof RegExp) return delimiter;
     const raw = delimiter == null ? '' : String(delimiter);
-    if (!raw || raw === ' ') return /\s+/;
-    if (raw === '\n') return /\r?\n+/;
-    if (raw === '\t') return /\t+/;
+    // Keep each whitespace unit separate so consecutive delimiters stay as distinct chunks.
+    if (!raw || raw === ' ') return /\s/;
+    if (raw === '\n') return /\r?\n/;
+    if (raw === '\t') return /\t/;
     return new RegExp(escapeRegExp(raw));
   }
 
@@ -40,10 +43,12 @@
   }
 
   // Split raw text into delimiter-preserving chunks, with optional first-chunk behavior to offset cycles.
-  function parseInput(raw, keepDelim = false, delimiter = /\s+/, size = 1, firstChunkBehavior = FIRST_CHUNK_BEHAVIORS.BETWEEN) {
+  // Example: "a   b" with whitespace + size 1 yields ["a ", " ", " ", "b"].
+  function parseInput(raw, keepDelim = false, delimiter = /\s/, size = 1, firstChunkBehavior = FIRST_CHUNK_BEHAVIORS.BETWEEN) {
     if (!raw) return [];
     const normalized = raw.replace(/\r\n/g, '\n');
-    const activeDelimiter = keepDelim ? /[,.!:;?\n]+/ : delimiter;
+    // Sentence mode still preserves punctuation, but each mark is treated as its own delimiter unit.
+    const activeDelimiter = keepDelim ? /[,.!:;?\n]/ : delimiter;
     const splitRe = buildDelimiterRegex(activeDelimiter);
     const flags = splitRe.flags.includes('g') ? splitRe.flags : splitRe.flags + 'g';
     const re = new RegExp(splitRe.source, flags);
@@ -156,7 +161,7 @@
     else if (mode === 'custom') delimiter = normalizeCustomDelimiter(customInput?.value || '');
     const sentenceMode = mode === 'sentence';
     if (!sentenceMode && !delimiter) delimiter = ' ';
-    const regex = sentenceMode ? /[,.!:;?\n]+/ : buildDelimiterRegex(delimiter);
+    const regex = sentenceMode ? /[,.!:;?\n]/ : buildDelimiterRegex(delimiter);
     const size = Math.max(1, readChunkSize(boxEl));
     return { mode, delimiter, regex, size, sentenceMode };
   }
@@ -475,7 +480,7 @@
     singlePass = false,
     firstChunkBehavior = FIRST_CHUNK_BEHAVIORS.BETWEEN
   ) {
-    const config = delimiterConfig || { regex: /\s+/, size: 1, sentenceMode: false };
+    const config = delimiterConfig || { regex: /\s/, size: 1, sentenceMode: false };
     const chunks = parseInput(raw || '', config.sentenceMode, config.regex, config.size, firstChunkBehavior);
     const base = chunks.filter(chunk => chunk.length > 0);
     if (!base.length) return [];
@@ -660,6 +665,12 @@
   function generate(rootEl) {
     const root = rootEl || document.querySelector('.mix-root');
     if (!root) return;
+    // Update top-level strings so standalone outputs stay in sync.
+    const chunkBoxes = Array.from(root.children)
+      .filter(child => child.classList.contains('chunk-wrapper'))
+      .map(wrapper => wrapper.querySelector('.chunk-box'))
+      .filter(Boolean);
+    chunkBoxes.forEach(box => evaluateChunkBox(box));
     const mixBoxes = Array.from(root.children)
       .filter(child => child.classList.contains('mix-wrapper'))
       .map(wrapper => wrapper.querySelector('.mix-box'))
@@ -714,6 +725,7 @@
     return box.dataset.boxId || 'Untitled';
   }
 
+  // Refresh variable selects and omit ancestor mixes so variables cannot target their parent chain.
   function refreshVariableOptions(scope) {
     const windowEl = scope?.closest?.('.app-window') || (scope?.classList?.contains?.('app-window') ? scope : null);
     const root = windowEl?.querySelector('.mix-root') || scope?.querySelector?.('.mix-root') || document.querySelector('.mix-root') || document;
@@ -726,29 +738,47 @@
         label: `${getBoxTitle(box)}`
       }))
       .filter(entry => entry.id);
+    const getAncestorMixIds = variableBox => {
+      const ids = new Set();
+      let node = variableBox?.parentElement || null;
+      while (node) {
+        if (node.classList?.contains('mix-box')) {
+          const id = node.dataset.boxId;
+          if (id) ids.add(id);
+        }
+        node = node.parentElement;
+      }
+      return ids;
+    };
     const selects = (windowEl || root).querySelectorAll('.variable-select');
     selects.forEach(select => {
       const current =
         select.value ||
         select.closest('.variable-box')?.dataset.targetId ||
         '';
+      const box = select.closest('.variable-box');
+      // Filter ancestor mix ids so variables only target outside mixes.
+      const forbiddenIds = getAncestorMixIds(box);
+      const allowedSources = sources.filter(source => !forbiddenIds.has(source.id));
       select.innerHTML = '';
       const placeholder = document.createElement('option');
       placeholder.value = '';
       placeholder.textContent = 'Select a mix or string...';
       select.appendChild(placeholder);
-      sources.forEach(source => {
+      allowedSources.forEach(source => {
         const option = document.createElement('option');
         option.value = source.id;
         option.textContent = source.label;
         select.appendChild(option);
       });
-      if (current && sources.some(source => source.id === current)) {
+      if (current && allowedSources.some(source => source.id === current)) {
         select.value = current;
       }
-      const box = select.closest('.variable-box');
       if (box && select.value) {
         box.dataset.targetId = select.value;
+      } else if (box) {
+        // Clear stale selections when a parent mix target is no longer valid.
+        box.dataset.targetId = '';
       }
       if (box) {
         const title = box.querySelector('.box-title');
@@ -1032,11 +1062,11 @@
   function exportMixState(rootEl) {
     const root = rootEl || document.querySelector('.mix-root');
     if (!root) return { mixes: [] };
+    // Keep the "mixes" key for compatibility, but include root-level strings too.
     const mixes = Array.from(root.children)
-      .filter(child => child.classList.contains('mix-wrapper'))
-      .map(wrapper => wrapper.querySelector('.mix-box'))
+      .map(child => child.querySelector('.mix-box, .chunk-box'))
       .filter(Boolean)
-      .map(box => serializeMixBox(box));
+      .map(box => (box.classList.contains('mix-box') ? serializeMixBox(box) : serializeChunkBox(box)));
     return {
       mixes,
       colorPresets: exportColorPresets()
@@ -1053,11 +1083,18 @@
       : [
           { type: 'mix', title: 'Mix', children: [] }
         ];
-    let prevColor = null;
+    let prevMixColor = null;
+    let prevChunkColor = null;
     mixes.forEach(cfg => {
-      const wrapper = createMixWrapper(cfg, { previousColor: prevColor });
+      if (cfg?.type === 'chunk') {
+        const wrapper = createChunkWrapper(cfg, { previousColor: prevChunkColor });
+        root.appendChild(wrapper);
+        prevChunkColor = wrapper.querySelector('.chunk-box')?.dataset.color || prevChunkColor;
+        return;
+      }
+      const wrapper = createMixWrapper(cfg, { previousColor: prevMixColor });
       root.appendChild(wrapper);
-      prevColor = wrapper.querySelector('.mix-box')?.dataset.color || prevColor;
+      prevMixColor = wrapper.querySelector('.mix-box')?.dataset.color || prevMixColor;
     });
     updateEmptyState(root);
 
@@ -1427,14 +1464,42 @@
     });
   }
 
+  // Empty state hides once any top-level mix or string exists.
   function updateEmptyState(rootEl) {
     const root = rootEl || document.querySelector('.mix-root');
     if (!root) return;
     const windowEl = root.closest('.app-window') || document;
     const emptyState = windowEl.querySelector('.empty-state');
     if (!emptyState) return;
-    const hasMixes = Array.from(root.children).some(child => child.classList.contains('mix-wrapper'));
-    emptyState.style.display = hasMixes ? 'none' : 'flex';
+    const hasBoxes = Array.from(root.children).some(child =>
+      child.classList.contains('mix-wrapper') || child.classList.contains('chunk-wrapper')
+    );
+    emptyState.style.display = hasBoxes ? 'none' : 'flex';
+  }
+
+  // Walk backward to find the most recent box color for a given selector.
+  function findPreviousBoxColor(root, selector) {
+    if (!root) return null;
+    const children = Array.from(root.children).reverse();
+    for (const child of children) {
+      const box = child.querySelector?.(selector);
+      if (box?.dataset?.color) return box.dataset.color;
+    }
+    return null;
+  }
+
+  // Root-level add helpers keep empty-state + toolbar buttons consistent.
+  function appendRootMix(root) {
+    if (!root) return;
+    const prevColor = findPreviousBoxColor(root, '.mix-box');
+    root.appendChild(createMixWrapper({ title: 'Mix' }, { previousColor: prevColor }));
+  }
+
+  function appendRootChunk(root) {
+    if (!root) return;
+    // Strings use their own palette, so track the most recent chunk color separately.
+    const prevColor = findPreviousBoxColor(root, '.chunk-box');
+    root.appendChild(createChunkWrapper({ title: 'String' }, { previousColor: prevColor }));
   }
 
   // Copy helper shared by mix output + string input buttons.
@@ -1716,21 +1781,23 @@
       });
       generateBtn.dataset.bound = 'true';
     }
+    const finalizeRootAdd = root => {
+      // After any root-level add, refresh controls + empty-state visibility.
+      setupDelimiterControls(scope);
+      setupSizeControls(scope);
+      syncCollapseButtons(scope);
+      updateEmptyState(root);
+      refreshColorPresetSelects(scope);
+      refreshVariableOptions(scope);
+    };
     const addEmpty = scope.querySelector('.add-empty-mix');
     if (addEmpty && !addEmpty.dataset.bound) {
       addEmpty.addEventListener('click', () => {
         const root = scope.querySelector('.mix-root');
         if (root) {
-          const prevChild = root.lastElementChild;
-          const prevColor = prevChild?.querySelector('.mix-box')?.dataset.color || null;
-          root.appendChild(createMixWrapper({ title: 'Mix' }, { previousColor: prevColor }));
+          appendRootMix(root);
+          finalizeRootAdd(root);
         }
-        setupDelimiterControls(scope);
-        setupSizeControls(scope);
-        syncCollapseButtons(scope);
-        updateEmptyState(root);
-        refreshColorPresetSelects(scope);
-        refreshVariableOptions(scope);
       });
       addEmpty.dataset.bound = 'true';
     }
@@ -1740,18 +1807,35 @@
       addRoot.addEventListener('click', () => {
         const root = scope.querySelector('.mix-root');
         if (root) {
-          const prevChild = root.lastElementChild;
-          const prevColor = prevChild?.querySelector('.mix-box')?.dataset.color || null;
-          root.appendChild(createMixWrapper({ title: 'Mix' }, { previousColor: prevColor }));
+          appendRootMix(root);
+          finalizeRootAdd(root);
         }
-        setupDelimiterControls(scope);
-        setupSizeControls(scope);
-        syncCollapseButtons(scope);
-        updateEmptyState(root);
-        refreshColorPresetSelects(scope);
-        refreshVariableOptions(scope);
       });
       addRoot.dataset.bound = 'true';
+    }
+
+    const addEmptyChunk = scope.querySelector('.add-empty-chunk');
+    if (addEmptyChunk && !addEmptyChunk.dataset.bound) {
+      addEmptyChunk.addEventListener('click', () => {
+        const root = scope.querySelector('.mix-root');
+        if (root) {
+          appendRootChunk(root);
+          finalizeRootAdd(root);
+        }
+      });
+      addEmptyChunk.dataset.bound = 'true';
+    }
+
+    const addRootChunk = scope.querySelector('.add-root-chunk');
+    if (addRootChunk && !addRootChunk.dataset.bound) {
+      addRootChunk.addEventListener('click', () => {
+        const root = scope.querySelector('.mix-root');
+        if (root) {
+          appendRootChunk(root);
+          finalizeRootAdd(root);
+        }
+      });
+      addRootChunk.dataset.bound = 'true';
     }
 
     const loadInput = scope.querySelector('.load-mix-file');

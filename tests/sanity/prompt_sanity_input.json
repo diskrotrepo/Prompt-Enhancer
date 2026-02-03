@@ -484,6 +484,98 @@
       }
     },
     {
+      "id": "root_string_global",
+      "description": "Root-level strings can exist without a parent mix.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "chunk",
+            "title": "Root String",
+            "text": "a b ",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "variable_parent_filtered",
+      "description": "Variable options exclude ancestor mixes so parent selections are cleared.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "id": "mix-parent",
+            "title": "Parent",
+            "limit": 20,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a ",
+                "limit": 20,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "mix",
+                "id": "mix-child",
+                "title": "Child",
+                "limit": 20,
+                "exact": true,
+                "singlePass": true,
+                "preserve": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                },
+                "children": [
+                  {
+                    "type": "chunk",
+                    "text": "b ",
+                    "limit": 20,
+                    "exact": true,
+                    "singlePass": true,
+                    "randomize": false,
+                    "delimiter": {
+                      "mode": "whitespace",
+                      "size": 1
+                    }
+                  },
+                  {
+                    "type": "variable",
+                    "id": "var-parent",
+                    "targetId": "mix-parent"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "delimiter_whitespace",
       "description": "Whitespace delimiter splits into word chunks and interleaves with another list.",
       "random": 0,
@@ -517,6 +609,54 @@
               {
                 "type": "chunk",
                 "text": "x x x ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "delimiter_whitespace_runs",
+      "description": "Whitespace delimiter keeps consecutive spaces as separate chunks.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Whitespace Runs",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a   b ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "x x x x ",
                 "limit": 1000,
                 "exact": true,
                 "singlePass": true,

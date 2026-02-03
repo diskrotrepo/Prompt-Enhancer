@@ -54,8 +54,22 @@
       "output": "a b b "
     },
     {
+      "id": "root_string_global",
+      "output": "",
+      "chunkOutput": "a b "
+    },
+    {
+      "id": "variable_parent_filtered",
+      "output": "a b ",
+      "variableTitle": "Variable"
+    },
+    {
       "id": "delimiter_whitespace",
       "output": "a x b x c x "
+    },
+    {
+      "id": "delimiter_whitespace_runs",
+      "output": "a x  x  x b x "
     },
     {
       "id": "delimiter_comma",

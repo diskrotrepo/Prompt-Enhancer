@@ -91,9 +91,14 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Basic mix ordering with preserved delimiters** — `basic_mix_divider`
 - **Default UI state** — `default_ui_state`
 
+#### Root-level strings
+
+- **Root-level strings generate without a parent mix** — `root_string_global`
+
 #### Delimiter modes
 
 - **Whitespace delimiter** — `delimiter_whitespace`
+- **Whitespace delimiter keeps consecutive spaces separate** — `delimiter_whitespace_runs`
 - **Comma delimiter** — `delimiter_comma`
 - **Semicolon delimiter** — `delimiter_semicolon`
 - **Pipe delimiter** — `delimiter_pipe`
@@ -131,6 +136,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 #### Variables
 
 - **Variable references forward chunks** — `variable_reference`
+- **Variable options exclude ancestor mixes** — `variable_parent_filtered`
 - **Exactly Once variables** — `exact_once_variable_mix`
 - **Variable cycle guard** — `variable_cycle_guard`
 
