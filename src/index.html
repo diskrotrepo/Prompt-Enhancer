@@ -141,7 +141,7 @@
                         <div class="mix-controls">
                           <div class="control-block">
                             <label>Rechunk Delimiter</label>
-                            <select class="delimiter-select" data-help="Choose how the mix output is split into chunks." data-help-detail="Select a delimiter to define chunk boundaries when this mix re-chunks its output. Use Custom to define your own delimiter.">
+                            <select class="delimiter-select" data-help="Choose how the mix output is split into chunks." data-help-detail="Select a delimiter to define chunk boundaries when this mix re-chunks its output. Custom Match All uses the full string; Custom Match Any splits on any character in the custom box.">
                               <option value="whitespace" selected>Whitespace (default)</option>
                               <option value="comma">Comma (,)</option>
                               <option value="semicolon">Semicolon (;)</option>
@@ -149,10 +149,11 @@
                               <option value="newline">Newline</option>
                               <option value="tab">Tab</option>
                               <option value="sentence">Sentence Punctuation (.,;:!? + newline)</option>
-                              <option value="custom">Custom...</option>
+                              <option value="custom-all">Custom Match All...</option>
+                              <option value="custom-any">Custom Match Any...</option>
                             </select>
                             <div class="input-row delimiter-custom-row" style="display:none">
-                              <input type="text" class="delimiter-custom" placeholder="Custom delimiter (use \n for newline)" data-help="Enter a custom delimiter." data-help-detail="Type the exact characters used to split chunks. Use \\n for newlines and \\t for tabs.">
+                              <input type="text" class="delimiter-custom" placeholder="Custom delimiter (use \n for newline)" data-help="Enter a custom delimiter." data-help-detail="Match All uses the full string (ex: ||). Match Any splits on any character in this box (ex: ,. ). Use \\n for newlines and \\t for tabs.">
                             </div>
                           </div>
                           <div class="control-block">
@@ -185,13 +186,14 @@
                           </div>
                           <div class="control-block">
                             <label>Length Limit</label>
-                            <input type="number" class="length-input" value="1000" min="1" data-help="Maximum total output length unless Exactly Once is enabled." data-help-detail="Caps how many characters this mix can emit. In Exactly Once mode, the limit is ignored so each chunk appears once.">
+                            <input type="number" class="length-input" value="1000" min="1" data-help="Maximum total output length unless a Fit mode is enabled." data-help-detail="Caps how many characters this mix can emit. Fit to Smallest and Fit to Largest ignore the limit and run one constrained pass across child lists.">
                           </div>
                           <div class="control-block toggle-block">
                             <label>Length Mode</label>
-                            <select class="length-mode" data-help="Choose how length limits are enforced." data-help-detail="Split Final Chunk trims the last chunk to hit the limit. Delete Final Chunk drops the chunk that would overflow. Exactly Once outputs each chunk one time and disables the length limit.">
+                            <select class="length-mode" data-help="Choose how length limits are enforced." data-help-detail="Split Final Chunk trims the last chunk to hit the limit. Delete Final Chunk drops the chunk that would overflow. Fit to Smallest stops when any child list runs out. Fit to Largest repeats shorter child lists until the longest list is exhausted.">
                               <option value="exact">Split Final Chunk</option>
-                              <option value="exact-once" selected>Exactly Once</option>
+                              <option value="fit-smallest" selected>Fit to Smallest</option>
+                              <option value="fit-largest">Fit to Largest</option>
                               <option value="allow">Delete Final Chunk</option>
                             </select>
                           </div>
@@ -248,7 +250,7 @@
                         <div class="chunk-controls">
                           <div class="control-block">
                             <label>Delimiter</label>
-                            <select class="delimiter-select" data-help="Choose how the string is split into chunks." data-help-detail="Select a delimiter to define chunk boundaries. Use Custom to define your own delimiter characters.">
+                            <select class="delimiter-select" data-help="Choose how the string is split into chunks." data-help-detail="Select a delimiter to define chunk boundaries. Custom Match All uses the full string; Custom Match Any splits on any character in the custom box.">
                               <option value="whitespace" selected>Whitespace (default)</option>
                               <option value="comma">Comma (,)</option>
                               <option value="semicolon">Semicolon (;)</option>
@@ -256,10 +258,11 @@
                               <option value="newline">Newline</option>
                               <option value="tab">Tab</option>
                               <option value="sentence">Sentence Punctuation (.,;:!? + newline)</option>
-                              <option value="custom">Custom...</option>
+                              <option value="custom-all">Custom Match All...</option>
+                              <option value="custom-any">Custom Match Any...</option>
                             </select>
                             <div class="input-row delimiter-custom-row" style="display:none">
-                              <input type="text" class="delimiter-custom" placeholder="Custom delimiter (use \n for newline)" data-help="Enter a custom delimiter." data-help-detail="Type the exact characters used to split chunks. Use \\n for newlines and \\t for tabs.">
+                              <input type="text" class="delimiter-custom" placeholder="Custom delimiter (use \n for newline)" data-help="Enter a custom delimiter." data-help-detail="Match All uses the full string (ex: ||). Match Any splits on any character in this box (ex: ,. ). Use \\n for newlines and \\t for tabs.">
                             </div>
                           </div>
                           <div class="control-block">

@@ -84,6 +84,16 @@ describe('Chunking + mixing engine', () => {
     const mixed = mixChunkLists([['a '], ['b ']], 100, false, false, true);
     expect(mixed.join('')).toBe('a b ');
   });
+
+  test('mixChunkLists fit-smallest stops when the shortest list is exhausted', () => {
+    const mixed = mixChunkLists([['a1 ', 'a2 ', 'a3 '], ['b1 ', 'b2 ']], 100, false, false, true, 'smallest');
+    expect(mixed.join('')).toBe('a1 b1 a2 b2 ');
+  });
+
+  test('mixChunkLists fit-largest repeats shorter lists until the longest list is exhausted', () => {
+    const mixed = mixChunkLists([['a1 ', 'a2 ', 'a3 '], ['b1 ', 'b2 ']], 100, false, false, true, 'largest');
+    expect(mixed.join('')).toBe('a1 b1 a2 b2 a3 b1 ');
+  });
 });
 
 describe('Delimiter regex', () => {

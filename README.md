@@ -29,7 +29,7 @@ browser flow.
 Canonical sanity fixtures live in `tests/sanity/`:
 
 - `prompt_sanity_input.json` — the “raw” input cases (each case contains a `state` tree
-  describing mixes and a `random` value to stub Math.random).
+  describing mixes and either a fixed `random` value or a `randomSequence` to stub Math.random).
 - `prompt_sanity_expected.json` — the curated expected outputs for each case id.
 
 When you add or change behavior:
@@ -105,6 +105,8 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Newline delimiter** — `delimiter_newline`
 - **Tab delimiter** — `delimiter_tab`
 - **Sentence punctuation delimiter** — `delimiter_sentence`
+- **Custom delimiter match-all (full string)** — `delimiter_custom_match_all`
+- **Custom delimiter match-any (character set)** — `delimiter_custom_match_any`
 - **Custom delimiter with `\n`** — `delimiter_custom_newline`
 - **Custom delimiter with `\t`** — `delimiter_custom_tab`
 - **Custom delimiter fallback (empty input)** — `delimiter_custom_empty`
@@ -126,7 +128,9 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 
 - **Split Final Chunk** — `exact_length_trim`
 - **Delete Final Chunk** — `delete_final_chunk`
-- **Exactly Once** — `exact_once_length`
+- **Fit to Smallest (mix)** — `fit_smallest_mix`
+- **Fit to Largest (mix)** — `fit_largest_mix`
+- **Exactly Once (chunk single-pass behavior)** — `exact_once_length`
 
 #### Randomization scope
 
@@ -139,6 +143,9 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Variable options exclude ancestor mixes** — `variable_parent_filtered`
 - **Exactly Once variables** — `exact_once_variable_mix`
 - **Variable cycle guard** — `variable_cycle_guard`
+- **Randomized string variable stays consistent** — `variable_random_chunk_consistent`
+- **Multiple variables share one randomized string output** — `variable_random_chunk_multi_reference`
+- **Randomized mix variable stays consistent** — `variable_random_mix_consistent`
 
 #### Output + copy behavior
 

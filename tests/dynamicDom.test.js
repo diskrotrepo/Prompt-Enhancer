@@ -54,13 +54,13 @@ describe('Dynamic mix DOM', () => {
     expect(select.value).toBe('size');
   });
 
-  test('new boxes default to exactly-once length mode', () => {
+  test('new boxes default to fit-smallest for mixes and exactly-once for chunks', () => {
     loadBody();
     const root = document.querySelector('.mix-root');
     main.applyMixState({ mixes: [{ type: 'mix', title: 'Default', children: [{ type: 'chunk', text: 'a ' }] }] }, root);
     const mixMode = root.querySelector('.mix-box .length-mode');
     const chunkMode = root.querySelector('.chunk-box .length-mode');
-    expect(mixMode?.value).toBe('exact-once');
+    expect(mixMode?.value).toBe('fit-smallest');
     expect(chunkMode?.value).toBe('exact-once');
   });
 });

@@ -82,7 +82,22 @@ function runSanityCase(testCase) {
     window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
   }
 
-  window.Math.random = () => (typeof testCase.random === 'number' ? testCase.random : 0);
+  const randomFallback = typeof testCase.random === 'number' ? testCase.random : 0;
+  const randomSequence = Array.isArray(testCase.randomSequence)
+    ? testCase.randomSequence.filter(value => typeof value === 'number')
+    : [];
+  const setDeterministicRandom = () => {
+    let randomIndex = 0;
+    window.Math.random = () => {
+      if (!randomSequence.length) return randomFallback;
+      if (randomIndex < randomSequence.length) {
+        const next = randomSequence[randomIndex];
+        randomIndex += 1;
+        return next;
+      }
+      return randomSequence[randomSequence.length - 1];
+    };
+  };
 
   // Normalize action tokens so fixtures can be short strings or full objects.
   const normalizeAction = action => {
@@ -135,6 +150,9 @@ function runSanityCase(testCase) {
   if (testCase.state) {
     window.PromptMixer.applyMixState(testCase.state, root);
   }
+  // Reset Math.random right before generation so fixture sequences only drive
+  // evaluation behavior (state hydration can consume random values for colors).
+  setDeterministicRandom();
   window.PromptMixer.generate(root);
   const actionResults = { mixCopiedText: '', chunkCopiedText: '' };
   // Run post-generate actions (copy, menu saves) so outputs are available.

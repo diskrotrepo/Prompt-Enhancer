@@ -16,13 +16,46 @@
     return String(string).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
+  // Delimiter parsing uses two custom modes:
+  // - Match-all: the full string is the delimiter (legacy "custom" maps here).
+  // - Match-any: any character in the custom input acts as a delimiter.
+  function normalizeDelimiterMode(mode) {
+    if (!mode) return 'whitespace';
+    if (mode === 'custom') return 'custom-all';
+    return mode;
+  }
+
+  function isCustomDelimiterMode(mode) {
+    return mode === 'custom' || mode === 'custom-all' || mode === 'custom-any';
+  }
+
+  function escapeCharClass(value) {
+    return value.replace(/[\\\-\]\[\^]/g, '\\$&');
+  }
+
   // Build a delimiter regex that matches a single delimiter unit at a time.
   // Chunk size groups multiple delimiter units explicitly instead of collapsing runs here.
-  function buildDelimiterRegex(delimiter) {
+  function buildDelimiterRegex(delimiter, options = {}) {
     if (delimiter instanceof RegExp) return delimiter;
     const raw = delimiter == null ? '' : String(delimiter);
+    const matchMode = options.matchMode || 'all';
+    const allowWhitespaceShortcut = options.allowWhitespaceShortcut !== false;
     // Keep each whitespace unit separate so consecutive delimiters stay as distinct chunks.
-    if (!raw || raw === ' ') return /\s/;
+    if (matchMode === 'any') {
+      if (!raw) return allowWhitespaceShortcut ? /\s/ : new RegExp(escapeRegExp(raw));
+      if (allowWhitespaceShortcut && raw === ' ') return /\s/;
+      // Each character becomes its own delimiter in match-any mode.
+      const escaped = Array.from(raw)
+        .map(char => {
+          if (char === '\n') return '\\n';
+          if (char === '\r') return '\\r';
+          if (char === '\t') return '\\t';
+          return escapeCharClass(char);
+        })
+        .join('');
+      return new RegExp(`[${escaped}]`);
+    }
+    if (allowWhitespaceShortcut && (!raw || raw === ' ')) return /\s/;
     if (raw === '\n') return /\r?\n/;
     if (raw === '\t') return /\t/;
     return new RegExp(escapeRegExp(raw));
@@ -32,6 +65,19 @@
     SIZE: 'size',
     BETWEEN: 'between',
     RANDOM_START: 'random-start'
+  };
+
+  const LENGTH_MODES = {
+    EXACT: 'exact',
+    ALLOW: 'allow',
+    EXACT_ONCE: 'exact-once',
+    FIT_SMALLEST: 'fit-smallest',
+    FIT_LARGEST: 'fit-largest'
+  };
+
+  const SINGLE_PASS_FIT_MODES = {
+    SMALLEST: 'smallest',
+    LARGEST: 'largest'
   };
 
   function coerceFirstChunkBehavior(value) {
@@ -147,21 +193,35 @@
     return !isNaN(fallback) && fallback > 0 ? fallback : 1;
   }
 
+  // Delimiter config normalizes legacy custom modes and preserves match-any intent.
   function getDelimiterConfig(boxEl) {
     const select = boxEl.querySelector('.delimiter-select');
     const customInput = boxEl.querySelector('.delimiter-custom');
-    const mode = select ? select.value : 'whitespace';
+    const mode = normalizeDelimiterMode(select ? select.value : 'whitespace');
+    const rawCustom = normalizeCustomDelimiter(customInput?.value || '');
     let delimiter = ' ';
+    let matchMode = 'all';
+    let allowWhitespaceShortcut = true;
     if (mode === 'whitespace') delimiter = ' ';
     else if (mode === 'comma') delimiter = ',';
     else if (mode === 'semicolon') delimiter = ';';
     else if (mode === 'pipe') delimiter = '|';
     else if (mode === 'newline') delimiter = '\n';
     else if (mode === 'tab') delimiter = '\t';
-    else if (mode === 'custom') delimiter = normalizeCustomDelimiter(customInput?.value || '');
+    else if (mode === 'custom-all' || mode === 'custom') delimiter = rawCustom;
+    else if (mode === 'custom-any') {
+      delimiter = rawCustom;
+      matchMode = 'any';
+      allowWhitespaceShortcut = rawCustom === '';
+    }
     const sentenceMode = mode === 'sentence';
-    if (!sentenceMode && !delimiter) delimiter = ' ';
-    const regex = sentenceMode ? /[,.!:;?\n]/ : buildDelimiterRegex(delimiter);
+    if (!sentenceMode && !delimiter) {
+      delimiter = ' ';
+      allowWhitespaceShortcut = true;
+    }
+    const regex = sentenceMode
+      ? /[,.!:;?\n]/
+      : buildDelimiterRegex(delimiter, { matchMode, allowWhitespaceShortcut });
     const size = Math.max(1, readChunkSize(boxEl));
     return { mode, delimiter, regex, size, sentenceMode };
   }
@@ -177,16 +237,45 @@
 
   function readExactMode(boxEl) {
     const select = boxEl.querySelector('.length-mode');
-    if (select) return select.value !== 'allow';
+    if (select) return select.value !== LENGTH_MODES.ALLOW;
     const exactBtn = boxEl.querySelector('.exact-toggle');
     return isActive(exactBtn);
   }
 
-  // "Exact once" is encoded in the length mode select to avoid adding extra toggles.
+  // Single-pass modes are encoded in the length mode select to avoid extra toggles.
   function readSinglePassMode(boxEl) {
     const select = boxEl.querySelector('.length-mode');
     if (!select) return false;
-    return select.value === 'exact-once';
+    return (
+      select.value === LENGTH_MODES.EXACT_ONCE ||
+      select.value === LENGTH_MODES.FIT_SMALLEST ||
+      select.value === LENGTH_MODES.FIT_LARGEST
+    );
+  }
+
+  function readSinglePassFitMode(boxEl) {
+    if (!boxEl?.classList?.contains('mix-box')) return SINGLE_PASS_FIT_MODES.SMALLEST;
+    const select = boxEl.querySelector('.length-mode');
+    if (!select) return SINGLE_PASS_FIT_MODES.SMALLEST;
+    if (select.value === LENGTH_MODES.FIT_LARGEST) return SINGLE_PASS_FIT_MODES.LARGEST;
+    return SINGLE_PASS_FIT_MODES.SMALLEST;
+  }
+
+  function getMixLengthModeConfig(config) {
+    if (!config) return LENGTH_MODES.FIT_SMALLEST;
+    if (config.lengthMode === LENGTH_MODES.EXACT_ONCE) return LENGTH_MODES.FIT_SMALLEST;
+    if (config.lengthMode === LENGTH_MODES.FIT_LARGEST) return LENGTH_MODES.FIT_LARGEST;
+    if (config.lengthMode === LENGTH_MODES.FIT_SMALLEST) return LENGTH_MODES.FIT_SMALLEST;
+    if (config.lengthMode === LENGTH_MODES.EXACT) return LENGTH_MODES.EXACT;
+    if (config.lengthMode === LENGTH_MODES.ALLOW) return LENGTH_MODES.ALLOW;
+    if (config.singlePass) {
+      return config.singlePassMode === SINGLE_PASS_FIT_MODES.LARGEST
+        ? LENGTH_MODES.FIT_LARGEST
+        : LENGTH_MODES.FIT_SMALLEST;
+    }
+    if (config.exact === false) return LENGTH_MODES.ALLOW;
+    if (config.exact === true) return LENGTH_MODES.EXACT;
+    return LENGTH_MODES.FIT_SMALLEST;
   }
 
   function readFirstChunkBehavior(boxEl) {
@@ -533,7 +622,14 @@
     return out;
   }
 
-  function mixChunkLists(lists, limit, exact, randomize, singlePass = false) {
+  function mixChunkLists(
+    lists,
+    limit,
+    exact,
+    randomize,
+    singlePass = false,
+    singlePassFitMode = SINGLE_PASS_FIT_MODES.SMALLEST
+  ) {
     const sources = lists
       .filter(list => Array.isArray(list) && list.length)
       .map(list => list.filter(chunk => chunk.length > 0))
@@ -543,9 +639,40 @@
       ? Number.POSITIVE_INFINITY
       : Math.max(0, parseInt(limit, 10) || 0);
     if (!max) return [];
-    const positions = sources.map(() => 0);
     const out = [];
     let length = 0;
+    if (singlePass) {
+      const orderBase = Array.from({ length: sources.length }, (_, i) => i);
+      const cycleCount = singlePassFitMode === SINGLE_PASS_FIT_MODES.LARGEST
+        ? Math.max(...sources.map(list => list.length))
+        : Math.min(...sources.map(list => list.length));
+      for (let cycle = 0; cycle < cycleCount && length < max; cycle += 1) {
+        const order = randomize ? shuffle(orderBase.slice()) : orderBase;
+        for (const idx of order) {
+          const list = sources[idx];
+          const chunkIndex = singlePassFitMode === SINGLE_PASS_FIT_MODES.LARGEST
+            ? cycle % list.length
+            : cycle;
+          const chunk = list[chunkIndex];
+          if (!chunk) continue;
+          const remaining = max - length;
+          if (chunk.length <= remaining) {
+            out.push(chunk);
+            length += chunk.length;
+          } else {
+            if (exact && remaining > 0) {
+              out.push(chunk.slice(0, remaining));
+              length = max;
+            }
+            return out;
+          }
+          if (length >= max) return out;
+        }
+      }
+      return out;
+    }
+
+    const positions = sources.map(() => 0);
     while (length < max) {
       const order = randomize
         ? shuffle(Array.from({ length: sources.length }, (_, i) => i))
@@ -555,8 +682,7 @@
         const list = sources[idx];
         if (!list.length) continue;
         const pos = positions[idx];
-        if (singlePass && pos >= list.length) continue;
-        const chunk = list[singlePass ? pos : pos % list.length];
+        const chunk = list[pos % list.length];
         positions[idx] = pos + 1;
         if (!chunk) continue;
         const remaining = max - length;
@@ -580,14 +706,34 @@
 
   // ======== Box Evaluation ========
 
-  function evaluateChunkBox(boxEl) {
+  // Each generate pass uses a scoped cache so variables copy the same evaluated output
+  // (including randomization) instead of re-running target generation.
+  function getEvaluationCache(context) {
+    return context?.cache instanceof Map ? context.cache : null;
+  }
+
+  function getEvaluationCacheKey(type, boxEl) {
+    const boxId = boxEl?.dataset?.boxId;
+    if (!boxId) return '';
+    return `${type}:${boxId}`;
+  }
+
+  function evaluateChunkBox(boxEl, context = {}) {
     const input = boxEl.querySelector('.chunk-input');
     const limitInput = boxEl.querySelector('.length-input');
     const randomBtn = boxEl.querySelector('.random-toggle');
     const outputEl = boxEl.querySelector('.chunk-output-text');
+    const cache = getEvaluationCache(context);
+    const cacheKey = getEvaluationCacheKey('chunk', boxEl);
+    if (cache && cacheKey && cache.has(cacheKey)) {
+      const cached = cache.get(cacheKey).slice();
+      if (outputEl) outputEl.textContent = cached.join('');
+      return cached;
+    }
     const limit = readNumber(limitInput, 1000);
     const exact = readExactMode(boxEl);
     const singlePass = readSinglePassMode(boxEl);
+    const singlePassFitMode = readSinglePassFitMode(boxEl);
     const randomize = isActive(randomBtn);
     const firstChunkBehavior = readFirstChunkBehavior(boxEl);
     const delimiterConfig = getDelimiterConfig(boxEl);
@@ -601,6 +747,7 @@
       firstChunkBehavior
     );
     if (outputEl) outputEl.textContent = result.join('');
+    if (cache && cacheKey) cache.set(cacheKey, result.slice());
     return result;
   }
 
@@ -612,7 +759,7 @@
     const target = root.querySelector(`[data-box-id="${escapeSelector(targetId)}"]`);
     if (!target) return [];
     if (target.classList.contains('mix-box')) return evaluateMixBox(target, context).slice();
-    if (target.classList.contains('chunk-box')) return evaluateChunkBox(target).slice();
+    if (target.classList.contains('chunk-box')) return evaluateChunkBox(target, context).slice();
     return [];
   }
 
@@ -625,6 +772,7 @@
     const limit = readNumber(limitInput, 1000);
     const exact = readExactMode(boxEl);
     const singlePass = readSinglePassMode(boxEl);
+    const singlePassFitMode = readSinglePassFitMode(boxEl);
     const randomize = isActive(randomBtn);
     const firstChunkBehavior = readFirstChunkBehavior(boxEl);
     const preserve = sizeSelect?.value === 'preserve';
@@ -632,6 +780,13 @@
 
     const root = context.root || boxEl.closest('.mix-root') || document;
     const visiting = context.visiting || new Set();
+    const cache = getEvaluationCache(context);
+    const cacheKey = getEvaluationCacheKey('mix', boxEl);
+    if (cache && cacheKey && cache.has(cacheKey)) {
+      const cached = cache.get(cacheKey).slice();
+      if (outputEl) outputEl.textContent = cached.join('');
+      return cached;
+    }
     const boxId = boxEl.dataset.boxId;
     if (boxId) {
       if (visiting.has(boxId)) return [];
@@ -646,12 +801,12 @@
       : [];
 
     const lists = children.map(child => {
-      if (child.classList.contains('mix-box')) return evaluateMixBox(child, { root, visiting });
-      if (child.classList.contains('variable-box')) return evaluateVariableBox(child, { root, visiting });
-      return evaluateChunkBox(child);
+      if (child.classList.contains('mix-box')) return evaluateMixBox(child, { root, visiting, cache });
+      if (child.classList.contains('variable-box')) return evaluateVariableBox(child, { root, visiting, cache });
+      return evaluateChunkBox(child, { root, visiting, cache });
     });
 
-    const mixed = mixChunkLists(lists, limit, exact, randomize, singlePass);
+    const mixed = mixChunkLists(lists, limit, exact, randomize, singlePass, singlePassFitMode);
     const outputString = mixed.join('');
     if (outputEl) outputEl.textContent = outputString;
 
@@ -659,23 +814,25 @@
       ? mixed
       : buildChunkList(outputString, delimiterConfig, limit, exact, false, singlePass, firstChunkBehavior);
     if (boxId) visiting.delete(boxId);
-    return result;
+    if (cache && cacheKey) cache.set(cacheKey, result.slice());
+    return result.slice();
   }
 
   function generate(rootEl) {
     const root = rootEl || document.querySelector('.mix-root');
     if (!root) return;
+    const evaluationCache = new Map();
     // Update top-level strings so standalone outputs stay in sync.
     const chunkBoxes = Array.from(root.children)
       .filter(child => child.classList.contains('chunk-wrapper'))
       .map(wrapper => wrapper.querySelector('.chunk-box'))
       .filter(Boolean);
-    chunkBoxes.forEach(box => evaluateChunkBox(box));
+    chunkBoxes.forEach(box => evaluateChunkBox(box, { root, cache: evaluationCache }));
     const mixBoxes = Array.from(root.children)
       .filter(child => child.classList.contains('mix-wrapper'))
       .map(wrapper => wrapper.querySelector('.mix-box'))
       .filter(Boolean);
-    mixBoxes.forEach(box => evaluateMixBox(box, { root, visiting: new Set() }));
+    mixBoxes.forEach(box => evaluateMixBox(box, { root, visiting: new Set(), cache: evaluationCache }));
   }
 
   // ======== Box Creation ========
@@ -814,15 +971,11 @@
     if (titleInput) titleInput.value = config.title || 'Mix';
     if (limitInput) limitInput.value = config.limit || 1000;
     if (lengthMode) {
-      lengthMode.value = config.singlePass
-        ? 'exact-once'
-        : config.exact === false
-        ? 'allow'
-        : config.exact === true
-        ? 'exact'
-        : 'exact-once';
+      lengthMode.value = getMixLengthModeConfig(config);
     }
-    if (delimiterSelect && config.delimiter?.mode) delimiterSelect.value = config.delimiter.mode;
+    if (delimiterSelect && config.delimiter?.mode) {
+      delimiterSelect.value = normalizeDelimiterMode(config.delimiter.mode);
+    }
     if (delimiterCustom) delimiterCustom.value = config.delimiter?.custom || '';
     if (delimiterSize) {
       if (config.preserve) {
@@ -913,14 +1066,16 @@
     if (limitInput) limitInput.value = config.limit || 1000;
     if (lengthMode) {
       lengthMode.value = config.singlePass
-        ? 'exact-once'
+        ? LENGTH_MODES.EXACT_ONCE
         : config.exact === false
-        ? 'allow'
+        ? LENGTH_MODES.ALLOW
         : config.exact === true
-        ? 'exact'
-        : 'exact-once';
+        ? LENGTH_MODES.EXACT
+        : LENGTH_MODES.EXACT_ONCE;
     }
-    if (delimiterSelect && config.delimiter?.mode) delimiterSelect.value = config.delimiter.mode;
+    if (delimiterSelect && config.delimiter?.mode) {
+      delimiterSelect.value = normalizeDelimiterMode(config.delimiter.mode);
+    }
     if (delimiterCustom) delimiterCustom.value = config.delimiter?.custom || '';
     if (delimiterSize && config.delimiter?.size) {
       const sizeValue = String(config.delimiter.size);
@@ -1021,6 +1176,7 @@
     const randomBtn = box.querySelector('.random-toggle');
     const delimiter = getDelimiterConfig(box);
     const sizeSelect = box.querySelector('.delimiter-size');
+    const singlePass = readSinglePassMode(box);
     const preserve = sizeSelect?.value === 'preserve';
     const colorState = getBoxColorState(box);
     const childContainer = box.querySelector('.mix-children');
@@ -1042,7 +1198,8 @@
       title: titleInput?.value || 'Mix',
       limit: readNumber(limitInput, 1000),
       exact: readExactMode(box),
-      singlePass: readSinglePassMode(box),
+      singlePass,
+      ...(singlePass ? { singlePassMode: readSinglePassFitMode(box) } : {}),
       firstChunkBehavior: readFirstChunkBehavior(box),
       color: colorState.autoColor,
       colorMode: colorState.mode,
@@ -1154,7 +1311,7 @@
       const customInput = customRow?.querySelector('.delimiter-custom');
       const toggle = () => {
         if (!customRow) return;
-        const isCustom = select.value === 'custom';
+        const isCustom = isCustomDelimiterMode(select.value);
         customRow.style.display = isCustom ? 'block' : 'none';
         if (!isCustom && customInput) customInput.value = '';
       };
@@ -1437,7 +1594,7 @@
     updateFirstChunkBehaviorLabels(boxEl);
   }
 
-  // Length mode drives whether the length input is active (Exactly Once disables it).
+  // Length mode drives whether the length input is active (single-pass fit modes disable it).
   function updateLengthModeState(boxEl) {
     if (!boxEl) return;
     const lengthInput = boxEl.querySelector('.length-input');

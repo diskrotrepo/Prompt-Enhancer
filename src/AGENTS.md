@@ -57,6 +57,9 @@ optional custom inputs and a chunk size input (`*-delimiter-size`). Use
 sizes. Chunking preserves the delimiter at the end of each chunk, and prompt
 recombination is a straight concatenation pass (no new delimiters inserted).
 
+Custom delimiter modes now include Match All (full-string delimiter; legacy
+`custom` maps here) and Match Any (split on any character in the custom field).
+
 Preset items are stored as strings only. Legacy array formats are no longer
 normalized during load or import; update data sources to provide string items.
 
@@ -66,13 +69,12 @@ modifiers when multiple stacks are active.
 
 ### Length Exactness
 
-The Length Mode select offers **Split Final Chunk**, **Delete Final Chunk**, and
-**Exactly Once**. Split Final Chunk trims mid-chunk to hit the character limit
-exactly, while Delete Final Chunk drops the next chunk if it would overflow.
-would overflow. Exactly Once outputs each chunk one time and disables the length
-limit input so the limit is treated as irrelevant.
-New boxes default to **Exactly Once** so fresh mixes emit each chunk once unless
-the user opts into repeat-length behavior.
+Mix length modes include **Split Final Chunk**, **Delete Final Chunk**, **Fit to
+Smallest**, and **Fit to Largest**. Fit to Smallest stops as soon as any child
+list runs out; Fit to Largest repeats shorter child lists until the longest
+child list is exhausted. Both fit modes disable the length limit input for mixes
+because they run a single constrained pass. Chunk boxes still use **Exactly
+Once** for single-pass chunk output.
 
 ### First Chunk Behavior
 

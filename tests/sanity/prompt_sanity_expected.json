@@ -3,7 +3,7 @@
     {
       "id": "default_ui_state",
       "output": "",
-      "lengthMode": "exact-once",
+      "lengthMode": "fit-smallest",
       "preserve": true,
       "firstChunkDisabled": true,
       "lengthLimitDisabled": true,
@@ -31,6 +31,16 @@
     {
       "id": "exact_once_length",
       "output": "a b "
+    },
+    {
+      "id": "fit_smallest_mix",
+      "output": "a x b y ",
+      "lengthMode": "fit-smallest"
+    },
+    {
+      "id": "fit_largest_mix",
+      "output": "a x b y c x ",
+      "lengthMode": "fit-largest"
     },
     {
       "id": "exact_once_variable_mix",
@@ -96,6 +106,14 @@
       "output": "A.x B!x C?x "
     },
     {
+      "id": "delimiter_custom_match_all",
+      "output": "a||x b||x c||x "
+    },
+    {
+      "id": "delimiter_custom_match_any",
+      "output": "a,x b.x c x "
+    },
+    {
       "id": "delimiter_custom_newline",
       "output": "a\nx b\nx c\nx "
     },
@@ -115,7 +133,7 @@
     },
     {
       "id": "first_chunk_between",
-      "output": "a1 b1 b2 a2 a3 b3 b4 a4 "
+      "output": "a1 b1 b2 a2 a3 b3 b4 "
     },
     {
       "id": "first_chunk_random_start",
@@ -137,6 +155,18 @@
     {
       "id": "variable_cycle_guard",
       "output": "a "
+    },
+    {
+      "id": "variable_random_chunk_consistent",
+      "output": "c c b b a a "
+    },
+    {
+      "id": "variable_random_chunk_multi_reference",
+      "output": "b b b a a a c c c "
+    },
+    {
+      "id": "variable_random_mix_consistent",
+      "output": "x x a a y y b b z z c c "
     },
     {
       "id": "copy_output_behavior",
@@ -176,7 +206,7 @@
     {
       "id": "local_storage_load",
       "output": "p ",
-      "lengthMode": "exact-once"
+      "lengthMode": "fit-smallest"
     }
   ]
 }

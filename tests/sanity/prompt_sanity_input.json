@@ -279,6 +279,104 @@
       }
     },
     {
+      "id": "fit_smallest_mix",
+      "description": "Fit to Smallest stops as soon as the shortest child list is exhausted.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Fit Smallest",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "singlePassMode": "smallest",
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a b c ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "x y ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "fit_largest_mix",
+      "description": "Fit to Largest repeats shorter child lists until the longest list is exhausted.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Fit Largest",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "singlePassMode": "largest",
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a b c ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "x y ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "random_first_off",
       "description": "Random-first chunk sizing off keeps chunk boundaries stable before mixing.",
       "random": 0,
@@ -960,6 +1058,104 @@
       }
     },
     {
+      "id": "delimiter_custom_match_all",
+      "description": "Custom Match All splits on the full delimiter string.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Custom Match All",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a||b||c||",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "custom-all",
+                  "custom": "||",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "x x x ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "delimiter_custom_match_any",
+      "description": "Custom Match Any splits on any character in the custom field.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Custom Match Any",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a,b.c ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "custom-any",
+                  "custom": ",. ",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "x x x ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "delimiter_custom_newline",
       "description": "Custom delimiter with \\n splits on newlines.",
       "random": 0,
@@ -1398,6 +1594,164 @@
                 "type": "variable",
                 "id": "var-cycle",
                 "targetId": "mix-cycle"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "variable_random_chunk_consistent",
+      "description": "A variable targeting a randomized string reuses that exact generated order.",
+      "randomSequence": [0, 0.99, 0.99, 0],
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Variable Random Chunk",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "id": "chunk-random-source",
+                "text": "a b c ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": true,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "variable",
+                "id": "var-random-source",
+                "targetId": "chunk-random-source"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "variable_random_chunk_multi_reference",
+      "description": "Multiple variables targeting one randomized string stay in lockstep.",
+      "randomSequence": [0.99, 0, 0, 0.99],
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Variable Random Chunk Multi",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "id": "chunk-random-shared",
+                "text": "a b c ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": true,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "variable",
+                "id": "var-random-shared-1",
+                "targetId": "chunk-random-shared"
+              },
+              {
+                "type": "variable",
+                "id": "var-random-shared-2",
+                "targetId": "chunk-random-shared"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "variable_random_mix_consistent",
+      "description": "Variables targeting randomized mixes copy the same mixed chunk order.",
+      "randomSequence": [0, 0, 0, 0.99, 0.99, 0.99],
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Variable Random Mix Host",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "mix",
+                "id": "mix-random-source",
+                "title": "Random Source Mix",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "preserve": true,
+                "randomize": true,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                },
+                "children": [
+                  {
+                    "type": "chunk",
+                    "text": "a b c ",
+                    "limit": 1000,
+                    "exact": true,
+                    "singlePass": true,
+                    "randomize": false,
+                    "delimiter": {
+                      "mode": "whitespace",
+                      "size": 1
+                    }
+                  },
+                  {
+                    "type": "chunk",
+                    "text": "x y z ",
+                    "limit": 1000,
+                    "exact": true,
+                    "singlePass": true,
+                    "randomize": false,
+                    "delimiter": {
+                      "mode": "whitespace",
+                      "size": 1
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "variable",
+                "id": "var-random-mix",
+                "targetId": "mix-random-source"
               }
             ]
           }
