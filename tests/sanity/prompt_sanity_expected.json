@@ -43,6 +43,16 @@
       "lengthMode": "fit-largest"
     },
     {
+      "id": "fit_smallest_empty_child",
+      "output": "",
+      "lengthMode": "fit-smallest"
+    },
+    {
+      "id": "fit_smallest_empty_variable",
+      "output": "",
+      "lengthMode": "fit-smallest"
+    },
+    {
       "id": "exact_once_variable_mix",
       "output": "a b b "
     },

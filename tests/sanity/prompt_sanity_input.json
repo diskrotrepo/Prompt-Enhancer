@@ -235,6 +235,7 @@
             "limit": 20,
             "exact": true,
             "singlePass": true,
+            "singlePassMode": "largest",
             "preserve": true,
             "randomize": false,
             "delimiter": {
@@ -370,6 +371,98 @@
                   "mode": "whitespace",
                   "size": 1
                 }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "fit_smallest_empty_child",
+      "description": "Fit to Smallest should emit nothing when any child list starts empty.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Fit Smallest Empty Child",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "singlePassMode": "smallest",
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a b c ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "fit_smallest_empty_variable",
+      "description": "Fit to Smallest should emit nothing when a variable child resolves to an empty list.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Fit Smallest Empty Variable",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "singlePassMode": "smallest",
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "id": "fit-smallest-source",
+                "text": "a b c ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "variable",
+                "id": "fit-smallest-empty-var",
+                "targetId": ""
               }
             ]
           }
@@ -642,6 +735,7 @@
                 "limit": 20,
                 "exact": true,
                 "singlePass": true,
+                "singlePassMode": "largest",
                 "preserve": true,
                 "randomize": false,
                 "delimiter": {
@@ -1571,6 +1665,7 @@
             "limit": 20,
             "exact": true,
             "singlePass": true,
+            "singlePassMode": "largest",
             "preserve": true,
             "randomize": false,
             "delimiter": {

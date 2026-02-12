@@ -630,10 +630,18 @@
     singlePass = false,
     singlePassFitMode = SINGLE_PASS_FIT_MODES.SMALLEST
   ) {
-    const sources = lists
-      .filter(list => Array.isArray(list) && list.length)
-      .map(list => list.filter(chunk => chunk.length > 0))
-      .filter(list => list.length);
+    const normalized = lists
+      .filter(Array.isArray)
+      .map(list => list.filter(chunk => chunk.length > 0));
+    if (
+      singlePass &&
+      singlePassFitMode === SINGLE_PASS_FIT_MODES.SMALLEST &&
+      normalized.some(list => list.length === 0)
+    ) {
+      // Fit-to-smallest should stop immediately when any child has no chunks.
+      return [];
+    }
+    const sources = normalized.filter(list => list.length);
     if (!sources.length) return [];
     const max = singlePass
       ? Number.POSITIVE_INFINITY

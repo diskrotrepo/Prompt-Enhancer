@@ -90,6 +90,11 @@ describe('Chunking + mixing engine', () => {
     expect(mixed.join('')).toBe('a1 b1 a2 b2 ');
   });
 
+  test('mixChunkLists fit-smallest emits nothing when any child list is empty', () => {
+    const mixed = mixChunkLists([['a1 ', 'a2 '], []], 100, false, false, true, 'smallest');
+    expect(mixed.join('')).toBe('');
+  });
+
   test('mixChunkLists fit-largest repeats shorter lists until the longest list is exhausted', () => {
     const mixed = mixChunkLists([['a1 ', 'a2 ', 'a3 '], ['b1 ', 'b2 ']], 100, false, false, true, 'largest');
     expect(mixed.join('')).toBe('a1 b1 a2 b2 a3 b1 ');
