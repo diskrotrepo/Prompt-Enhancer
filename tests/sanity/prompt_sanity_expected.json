@@ -43,6 +43,11 @@
       "lengthMode": "fit-largest"
     },
     {
+      "id": "dropout_mix",
+      "output": "y c x ",
+      "lengthMode": "dropout"
+    },
+    {
       "id": "fit_smallest_empty_child",
       "output": "",
       "lengthMode": "fit-smallest"

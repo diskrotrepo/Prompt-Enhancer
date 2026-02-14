@@ -72,7 +72,8 @@
     ALLOW: 'allow',
     EXACT_ONCE: 'exact-once',
     FIT_SMALLEST: 'fit-smallest',
-    FIT_LARGEST: 'fit-largest'
+    FIT_LARGEST: 'fit-largest',
+    DROPOUT: 'dropout'
   };
 
   const SINGLE_PASS_FIT_MODES = {
@@ -261,11 +262,23 @@
     return SINGLE_PASS_FIT_MODES.SMALLEST;
   }
 
+  function readMixLengthMode(boxEl) {
+    if (!boxEl?.classList?.contains('mix-box')) return LENGTH_MODES.FIT_SMALLEST;
+    const select = boxEl.querySelector('.length-mode');
+    if (select) return select.value;
+    if (readSinglePassFitMode(boxEl) === SINGLE_PASS_FIT_MODES.LARGEST) {
+      return LENGTH_MODES.FIT_LARGEST;
+    }
+    if (readSinglePassMode(boxEl)) return LENGTH_MODES.FIT_SMALLEST;
+    return readExactMode(boxEl) ? LENGTH_MODES.EXACT : LENGTH_MODES.ALLOW;
+  }
+
   function getMixLengthModeConfig(config) {
     if (!config) return LENGTH_MODES.FIT_SMALLEST;
     if (config.lengthMode === LENGTH_MODES.EXACT_ONCE) return LENGTH_MODES.FIT_SMALLEST;
     if (config.lengthMode === LENGTH_MODES.FIT_LARGEST) return LENGTH_MODES.FIT_LARGEST;
     if (config.lengthMode === LENGTH_MODES.FIT_SMALLEST) return LENGTH_MODES.FIT_SMALLEST;
+    if (config.lengthMode === LENGTH_MODES.DROPOUT) return LENGTH_MODES.DROPOUT;
     if (config.lengthMode === LENGTH_MODES.EXACT) return LENGTH_MODES.EXACT;
     if (config.lengthMode === LENGTH_MODES.ALLOW) return LENGTH_MODES.ALLOW;
     if (config.singlePass) {
@@ -712,6 +725,22 @@
     return out;
   }
 
+  // Dropout mode starts from a full fit-largest pass, then removes random chunks
+  // until the concatenated output length is at or under the configured limit.
+  function dropChunksToLimit(chunks, limit) {
+    const source = Array.isArray(chunks) ? chunks.filter(chunk => typeof chunk === 'string' && chunk.length > 0) : [];
+    const max = Math.max(0, parseInt(limit, 10) || 0);
+    if (!source.length || !max) return [];
+    const out = source.slice();
+    let length = out.reduce((total, chunk) => total + chunk.length, 0);
+    while (out.length && length > max) {
+      const idx = Math.floor(Math.random() * out.length);
+      const [removed] = out.splice(idx, 1);
+      if (removed) length -= removed.length;
+    }
+    return out;
+  }
+
   // ======== Box Evaluation ========
 
   // Each generate pass uses a scoped cache so variables copy the same evaluated output
@@ -778,9 +807,11 @@
     const outputEl = boxEl.querySelector('.mix-output-text');
 
     const limit = readNumber(limitInput, 1000);
+    const lengthMode = readMixLengthMode(boxEl);
+    const dropoutMode = lengthMode === LENGTH_MODES.DROPOUT;
     const exact = readExactMode(boxEl);
-    const singlePass = readSinglePassMode(boxEl);
-    const singlePassFitMode = readSinglePassFitMode(boxEl);
+    const singlePass = dropoutMode ? true : readSinglePassMode(boxEl);
+    const singlePassFitMode = dropoutMode ? SINGLE_PASS_FIT_MODES.LARGEST : readSinglePassFitMode(boxEl);
     const randomize = isActive(randomBtn);
     const firstChunkBehavior = readFirstChunkBehavior(boxEl);
     const preserve = sizeSelect?.value === 'preserve';
@@ -814,13 +845,25 @@
       return evaluateChunkBox(child, { root, visiting, cache });
     });
 
-    const mixed = mixChunkLists(lists, limit, exact, randomize, singlePass, singlePassFitMode);
+    const mixedBase = mixChunkLists(lists, limit, exact, randomize, singlePass, singlePassFitMode);
+    const mixed = dropoutMode ? dropChunksToLimit(mixedBase, limit) : mixedBase;
     const outputString = mixed.join('');
     if (outputEl) outputEl.textContent = outputString;
 
+    // Dropout already enforces final length, so rechunking should not repeat output.
+    const reChunkSinglePass = dropoutMode ? true : singlePass;
+    const reChunkLimit = dropoutMode ? Number.POSITIVE_INFINITY : limit;
     const result = preserve
       ? mixed
-      : buildChunkList(outputString, delimiterConfig, limit, exact, false, singlePass, firstChunkBehavior);
+      : buildChunkList(
+          outputString,
+          delimiterConfig,
+          reChunkLimit,
+          exact,
+          false,
+          reChunkSinglePass,
+          firstChunkBehavior
+        );
     if (boxId) visiting.delete(boxId);
     if (cache && cacheKey) cache.set(cacheKey, result.slice());
     return result.slice();
@@ -1205,6 +1248,7 @@
       id: box.dataset.boxId,
       title: titleInput?.value || 'Mix',
       limit: readNumber(limitInput, 1000),
+      lengthMode: readMixLengthMode(box),
       exact: readExactMode(box),
       singlePass,
       ...(singlePass ? { singlePassMode: readSinglePassFitMode(box) } : {}),
@@ -2642,6 +2686,7 @@
     normalizeCustomDelimiter,
     buildChunkList,
     mixChunkLists,
+    dropChunksToLimit,
     evaluateMixBox,
     exportMixState,
     applyMixState,

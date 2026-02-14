@@ -130,6 +130,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Delete Final Chunk** — `delete_final_chunk`
 - **Fit to Smallest (mix)** — `fit_smallest_mix`
 - **Fit to Largest (mix)** — `fit_largest_mix`
+- **Dropout (full fit-largest, then random chunk removal to limit)** — `dropout_mix`
 - **Fit to Smallest halts when any child is empty** — `fit_smallest_empty_child`
 - **Fit to Smallest halts when a variable resolves empty** — `fit_smallest_empty_variable`
 - **Exactly Once (chunk single-pass behavior)** — `exact_once_length`

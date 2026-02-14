@@ -378,6 +378,54 @@
       }
     },
     {
+      "id": "dropout_mix",
+      "description": "Dropout starts from a full fit-largest pass, then deletes random chunks until under limit.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Dropout Mix",
+            "limit": 6,
+            "lengthMode": "dropout",
+            "exact": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a b c ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "x y ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "fit_smallest_empty_child",
       "description": "Fit to Smallest should emit nothing when any child list starts empty.",
       "random": 0,

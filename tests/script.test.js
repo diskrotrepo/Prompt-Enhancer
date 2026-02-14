@@ -11,7 +11,8 @@ const {
   parseInput,
   buildChunkList,
   mixChunkLists,
-  buildDelimiterRegex
+  buildDelimiterRegex,
+  dropChunksToLimit
 } = main;
 
 describe('Chunking + mixing engine', () => {
@@ -98,6 +99,31 @@ describe('Chunking + mixing engine', () => {
   test('mixChunkLists fit-largest repeats shorter lists until the longest list is exhausted', () => {
     const mixed = mixChunkLists([['a1 ', 'a2 ', 'a3 '], ['b1 ', 'b2 ']], 100, false, false, true, 'largest');
     expect(mixed.join('')).toBe('a1 b1 a2 b2 a3 b1 ');
+  });
+
+  test('dropout removes random chunks until output is under the limit', () => {
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0);
+    const full = mixChunkLists(
+      [['a1 ', 'a2 ', 'a3 '], ['b1 ', 'b2 ']],
+      100,
+      true,
+      false,
+      true,
+      'largest'
+    );
+    const dropped = dropChunksToLimit(full, 9);
+    Math.random = orig;
+    expect(full.join('')).toBe('a1 b1 a2 b2 a3 b1 ');
+    expect(dropped.join('')).toBe('b2 a3 b1 ');
+  });
+
+  test('dropout can remove all chunks when limit is below every chunk length', () => {
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0);
+    const dropped = dropChunksToLimit(['abcd '], 2);
+    Math.random = orig;
+    expect(dropped).toEqual([]);
   });
 });
 

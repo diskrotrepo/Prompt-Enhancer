@@ -59,4 +59,30 @@ describe('Mix state roundtrip', () => {
     main.applyMixState(exported, root);
     expect(root.querySelectorAll('.chunk-box').length).toBe(2);
   });
+
+  test('dropout length mode roundtrips through export and re-apply', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    main.applyMixState({
+      mixes: [
+        {
+          type: 'mix',
+          title: 'Dropout',
+          limit: 9,
+          lengthMode: 'dropout',
+          preserve: true,
+          randomize: false,
+          delimiter: { mode: 'whitespace', size: 1 },
+          children: [
+            { type: 'chunk', text: 'a b c ', limit: 1000, exact: true, singlePass: true, delimiter: { mode: 'whitespace', size: 1 } },
+            { type: 'chunk', text: 'x y ', limit: 1000, exact: true, singlePass: true, delimiter: { mode: 'whitespace', size: 1 } }
+          ]
+        }
+      ]
+    }, root);
+    const exported = main.exportMixState(root);
+    expect(exported.mixes[0].lengthMode).toBe('dropout');
+    main.applyMixState(exported, root);
+    expect(root.querySelector('.mix-box .length-mode')?.value).toBe('dropout');
+  });
 });

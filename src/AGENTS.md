@@ -70,11 +70,13 @@ modifiers when multiple stacks are active.
 ### Length Exactness
 
 Mix length modes include **Split Final Chunk**, **Delete Final Chunk**, **Fit to
-Smallest**, and **Fit to Largest**. Fit to Smallest stops as soon as any child
-list runs out; Fit to Largest repeats shorter child lists until the longest
-child list is exhausted. Both fit modes disable the length limit input for mixes
-because they run a single constrained pass. Chunk boxes still use **Exactly
-Once** for single-pass chunk output.
+Smallest**, **Fit to Largest**, and **Dropout**. Fit to Smallest stops as soon
+as any child list runs out; Fit to Largest repeats shorter child lists until the
+longest child list is exhausted. Dropout first builds a full Fit to Largest pass
+and then removes random chunks until total output is at or below the limit.
+Only the fit modes disable the length limit input for mixes because they run a
+single constrained pass. Chunk boxes still use **Exactly Once** for single-pass
+chunk output.
 
 ### First Chunk Behavior
 

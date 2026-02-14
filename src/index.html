@@ -190,10 +190,11 @@
                           </div>
                           <div class="control-block toggle-block">
                             <label>Length Mode</label>
-                            <select class="length-mode" data-help="Choose how length limits are enforced." data-help-detail="Split Final Chunk trims the last chunk to hit the limit. Delete Final Chunk drops the chunk that would overflow. Fit to Smallest stops when any child list runs out. Fit to Largest repeats shorter child lists until the longest list is exhausted.">
+                            <select class="length-mode" data-help="Choose how length limits are enforced." data-help-detail="Split Final Chunk trims the last chunk to hit the limit. Delete Final Chunk drops the chunk that would overflow. Fit to Smallest stops when any child list runs out. Fit to Largest repeats shorter child lists until the longest list is exhausted. Dropout builds a full Fit to Largest pass, then randomly removes chunks until the output is under the limit.">
                               <option value="exact">Split Final Chunk</option>
                               <option value="fit-smallest" selected>Fit to Smallest</option>
                               <option value="fit-largest">Fit to Largest</option>
+                              <option value="dropout">Dropout (randomly remove chunks)</option>
                               <option value="allow">Delete Final Chunk</option>
                             </select>
                           </div>
