@@ -299,9 +299,10 @@
                           </div>
                           <div class="control-block toggle-block">
                             <label>Length Mode</label>
-                            <select class="length-mode" data-help="Choose how length limits are enforced." data-help-detail="Split Final Chunk trims the last chunk to hit the limit. Delete Final Chunk drops the chunk that would overflow. Exactly Once outputs each chunk one time and disables the length limit.">
+                            <select class="length-mode" data-help="Choose how length limits are enforced." data-help-detail="Split Final Chunk trims the last chunk to hit the limit. Delete Final Chunk drops the chunk that would overflow. Exactly Once outputs each chunk one time and disables the length limit. Dropout emits a full one-pass chunk list first, then randomly removes chunks until the output is under the limit.">
                               <option value="exact">Split Final Chunk</option>
                               <option value="exact-once" selected>Exactly Once</option>
+                              <option value="dropout">Dropout (randomly remove chunks)</option>
                               <option value="allow">Delete Final Chunk</option>
                             </select>
                           </div>

@@ -84,6 +84,12 @@
       "chunkOutput": "a b "
     },
     {
+      "id": "root_string_dropout",
+      "output": "",
+      "chunkOutput": "c x y ",
+      "chunkLengthMode": "dropout"
+    },
+    {
       "id": "variable_parent_filtered",
       "output": "a b ",
       "variableTitle": "Variable"

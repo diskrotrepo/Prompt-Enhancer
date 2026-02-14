@@ -179,6 +179,7 @@ function runSanityCase(testCase) {
   const chunkBox = root.querySelector('.chunk-box') || window.document.querySelector('.chunk-box');
   const output = mixBox?.querySelector('.mix-output-text')?.textContent || '';
   const chunkOutput = chunkBox?.querySelector('.chunk-output-text')?.textContent || '';
+  const chunkLengthMode = chunkBox?.querySelector('.length-mode')?.value || '';
   const lengthMode = mixBox?.querySelector('.length-mode')?.value || '';
   const preserve = mixBox?.querySelector('.delimiter-size')?.value === 'preserve';
   const firstChunkSelect = mixBox?.querySelector('.first-chunk-select');
@@ -203,6 +204,7 @@ function runSanityCase(testCase) {
     id: testCase.id,
     output,
     chunkOutput,
+    chunkLengthMode,
     lengthMode,
     preserve,
     firstChunkDisabled,
@@ -270,6 +272,9 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'chunkOutput')) {
         expect(result.chunkOutput).toBe(expected.chunkOutput);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'chunkLengthMode')) {
+        expect(result.chunkLengthMode).toBe(expected.chunkLengthMode);
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'mixCopiedText')) {
         expect(result.mixCopiedText).toBe(expected.mixCopiedText);

@@ -125,6 +125,23 @@ describe('Chunking + mixing engine', () => {
     Math.random = orig;
     expect(dropped).toEqual([]);
   });
+
+  test('dropout supports string-style chunk lists from a single source', () => {
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0);
+    const full = buildChunkList(
+      'a b c x y ',
+      { regex: /\s/, size: 1, sentenceMode: false },
+      Number.POSITIVE_INFINITY,
+      true,
+      false,
+      true
+    );
+    const dropped = dropChunksToLimit(full, 6);
+    Math.random = orig;
+    expect(full.join('')).toBe('a b c x y ');
+    expect(dropped.join('')).toBe('c x y ');
+  });
 });
 
 describe('Delimiter regex', () => {

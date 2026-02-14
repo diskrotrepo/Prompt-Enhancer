@@ -75,8 +75,9 @@ as any child list runs out; Fit to Largest repeats shorter child lists until the
 longest child list is exhausted. Dropout first builds a full Fit to Largest pass
 and then removes random chunks until total output is at or below the limit.
 Only the fit modes disable the length limit input for mixes because they run a
-single constrained pass. Chunk boxes still use **Exactly Once** for single-pass
-chunk output.
+single constrained pass. Chunk boxes support **Exactly Once** and **Dropout**:
+Exactly Once ignores the limit and emits one pass, while Dropout uses the limit
+to randomly remove chunks after building a full one-pass chunk list.
 
 ### First Chunk Behavior
 

@@ -273,6 +273,14 @@
     return readExactMode(boxEl) ? LENGTH_MODES.EXACT : LENGTH_MODES.ALLOW;
   }
 
+  function readChunkLengthMode(boxEl) {
+    if (!boxEl?.classList?.contains('chunk-box')) return LENGTH_MODES.EXACT_ONCE;
+    const select = boxEl.querySelector('.length-mode');
+    if (select) return select.value;
+    if (readSinglePassMode(boxEl)) return LENGTH_MODES.EXACT_ONCE;
+    return readExactMode(boxEl) ? LENGTH_MODES.EXACT : LENGTH_MODES.ALLOW;
+  }
+
   function getMixLengthModeConfig(config) {
     if (!config) return LENGTH_MODES.FIT_SMALLEST;
     if (config.lengthMode === LENGTH_MODES.EXACT_ONCE) return LENGTH_MODES.FIT_SMALLEST;
@@ -289,6 +297,18 @@
     if (config.exact === false) return LENGTH_MODES.ALLOW;
     if (config.exact === true) return LENGTH_MODES.EXACT;
     return LENGTH_MODES.FIT_SMALLEST;
+  }
+
+  function getChunkLengthModeConfig(config) {
+    if (!config) return LENGTH_MODES.EXACT_ONCE;
+    if (config.lengthMode === LENGTH_MODES.DROPOUT) return LENGTH_MODES.DROPOUT;
+    if (config.lengthMode === LENGTH_MODES.EXACT_ONCE) return LENGTH_MODES.EXACT_ONCE;
+    if (config.lengthMode === LENGTH_MODES.EXACT) return LENGTH_MODES.EXACT;
+    if (config.lengthMode === LENGTH_MODES.ALLOW) return LENGTH_MODES.ALLOW;
+    if (config.singlePass) return LENGTH_MODES.EXACT_ONCE;
+    if (config.exact === false) return LENGTH_MODES.ALLOW;
+    if (config.exact === true) return LENGTH_MODES.EXACT;
+    return LENGTH_MODES.EXACT_ONCE;
   }
 
   function readFirstChunkBehavior(boxEl) {
@@ -768,21 +788,24 @@
       return cached;
     }
     const limit = readNumber(limitInput, 1000);
+    const lengthMode = readChunkLengthMode(boxEl);
+    const dropoutMode = lengthMode === LENGTH_MODES.DROPOUT;
     const exact = readExactMode(boxEl);
-    const singlePass = readSinglePassMode(boxEl);
-    const singlePassFitMode = readSinglePassFitMode(boxEl);
+    const singlePass = dropoutMode ? true : readSinglePassMode(boxEl);
     const randomize = isActive(randomBtn);
     const firstChunkBehavior = readFirstChunkBehavior(boxEl);
     const delimiterConfig = getDelimiterConfig(boxEl);
-    const result = buildChunkList(
+    const chunkLimit = dropoutMode ? Number.POSITIVE_INFINITY : limit;
+    const chunkResult = buildChunkList(
       input?.value || '',
       delimiterConfig,
-      limit,
+      chunkLimit,
       exact,
       randomize,
       singlePass,
       firstChunkBehavior
     );
+    const result = dropoutMode ? dropChunksToLimit(chunkResult, limit) : chunkResult;
     if (outputEl) outputEl.textContent = result.join('');
     if (cache && cacheKey) cache.set(cacheKey, result.slice());
     return result;
@@ -1116,13 +1139,7 @@
     if (input) input.value = config.text || '';
     if (limitInput) limitInput.value = config.limit || 1000;
     if (lengthMode) {
-      lengthMode.value = config.singlePass
-        ? LENGTH_MODES.EXACT_ONCE
-        : config.exact === false
-        ? LENGTH_MODES.ALLOW
-        : config.exact === true
-        ? LENGTH_MODES.EXACT
-        : LENGTH_MODES.EXACT_ONCE;
+      lengthMode.value = getChunkLengthModeConfig(config);
     }
     if (delimiterSelect && config.delimiter?.mode) {
       delimiterSelect.value = normalizeDelimiterMode(config.delimiter.mode);
@@ -1196,6 +1213,7 @@
       title: titleInput?.value || 'String',
       text: input?.value || '',
       limit: readNumber(limitInput, 1000),
+      lengthMode: readChunkLengthMode(box),
       exact: readExactMode(box),
       singlePass: readSinglePassMode(box),
       firstChunkBehavior: readFirstChunkBehavior(box),

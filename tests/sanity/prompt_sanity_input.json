@@ -745,6 +745,28 @@
       }
     },
     {
+      "id": "root_string_dropout",
+      "description": "Root-level strings support dropout mode and remove random chunks to the limit.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "chunk",
+            "title": "Dropout String",
+            "text": "a b c x y ",
+            "limit": 6,
+            "lengthMode": "dropout",
+            "exact": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            }
+          }
+        ]
+      }
+    },
+    {
       "id": "variable_parent_filtered",
       "description": "Variable options exclude ancestor mixes so parent selections are cleared.",
       "random": 0,
