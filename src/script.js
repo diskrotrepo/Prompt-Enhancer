@@ -21,6 +21,7 @@
   // - Match-any: any character in the custom input acts as a delimiter.
   function normalizeDelimiterMode(mode) {
     if (!mode) return 'whitespace';
+    if (mode === 'empty-chunk') return 'empty-chunk';
     if (mode === 'custom') return 'custom-all';
     return mode;
   }
@@ -67,6 +68,8 @@
     RANDOM_START: 'random-start'
   };
 
+  const EMPTY_CHUNK_DELIMITER_MODE = 'empty-chunk';
+
   const LENGTH_MODES = {
     EXACT: 'exact',
     ALLOW: 'allow',
@@ -74,6 +77,12 @@
     FIT_SMALLEST: 'fit-smallest',
     FIT_LARGEST: 'fit-largest',
     DROPOUT: 'dropout'
+  };
+
+  const ORDER_MODES = {
+    CANONICAL: 'canonical',
+    INTERLEAVE: 'randomize-interleave',
+    FULL: 'full-randomize'
   };
 
   const SINGLE_PASS_FIT_MODES = {
@@ -198,7 +207,9 @@
   function getDelimiterConfig(boxEl) {
     const select = boxEl.querySelector('.delimiter-select');
     const customInput = boxEl.querySelector('.delimiter-custom');
-    const mode = normalizeDelimiterMode(select ? select.value : 'whitespace');
+    const selectedMode = normalizeDelimiterMode(select ? select.value : 'whitespace');
+    // Empty-chunk mode is a temporary UI lock for blank strings.
+    const mode = selectedMode === EMPTY_CHUNK_DELIMITER_MODE ? 'whitespace' : selectedMode;
     const rawCustom = normalizeCustomDelimiter(customInput?.value || '');
     let delimiter = ' ';
     let matchMode = 'all';
@@ -260,6 +271,31 @@
     if (!select) return SINGLE_PASS_FIT_MODES.SMALLEST;
     if (select.value === LENGTH_MODES.FIT_LARGEST) return SINGLE_PASS_FIT_MODES.LARGEST;
     return SINGLE_PASS_FIT_MODES.SMALLEST;
+  }
+
+  function normalizeMixOrderMode(value, legacyRandomize = false) {
+    if (value === ORDER_MODES.FULL) return ORDER_MODES.FULL;
+    if (value === ORDER_MODES.INTERLEAVE) return ORDER_MODES.INTERLEAVE;
+    if (value === ORDER_MODES.CANONICAL) return ORDER_MODES.CANONICAL;
+    return legacyRandomize ? ORDER_MODES.INTERLEAVE : ORDER_MODES.CANONICAL;
+  }
+
+  function normalizeChunkOrderMode(value, legacyRandomize = false) {
+    if (value === ORDER_MODES.FULL) return ORDER_MODES.FULL;
+    if (value === ORDER_MODES.CANONICAL) return ORDER_MODES.CANONICAL;
+    return legacyRandomize ? ORDER_MODES.FULL : ORDER_MODES.CANONICAL;
+  }
+
+  function readMixOrderMode(boxEl) {
+    if (!boxEl?.classList?.contains('mix-box')) return ORDER_MODES.CANONICAL;
+    const select = boxEl.querySelector('.order-mode');
+    return normalizeMixOrderMode(select?.value);
+  }
+
+  function readChunkOrderMode(boxEl) {
+    if (!boxEl?.classList?.contains('chunk-box')) return ORDER_MODES.CANONICAL;
+    const select = boxEl.querySelector('.order-mode');
+    return normalizeChunkOrderMode(select?.value);
   }
 
   function readMixLengthMode(boxEl) {
@@ -665,7 +701,7 @@
   ) {
     const normalized = lists
       .filter(Array.isArray)
-      .map(list => list.filter(chunk => chunk.length > 0));
+      .map(list => list.filter(chunk => typeof chunk === 'string'));
     if (
       singlePass &&
       singlePassFitMode === SINGLE_PASS_FIT_MODES.SMALLEST &&
@@ -695,7 +731,7 @@
             ? cycle % list.length
             : cycle;
           const chunk = list[chunkIndex];
-          if (!chunk) continue;
+          if (chunk == null) continue;
           const remaining = max - length;
           if (chunk.length <= remaining) {
             out.push(chunk);
@@ -719,18 +755,20 @@
         ? shuffle(Array.from({ length: sources.length }, (_, i) => i))
         : Array.from({ length: sources.length }, (_, i) => i);
       let added = false;
+      let grew = false;
       for (const idx of order) {
         const list = sources[idx];
         if (!list.length) continue;
         const pos = positions[idx];
         const chunk = list[pos % list.length];
         positions[idx] = pos + 1;
-        if (!chunk) continue;
+        if (chunk == null) continue;
         const remaining = max - length;
         if (chunk.length <= remaining) {
           out.push(chunk);
           length += chunk.length;
           added = true;
+          if (chunk.length > 0) grew = true;
         } else {
           if (exact && remaining > 0) {
             out.push(chunk.slice(0, remaining));
@@ -741,6 +779,7 @@
         if (length >= max) return out;
       }
       if (!added) break;
+      if (!grew) break;
     }
     return out;
   }
@@ -763,41 +802,51 @@
 
   // ======== Box Evaluation ========
 
-  // Each generate pass uses a scoped cache so variables copy the same evaluated output
-  // (including randomization) instead of re-running target generation.
+  // Each generate pass uses a cache to keep repeated evaluations stable.
+  // Mix variables add their own scope so they behave like local submix instances.
   function getEvaluationCache(context) {
     return context?.cache instanceof Map ? context.cache : null;
   }
 
-  function getEvaluationCacheKey(type, boxEl) {
+  // Cache keys can be scoped so variable-referenced mixes evaluate like local submix copies.
+  // When scope is empty, behavior stays global for top-level/direct child evaluation.
+  function getEvaluationCacheKey(type, boxEl, context = {}) {
     const boxId = boxEl?.dataset?.boxId;
     if (!boxId) return '';
-    return `${type}:${boxId}`;
+    const scope = context?.cacheScope ? `${context.cacheScope}:` : '';
+    return `${scope}${type}:${boxId}`;
   }
 
   function evaluateChunkBox(boxEl, context = {}) {
     const input = boxEl.querySelector('.chunk-input');
     const limitInput = boxEl.querySelector('.length-input');
-    const randomBtn = boxEl.querySelector('.random-toggle');
     const outputEl = boxEl.querySelector('.chunk-output-text');
     const cache = getEvaluationCache(context);
-    const cacheKey = getEvaluationCacheKey('chunk', boxEl);
+    const cacheKey = getEvaluationCacheKey('chunk', boxEl, context);
     if (cache && cacheKey && cache.has(cacheKey)) {
       const cached = cache.get(cacheKey).slice();
       if (outputEl) outputEl.textContent = cached.join('');
       return cached;
+    }
+    const rawInput = input?.value || '';
+    if (rawInput === '') {
+      const emptyChunk = [''];
+      if (outputEl) outputEl.textContent = '';
+      if (cache && cacheKey) cache.set(cacheKey, emptyChunk.slice());
+      return emptyChunk;
     }
     const limit = readNumber(limitInput, 1000);
     const lengthMode = readChunkLengthMode(boxEl);
     const dropoutMode = lengthMode === LENGTH_MODES.DROPOUT;
     const exact = readExactMode(boxEl);
     const singlePass = dropoutMode ? true : readSinglePassMode(boxEl);
-    const randomize = isActive(randomBtn);
+    const orderMode = readChunkOrderMode(boxEl);
+    const randomize = orderMode === ORDER_MODES.FULL;
     const firstChunkBehavior = readFirstChunkBehavior(boxEl);
     const delimiterConfig = getDelimiterConfig(boxEl);
     const chunkLimit = dropoutMode ? Number.POSITIVE_INFINITY : limit;
     const chunkResult = buildChunkList(
-      input?.value || '',
+      rawInput,
       delimiterConfig,
       chunkLimit,
       exact,
@@ -818,14 +867,22 @@
     const root = context?.root || document;
     const target = root.querySelector(`[data-box-id="${escapeSelector(targetId)}"]`);
     if (!target) return [];
-    if (target.classList.contains('mix-box')) return evaluateMixBox(target, context).slice();
+    if (target.classList.contains('mix-box')) {
+      // Mix variables should behave as in-place submixes, so isolate cache scope per variable box.
+      // This keeps evaluation deterministic within one variable while avoiding shared randomized output.
+      const variableScope = `var:${boxEl?.dataset?.boxId || ''}`;
+      const scopedContext = {
+        ...context,
+        cacheScope: context?.cacheScope ? `${context.cacheScope}/${variableScope}` : variableScope
+      };
+      return evaluateMixBox(target, scopedContext).slice();
+    }
     if (target.classList.contains('chunk-box')) return evaluateChunkBox(target, context).slice();
     return [];
   }
 
   function evaluateMixBox(boxEl, context = {}) {
     const limitInput = boxEl.querySelector('.length-input');
-    const randomBtn = boxEl.querySelector('.random-toggle');
     const sizeSelect = boxEl.querySelector('.delimiter-size');
     const outputEl = boxEl.querySelector('.mix-output-text');
 
@@ -835,7 +892,9 @@
     const exact = readExactMode(boxEl);
     const singlePass = dropoutMode ? true : readSinglePassMode(boxEl);
     const singlePassFitMode = dropoutMode ? SINGLE_PASS_FIT_MODES.LARGEST : readSinglePassFitMode(boxEl);
-    const randomize = isActive(randomBtn);
+    const orderMode = readMixOrderMode(boxEl);
+    const interleaveRandomize = orderMode === ORDER_MODES.INTERLEAVE;
+    const fullRandomize = orderMode === ORDER_MODES.FULL;
     const firstChunkBehavior = readFirstChunkBehavior(boxEl);
     const preserve = sizeSelect?.value === 'preserve';
     const delimiterConfig = getDelimiterConfig(boxEl);
@@ -843,7 +902,7 @@
     const root = context.root || boxEl.closest('.mix-root') || document;
     const visiting = context.visiting || new Set();
     const cache = getEvaluationCache(context);
-    const cacheKey = getEvaluationCacheKey('mix', boxEl);
+    const cacheKey = getEvaluationCacheKey('mix', boxEl, context);
     if (cache && cacheKey && cache.has(cacheKey)) {
       const cached = cache.get(cacheKey).slice();
       if (outputEl) outputEl.textContent = cached.join('');
@@ -868,8 +927,9 @@
       return evaluateChunkBox(child, { root, visiting, cache });
     });
 
-    const mixedBase = mixChunkLists(lists, limit, exact, randomize, singlePass, singlePassFitMode);
-    const mixed = dropoutMode ? dropChunksToLimit(mixedBase, limit) : mixedBase;
+    const mixedBase = mixChunkLists(lists, limit, exact, interleaveRandomize, singlePass, singlePassFitMode);
+    const mixedOrdered = fullRandomize ? shuffle(mixedBase.slice()) : mixedBase;
+    const mixed = dropoutMode ? dropChunksToLimit(mixedOrdered, limit) : mixedOrdered;
     const outputString = mixed.join('');
     if (outputEl) outputEl.textContent = outputString;
 
@@ -1028,7 +1088,7 @@
     const box = fragment.querySelector('.mix-box');
     const titleInput = fragment.querySelector('.box-title');
     const limitInput = fragment.querySelector('.length-input');
-    const randomBtn = fragment.querySelector('.random-toggle');
+    const orderSelect = fragment.querySelector('.order-mode');
     const lengthMode = fragment.querySelector('.length-mode');
     const firstChunkSelect = fragment.querySelector('.first-chunk-select');
     const delimiterSelect = fragment.querySelector('.delimiter-select');
@@ -1066,7 +1126,9 @@
       }
     }
 
-    initToggleButton(randomBtn, !!config.randomize);
+    if (orderSelect) {
+      orderSelect.value = normalizeMixOrderMode(config.orderMode, !!config.randomize);
+    }
     if (firstChunkSelect) firstChunkSelect.value = getFirstChunkBehaviorConfig(config);
     if (config.colorMode === 'custom' && config.colorValue) {
       setBoxColorMode(box, 'custom', config.colorValue);
@@ -1121,7 +1183,7 @@
     const titleInput = fragment.querySelector('.box-title');
     const input = fragment.querySelector('.chunk-input');
     const limitInput = fragment.querySelector('.length-input');
-    const randomBtn = fragment.querySelector('.random-toggle');
+    const orderSelect = fragment.querySelector('.order-mode');
     const lengthMode = fragment.querySelector('.length-mode');
     const firstChunkSelect = fragment.querySelector('.first-chunk-select');
     const delimiterSelect = fragment.querySelector('.delimiter-select');
@@ -1157,7 +1219,9 @@
       }
     }
 
-    initToggleButton(randomBtn, !!config.randomize);
+    if (orderSelect) {
+      orderSelect.value = normalizeChunkOrderMode(config.orderMode, !!config.randomize);
+    }
     if (firstChunkSelect) firstChunkSelect.value = getFirstChunkBehaviorConfig(config);
     if (config.colorMode === 'custom' && config.colorValue) {
       setBoxColorMode(box, 'custom', config.colorValue);
@@ -1173,6 +1237,7 @@
     setupSizeControls(wrapper);
     updateLengthModeState(box);
     updateFirstChunkBehaviorLabels(box);
+    updateEmptyChunkMode(box);
     syncColorControls(box);
     return wrapper;
   }
@@ -1204,9 +1269,9 @@
     const titleInput = box.querySelector('.box-title');
     const input = box.querySelector('.chunk-input');
     const limitInput = box.querySelector('.length-input');
-    const randomBtn = box.querySelector('.random-toggle');
     const delimiter = getDelimiterConfig(box);
     const colorState = getBoxColorState(box);
+    const orderMode = readChunkOrderMode(box);
     return {
       type: 'chunk',
       id: box.dataset.boxId,
@@ -1221,7 +1286,8 @@
       colorMode: colorState.mode,
       colorValue: colorState.value,
       colorPreset: colorState.preset,
-      randomize: isActive(randomBtn),
+      orderMode,
+      randomize: orderMode === ORDER_MODES.FULL,
       delimiter: {
         mode: delimiter.mode,
         custom: box.querySelector('.delimiter-custom')?.value || '',
@@ -1242,12 +1308,12 @@
   function serializeMixBox(box) {
     const titleInput = box.querySelector('.box-title');
     const limitInput = box.querySelector('.length-input');
-    const randomBtn = box.querySelector('.random-toggle');
     const delimiter = getDelimiterConfig(box);
     const sizeSelect = box.querySelector('.delimiter-size');
     const singlePass = readSinglePassMode(box);
     const preserve = sizeSelect?.value === 'preserve';
     const colorState = getBoxColorState(box);
+    const orderMode = readMixOrderMode(box);
     const childContainer = box.querySelector('.mix-children');
     const children = childContainer
       ? Array.from(childContainer.children)
@@ -1276,7 +1342,8 @@
       colorValue: colorState.value,
       colorPreset: colorState.preset,
       preserve,
-      randomize: isActive(randomBtn),
+      orderMode,
+      randomize: orderMode === ORDER_MODES.INTERLEAVE,
       delimiter: {
         mode: delimiter.mode,
         custom: box.querySelector('.delimiter-custom')?.value || '',
@@ -1330,6 +1397,7 @@
     syncCollapseButtons(root);
     root.querySelectorAll('.mix-box').forEach(updatePreserveMode);
     root.querySelectorAll('.mix-box, .chunk-box').forEach(updateLengthModeState);
+    root.querySelectorAll('.chunk-box').forEach(updateEmptyChunkMode);
     refreshColorPresetSelects(root);
     syncTextareaHeights(root);
     refreshVariableOptions(root);
@@ -1393,12 +1461,88 @@
     });
   }
 
+  // Blank strings emit a single empty chunk; while blank, lock chunking controls.
+  function updateEmptyChunkMode(boxEl) {
+    if (!boxEl?.classList?.contains('chunk-box')) return;
+    const input = boxEl.querySelector('.chunk-input');
+    const delimiterSelect = boxEl.querySelector('.delimiter-select');
+    if (!delimiterSelect) return;
+    const delimiterBlock = delimiterSelect.closest('.control-block');
+    const customRow = boxEl.querySelector('.delimiter-custom-row');
+    const customInput = boxEl.querySelector('.delimiter-custom');
+    const sizeSelect = boxEl.querySelector('.delimiter-size');
+    const sizeBlock = sizeSelect?.closest('.control-block');
+    const sizeCustomRow = boxEl.querySelector('.delimiter-size-custom-row');
+    const sizeCustomInput = boxEl.querySelector('.delimiter-size-custom');
+    const firstChunkSelect = boxEl.querySelector('.first-chunk-select');
+    const firstChunkBlock = firstChunkSelect?.closest('.control-block');
+    const isEmpty = (input?.value || '') === '';
+
+    if (isEmpty) {
+      let emptyOption = delimiterSelect.querySelector(`option[value="${EMPTY_CHUNK_DELIMITER_MODE}"]`);
+      if (!emptyOption) {
+        emptyOption = document.createElement('option');
+        emptyOption.value = EMPTY_CHUNK_DELIMITER_MODE;
+        emptyOption.textContent = 'Empty chunk';
+        delimiterSelect.insertBefore(emptyOption, delimiterSelect.firstChild);
+      }
+      if (delimiterSelect.value !== EMPTY_CHUNK_DELIMITER_MODE) {
+        delimiterSelect.dataset.prevValue = delimiterSelect.value;
+      }
+      delimiterSelect.value = EMPTY_CHUNK_DELIMITER_MODE;
+      delimiterSelect.disabled = true;
+      if (customInput) customInput.disabled = true;
+      if (customRow) customRow.style.display = 'none';
+      if (sizeSelect) sizeSelect.disabled = true;
+      if (sizeCustomInput) sizeCustomInput.disabled = true;
+      if (sizeCustomRow) sizeCustomRow.style.display = 'none';
+      if (firstChunkSelect) {
+        firstChunkSelect.disabled = true;
+        firstChunkSelect.setAttribute('aria-disabled', 'true');
+      }
+      if (delimiterBlock) delimiterBlock.classList.add('is-disabled');
+      if (sizeBlock) sizeBlock.classList.add('is-disabled');
+      if (firstChunkBlock) firstChunkBlock.classList.add('is-disabled');
+      return;
+    }
+
+    delimiterSelect.disabled = false;
+    const prevValue = delimiterSelect.dataset.prevValue;
+    if (prevValue) {
+      delimiterSelect.value = prevValue;
+      delete delimiterSelect.dataset.prevValue;
+    } else if (delimiterSelect.value === EMPTY_CHUNK_DELIMITER_MODE) {
+      delimiterSelect.value = 'whitespace';
+    }
+    const emptyOption = delimiterSelect.querySelector(`option[value="${EMPTY_CHUNK_DELIMITER_MODE}"]`);
+    if (emptyOption) emptyOption.remove();
+    if (customInput) customInput.disabled = false;
+    if (sizeSelect) sizeSelect.disabled = false;
+    if (sizeCustomInput) sizeCustomInput.disabled = false;
+    if (firstChunkSelect) {
+      firstChunkSelect.disabled = false;
+      firstChunkSelect.setAttribute('aria-disabled', 'false');
+    }
+    if (delimiterBlock) delimiterBlock.classList.remove('is-disabled');
+    if (sizeBlock) sizeBlock.classList.remove('is-disabled');
+    if (firstChunkBlock) firstChunkBlock.classList.remove('is-disabled');
+    setupDelimiterControls(boxEl);
+    setupSizeControls(boxEl);
+    updateFirstChunkBehaviorLabels(boxEl);
+  }
+
   function getDisabledReason(helpEl) {
     const block = helpEl?.closest?.('.control-block, .input-row');
     if (!block) return '';
     const disabledInput = block.querySelector('input:disabled, select:disabled, textarea:disabled');
     if (!disabledInput) return '';
     const box = helpEl.closest('.mix-box, .chunk-box');
+    if (box?.classList?.contains('chunk-box')) {
+      const chunkInput = box.querySelector('.chunk-input');
+      if ((chunkInput?.value || '') === '' && block.querySelector('.delimiter-select, .delimiter-custom, .delimiter-size, .delimiter-size-custom, .first-chunk-select')) {
+        return 'Disabled because blank strings emit one empty chunk and skip rechunk settings.';
+      }
+    }
     if (block.querySelector('.length-input') && readSinglePassMode(box)) {
       return 'Disabled because Exactly Once outputs each chunk one time and ignores length limits.';
     }
@@ -1902,6 +2046,8 @@
       const textarea = event.target.closest('.chunk-input');
       if (!textarea) return;
       autoResizeTextarea(textarea);
+      const box = textarea.closest('.chunk-box');
+      if (box) updateEmptyChunkMode(box);
     });
 
     root.addEventListener('input', event => {

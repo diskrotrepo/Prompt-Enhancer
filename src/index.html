@@ -111,7 +111,6 @@
                         <div class="button-col">
                           <button type="button" class="copy-button icon-button copy-output" title="Copy output" data-help="Copy the current mix output to the clipboard." data-help-detail="Copies the generated mix output shown below. Use this after Generate to quickly paste the result elsewhere.">&#128203;</button>
                           <button type="button" class="toggle-button icon-button color-toggle" title="Color" data-help="Open the color panel to pick a custom color or preset." data-help-detail="Choose Auto, a preset, or a custom color to visually tag this mix. Saved presets can be reused across boxes.">&#127912;</button>
-                          <button type="button" class="toggle-button icon-button random-button random-toggle" title="Randomize list order" data-help="Randomize mix order each cycle." data-help-detail="When on, the mix cycles through child lists in a shuffled order each pass. Turn off to keep a stable, predictable order.">&#127922;</button>
                           <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Collapse" data-expanded="-" data-collapsed="+" data-help="Collapse or expand this mix." data-help-detail="Collapsing hides the mix body so you can focus on other sections; expand to edit again.">-</button>
                           <button type="button" class="delete-button icon-button remove-box" title="Remove" data-help="Remove this mix." data-help-detail="Deletes this mix and all of its children from the prompt structure.">X</button>
                         </div>
@@ -198,6 +197,14 @@
                               <option value="allow">Delete Final Chunk</option>
                             </select>
                           </div>
+                          <div class="control-block toggle-block">
+                            <label>Order</label>
+                            <select class="order-mode" data-help="Choose mix ordering behavior." data-help-detail="Canonical order keeps deterministic interleave order. Randomize interleave shuffles list order each cycle. Full randomize shuffles the final mixed chunk list like string randomization.">
+                              <option value="canonical" selected>Canonical order</option>
+                              <option value="randomize-interleave">Randomize interleave</option>
+                              <option value="full-randomize">Full randomize</option>
+                            </select>
+                          </div>
                         </div>
                         <div class="mix-children"></div>
                         <div class="mix-actions">
@@ -218,7 +225,6 @@
                         <div class="button-col">
                           <button type="button" class="copy-button icon-button copy-input" title="Copy string" data-help="Copy this string’s output to the clipboard." data-help-detail="Copies the generated output for this string (including randomization and length mode), not the raw input text.">&#128203;</button>
                           <button type="button" class="toggle-button icon-button color-toggle" title="Color" data-help="Open the color panel to pick a custom color or preset." data-help-detail="Choose Auto, a preset, or a custom color to visually tag this string. Saved presets can be reused across boxes.">&#127912;</button>
-                          <button type="button" class="toggle-button icon-button random-button random-toggle" title="Randomize chunks" data-help="Randomize chunk order." data-help-detail="When on, the chunks in this string are shuffled each cycle before applying length rules.">&#127922;</button>
                           <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Collapse" data-expanded="-" data-collapsed="+" data-help="Collapse or expand this string." data-help-detail="Collapsing hides the string body so you can focus on other sections; expand to edit again.">-</button>
                           <button type="button" class="delete-button icon-button remove-box" title="Remove" data-help="Remove this string." data-help-detail="Deletes this string box and removes its chunks from any mixes that reference it.">X</button>
                         </div>
@@ -304,6 +310,13 @@
                               <option value="exact-once" selected>Exactly Once</option>
                               <option value="dropout">Dropout (randomly remove chunks)</option>
                               <option value="allow">Delete Final Chunk</option>
+                            </select>
+                          </div>
+                          <div class="control-block toggle-block">
+                            <label>Order</label>
+                            <select class="order-mode" data-help="Choose string ordering behavior." data-help-detail="Canonical order keeps original chunk order. Full randomize shuffles chunk order before length rules are applied.">
+                              <option value="canonical" selected>Canonical order</option>
+                              <option value="full-randomize">Full randomize</option>
                             </select>
                           </div>
                         </div>

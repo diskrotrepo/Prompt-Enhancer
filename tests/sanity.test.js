@@ -112,7 +112,8 @@ function runSanityCase(testCase) {
     return active?.querySelector('.mix-root') || window.document.querySelector('.mix-root');
   };
   const runAction = (action, root, actionResults) => {
-    const { type } = normalizeAction(action);
+    const normalized = normalizeAction(action);
+    const { type } = normalized;
     if (type === 'openPromptsWindow') {
       const menuItem = window.document.querySelector('.menu-item[data-window=\"prompts\"]');
       if (menuItem) menuItem.click();
@@ -154,12 +155,23 @@ function runSanityCase(testCase) {
       } else if (root) {
         window.PromptMixer.generate(root);
       }
+      return;
+    }
+    if (type === 'setFirstChunkInput') {
+      const chunkInput = root?.querySelector('.chunk-box .chunk-input');
+      if (!chunkInput) return;
+      chunkInput.value = typeof normalized.value === 'string' ? normalized.value : '';
+      chunkInput.dispatchEvent(new window.Event('input', { bubbles: true }));
     }
   };
 
   const actions = Array.isArray(testCase.actions) ? testCase.actions : [];
   const preActions = actions.filter(action => normalizeAction(action).type === 'openPromptsWindow');
-  const postActions = actions.filter(action => normalizeAction(action).type !== 'openPromptsWindow');
+  const preGenerateActions = actions.filter(action => normalizeAction(action).type === 'setFirstChunkInput');
+  const postActions = actions.filter(action => {
+    const type = normalizeAction(action).type;
+    return type !== 'openPromptsWindow' && type !== 'setFirstChunkInput';
+  });
   preActions.forEach(action => runAction(action));
 
   const root = getActiveRoot();
@@ -167,6 +179,7 @@ function runSanityCase(testCase) {
   if (testCase.state) {
     window.PromptMixer.applyMixState(testCase.state, root);
   }
+  preGenerateActions.forEach(action => runAction(action, root));
   // Reset Math.random right before generation so fixture sequences only drive
   // evaluation behavior (state hydration can consume random values for colors).
   setDeterministicRandom();
@@ -175,12 +188,16 @@ function runSanityCase(testCase) {
   // Run post-generate actions (copy, menu saves) so outputs are available.
   postActions.forEach(action => runAction(action, root, actionResults));
 
-  const mixBox = root.querySelector('.mix-box') || window.document.querySelector('.mix-box');
-  const chunkBox = root.querySelector('.chunk-box') || window.document.querySelector('.chunk-box');
+  const mixBox = root.querySelector('.mix-box');
+  const chunkBox = root.querySelector('.chunk-box');
   const output = mixBox?.querySelector('.mix-output-text')?.textContent || '';
   const chunkOutput = chunkBox?.querySelector('.chunk-output-text')?.textContent || '';
   const chunkLengthMode = chunkBox?.querySelector('.length-mode')?.value || '';
+  const chunkOrderMode = chunkBox?.querySelector('.order-mode')?.value || '';
+  const chunkDelimiterMode = chunkBox?.querySelector('.delimiter-select')?.value || '';
+  const chunkDelimiterDisabled = !!chunkBox?.querySelector('.delimiter-select')?.disabled;
   const lengthMode = mixBox?.querySelector('.length-mode')?.value || '';
+  const mixOrderMode = mixBox?.querySelector('.order-mode')?.value || '';
   const preserve = mixBox?.querySelector('.delimiter-size')?.value === 'preserve';
   const firstChunkSelect = mixBox?.querySelector('.first-chunk-select');
   const firstChunkDisabled = !!(firstChunkSelect?.disabled || firstChunkSelect?.classList.contains('disabled'));
@@ -205,7 +222,11 @@ function runSanityCase(testCase) {
     output,
     chunkOutput,
     chunkLengthMode,
+    chunkOrderMode,
+    chunkDelimiterMode,
+    chunkDelimiterDisabled,
     lengthMode,
+    mixOrderMode,
     preserve,
     firstChunkDisabled,
     lengthLimitDisabled,
@@ -275,6 +296,18 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'chunkLengthMode')) {
         expect(result.chunkLengthMode).toBe(expected.chunkLengthMode);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'chunkOrderMode')) {
+        expect(result.chunkOrderMode).toBe(expected.chunkOrderMode);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'chunkDelimiterMode')) {
+        expect(result.chunkDelimiterMode).toBe(expected.chunkDelimiterMode);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'chunkDelimiterDisabled')) {
+        expect(result.chunkDelimiterDisabled).toBe(expected.chunkDelimiterDisabled);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'mixOrderMode')) {
+        expect(result.mixOrderMode).toBe(expected.mixOrderMode);
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'mixCopiedText')) {
         expect(result.mixCopiedText).toBe(expected.mixCopiedText);

@@ -13,6 +13,28 @@ function loadBody() {
   document.documentElement.innerHTML = html;
 }
 
+function runGeneratedOutput(state, randomSequence = [0]) {
+  loadBody();
+  const root = document.querySelector('.mix-root');
+  main.applyMixState(state, root);
+  const originalRandom = Math.random;
+  let randomIndex = 0;
+  Math.random = () => {
+    if (randomIndex < randomSequence.length) {
+      const next = randomSequence[randomIndex];
+      randomIndex += 1;
+      return next;
+    }
+    return randomSequence[randomSequence.length - 1] || 0;
+  };
+  try {
+    main.generate(root);
+  } finally {
+    Math.random = originalRandom;
+  }
+  return root.querySelector('.mix-box .mix-output-text')?.textContent || '';
+}
+
 describe('Mix state roundtrip', () => {
   test('exportMixState and applyMixState preserve structure', () => {
     loadBody();
@@ -108,5 +130,139 @@ describe('Mix state roundtrip', () => {
     expect(exported.mixes[0].lengthMode).toBe('dropout');
     main.applyMixState(exported, root);
     expect(root.querySelector('.chunk-box .length-mode')?.value).toBe('dropout');
+  });
+
+  test('order mode roundtrips for mixes and strings', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    main.applyMixState({
+      mixes: [
+        {
+          type: 'mix',
+          title: 'Ordered Mix',
+          orderMode: 'full-randomize',
+          preserve: true,
+          children: [
+            { type: 'chunk', text: 'a b ' }
+          ]
+        },
+        {
+          type: 'chunk',
+          title: 'Ordered String',
+          text: 'x y ',
+          orderMode: 'full-randomize'
+        }
+      ]
+    }, root);
+    const exported = main.exportMixState(root);
+    expect(exported.mixes[0].orderMode).toBe('full-randomize');
+    expect(exported.mixes[1].orderMode).toBe('full-randomize');
+    main.applyMixState(exported, root);
+    const mixOrder = root.querySelector('.mix-box .order-mode');
+    const chunkOrder = Array.from(root.querySelectorAll('.chunk-box'))
+      .find(box => box.querySelector('.box-title')?.value === 'Ordered String')
+      ?.querySelector('.order-mode');
+    expect(mixOrder?.value).toBe('full-randomize');
+    expect(chunkOrder?.value).toBe('full-randomize');
+  });
+
+  test('legacy randomize booleans map to order modes on load', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    main.applyMixState({
+      mixes: [
+        {
+          type: 'mix',
+          title: 'Legacy Mix',
+          randomize: true,
+          preserve: true,
+          children: [{ type: 'chunk', text: 'a ' }]
+        },
+        {
+          type: 'chunk',
+          title: 'Legacy String',
+          text: 'x ',
+          randomize: true
+        }
+      ]
+    }, root);
+    const mixOrder = root.querySelector('.mix-box .order-mode');
+    const chunkOrder = Array.from(root.querySelectorAll('.chunk-box'))
+      .find(box => box.querySelector('.box-title')?.value === 'Legacy String')
+      ?.querySelector('.order-mode');
+    expect(mixOrder?.value).toBe('randomize-interleave');
+    expect(chunkOrder?.value).toBe('full-randomize');
+  });
+
+  test('mix variable output matches duplicated submix output for randomized order modes', () => {
+    const buildSourceMix = orderMode => ({
+      type: 'mix',
+      id: 'source',
+      title: 'Source',
+      limit: 1000,
+      lengthMode: 'fit-smallest',
+      preserve: true,
+      orderMode,
+      delimiter: { mode: 'whitespace', size: 1 },
+      children: [
+        {
+          type: 'chunk',
+          id: 'source-chunk-a',
+          text: 'a b c ',
+          lengthMode: 'exact-once',
+          orderMode: 'canonical',
+          delimiter: { mode: 'whitespace', size: 1 }
+        },
+        {
+          type: 'chunk',
+          id: 'source-chunk-x',
+          text: 'x y z ',
+          lengthMode: 'exact-once',
+          orderMode: 'canonical',
+          delimiter: { mode: 'whitespace', size: 1 }
+        }
+      ]
+    });
+    const buildHost = children => ({
+      type: 'mix',
+      id: 'host',
+      title: 'Host',
+      limit: 1000,
+      lengthMode: 'fit-smallest',
+      preserve: true,
+      orderMode: 'canonical',
+      delimiter: { mode: 'whitespace', size: 1 },
+      children
+    });
+    const randomSequence = [0, 0, 0, 0.99, 0.99, 0.99, 0.2, 0.8, 0.1, 0.7];
+
+    ['randomize-interleave', 'full-randomize'].forEach(orderMode => {
+      const sourceForVariable = buildSourceMix(orderMode);
+      const sourceForDuplicate = buildSourceMix(orderMode);
+      const variableState = {
+        mixes: [
+          buildHost([
+            sourceForVariable,
+            { type: 'variable', id: 'source-variable', targetId: 'source' }
+          ])
+        ]
+      };
+      const duplicatedState = {
+        mixes: [
+          buildHost([
+            sourceForDuplicate,
+            {
+              ...JSON.parse(JSON.stringify(sourceForDuplicate)),
+              id: 'source-copy',
+              title: 'Source Copy'
+            }
+          ])
+        ]
+      };
+
+      const viaVariable = runGeneratedOutput(variableState, randomSequence);
+      const viaDuplicate = runGeneratedOutput(duplicatedState, randomSequence);
+      expect(viaVariable).toBe(viaDuplicate);
+    });
   });
 });

@@ -94,6 +94,8 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 #### Root-level strings
 
 - **Root-level strings generate without a parent mix** — `root_string_global`
+- **Blank strings emit one empty chunk and lock delimiter controls** — `root_string_empty_chunk`
+- **Typing into a blank string restores normal delimiter controls** — `root_string_empty_chunk_released`
 - **Root-level strings support dropout mode** — `root_string_dropout`
 
 #### Delimiter modes
@@ -133,14 +135,19 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Fit to Largest (mix)** — `fit_largest_mix`
 - **Dropout (full fit-largest, then random chunk removal to limit)** — `dropout_mix`
 - **Dropout on strings (full one-pass chunk output, then random chunk removal)** — `root_string_dropout`
-- **Fit to Smallest halts when any child is empty** — `fit_smallest_empty_child`
+- **Fit to Smallest keeps blank-string children (empty chunk slots)** — `fit_smallest_empty_child`
 - **Fit to Smallest halts when a variable resolves empty** — `fit_smallest_empty_variable`
 - **Exactly Once (chunk single-pass behavior)** — `exact_once_length`
 
 #### Randomization scope
 
-- **Mix list order shuffle** — `random_mix_order`
-- **Chunk list shuffle** — `random_chunk_order`
+- **Mix randomize interleave order mode** — `random_mix_order`
+- **Mix full randomize order mode** — `mix_full_randomize_order`
+- **Chunk full randomize order mode** — `random_chunk_order`
+
+#### Empty chunks
+
+- **Empty chunk list can skip interleave slots in mixes** — `empty_chunk_mix_skip`
 
 #### Variables
 
@@ -151,7 +158,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Variable cycle guard** — `variable_cycle_guard`
 - **Randomized string variable stays consistent** — `variable_random_chunk_consistent`
 - **Multiple variables share one randomized string output** — `variable_random_chunk_multi_reference`
-- **Randomized mix variable stays consistent** — `variable_random_mix_consistent`
+- **Randomized mix variable matches duplicated submix behavior** — `variable_random_mix_consistent`
 
 #### Output + copy behavior
 

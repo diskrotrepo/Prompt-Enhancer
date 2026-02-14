@@ -109,7 +109,7 @@
             "limit": 6,
             "exact": false,
             "preserve": true,
-            "randomize": true,
+            "orderMode": "randomize-interleave",
             "delimiter": {
               "mode": "whitespace",
               "size": 1
@@ -143,6 +143,54 @@
                 "limit": 6,
                 "exact": false,
                 "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "mix_full_randomize_order",
+      "description": "Mix full randomize shuffles the final mixed chunk list after canonical interleave.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Mix Full Random",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "orderMode": "full-randomize",
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a1 a2 ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "orderMode": "canonical",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "b1 b2 ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "orderMode": "canonical",
                 "delimiter": {
                   "mode": "whitespace",
                   "size": 1
@@ -427,7 +475,7 @@
     },
     {
       "id": "fit_smallest_empty_child",
-      "description": "Fit to Smallest should emit nothing when any child list starts empty.",
+      "description": "Fit to Smallest keeps running when a blank string child emits an empty chunk.",
       "random": 0,
       "state": {
         "mixes": [
@@ -745,6 +793,59 @@
       }
     },
     {
+      "id": "root_string_empty_chunk",
+      "description": "Blank strings lock delimiter controls and emit a single empty chunk.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "chunk",
+            "title": "Empty String",
+            "text": "",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "orderMode": "canonical",
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "root_string_empty_chunk_released",
+      "description": "Typing into a blank string exits empty chunk mode and restores delimiter controls.",
+      "random": 0,
+      "actions": [
+        {
+          "type": "openPromptsWindow"
+        },
+        {
+          "type": "setFirstChunkInput",
+          "value": "a b "
+        }
+      ],
+      "state": {
+        "mixes": [
+          {
+            "type": "chunk",
+            "title": "Empty Then Filled",
+            "text": "",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "orderMode": "canonical",
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            }
+          }
+        ]
+      }
+    },
+    {
       "id": "root_string_dropout",
       "description": "Root-level strings support dropout mode and remove random chunks to the limit.",
       "random": 0,
@@ -762,6 +863,54 @@
               "mode": "whitespace",
               "size": 1
             }
+          }
+        ]
+      }
+    },
+    {
+      "id": "empty_chunk_mix_skip",
+      "description": "An empty chunk child can intentionally skip a slot during mix interleave.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Empty Skip Mix",
+            "limit": 1000,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "orderMode": "canonical",
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "orderMode": "canonical",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "x ",
+                "limit": 1000,
+                "exact": true,
+                "singlePass": true,
+                "orderMode": "canonical",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
           }
         ]
       }
@@ -1717,7 +1866,7 @@
                 "limit": 1000,
                 "exact": true,
                 "singlePass": true,
-                "randomize": true,
+                "orderMode": "full-randomize",
                 "delimiter": {
                   "mode": "whitespace",
                   "size": 1
@@ -1910,7 +2059,7 @@
     },
     {
       "id": "variable_random_mix_consistent",
-      "description": "Variables targeting randomized mixes copy the same mixed chunk order.",
+      "description": "Variables targeting randomized mixes evaluate like in-place submix copies.",
       "randomSequence": [0, 0, 0, 0.99, 0.99, 0.99],
       "state": {
         "mixes": [

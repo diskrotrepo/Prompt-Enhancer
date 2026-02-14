@@ -101,6 +101,11 @@ describe('Chunking + mixing engine', () => {
     expect(mixed.join('')).toBe('a1 b1 a2 b2 a3 b1 ');
   });
 
+  test('mixChunkLists keeps empty chunks so lists can intentionally skip slots', () => {
+    const mixed = mixChunkLists([['', 'a '], ['x ', 'x ']], 100, false, false, true, 'largest');
+    expect(mixed.join('')).toBe('x a x ');
+  });
+
   test('dropout removes random chunks until output is under the limit', () => {
     const orig = Math.random;
     Math.random = jest.fn().mockReturnValue(0);

@@ -42,10 +42,11 @@ negatives remain aligned with positives.
 
 ### Order Resolution Note
 
-Order modes now resolve by shuffling list copies at generation time (see
-`resolveListOrder` and `resolveStackOrders`). Index-based order arrays are still
-supported for explicit mappings in `buildVersions`, but avoid reapplying the
-same base order twice—pass ordered lists or an order array, not both.
+Mix and string boxes use an **Order** dropdown instead of a randomize toggle.
+Mix modes are **Canonical order**, **Randomize interleave**, and **Full
+randomize**. String modes are **Canonical order** and **Full randomize**.
+Canonical keeps deterministic order, Randomize interleave shuffles source-list
+order each cycle, and Full randomize shuffles the final chunk list.
 
 ### Delimiter Controls
 
@@ -59,6 +60,10 @@ recombination is a straight concatenation pass (no new delimiters inserted).
 
 Custom delimiter modes now include Match All (full-string delimiter; legacy
 `custom` maps here) and Match Any (split on any character in the custom field).
+
+Blank strings enter an **Empty chunk** lock mode: delimiter controls display
+`empty-chunk` and are disabled, and generation emits one empty chunk (`['']`).
+Once text is entered, controls unlock and delimiter settings resume normally.
 
 Preset items are stored as strings only. Legacy array formats are no longer
 normalized during load or import; update data sources to provide string items.

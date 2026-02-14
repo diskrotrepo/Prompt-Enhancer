@@ -22,7 +22,13 @@
     },
     {
       "id": "random_mix_order",
-      "output": "b c a "
+      "output": "b c a ",
+      "mixOrderMode": "randomize-interleave"
+    },
+    {
+      "id": "mix_full_randomize_order",
+      "output": "b1 a2 b2 a1 ",
+      "mixOrderMode": "full-randomize"
     },
     {
       "id": "exact_length_trim",
@@ -49,7 +55,7 @@
     },
     {
       "id": "fit_smallest_empty_child",
-      "output": "",
+      "output": "a ",
       "lengthMode": "fit-smallest"
     },
     {
@@ -84,10 +90,29 @@
       "chunkOutput": "a b "
     },
     {
+      "id": "root_string_empty_chunk",
+      "output": "",
+      "chunkOutput": "",
+      "chunkDelimiterMode": "empty-chunk",
+      "chunkDelimiterDisabled": true
+    },
+    {
+      "id": "root_string_empty_chunk_released",
+      "output": "",
+      "chunkOutput": "a b ",
+      "chunkDelimiterMode": "whitespace",
+      "chunkDelimiterDisabled": false
+    },
+    {
       "id": "root_string_dropout",
       "output": "",
       "chunkOutput": "c x y ",
       "chunkLengthMode": "dropout"
+    },
+    {
+      "id": "empty_chunk_mix_skip",
+      "output": "x ",
+      "mixOrderMode": "canonical"
     },
     {
       "id": "variable_parent_filtered",
@@ -173,7 +198,8 @@
     },
     {
       "id": "random_chunk_order",
-      "output": "b c a "
+      "output": "b c a ",
+      "chunkOrderMode": "full-randomize"
     },
     {
       "id": "rechunk_no_random",
@@ -193,7 +219,7 @@
     },
     {
       "id": "variable_random_mix_consistent",
-      "output": "x x a a y y b b z z c c "
+      "output": "x a a x y b b y z c c z "
     },
     {
       "id": "copy_output_behavior",

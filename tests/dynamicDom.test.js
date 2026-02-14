@@ -63,4 +63,28 @@ describe('Dynamic mix DOM', () => {
     expect(mixMode?.value).toBe('fit-smallest');
     expect(chunkMode?.value).toBe('exact-once');
   });
+
+  test('blank chunk input enters empty chunk mode and locks delimiter controls', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    main.applyMixState({ mixes: [{ type: 'chunk', text: '' }] }, root);
+    const chunkBox = root.querySelector('.chunk-box');
+    const delimiter = chunkBox?.querySelector('.delimiter-select');
+    const size = chunkBox?.querySelector('.delimiter-size');
+    const firstChunk = chunkBox?.querySelector('.first-chunk-select');
+    expect(delimiter?.value).toBe('empty-chunk');
+    expect(delimiter?.disabled).toBe(true);
+    expect(size?.disabled).toBe(true);
+    expect(firstChunk?.disabled).toBe(true);
+  });
+
+  test('non-empty chunk input keeps delimiter controls active', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    main.applyMixState({ mixes: [{ type: 'chunk', text: 'a b ' }] }, root);
+    const chunkBox = root.querySelector('.chunk-box');
+    const delimiter = chunkBox?.querySelector('.delimiter-select');
+    expect(delimiter?.disabled).toBe(false);
+    expect(delimiter?.value).toBe('whitespace');
+  });
 });
