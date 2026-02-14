@@ -244,6 +244,43 @@ describe('Mix state roundtrip', () => {
     expect(chunkOrder?.value).toBe('full-randomize');
   });
 
+  test('collapsed state roundtrips for mixes and strings', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    main.applyMixState({
+      mixes: [
+        {
+          type: 'mix',
+          title: 'Collapsed Mix',
+          collapsed: true,
+          preserve: true,
+          children: [
+            { type: 'chunk', title: 'Open Child', text: 'a ' }
+          ]
+        },
+        {
+          type: 'chunk',
+          title: 'Collapsed String',
+          text: 'x ',
+          collapsed: true
+        }
+      ]
+    }, root);
+    const exported = main.exportMixState(root);
+    expect(exported.mixes[0].collapsed).toBe(true);
+    expect(exported.mixes[1].collapsed).toBe(true);
+    expect(exported.mixes[0].minimized).toBe(true);
+    expect(exported.mixes[1].minimized).toBe(true);
+    expect(exported.mixes[0].maximized).toBe(false);
+    expect(exported.mixes[1].maximized).toBe(false);
+    main.applyMixState(exported, root);
+    const mixBox = root.querySelector('.mix-box');
+    const collapsedString = Array.from(root.querySelectorAll('.chunk-box'))
+      .find(box => box.querySelector('.box-title')?.value === 'Collapsed String');
+    expect(mixBox?.classList.contains('is-collapsed')).toBe(true);
+    expect(collapsedString?.classList.contains('is-collapsed')).toBe(true);
+  });
+
   test('legacy randomize booleans map to order modes on load', () => {
     loadBody();
     const root = document.querySelector('.mix-root');

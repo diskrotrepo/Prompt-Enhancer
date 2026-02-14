@@ -217,6 +217,8 @@ function runSanityCase(testCase) {
   const chunkColorPreset = chunkBox?.dataset?.colorPreset || '';
   const mixCount = root.querySelectorAll('.mix-box').length;
   const variableCount = root.querySelectorAll('.variable-box').length;
+  const mixCollapsed = !!mixBox?.classList?.contains('is-collapsed');
+  const chunkCollapsed = !!chunkBox?.classList?.contains('is-collapsed');
   const hasLoadPresetMenu = !!(
     getActiveWindow()?.querySelector('.prompt-menu-item[data-action="load-preset"]') ||
     window.document.querySelector('.prompt-window:not(.window-template) .prompt-menu-item[data-action="load-preset"]')
@@ -244,6 +246,8 @@ function runSanityCase(testCase) {
     chunkColorPreset,
     mixCount,
     variableCount,
+    mixCollapsed,
+    chunkCollapsed,
     hasLoadPresetMenu,
     mixCopiedText: actionResults.mixCopiedText,
     chunkCopiedText: actionResults.chunkCopiedText,
@@ -340,6 +344,12 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'variableCount')) {
         expect(result.variableCount).toBe(expected.variableCount);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'mixCollapsed')) {
+        expect(result.mixCollapsed).toBe(expected.mixCollapsed);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'chunkCollapsed')) {
+        expect(result.chunkCollapsed).toBe(expected.chunkCollapsed);
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'hasLoadPresetMenu')) {
         expect(result.hasLoadPresetMenu).toBe(expected.hasLoadPresetMenu);

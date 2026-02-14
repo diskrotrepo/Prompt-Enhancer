@@ -1250,6 +1250,9 @@
       orderSelect.value = normalizeMixOrderMode(config.orderMode, !!config.randomize);
     }
     if (firstChunkSelect) firstChunkSelect.value = getFirstChunkBehaviorConfig(config);
+    if (config.collapsed === true || config.minimized === true || config.maximized === false) {
+      box.classList.add('is-collapsed');
+    }
     if (config.colorMode === 'custom' && config.colorValue) {
       setBoxColorMode(box, 'custom', config.colorValue);
     } else if (config.colorMode === 'preset' && config.colorPreset) {
@@ -1343,6 +1346,9 @@
       orderSelect.value = normalizeChunkOrderMode(config.orderMode, !!config.randomize);
     }
     if (firstChunkSelect) firstChunkSelect.value = getFirstChunkBehaviorConfig(config);
+    if (config.collapsed === true || config.minimized === true || config.maximized === false) {
+      box.classList.add('is-collapsed');
+    }
     if (config.colorMode === 'custom' && config.colorValue) {
       setBoxColorMode(box, 'custom', config.colorValue);
     } else if (config.colorMode === 'preset' && config.colorPreset) {
@@ -1392,6 +1398,7 @@
     const delimiter = getDelimiterConfig(box);
     const colorState = getBoxColorState(box);
     const orderMode = readChunkOrderMode(box);
+    const collapsed = box.classList.contains('is-collapsed');
     return {
       type: 'chunk',
       id: box.dataset.boxId,
@@ -1407,6 +1414,9 @@
       colorValue: colorState.value,
       colorPreset: colorState.preset,
       orderMode,
+      collapsed,
+      minimized: collapsed,
+      maximized: !collapsed,
       randomize: orderMode === ORDER_MODES.FULL,
       delimiter: {
         mode: delimiter.mode,
@@ -1434,6 +1444,7 @@
     const preserve = sizeSelect?.value === 'preserve';
     const colorState = getBoxColorState(box);
     const orderMode = readMixOrderMode(box);
+    const collapsed = box.classList.contains('is-collapsed');
     const childContainer = box.querySelector('.mix-children');
     const children = childContainer
       ? Array.from(childContainer.children)
@@ -1463,6 +1474,9 @@
       colorPreset: colorState.preset,
       preserve,
       orderMode,
+      collapsed,
+      minimized: collapsed,
+      maximized: !collapsed,
       randomize: orderMode === ORDER_MODES.INTERLEAVE,
       delimiter: {
         mode: delimiter.mode,

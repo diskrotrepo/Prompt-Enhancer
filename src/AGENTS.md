@@ -139,6 +139,13 @@ Prompt menu **Load Preset** populates from `src/presets/index.js` via
 `state` objects (plus optional `name/label/file`) so presets work in direct
 file usage without network fetches.
 
+### Box Collapse State
+
+Mix and String collapse UI state is serialized (`collapsed`, plus compatibility
+aliases `minimized`/`maximized`) and should roundtrip through
+`applyMixState`/`exportMixState`. Keep this behavior intact when changing box
+templates or collapse button wiring.
+
 ## Testing
 
 Run the full suite with `npm test` whenever you modify code. Expand coverage whenever a bug is fixed or a new feature is added.

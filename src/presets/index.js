@@ -1,11 +1,11 @@
 // Preset catalog for local/file usage.
 // Add entries as { name, file, state }.
 window.PromptEnhancerPresetCatalog = {
-  presets: [
+  "presets": [
     {
-      name: 'yolkhead lyrics processor',
-      file: 'yolkhead lyrics processor.json',
-      state: {
+      "name": "yolkhead lyrics processor",
+      "file": "yolkhead lyrics processor.json",
+      "state": {
         "mixes": [
           {
             "type": "mix",
@@ -23,6 +23,9 @@ window.PromptEnhancerPresetCatalog = {
             "colorPreset": "",
             "preserve": true,
             "orderMode": "canonical",
+            "collapsed": false,
+            "minimized": false,
+            "maximized": true,
             "randomize": false,
             "delimiter": {
               "mode": "whitespace",
@@ -45,6 +48,9 @@ window.PromptEnhancerPresetCatalog = {
                 "colorValue": "#7e82f7",
                 "colorPreset": "",
                 "orderMode": "canonical",
+                "collapsed": false,
+                "minimized": false,
+                "maximized": true,
                 "randomize": false,
                 "delimiter": {
                   "mode": "whitespace",
@@ -74,6 +80,9 @@ window.PromptEnhancerPresetCatalog = {
             "colorPreset": "",
             "preserve": true,
             "orderMode": "full-randomize",
+            "collapsed": true,
+            "minimized": true,
+            "maximized": false,
             "randomize": false,
             "delimiter": {
               "mode": "whitespace",
@@ -96,6 +105,9 @@ window.PromptEnhancerPresetCatalog = {
                 "colorValue": "",
                 "colorPreset": "",
                 "orderMode": "canonical",
+                "collapsed": false,
+                "minimized": false,
+                "maximized": true,
                 "randomize": false,
                 "delimiter": {
                   "mode": "whitespace",
@@ -118,6 +130,9 @@ window.PromptEnhancerPresetCatalog = {
                 "colorValue": "",
                 "colorPreset": "",
                 "orderMode": "canonical",
+                "collapsed": true,
+                "minimized": true,
+                "maximized": false,
                 "randomize": false,
                 "delimiter": {
                   "mode": "whitespace",
@@ -140,6 +155,9 @@ window.PromptEnhancerPresetCatalog = {
                 "colorValue": "",
                 "colorPreset": "",
                 "orderMode": "canonical",
+                "collapsed": true,
+                "minimized": true,
+                "maximized": false,
                 "randomize": false,
                 "delimiter": {
                   "mode": "whitespace",
@@ -162,6 +180,9 @@ window.PromptEnhancerPresetCatalog = {
                 "colorValue": "",
                 "colorPreset": "",
                 "orderMode": "canonical",
+                "collapsed": true,
+                "minimized": true,
+                "maximized": false,
                 "randomize": false,
                 "delimiter": {
                   "mode": "whitespace",
@@ -184,6 +205,9 @@ window.PromptEnhancerPresetCatalog = {
                 "colorValue": "",
                 "colorPreset": "",
                 "orderMode": "canonical",
+                "collapsed": true,
+                "minimized": true,
+                "maximized": false,
                 "randomize": false,
                 "delimiter": {
                   "mode": "whitespace",
@@ -206,6 +230,9 @@ window.PromptEnhancerPresetCatalog = {
                 "colorValue": "",
                 "colorPreset": "",
                 "orderMode": "canonical",
+                "collapsed": true,
+                "minimized": true,
+                "maximized": false,
                 "randomize": false,
                 "delimiter": {
                   "mode": "whitespace",
@@ -228,6 +255,9 @@ window.PromptEnhancerPresetCatalog = {
                 "colorValue": "",
                 "colorPreset": "",
                 "orderMode": "canonical",
+                "collapsed": true,
+                "minimized": true,
+                "maximized": false,
                 "randomize": false,
                 "delimiter": {
                   "mode": "whitespace",

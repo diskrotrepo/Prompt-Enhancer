@@ -257,6 +257,12 @@
       "colorPreset": ""
     },
     {
+      "id": "collapsed_state_persisted",
+      "output": "a ",
+      "mixCollapsed": true,
+      "chunkCollapsed": true
+    },
+    {
       "id": "prompt_menu_load_preset_item",
       "output": "",
       "hasLoadPresetMenu": true

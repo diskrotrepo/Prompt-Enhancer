@@ -2332,6 +2332,41 @@
       }
     },
     {
+      "id": "collapsed_state_persisted",
+      "description": "Collapsed mix and string boxes should hydrate in collapsed state from saved data.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Collapsed Root Mix",
+            "limit": 6,
+            "lengthMode": "fit-smallest",
+            "collapsed": true,
+            "preserve": true,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "title": "Collapsed Child String",
+                "text": "a ",
+                "limit": 6,
+                "lengthMode": "exact-once",
+                "collapsed": true,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "prompt_menu_load_preset_item",
       "description": "Prompt menu includes a Load Preset submenu entry.",
       "random": 0,
