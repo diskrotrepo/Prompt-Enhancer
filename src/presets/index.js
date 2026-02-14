@@ -270,6 +270,154 @@ window.PromptEnhancerPresetCatalog = {
         ],
         "colorPresets": []
       }
+    },
+    {
+      "name": "yolkhead pos_neg example",
+      "file": "yolkhead pos_neg example.json",
+      "state": {
+        "mixes": [
+          {
+            "type": "chunk",
+            "id": "chunk-5",
+            "title": "Prompt",
+            "text": "A night sky Cassette smeared into tomorrow, An loop of a decomposing electric guitar and voice tape\nis juxtaposed over\nplugged in beside an a prepared piano dyad\nevanescent flux of industrial and a swirling ambience background sounds, Time continues, of industrial noise\nThe hands drying in the resulting combination\nis an irrigation from this dewdrop unsteady totter of irregular pond, A knowing smile meter\nand pitch intervals in passing conversation, Cat dependent\non chance decay ridges along a pink over time, As segments orange ceiling, sometimes the of the tape loop volume scrapes these white deteriorate, sputtering and wheezing teeth, sometimes, it descends replaces\nthe original recorded into silence, but it frequencies\nas the system is always present, A slowly collapses in on barbebìa, ",
+            "limit": 1000,
+            "lengthMode": "exact-once",
+            "exact": true,
+            "singlePass": true,
+            "firstChunkBehavior": "between",
+            "color": "1",
+            "colorMode": "custom",
+            "colorValue": "#79c0ec",
+            "colorPreset": "",
+            "orderMode": "canonical",
+            "collapsed": true,
+            "minimized": true,
+            "maximized": false,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "custom": "",
+              "size": 4
+            }
+          },
+          {
+            "type": "mix",
+            "id": "mix-6",
+            "title": "Positive Conditioning",
+            "limit": 1000,
+            "lengthMode": "dropout",
+            "exact": true,
+            "singlePass": false,
+            "firstChunkBehavior": "size",
+            "color": "5",
+            "colorMode": "custom",
+            "colorValue": "#b6ce5f",
+            "colorPreset": "",
+            "preserve": true,
+            "orderMode": "randomize-interleave",
+            "collapsed": true,
+            "minimized": true,
+            "maximized": false,
+            "randomize": true,
+            "delimiter": {
+              "mode": "whitespace",
+              "custom": "",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "variable",
+                "id": "var-8",
+                "targetId": "chunk-5"
+              },
+              {
+                "type": "chunk",
+                "id": "chunk-11",
+                "title": "general good terms",
+                "text": "good, best, great, wonderful, amazing, incredible, excellent, perfect, compelling, exceptional, exemplary, first-rate, masterful, foremost, gratifying, impressive, meaningful, outstanding, remarkable, standout, superior, top-notch, wonderful, enjoyable, fulfilling, insightful, refreshing, satisfying, solid, worthwhile, pleasing, high-quality",
+                "limit": 1000,
+                "lengthMode": "exact-once",
+                "exact": true,
+                "singlePass": true,
+                "firstChunkBehavior": "size",
+                "color": "6",
+                "colorMode": "custom",
+                "colorValue": "#8cfb04",
+                "colorPreset": "",
+                "orderMode": "full-randomize",
+                "collapsed": true,
+                "minimized": true,
+                "maximized": false,
+                "randomize": true,
+                "delimiter": {
+                  "mode": "comma",
+                  "custom": "",
+                  "size": 1
+                }
+              }
+            ]
+          },
+          {
+            "type": "mix",
+            "id": "mix-7",
+            "title": "Negative Conditioning",
+            "limit": 1000,
+            "lengthMode": "dropout",
+            "exact": true,
+            "singlePass": false,
+            "firstChunkBehavior": "size",
+            "color": "2",
+            "colorMode": "custom",
+            "colorValue": "#e16666",
+            "colorPreset": "",
+            "preserve": true,
+            "orderMode": "randomize-interleave",
+            "collapsed": true,
+            "minimized": true,
+            "maximized": false,
+            "randomize": true,
+            "delimiter": {
+              "mode": "whitespace",
+              "custom": "",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "variable",
+                "id": "var-9",
+                "targetId": "chunk-5"
+              },
+              {
+                "type": "chunk",
+                "id": "chunk-10",
+                "title": "general bad terms",
+                "text": "bad, worst, awful, terrible, horrible, unconvincing, mediocre, disappointing, displeasing, uninspiring, forgettable, lackluster, subpar, unenjoyable, shallow, stale, second-rate, disappointing, unimpressive, mundane, low-quality, unenjoyable, pointless, boring, tedious, drab, dull, vapid, unremarkable, unfulfilling, unsatisfying, uninsightful, ungratifying, unmasterful, uncompelling, unfavorable, poor, dreadful, abysmal, dismal, rubbish, unsatisfactory, atrocious, lousy",
+                "limit": 1000,
+                "lengthMode": "exact-once",
+                "exact": true,
+                "singlePass": true,
+                "firstChunkBehavior": "size",
+                "color": "3",
+                "colorMode": "custom",
+                "colorValue": "#ff4d00",
+                "colorPreset": "",
+                "orderMode": "full-randomize",
+                "collapsed": true,
+                "minimized": true,
+                "maximized": false,
+                "randomize": true,
+                "delimiter": {
+                  "mode": "comma",
+                  "custom": "",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ],
+        "colorPresets": []
+      }
     }
   ]
 };
