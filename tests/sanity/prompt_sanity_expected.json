@@ -50,7 +50,12 @@
     },
     {
       "id": "dropout_mix",
-      "output": "y c x ",
+      "output": "x b y ",
+      "lengthMode": "dropout"
+    },
+    {
+      "id": "dropout_mix_short_lists",
+      "output": "b a b ",
       "lengthMode": "dropout"
     },
     {
@@ -106,7 +111,13 @@
     {
       "id": "root_string_dropout",
       "output": "",
-      "chunkOutput": "c x y ",
+      "chunkOutput": "b c x ",
+      "chunkLengthMode": "dropout"
+    },
+    {
+      "id": "root_string_dropout_short_cycle",
+      "output": "",
+      "chunkOutput": "b a b ",
       "chunkLengthMode": "dropout"
     },
     {

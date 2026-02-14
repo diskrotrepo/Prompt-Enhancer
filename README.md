@@ -97,6 +97,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Blank strings emit one empty chunk and lock delimiter controls** — `root_string_empty_chunk`
 - **Typing into a blank string restores normal delimiter controls** — `root_string_empty_chunk_released`
 - **Root-level strings support dropout mode** — `root_string_dropout`
+- **Root-level short strings still cycle before dropout removal** — `root_string_dropout_short_cycle`
 
 #### Delimiter modes
 
@@ -133,8 +134,9 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Delete Final Chunk** — `delete_final_chunk`
 - **Fit to Smallest (mix)** — `fit_smallest_mix`
 - **Fit to Largest (mix)** — `fit_largest_mix`
-- **Dropout (full fit-largest, then random chunk removal to limit)** — `dropout_mix`
-- **Dropout on strings (full one-pass chunk output, then random chunk removal)** — `root_string_dropout`
+- **Dropout (cycle past limit, then random chunk removal to limit)** — `dropout_mix`
+- **Dropout on short mixes still repeats before removal** — `dropout_mix_short_lists`
+- **Dropout on strings (cycle past limit, then random chunk removal)** — `root_string_dropout`
 - **Fit to Smallest keeps blank-string children (empty chunk slots)** — `fit_smallest_empty_child`
 - **Fit to Smallest halts when a variable resolves empty** — `fit_smallest_empty_variable`
 - **Exactly Once (chunk single-pass behavior)** — `exact_once_length`

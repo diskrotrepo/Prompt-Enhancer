@@ -784,8 +784,47 @@
     return out;
   }
 
-  // Dropout mode starts from a full fit-largest pass, then removes random chunks
-  // until the concatenated output length is at or under the configured limit.
+  function readMaxChunkLength(chunks) {
+    if (!Array.isArray(chunks) || !chunks.length) return 0;
+    return chunks.reduce((max, chunk) => {
+      if (typeof chunk !== 'string') return max;
+      return Math.max(max, chunk.length);
+    }, 0);
+  }
+
+  function readMaxChunkLengthFromLists(lists) {
+    if (!Array.isArray(lists) || !lists.length) return 0;
+    return lists.reduce((max, list) => Math.max(max, readMaxChunkLength(list)), 0);
+  }
+
+  // Build a repeated cycle using full chunks only. This mirrors "Delete Final Chunk"
+  // behavior (no trimming) and is used to seed dropout before random removals.
+  function buildCycleWithinLimit(chunks, limit) {
+    const source = Array.isArray(chunks) ? chunks.filter(chunk => typeof chunk === 'string') : [];
+    const max = Math.max(0, parseInt(limit, 10) || 0);
+    if (!source.length || !max) return [];
+    const out = [];
+    let length = 0;
+    let grew = false;
+    while (length < max) {
+      for (const chunk of source) {
+        const remaining = max - length;
+        if (chunk.length <= remaining) {
+          out.push(chunk);
+          length += chunk.length;
+          if (chunk.length > 0) grew = true;
+        } else {
+          return out;
+        }
+        if (length >= max) return out;
+      }
+      if (!grew) break;
+    }
+    return out;
+  }
+
+  // Dropout removes random full chunks until the concatenated output length
+  // is at or under the configured limit.
   function dropChunksToLimit(chunks, limit) {
     const source = Array.isArray(chunks) ? chunks.filter(chunk => typeof chunk === 'string' && chunk.length > 0) : [];
     const max = Math.max(0, parseInt(limit, 10) || 0);
@@ -839,22 +878,35 @@
     const lengthMode = readChunkLengthMode(boxEl);
     const dropoutMode = lengthMode === LENGTH_MODES.DROPOUT;
     const exact = readExactMode(boxEl);
-    const singlePass = dropoutMode ? true : readSinglePassMode(boxEl);
+    const singlePass = readSinglePassMode(boxEl);
     const orderMode = readChunkOrderMode(boxEl);
     const randomize = orderMode === ORDER_MODES.FULL;
     const firstChunkBehavior = readFirstChunkBehavior(boxEl);
     const delimiterConfig = getDelimiterConfig(boxEl);
-    const chunkLimit = dropoutMode ? Number.POSITIVE_INFINITY : limit;
-    const chunkResult = buildChunkList(
-      rawInput,
-      delimiterConfig,
-      chunkLimit,
-      exact,
-      randomize,
-      singlePass,
-      firstChunkBehavior
-    );
-    const result = dropoutMode ? dropChunksToLimit(chunkResult, limit) : chunkResult;
+    const result = dropoutMode
+      ? (() => {
+          const fullCycle = buildChunkList(
+            rawInput,
+            delimiterConfig,
+            Number.POSITIVE_INFINITY,
+            false,
+            randomize,
+            true,
+            firstChunkBehavior
+          );
+          const overrunLimit = limit + Math.max(1, readMaxChunkLength(fullCycle));
+          const seeded = buildCycleWithinLimit(fullCycle, overrunLimit);
+          return dropChunksToLimit(seeded, limit);
+        })()
+      : buildChunkList(
+          rawInput,
+          delimiterConfig,
+          limit,
+          exact,
+          randomize,
+          singlePass,
+          firstChunkBehavior
+        );
     if (outputEl) outputEl.textContent = result.join('');
     if (cache && cacheKey) cache.set(cacheKey, result.slice());
     return result;
@@ -890,8 +942,8 @@
     const lengthMode = readMixLengthMode(boxEl);
     const dropoutMode = lengthMode === LENGTH_MODES.DROPOUT;
     const exact = readExactMode(boxEl);
-    const singlePass = dropoutMode ? true : readSinglePassMode(boxEl);
-    const singlePassFitMode = dropoutMode ? SINGLE_PASS_FIT_MODES.LARGEST : readSinglePassFitMode(boxEl);
+    const singlePass = readSinglePassMode(boxEl);
+    const singlePassFitMode = readSinglePassFitMode(boxEl);
     const orderMode = readMixOrderMode(boxEl);
     const interleaveRandomize = orderMode === ORDER_MODES.INTERLEAVE;
     const fullRandomize = orderMode === ORDER_MODES.FULL;
@@ -927,7 +979,19 @@
       return evaluateChunkBox(child, { root, visiting, cache });
     });
 
-    const mixedBase = mixChunkLists(lists, limit, exact, interleaveRandomize, singlePass, singlePassFitMode);
+    const mixLimit = dropoutMode
+      ? limit + Math.max(1, readMaxChunkLengthFromLists(lists))
+      : limit;
+    const mixExact = dropoutMode ? false : exact;
+    const mixSinglePass = dropoutMode ? false : singlePass;
+    const mixedBase = mixChunkLists(
+      lists,
+      mixLimit,
+      mixExact,
+      interleaveRandomize,
+      mixSinglePass,
+      singlePassFitMode
+    );
     const mixedOrdered = fullRandomize ? shuffle(mixedBase.slice()) : mixedBase;
     const mixed = dropoutMode ? dropChunksToLimit(mixedOrdered, limit) : mixedOrdered;
     const outputString = mixed.join('');

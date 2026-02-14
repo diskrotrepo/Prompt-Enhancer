@@ -77,12 +77,13 @@ modifiers when multiple stacks are active.
 Mix length modes include **Split Final Chunk**, **Delete Final Chunk**, **Fit to
 Smallest**, **Fit to Largest**, and **Dropout**. Fit to Smallest stops as soon
 as any child list runs out; Fit to Largest repeats shorter child lists until the
-longest child list is exhausted. Dropout first builds a full Fit to Largest pass
-and then removes random chunks until total output is at or below the limit.
+longest child list is exhausted. Dropout now follows normal repeated generation
+first (cycling past the limit with full chunks) and then removes random chunks
+until total output is at or below the limit.
 Only the fit modes disable the length limit input for mixes because they run a
 single constrained pass. Chunk boxes support **Exactly Once** and **Dropout**:
-Exactly Once ignores the limit and emits one pass, while Dropout uses the limit
-to randomly remove chunks after building a full one-pass chunk list.
+Exactly Once ignores the limit and emits one pass, while Dropout cycles the
+string chunks toward the limit before random chunk removal.
 
 ### First Chunk Behavior
 

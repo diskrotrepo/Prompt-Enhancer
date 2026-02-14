@@ -35,6 +35,28 @@ function runGeneratedOutput(state, randomSequence = [0]) {
   return root.querySelector('.mix-box .mix-output-text')?.textContent || '';
 }
 
+function runGeneratedChunkOutput(state, randomSequence = [0]) {
+  loadBody();
+  const root = document.querySelector('.mix-root');
+  main.applyMixState(state, root);
+  const originalRandom = Math.random;
+  let randomIndex = 0;
+  Math.random = () => {
+    if (randomIndex < randomSequence.length) {
+      const next = randomSequence[randomIndex];
+      randomIndex += 1;
+      return next;
+    }
+    return randomSequence[randomSequence.length - 1] || 0;
+  };
+  try {
+    main.generate(root);
+  } finally {
+    Math.random = originalRandom;
+  }
+  return root.querySelector('.chunk-box .chunk-output-text')?.textContent || '';
+}
+
 describe('Mix state roundtrip', () => {
   test('exportMixState and applyMixState preserve structure', () => {
     loadBody();
@@ -130,6 +152,62 @@ describe('Mix state roundtrip', () => {
     expect(exported.mixes[0].lengthMode).toBe('dropout');
     main.applyMixState(exported, root);
     expect(root.querySelector('.chunk-box .length-mode')?.value).toBe('dropout');
+  });
+
+  test('string dropout repeats short cycles before random removal', () => {
+    const output = runGeneratedChunkOutput(
+      {
+        mixes: [
+          {
+            type: 'chunk',
+            title: 'Short Dropout String',
+            text: 'a b ',
+            limit: 7,
+            lengthMode: 'dropout',
+            orderMode: 'canonical',
+            delimiter: { mode: 'whitespace', size: 1 }
+          }
+        ]
+      },
+      [0]
+    );
+    expect(output).toBe('b a b ');
+  });
+
+  test('mix dropout repeats short lists before random removal', () => {
+    const output = runGeneratedOutput(
+      {
+        mixes: [
+          {
+            type: 'mix',
+            title: 'Short Dropout Mix',
+            limit: 7,
+            lengthMode: 'dropout',
+            preserve: true,
+            orderMode: 'canonical',
+            delimiter: { mode: 'whitespace', size: 1 },
+            children: [
+              {
+                type: 'chunk',
+                text: 'a ',
+                lengthMode: 'exact-once',
+                orderMode: 'canonical',
+                delimiter: { mode: 'whitespace', size: 1 }
+              },
+              {
+                type: 'chunk',
+                text: 'b ',
+                lengthMode: 'exact-once',
+                orderMode: 'canonical',
+                delimiter: { mode: 'whitespace', size: 1 }
+              }
+            ]
+          }
+        ]
+      },
+      [0]
+    );
+    expect(output).toBe('b a b ');
   });
 
   test('order mode roundtrips for mixes and strings', () => {
