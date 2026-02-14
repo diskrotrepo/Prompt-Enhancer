@@ -768,6 +768,60 @@
       }
     },
     {
+      "id": "remove_variable_keeps_parent_mix",
+      "description": "Removing a variable should delete only that variable, not its parent mix.",
+      "random": 0,
+      "actions": [
+        {
+          "type": "openPromptsWindow"
+        },
+        {
+          "type": "removeFirstVariable"
+        },
+        {
+          "type": "generate"
+        }
+      ],
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "id": "mix-parent-remove-test",
+            "title": "Parent Remove Test",
+            "limit": 20,
+            "exact": true,
+            "singlePass": true,
+            "preserve": true,
+            "randomize": false,
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "id": "chunk-remove-test",
+                "text": "a ",
+                "limit": 20,
+                "exact": true,
+                "singlePass": true,
+                "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "variable",
+                "id": "var-remove-test",
+                "targetId": "chunk-remove-test"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "delimiter_whitespace",
       "description": "Whitespace delimiter splits into word chunks and interleaves with another list.",
       "random": 0,

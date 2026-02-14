@@ -84,6 +84,12 @@
       "variableTitle": "Variable"
     },
     {
+      "id": "remove_variable_keeps_parent_mix",
+      "output": "a ",
+      "mixCount": 1,
+      "variableCount": 0
+    },
+    {
       "id": "delimiter_whitespace",
       "output": "a x b x c x "
     },

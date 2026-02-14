@@ -137,6 +137,23 @@ function runSanityCase(testCase) {
       const btn = root?.querySelector('.chunk-box .copy-input');
       if (btn) btn.click();
       actionResults.chunkCopiedText = clipboardState.last;
+      return;
+    }
+    if (type === 'removeFirstVariable') {
+      // Exercise delegated remove handlers through the real UI path.
+      const btn = root?.querySelector('.variable-box .remove-box');
+      if (btn) btn.click();
+      return;
+    }
+    if (type === 'generate') {
+      const btn =
+        root?.closest('.app-window')?.querySelector('.generate-button') ||
+        window.document.querySelector('.generate-button');
+      if (btn) {
+        btn.click();
+      } else if (root) {
+        window.PromptMixer.generate(root);
+      }
     }
   };
 
@@ -180,6 +197,8 @@ function runSanityCase(testCase) {
   const chunkColorMode = chunkBox?.dataset?.colorMode || '';
   const chunkColorValue = chunkBox?.dataset?.colorValue || '';
   const chunkColorPreset = chunkBox?.dataset?.colorPreset || '';
+  const mixCount = root.querySelectorAll('.mix-box').length;
+  const variableCount = root.querySelectorAll('.variable-box').length;
   const result = {
     id: testCase.id,
     output,
@@ -196,6 +215,8 @@ function runSanityCase(testCase) {
     chunkColorMode,
     chunkColorValue,
     chunkColorPreset,
+    mixCount,
+    variableCount,
     mixCopiedText: actionResults.mixCopiedText,
     chunkCopiedText: actionResults.chunkCopiedText,
     promptCount,
@@ -270,6 +291,12 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'chunkColorPreset')) {
         expect(result.chunkColorPreset).toBe(expected.chunkColorPreset);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'mixCount')) {
+        expect(result.mixCount).toBe(expected.mixCount);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'variableCount')) {
+        expect(result.variableCount).toBe(expected.variableCount);
       }
     });
   });

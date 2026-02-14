@@ -143,6 +143,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 
 - **Variable references forward chunks** — `variable_reference`
 - **Variable options exclude ancestor mixes** — `variable_parent_filtered`
+- **Removing a variable does not remove its parent mix** — `remove_variable_keeps_parent_mix`
 - **Exactly Once variables** — `exact_once_variable_mix`
 - **Variable cycle guard** — `variable_cycle_guard`
 - **Randomized string variable stays consistent** — `variable_random_chunk_consistent`

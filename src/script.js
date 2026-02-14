@@ -1767,7 +1767,10 @@
       }
 
       if (btn.classList.contains('remove-box')) {
-        const wrapper = btn.closest('.mix-wrapper, .chunk-wrapper, .window-shell');
+        // Resolve the wrapper from the nearest prompt box first so nested variable deletes
+        // cannot climb to an ancestor mix wrapper.
+        const box = btn.closest('.variable-box, .chunk-box, .mix-box');
+        const wrapper = box?.closest('.variable-wrapper, .chunk-wrapper, .mix-wrapper');
         if (!wrapper) return;
         wrapper.remove();
         updateEmptyState(root);
