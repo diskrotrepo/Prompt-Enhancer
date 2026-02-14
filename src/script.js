@@ -172,6 +172,62 @@
     return /\.json$/i.test(fileName) ? fileName : `${fileName}.json`;
   }
 
+  const PRESET_CATALOG_KEYS = ['PromptEnhancerPresetCatalog', 'PromptEnhancerPresets'];
+
+  function clonePresetState(value) {
+    if (!value || typeof value !== 'object') return null;
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch (err) {
+      return null;
+    }
+  }
+
+  // Preset catalog accepts { presets: [...] } or direct array entries.
+  // Entries can be { name/label, state } or raw state objects.
+  function normalizePresetCatalog(data) {
+    const source = Array.isArray(data) ? data : Array.isArray(data?.presets) ? data.presets : [];
+    return source
+      .map((entry, index) => {
+        const hasExplicitState =
+          entry &&
+          typeof entry === 'object' &&
+          (Object.prototype.hasOwnProperty.call(entry, 'state') ||
+            Object.prototype.hasOwnProperty.call(entry, 'data') ||
+            Object.prototype.hasOwnProperty.call(entry, 'preset'));
+        const stateSource = hasExplicitState ? (entry.state || entry.data || entry.preset) : entry;
+        const state = clonePresetState(stateSource);
+        if (!state || typeof state !== 'object') return null;
+        const labelSource =
+          (entry && typeof entry === 'object' && (entry.label || entry.name || entry.id || entry.file)) ||
+          `Preset ${index + 1}`;
+        const label = typeof labelSource === 'string' ? labelSource.trim() : `Preset ${index + 1}`;
+        const idSource = entry && typeof entry === 'object' && entry.id ? String(entry.id).trim() : '';
+        const id = idSource || `preset-${index + 1}`;
+        const fileName = entry && typeof entry === 'object' && typeof entry.file === 'string'
+          ? entry.file.trim()
+          : `${label}.json`;
+        return {
+          id,
+          label: label || `Preset ${index + 1}`,
+          file: ensureJsonExtension(fileName || `preset-${index + 1}.json`),
+          state
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function readPresetCatalogEntries() {
+    if (typeof window === 'undefined') return [];
+    for (const key of PRESET_CATALOG_KEYS) {
+      const raw = window[key];
+      if (!raw) continue;
+      const entries = normalizePresetCatalog(raw);
+      if (entries.length) return entries;
+    }
+    return [];
+  }
+
   function shuffle(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -2336,10 +2392,90 @@
       reader.readAsText(file);
     };
 
+    const presetItem = scope.querySelector('.prompt-menu-item[data-action="load-preset"]');
+    const presetSubmenu = scope.querySelector('.prompt-menu-submenu');
+    let presetRequestToken = 0;
+    let currentPresetEntries = [];
+
+    const renderPresetStatus = label => {
+      if (!presetSubmenu) return;
+      presetSubmenu.innerHTML = '';
+      currentPresetEntries = [];
+      const row = document.createElement('div');
+      row.className = 'prompt-menu-subitem disabled';
+      row.textContent = label;
+      presetSubmenu.appendChild(row);
+    };
+
+    const renderPresetEntries = entries => {
+      if (!presetSubmenu) return;
+      presetSubmenu.innerHTML = '';
+      currentPresetEntries = Array.isArray(entries) ? entries.slice() : [];
+      if (!entries.length) {
+        renderPresetStatus('No presets in catalog');
+        return;
+      }
+      entries.forEach((entry, index) => {
+        const row = document.createElement('div');
+        row.className = 'prompt-menu-subitem';
+        row.dataset.action = 'load-preset-file';
+        row.dataset.presetIndex = String(index);
+        row.dataset.presetFile = entry.file;
+        row.textContent = entry.label;
+        presetSubmenu.appendChild(row);
+      });
+    };
+
+    const refreshPresetEntries = async () => {
+      if (!presetSubmenu) return;
+      renderPresetStatus('Loading presets...');
+      const token = ++presetRequestToken;
+      try {
+        const entries = readPresetCatalogEntries();
+        if (token !== presetRequestToken) return;
+        if (!entries.length) {
+          renderPresetStatus('No presets in catalog');
+          return;
+        }
+        renderPresetEntries(entries);
+      } catch (err) {
+        if (token !== presetRequestToken) return;
+        renderPresetStatus('Preset catalog load failed');
+      }
+    };
+
+    const loadPresetFromMenuItem = async item => {
+      if (!item) return false;
+      const presetIndex = parseInt(item.dataset.presetIndex || '', 10);
+      const entry = Number.isFinite(presetIndex) ? currentPresetEntries[presetIndex] : null;
+      if (!entry) return false;
+      const root = scope.querySelector('.mix-root');
+      if (!root) return false;
+      const state = clonePresetState(entry.state);
+      if (!state) {
+        renderPresetStatus('Preset load failed (invalid catalog state)');
+        return false;
+      }
+      applyMixState(state, root);
+      if (entry.file) setFileName(ensureJsonExtension(entry.file));
+      return true;
+    };
+
     const menuToggle = scope.querySelector('.prompt-menu-start');
     const menuDropdown = scope.querySelector('.prompt-menu-dropdown');
     if (menuToggle && menuDropdown && !menuToggle.dataset.bound) {
+      const closePresetMenu = () => {
+        if (!presetItem || !presetSubmenu) return;
+        presetItem.classList.remove('open');
+        presetSubmenu.setAttribute('aria-hidden', 'true');
+      };
+      const openPresetMenu = () => {
+        if (!presetItem || !presetSubmenu) return;
+        presetItem.classList.add('open');
+        presetSubmenu.setAttribute('aria-hidden', 'false');
+      };
       const closeMenu = () => {
+        closePresetMenu();
         menuDropdown.classList.remove('open');
         menuDropdown.setAttribute('aria-hidden', 'true');
         menuToggle.setAttribute('aria-expanded', 'false');
@@ -2361,14 +2497,29 @@
         if (event.target.closest('.prompt-menu')) return;
         closeMenu();
       });
-      // Prompt menu actions mirror visible items (open/save/save as).
-      menuDropdown.addEventListener('click', event => {
+      // Prompt menu actions mirror visible items (open/load preset/save/save as).
+      menuDropdown.addEventListener('click', async event => {
+        const presetRow = event.target.closest('.prompt-menu-subitem[data-action="load-preset-file"]');
+        if (presetRow) {
+          const loaded = await loadPresetFromMenuItem(presetRow);
+          if (loaded) closeMenu();
+          return;
+        }
         const item = event.target.closest('.prompt-menu-item');
         if (!item) return;
         const action = item.dataset.action;
         if (action === 'open') {
           // Open uses the hidden file input.
           loadInput?.click();
+        } else if (action === 'load-preset') {
+          const isOpen = item.classList.contains('open');
+          if (isOpen) {
+            closePresetMenu();
+          } else {
+            openPresetMenu();
+            refreshPresetEntries();
+          }
+          return;
         } else if (action === 'save') {
           // Save exports the current mix state as JSON.
           saveMix();

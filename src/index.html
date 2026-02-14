@@ -73,6 +73,11 @@
                   </button>
                   <div class="prompt-menu-dropdown" role="menu" aria-hidden="true">
                     <div class="prompt-menu-item" data-action="open" role="menuitem" data-help="Load a saved prompt enhancer JSON file." data-help-detail="Open a saved prompt enhancer file. The prompt window title updates to the file name and any saved presets or settings load with it.">Open</div>
+                    <div class="prompt-menu-item has-submenu" data-action="load-preset" role="menuitem" aria-haspopup="true" data-help="Load a preset from the repo presets catalog." data-help-detail="Opens a submenu populated from src/presets/index.js so you can quickly load curated preset states from the repository.">
+                      <span>Load Preset</span>
+                      <span class="prompt-menu-caret" aria-hidden="true">▸</span>
+                      <div class="prompt-menu-submenu" role="menu" aria-hidden="true"></div>
+                    </div>
                     <div class="prompt-menu-item" data-action="save" role="menuitem" data-help="Save using the current file name, or prompt for one if none is set." data-help-detail="Save the current prompt enhancer state. If the window already has a name, it downloads immediately; if not, it will prompt for a name first.">Save</div>
                     <div class="prompt-menu-item" data-action="save-as" role="menuitem" data-help="Choose a new file name and save the current prompt enhancer state." data-help-detail="Always prompt for a new file name, download the JSON under that name (auto-adding .json), and update the window title.">Save As</div>
                   </div>
@@ -410,6 +415,8 @@
   <!-- External script loading order is important -->
   <!-- Load list data files first -->
   <script src="default_list.js"></script>
+  <!-- Load preset catalog (inline preset states) -->
+  <script src="presets/index.js"></script>
   <!-- Then load main application logic -->
   <script src="script.js"></script>
 </body>

@@ -217,6 +217,10 @@ function runSanityCase(testCase) {
   const chunkColorPreset = chunkBox?.dataset?.colorPreset || '';
   const mixCount = root.querySelectorAll('.mix-box').length;
   const variableCount = root.querySelectorAll('.variable-box').length;
+  const hasLoadPresetMenu = !!(
+    getActiveWindow()?.querySelector('.prompt-menu-item[data-action="load-preset"]') ||
+    window.document.querySelector('.prompt-window:not(.window-template) .prompt-menu-item[data-action="load-preset"]')
+  );
   const result = {
     id: testCase.id,
     output,
@@ -240,6 +244,7 @@ function runSanityCase(testCase) {
     chunkColorPreset,
     mixCount,
     variableCount,
+    hasLoadPresetMenu,
     mixCopiedText: actionResults.mixCopiedText,
     chunkCopiedText: actionResults.chunkCopiedText,
     promptCount,
@@ -335,6 +340,9 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'variableCount')) {
         expect(result.variableCount).toBe(expected.variableCount);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasLoadPresetMenu')) {
+        expect(result.hasLoadPresetMenu).toBe(expected.hasLoadPresetMenu);
       }
     });
   });

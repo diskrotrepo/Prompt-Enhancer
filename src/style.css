@@ -1984,6 +1984,57 @@ button {
   user-select: none;
 }
 
+.prompt-menu-item.has-submenu {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.prompt-menu-caret {
+  margin-left: auto;
+  font-size: 0.5rem;
+  opacity: 0.85;
+}
+
+.prompt-menu-submenu {
+  position: absolute;
+  top: -0.4rem;
+  left: calc(100% + 0.25rem);
+  display: none;
+  flex-direction: column;
+  min-width: 190px;
+  padding: 0.4rem;
+  background: linear-gradient(180deg, rgba(220, 222, 228, 0.98), rgba(180, 184, 192, 0.98));
+  border: 1px solid rgba(80, 84, 92, 0.7);
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.35);
+  z-index: 5;
+}
+
+.prompt-menu-item.has-submenu.open .prompt-menu-submenu {
+  display: flex;
+}
+
+.prompt-menu-subitem {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #1f2937;
+  cursor: pointer;
+  user-select: none;
+}
+
+.prompt-menu-subitem:hover {
+  background: rgba(120, 130, 150, 0.25);
+}
+
+.prompt-menu-subitem.disabled {
+  opacity: 0.65;
+  cursor: default;
+  pointer-events: none;
+}
+
 .prompt-menu-item:hover {
   background: rgba(120, 130, 150, 0.25);
 }

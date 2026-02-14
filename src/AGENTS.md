@@ -132,6 +132,13 @@ omits a trailing `.json` extension for cleaner window labels, and Save As
 auto-appends `.json` to download names when users omit it. Save As prompts for
 the bare title (no `.json` shown in the input).
 
+### Preset Menu
+
+Prompt menu **Load Preset** populates from `src/presets/index.js` via
+`window.PromptEnhancerPresetCatalog`. Catalog entries should include inline
+`state` objects (plus optional `name/label/file`) so presets work in direct
+file usage without network fetches.
+
 ## Testing
 
 Run the full suite with `npm test` whenever you modify code. Expand coverage whenever a bug is fixed or a new feature is added.
