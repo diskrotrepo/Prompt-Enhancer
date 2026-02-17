@@ -32,14 +32,6 @@ Text-based toggles that appear alongside icon buttons should sit in a
 separate `.text-button-group` container. This keeps icons clustered for
 the right edge on mobile while text buttons center on their own line.
 
-### Depth Control Note
-
-Depth is always randomized at generation time. There are no depth selectors in
-the UI; depth arrays are computed during `collectInputs` based on ordered stacks
-and base word counts. When adding new modifier stacks, ensure the generation-time
-helpers (`computeDepthCountsFrom`, `buildDepthValues`) receive the new stacks so
-negatives remain aligned with positives.
-
 ### Order Resolution Note
 
 Mix and string boxes use an **Order** dropdown instead of a randomize toggle.
@@ -50,13 +42,12 @@ order each cycle, and Full randomize shuffles the final chunk list.
 
 ### Delimiter Controls
 
-Each list now owns its own delimiter dropdown (e.g., `base-delimiter-select`,
-`pos-delimiter-select`, `neg-delimiter-select`, `divider-delimiter-select`) plus
-optional custom inputs and a chunk size input (`*-delimiter-size`). Use
-`getDelimiterConfigFor`, `parseBaseInput`, `parseListInput`, and
-`collectStackInputs` so new logic respects per-list and per-stack delimiters and
-sizes. Chunking preserves the delimiter at the end of each chunk, and prompt
-recombination is a straight concatenation pass (no new delimiters inserted).
+Each box owns its own delimiter dropdown (`.delimiter-select`) plus optional
+custom input (`.delimiter-custom`) and chunk size input (`.delimiter-size`).
+Use `getDelimiterConfig`, `parseInput`, `buildChunkList`, and `mixChunkLists`
+so new logic respects per-box delimiter modes and sizes. Chunking preserves the
+delimiter at the end of each chunk, and recombination is a straight
+concatenation pass (no new delimiters inserted).
 
 Custom delimiter modes now include Match All (full-string delimiter; legacy
 `custom` maps here) and Match Any (split on any character in the custom field).
@@ -68,22 +59,29 @@ Once text is entered, controls unlock and delimiter settings resume normally.
 Preset items are stored as strings only. Legacy array formats are no longer
 normalized during load or import; update data sources to provide string items.
 
-`computeDepthCounts` now sums words from earlier stacks for both positive and
-negative sections. Random depth calculations therefore consider all preceding
-modifiers when multiple stacks are active.
+### Shared terminology
+
+Use these words consistently in code and docs:
+
+- **String**: a `chunk-box` with raw text input.
+- **Chunk**: one delimiter-preserving text segment.
+- **Chunk list**: ordered array of chunks.
+- **Mix**: a `mix-box` that combines child chunk lists.
+- **Source list**: chunk list before length mode is applied.
+- **Output list**: chunk list after length mode is applied.
 
 ### Length Exactness
 
 Mix length modes include **Split Final Chunk**, **Delete Final Chunk**, **Fit to
 Smallest**, **Fit to Largest**, and **Dropout**. Fit to Smallest stops as soon
 as any child list runs out; Fit to Largest repeats shorter child lists until the
-longest child list is exhausted. Dropout now follows normal repeated generation
-first (cycling past the limit with full chunks) and then removes random chunks
-until total output is at or below the limit.
+longest child list is exhausted. Dropout builds a full one-pass source list
+first, then removes random chunks (with recounts) until total output is at or
+below the limit.
 Only the fit modes disable the length limit input for mixes because they run a
 single constrained pass. Chunk boxes support **Exactly Once** and **Dropout**:
-Exactly Once ignores the limit and emits one pass, while Dropout cycles the
-string chunks toward the limit before random chunk removal.
+Exactly Once ignores the limit and emits one pass, while Dropout builds one full
+pass first and then removes random chunks to fit the limit.
 
 ### First Chunk Behavior
 
@@ -93,15 +91,6 @@ first chunk size, and **Size X, random start location** rotates the prompt to
 start at a random offset before grouping.
 When a mix is set to **Preserve chunks**, the first-chunk select is locked to
 **Size X** and disabled because no rechunking occurs in that mode.
-
-### Lyrics Insertions
-
-Lyrics processing includes an optional *Insertions* list. Terms from this list
-are injected at word intervals and can stack multiple items inside brackets.
-Intervals may be randomized so the chosen frequency acts as a mean with
-positions selected uniformly across the lyrics. When adding new controls to
-this subsystem, ensure related selectors are included in presets and state
-persistence.
 
 ### Help Mode
 

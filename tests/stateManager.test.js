@@ -154,7 +154,7 @@ describe('Mix state roundtrip', () => {
     expect(root.querySelector('.chunk-box .length-mode')?.value).toBe('dropout');
   });
 
-  test('string dropout repeats short cycles before random removal', () => {
+  test('string dropout uses one-pass seed before random removal', () => {
     const output = runGeneratedChunkOutput(
       {
         mixes: [
@@ -171,10 +171,10 @@ describe('Mix state roundtrip', () => {
       },
       [0]
     );
-    expect(output).toBe('b a b ');
+    expect(output).toBe('a b ');
   });
 
-  test('mix dropout repeats short lists before random removal', () => {
+  test('mix dropout uses one-pass seed before random removal', () => {
     const output = runGeneratedOutput(
       {
         mixes: [
@@ -207,7 +207,7 @@ describe('Mix state roundtrip', () => {
       },
       [0]
     );
-    expect(output).toBe('b a b ');
+    expect(output).toBe('a b ');
   });
 
   test('order mode roundtrips for mixes and strings', () => {

@@ -412,11 +412,13 @@
   }
 
   function getFirstChunkBehaviorConfig(config) {
-    if (!config) return FIRST_CHUNK_BEHAVIORS.BETWEEN;
+    // Default to fixed-size first chunks so canonical ordering stays deterministic
+    // until users explicitly pick a randomized first-chunk mode.
+    if (!config) return FIRST_CHUNK_BEHAVIORS.SIZE;
     if (config.firstChunkBehavior) return coerceFirstChunkBehavior(config.firstChunkBehavior);
     if (config.randomFirst === false) return FIRST_CHUNK_BEHAVIORS.SIZE;
     if (config.randomFirst === true) return FIRST_CHUNK_BEHAVIORS.BETWEEN;
-    return FIRST_CHUNK_BEHAVIORS.BETWEEN;
+    return FIRST_CHUNK_BEHAVIORS.SIZE;
   }
 
   function escapeSelector(value) {
@@ -692,7 +694,8 @@
     exact,
     randomize,
     singlePass = false,
-    firstChunkBehavior = FIRST_CHUNK_BEHAVIORS.BETWEEN
+    firstChunkBehavior = FIRST_CHUNK_BEHAVIORS.BETWEEN,
+    allowOverflow = false
   ) {
     const config = delimiterConfig || { regex: /\s/, size: 1, sentenceMode: false };
     const chunks = parseInput(raw || '', config.sentenceMode, config.regex, config.size, firstChunkBehavior);
@@ -707,7 +710,7 @@
     let length = 0;
     if (singlePass) {
       // Single-pass output never wraps; the limit is ignored so chunks emit once.
-      for (let idx = 0; idx < ordered.length && length < max; idx += 1) {
+      for (let idx = 0; idx < ordered.length && (allowOverflow ? length <= max : length < max); idx += 1) {
         const chunk = ordered[idx];
         if (!chunk) continue;
         const remaining = max - length;
@@ -719,13 +722,16 @@
         if (exact && remaining > 0) {
           out.push(chunk.slice(0, remaining));
           length = max;
+        } else if (allowOverflow) {
+          out.push(chunk);
+          length += chunk.length;
         }
         break;
       }
       return out;
     }
     let idx = 0;
-    while (length < max) {
+    while (allowOverflow ? length <= max : length < max) {
       const chunk = ordered[idx % ordered.length];
       idx += 1;
       if (!chunk) {
@@ -741,6 +747,9 @@
       if (exact && remaining > 0) {
         out.push(chunk.slice(0, remaining));
         length = max;
+      } else if (allowOverflow) {
+        out.push(chunk);
+        length += chunk.length;
       }
       break;
     }
@@ -753,7 +762,8 @@
     exact,
     randomize,
     singlePass = false,
-    singlePassFitMode = SINGLE_PASS_FIT_MODES.SMALLEST
+    singlePassFitMode = SINGLE_PASS_FIT_MODES.SMALLEST,
+    allowOverflow = false
   ) {
     const normalized = lists
       .filter(Array.isArray)
@@ -779,8 +789,9 @@
       const cycleCount = singlePassFitMode === SINGLE_PASS_FIT_MODES.LARGEST
         ? Math.max(...sources.map(list => list.length))
         : Math.min(...sources.map(list => list.length));
-      for (let cycle = 0; cycle < cycleCount && length < max; cycle += 1) {
+      for (let cycle = 0; cycle < cycleCount && (allowOverflow ? length <= max : length < max); cycle += 1) {
         const order = randomize ? shuffle(orderBase.slice()) : orderBase;
+        let cycleOverflowed = false;
         for (const idx of order) {
           const list = sources[idx];
           const chunkIndex = singlePassFitMode === SINGLE_PASS_FIT_MODES.LARGEST
@@ -796,22 +807,28 @@
             if (exact && remaining > 0) {
               out.push(chunk.slice(0, remaining));
               length = max;
+            } else if (allowOverflow) {
+              out.push(chunk);
+              length += chunk.length;
+              cycleOverflowed = true;
             }
-            return out;
+            if (!allowOverflow) return out;
           }
-          if (length >= max) return out;
+          if (!allowOverflow && length >= max) return out;
         }
+        if (allowOverflow && cycleOverflowed) return out;
       }
       return out;
     }
 
     const positions = sources.map(() => 0);
-    while (length < max) {
+    while (allowOverflow ? length <= max : length < max) {
       const order = randomize
         ? shuffle(Array.from({ length: sources.length }, (_, i) => i))
         : Array.from({ length: sources.length }, (_, i) => i);
       let added = false;
       let grew = false;
+      let cycleOverflowed = false;
       for (const idx of order) {
         const list = sources[idx];
         if (!list.length) continue;
@@ -829,52 +846,20 @@
           if (exact && remaining > 0) {
             out.push(chunk.slice(0, remaining));
             length = max;
+          } else if (allowOverflow) {
+            out.push(chunk);
+            length += chunk.length;
+            added = true;
+            if (chunk.length > 0) grew = true;
+            cycleOverflowed = true;
           }
-          return out;
+          if (!allowOverflow) return out;
         }
-        if (length >= max) return out;
+        if (!allowOverflow && length >= max) return out;
       }
       if (!added) break;
       if (!grew) break;
-    }
-    return out;
-  }
-
-  function readMaxChunkLength(chunks) {
-    if (!Array.isArray(chunks) || !chunks.length) return 0;
-    return chunks.reduce((max, chunk) => {
-      if (typeof chunk !== 'string') return max;
-      return Math.max(max, chunk.length);
-    }, 0);
-  }
-
-  function readMaxChunkLengthFromLists(lists) {
-    if (!Array.isArray(lists) || !lists.length) return 0;
-    return lists.reduce((max, list) => Math.max(max, readMaxChunkLength(list)), 0);
-  }
-
-  // Build a repeated cycle using full chunks only. This mirrors "Delete Final Chunk"
-  // behavior (no trimming) and is used to seed dropout before random removals.
-  function buildCycleWithinLimit(chunks, limit) {
-    const source = Array.isArray(chunks) ? chunks.filter(chunk => typeof chunk === 'string') : [];
-    const max = Math.max(0, parseInt(limit, 10) || 0);
-    if (!source.length || !max) return [];
-    const out = [];
-    let length = 0;
-    let grew = false;
-    while (length < max) {
-      for (const chunk of source) {
-        const remaining = max - length;
-        if (chunk.length <= remaining) {
-          out.push(chunk);
-          length += chunk.length;
-          if (chunk.length > 0) grew = true;
-        } else {
-          return out;
-        }
-        if (length >= max) return out;
-      }
-      if (!grew) break;
+      if (allowOverflow && cycleOverflowed) return out;
     }
     return out;
   }
@@ -941,7 +926,8 @@
     const delimiterConfig = getDelimiterConfig(boxEl);
     const result = dropoutMode
       ? (() => {
-          const fullCycle = buildChunkList(
+          // Dropout starts from a full one-pass chunk list so late chunks can survive removals.
+          const seeded = buildChunkList(
             rawInput,
             delimiterConfig,
             Number.POSITIVE_INFINITY,
@@ -950,8 +936,6 @@
             true,
             firstChunkBehavior
           );
-          const overrunLimit = limit + Math.max(1, readMaxChunkLength(fullCycle));
-          const seeded = buildCycleWithinLimit(fullCycle, overrunLimit);
           return dropChunksToLimit(seeded, limit);
         })()
       : buildChunkList(
@@ -1035,18 +1019,17 @@
       return evaluateChunkBox(child, { root, visiting, cache });
     });
 
-    const mixLimit = dropoutMode
-      ? limit + Math.max(1, readMaxChunkLengthFromLists(lists))
-      : limit;
+    const mixLimit = dropoutMode ? Number.POSITIVE_INFINITY : limit;
     const mixExact = dropoutMode ? false : exact;
-    const mixSinglePass = dropoutMode ? false : singlePass;
+    const mixSinglePass = dropoutMode ? true : singlePass;
+    const mixFitMode = dropoutMode ? SINGLE_PASS_FIT_MODES.LARGEST : singlePassFitMode;
     const mixedBase = mixChunkLists(
       lists,
       mixLimit,
       mixExact,
       interleaveRandomize,
       mixSinglePass,
-      singlePassFitMode
+      mixFitMode
     );
     const mixedOrdered = fullRandomize ? shuffle(mixedBase.slice()) : mixedBase;
     const mixed = dropoutMode ? dropChunksToLimit(mixedOrdered, limit) : mixedOrdered;

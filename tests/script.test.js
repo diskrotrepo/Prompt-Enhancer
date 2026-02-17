@@ -68,6 +68,20 @@ describe('Chunking + mixing engine', () => {
     expect(list.join('')).toBe('b a ');
   });
 
+  test('buildChunkList can include one overflow chunk for dropout seeding', () => {
+    const list = buildChunkList(
+      'a b c ',
+      { regex: /\s/, size: 1, sentenceMode: false },
+      4,
+      false,
+      false,
+      false,
+      'size',
+      true
+    );
+    expect(list.join('')).toBe('a b c ');
+  });
+
   test('mixChunkLists interleaves lists in canonical order', () => {
     const mixed = mixChunkLists([['a '], ['b '], ['d ']], 6, false, false);
     expect(mixed.join('')).toBe('a b d ');
@@ -104,6 +118,16 @@ describe('Chunking + mixing engine', () => {
   test('mixChunkLists keeps empty chunks so lists can intentionally skip slots', () => {
     const mixed = mixChunkLists([['', 'a '], ['x ', 'x ']], 100, false, false, true, 'largest');
     expect(mixed.join('')).toBe('x a x ');
+  });
+
+  test('mixChunkLists can include one overflow chunk for dropout seeding', () => {
+    const mixed = mixChunkLists([['a ', 'b '], ['1 ', '2 ']], 6, false, false, false, 'smallest', true);
+    expect(mixed.join('')).toBe('a 1 b 2 ');
+  });
+
+  test('mixChunkLists overflow seeding completes the current canonical cycle', () => {
+    const mixed = mixChunkLists([['aaaaa '], ['bbbbb ']], 5, false, false, false, 'smallest', true);
+    expect(mixed.join('')).toBe('aaaaa bbbbb ');
   });
 
   test('dropout removes random chunks until output is under the limit', () => {
@@ -146,6 +170,25 @@ describe('Chunking + mixing engine', () => {
     Math.random = orig;
     expect(full.join('')).toBe('a b c x y ');
     expect(dropped.join('')).toBe('c x y ');
+  });
+
+  test('dropout can keep chunks that were only available after overflow seeding', () => {
+    const orig = Math.random;
+    Math.random = jest.fn().mockReturnValue(0);
+    const seeded = buildChunkList(
+      'a b c ',
+      { regex: /\s/, size: 1, sentenceMode: false },
+      4,
+      false,
+      false,
+      false,
+      'size',
+      true
+    );
+    const dropped = dropChunksToLimit(seeded, 4);
+    Math.random = orig;
+    expect(seeded.join('')).toBe('a b c ');
+    expect(dropped.join('')).toBe('b c ');
   });
 });
 

@@ -7,6 +7,35 @@ Prompt menu presets load from `src/presets/index.js` via `window.PromptEnhancerP
 
 The code is intentionally kept in a single `script.js` file so an LLM can search through the entire logic easily. Comments and a small table of contents guide navigation. Following the **50% Rule**, even small clarifications or tests compound into a much more reliable project.
 
+## Length handling model
+
+Mix and string generation follow this pipeline:
+
+1. Build the source chunk list from the configured children (canonical or randomized ordering rules).
+2. Apply the selected length mode to that source list.
+
+Length modes then decide how the length limit is enforced:
+
+- **Split Final Chunk** trims the first chunk that would overflow.
+- **Delete Final Chunk** stops before the first chunk that would overflow.
+- **Fit to Smallest / Fit to Largest / Exactly Once** run a one-pass traversal of source lists.
+- **Dropout** first builds a full one-pass source list, then repeatedly removes random chunks and recounts until total length is `<= limit`.
+
+For Dropout in canonical order, surviving chunks keep canonical relative order; randomness controls which chunks remain.
+
+## Shared terminology
+
+Use these terms consistently in code, docs, and tests:
+
+- **String**: a leaf box (`chunk-box`) containing raw text input.
+- **Chunk**: one delimiter-preserving text segment produced from a string or rechunked mix output.
+- **Chunk list**: ordered array of chunks (the core unit passed between helpers).
+- **Mix**: a node (`mix-box`) that combines child chunk lists into one output chunk list.
+- **Source list**: the full pre-length-mode chunk list produced by a string or mix.
+- **Output list**: the chunk list after length-mode rules are applied.
+- **Canonical order**: deterministic order with no shuffling; relative order is preserved.
+- **Length limit**: max character count constraint applied by the selected length mode.
+
 ## Testing (run first)
 
 Install dependencies and run the full suite:
@@ -98,7 +127,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Blank strings emit one empty chunk and lock delimiter controls** — `root_string_empty_chunk`
 - **Typing into a blank string restores normal delimiter controls** — `root_string_empty_chunk_released`
 - **Root-level strings support dropout mode** — `root_string_dropout`
-- **Root-level short strings still cycle before dropout removal** — `root_string_dropout_short_cycle`
+- **Root-level short strings still build a full one-pass source list before dropout removal** — `root_string_dropout_short_one_pass`
 
 #### Delimiter modes
 
@@ -119,6 +148,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 #### Chunk sizing + first-chunk behavior
 
 - **Fixed chunk size grouping** — `random_first_off`
+- **Default first-chunk behavior is fixed size (canonical runs stay deterministic unless randomized explicitly; shared fixture)** — `nested_rechunk`
 - **Custom chunk sizes persist** — `custom_chunk_size`
 - **First chunk Between 1 - X** — `first_chunk_between`
 - **First chunk random start** — `first_chunk_random_start`
@@ -126,7 +156,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 #### Preserve + rechunking
 
 - **Preserve chunks off enables controls** — `preserve_off_enables_controls`
-- **Nested rechunk behavior** — `nested_rechunk`
+- **Nested rechunk behavior (shared fixture)** — `nested_rechunk`
 - **Rechunk pass not randomized** — `rechunk_no_random`
 
 #### Length modes
@@ -135,9 +165,10 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Delete Final Chunk** — `delete_final_chunk`
 - **Fit to Smallest (mix)** — `fit_smallest_mix`
 - **Fit to Largest (mix)** — `fit_largest_mix`
-- **Dropout (cycle past limit, then random chunk removal to limit)** — `dropout_mix`
-- **Dropout on short mixes still repeats before removal** — `dropout_mix_short_lists`
-- **Dropout on strings (cycle past limit, then random chunk removal)** — `root_string_dropout`
+- **Dropout on mixes (full one-pass seed, then random chunk removal to limit)** — `dropout_mix`
+- **Dropout on short mixes still builds one full pass before removal** — `dropout_mix_short_lists`
+- **Dropout on strings (full one-pass seed, then random chunk removal)** — `root_string_dropout`
+- **Dropout can keep late canonical chunks because seeding starts from a full one-pass list** — `dropout_mix_reaches_tail_chunks`
 - **Fit to Smallest keeps blank-string children (empty chunk slots)** — `fit_smallest_empty_child`
 - **Fit to Smallest halts when a variable resolves empty** — `fit_smallest_empty_variable`
 - **Exactly Once (chunk single-pass behavior)** — `exact_once_length`

@@ -427,7 +427,7 @@
     },
     {
       "id": "dropout_mix",
-      "description": "Dropout builds normal repeated output past the limit, then deletes random chunks until under limit.",
+      "description": "Dropout on mixes builds a full one-pass list, then removes random chunks to satisfy the limit.",
       "random": 0,
       "state": {
         "mixes": [
@@ -475,7 +475,7 @@
     },
     {
       "id": "dropout_mix_short_lists",
-      "description": "Dropout still repeats short child lists toward the limit before random chunk removal.",
+      "description": "Dropout on short mixes still seeds from one full pass before random removals.",
       "random": 0,
       "state": {
         "mixes": [
@@ -895,7 +895,7 @@
     },
     {
       "id": "root_string_dropout",
-      "description": "Root-level strings support dropout mode and remove random chunks after cycling toward the limit.",
+      "description": "Dropout on strings builds a full one-pass list, then removes random chunks to satisfy the limit.",
       "random": 0,
       "state": {
         "mixes": [
@@ -916,8 +916,8 @@
       }
     },
     {
-      "id": "root_string_dropout_short_cycle",
-      "description": "Dropout on short root strings repeats chunks toward the limit before random removal.",
+      "id": "root_string_dropout_short_one_pass",
+      "description": "Dropout on short strings still seeds from one full pass before random removals.",
       "random": 0,
       "state": {
         "mixes": [
@@ -2041,7 +2041,12 @@
     {
       "id": "variable_random_chunk_consistent",
       "description": "A variable targeting a randomized string reuses that exact generated order.",
-      "randomSequence": [0, 0.99, 0.99, 0],
+      "randomSequence": [
+        0,
+        0.99,
+        0.99,
+        0
+      ],
       "state": {
         "mixes": [
           {
@@ -2083,7 +2088,12 @@
     {
       "id": "variable_random_chunk_multi_reference",
       "description": "Multiple variables targeting one randomized string stay in lockstep.",
-      "randomSequence": [0.99, 0, 0, 0.99],
+      "randomSequence": [
+        0.99,
+        0,
+        0,
+        0.99
+      ],
       "state": {
         "mixes": [
           {
@@ -2130,7 +2140,14 @@
     {
       "id": "variable_random_mix_consistent",
       "description": "Variables targeting randomized mixes evaluate like in-place submix copies.",
-      "randomSequence": [0, 0, 0, 0.99, 0.99, 0.99],
+      "randomSequence": [
+        0,
+        0,
+        0,
+        0.99,
+        0.99,
+        0.99
+      ],
       "state": {
         "mixes": [
           {
@@ -2425,6 +2442,53 @@
                 "exact": true,
                 "singlePass": true,
                 "randomize": false,
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "dropout_mix_reaches_tail_chunks",
+      "description": "Dropout uses a full canonical one-pass source so late chunks can survive removals.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Dropout Tail Coverage",
+            "limit": 20,
+            "lengthMode": "dropout",
+            "preserve": true,
+            "orderMode": "canonical",
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a1 a2 a3 a4 a5 a6 a7 a8 ",
+                "limit": 1000,
+                "lengthMode": "exact-once",
+                "orderMode": "canonical",
+                "firstChunkBehavior": "size",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "b1 b2 b3 b4 b5 b6 b7 b8 ",
+                "limit": 1000,
+                "lengthMode": "exact-once",
+                "orderMode": "canonical",
+                "firstChunkBehavior": "size",
                 "delimiter": {
                   "mode": "whitespace",
                   "size": 1

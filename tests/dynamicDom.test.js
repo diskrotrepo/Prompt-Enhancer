@@ -64,6 +64,14 @@ describe('Dynamic mix DOM', () => {
     expect(chunkMode?.value).toBe('exact-once');
   });
 
+  test('new chunk boxes default first-chunk behavior to fixed size', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    main.applyMixState({ mixes: [{ type: 'chunk', text: 'a b c d ' }] }, root);
+    const firstChunk = root.querySelector('.chunk-box .first-chunk-select');
+    expect(firstChunk?.value).toBe('size');
+  });
+
   test('blank chunk input enters empty chunk mode and locks delimiter controls', () => {
     loadBody();
     const root = document.querySelector('.mix-root');
@@ -86,5 +94,31 @@ describe('Dynamic mix DOM', () => {
     const delimiter = chunkBox?.querySelector('.delimiter-select');
     expect(delimiter?.disabled).toBe(false);
     expect(delimiter?.value).toBe('whitespace');
+  });
+
+  test('canonical mix output stays deterministic across repeated generate clicks', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    main.applyMixState({
+      mixes: [
+        {
+          type: 'mix',
+          title: 'Stable Canonical',
+          limit: 40,
+          lengthMode: 'allow',
+          preserve: true,
+          orderMode: 'canonical',
+          children: [
+            { type: 'chunk', text: 'a b c d e f g h ', lengthMode: 'allow', orderMode: 'canonical' },
+            { type: 'chunk', text: '1 2 3 4 5 6 7 8 ', lengthMode: 'allow', orderMode: 'canonical' }
+          ]
+        }
+      ]
+    }, root);
+    main.generate(root);
+    const first = root.querySelector('.mix-box .mix-output-text')?.textContent || '';
+    main.generate(root);
+    const second = root.querySelector('.mix-box .mix-output-text')?.textContent || '';
+    expect(second).toBe(first);
   });
 });

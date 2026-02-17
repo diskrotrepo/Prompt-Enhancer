@@ -50,12 +50,12 @@
     },
     {
       "id": "dropout_mix",
-      "output": "x b y ",
+      "output": "y c x ",
       "lengthMode": "dropout"
     },
     {
       "id": "dropout_mix_short_lists",
-      "output": "b a b ",
+      "output": "a b ",
       "lengthMode": "dropout"
     },
     {
@@ -83,7 +83,7 @@
     },
     {
       "id": "nested_rechunk",
-      "output": "a x b "
+      "output": "a b x "
     },
     {
       "id": "variable_reference",
@@ -111,13 +111,13 @@
     {
       "id": "root_string_dropout",
       "output": "",
-      "chunkOutput": "b c x ",
+      "chunkOutput": "c x y ",
       "chunkLengthMode": "dropout"
     },
     {
-      "id": "root_string_dropout_short_cycle",
+      "id": "root_string_dropout_short_one_pass",
       "output": "",
-      "chunkOutput": "b a b ",
+      "chunkOutput": "a b ",
       "chunkLengthMode": "dropout"
     },
     {
@@ -282,6 +282,11 @@
       "id": "local_storage_load",
       "output": "p ",
       "lengthMode": "fit-smallest"
+    },
+    {
+      "id": "dropout_mix_reaches_tail_chunks",
+      "output": "a6 b6 a7 b7 a8 b8 ",
+      "lengthMode": "dropout"
     }
   ]
 }
