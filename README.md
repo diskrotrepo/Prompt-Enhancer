@@ -22,6 +22,7 @@ Length modes then decide how the length limit is enforced:
 - **Dropout** first builds a full one-pass source list, then repeatedly removes random chunks and recounts until total length is `<= limit`.
 
 For Dropout in canonical order, surviving chunks keep canonical relative order; randomness controls which chunks remain.
+When a mode wraps a shorter list (for example Fit to Largest or non-single-pass repeat), the wrapped source is regenerated from its base state so randomized children reroll instead of replaying one frozen cycle.
 
 ## Shared terminology
 
@@ -172,6 +173,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Fit to Smallest keeps blank-string children (empty chunk slots)** — `fit_smallest_empty_child`
 - **Fit to Smallest halts when a variable resolves empty** — `fit_smallest_empty_variable`
 - **Exactly Once (chunk single-pass behavior)** — `exact_once_length`
+- **Fit to Largest rerolls wrapped randomized children instead of replaying one static cycle** — `fit_largest_rerolls_wrapped_child`
 
 #### Randomization scope
 

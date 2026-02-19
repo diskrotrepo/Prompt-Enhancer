@@ -68,6 +68,20 @@ describe('Chunking + mixing engine', () => {
     expect(list.join('')).toBe('b a ');
   });
 
+  test('buildChunkList rerolls randomized order when repeating past one cycle', () => {
+    const orig = Math.random;
+    const sequence = [0, 0, 0.99, 0.99];
+    let idx = 0;
+    Math.random = jest.fn(() => {
+      const value = sequence[idx] ?? sequence[sequence.length - 1];
+      idx += 1;
+      return value;
+    });
+    const list = buildChunkList('a b c ', { regex: /\s/, size: 1, sentenceMode: false }, 12, false, true);
+    Math.random = orig;
+    expect(list.join('')).toBe('b c a a b c ');
+  });
+
   test('buildChunkList can include one overflow chunk for dropout seeding', () => {
     const list = buildChunkList(
       'a b c ',
@@ -113,6 +127,30 @@ describe('Chunking + mixing engine', () => {
   test('mixChunkLists fit-largest repeats shorter lists until the longest list is exhausted', () => {
     const mixed = mixChunkLists([['a1 ', 'a2 ', 'a3 '], ['b1 ', 'b2 ']], 100, false, false, true, 'largest');
     expect(mixed.join('')).toBe('a1 b1 a2 b2 a3 b1 ');
+  });
+
+  test('mixChunkLists fit-largest can reroll a wrapped source list', () => {
+    const refreshers = [
+      null,
+      (() => {
+        let calls = 0;
+        return () => {
+          calls += 1;
+          return calls === 1 ? ['x2 ', 'y2 '] : ['x3 ', 'y3 '];
+        };
+      })()
+    ];
+    const mixed = mixChunkLists(
+      [['a1 ', 'a2 ', 'a3 ', 'a4 '], ['x1 ', 'y1 ']],
+      100,
+      false,
+      false,
+      true,
+      'largest',
+      false,
+      { refreshers }
+    );
+    expect(mixed.join('')).toBe('a1 x1 a2 y1 a3 x2 a4 y2 ');
   });
 
   test('mixChunkLists keeps empty chunks so lists can intentionally skip slots', () => {

@@ -2417,6 +2417,80 @@
       ]
     },
     {
+      "id": "fit_largest_rerolls_wrapped_child",
+      "description": "Fit to Largest reruns wrapped child generation so randomized children reroll each repeat.",
+      "randomSequence": [
+        0,
+        0.99
+      ],
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "id": "host",
+            "title": "Host",
+            "limit": 1000,
+            "lengthMode": "fit-largest",
+            "preserve": true,
+            "orderMode": "canonical",
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "id": "lyrics",
+                "text": "L1 L2 L3 L4 ",
+                "lengthMode": "exact-once",
+                "orderMode": "canonical",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "mix",
+                "id": "spacer-source",
+                "title": "Spacer Source",
+                "lengthMode": "fit-smallest",
+                "preserve": true,
+                "orderMode": "full-randomize",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                },
+                "children": [
+                  {
+                    "type": "chunk",
+                    "id": "spacer-a",
+                    "text": "a ",
+                    "lengthMode": "exact-once",
+                    "orderMode": "canonical",
+                    "delimiter": {
+                      "mode": "whitespace",
+                      "size": 1
+                    }
+                  },
+                  {
+                    "type": "chunk",
+                    "id": "spacer-b",
+                    "text": "b ",
+                    "lengthMode": "exact-once",
+                    "orderMode": "canonical",
+                    "delimiter": {
+                      "mode": "whitespace",
+                      "size": 1
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "local_storage_load",
       "description": "Persisted mix data loads on startup before defaults.",
       "random": 0,

@@ -309,6 +309,62 @@ describe('Mix state roundtrip', () => {
     expect(chunkOrder?.value).toBe('full-randomize');
   });
 
+  test('fit-largest rerolls wrapped randomized child mixes instead of replaying one cycle', () => {
+    const state = {
+      mixes: [
+        {
+          type: 'mix',
+          id: 'host',
+          title: 'Host',
+          limit: 1000,
+          lengthMode: 'fit-largest',
+          preserve: true,
+          orderMode: 'canonical',
+          delimiter: { mode: 'whitespace', size: 1 },
+          children: [
+            {
+              type: 'chunk',
+              id: 'lyrics',
+              text: 'L1 L2 L3 L4 ',
+              lengthMode: 'exact-once',
+              orderMode: 'canonical',
+              delimiter: { mode: 'whitespace', size: 1 }
+            },
+            {
+              type: 'mix',
+              id: 'spacer-source',
+              title: 'Spacer Source',
+              lengthMode: 'fit-smallest',
+              preserve: true,
+              orderMode: 'full-randomize',
+              delimiter: { mode: 'whitespace', size: 1 },
+              children: [
+                {
+                  type: 'chunk',
+                  id: 'spacer-a',
+                  text: 'a ',
+                  lengthMode: 'exact-once',
+                  orderMode: 'canonical',
+                  delimiter: { mode: 'whitespace', size: 1 }
+                },
+                {
+                  type: 'chunk',
+                  id: 'spacer-b',
+                  text: 'b ',
+                  lengthMode: 'exact-once',
+                  orderMode: 'canonical',
+                  delimiter: { mode: 'whitespace', size: 1 }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+    const output = runGeneratedOutput(state, [0, 0.99]);
+    expect(output).toBe('L1 b L2 a L3 a L4 b ');
+  });
+
   test('mix variable output matches duplicated submix output for randomized order modes', () => {
     const buildSourceMix = orderMode => ({
       type: 'mix',

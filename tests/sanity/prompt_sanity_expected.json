@@ -279,6 +279,11 @@
       ]
     },
     {
+      "id": "fit_largest_rerolls_wrapped_child",
+      "output": "L1 b L2 a L3 a L4 b ",
+      "lengthMode": "fit-largest"
+    },
+    {
       "id": "local_storage_load",
       "output": "p ",
       "lengthMode": "fit-smallest"

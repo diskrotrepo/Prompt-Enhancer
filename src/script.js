@@ -698,10 +698,16 @@
     allowOverflow = false
   ) {
     const config = delimiterConfig || { regex: /\s/, size: 1, sentenceMode: false };
-    const chunks = parseInput(raw || '', config.sentenceMode, config.regex, config.size, firstChunkBehavior);
-    const base = chunks.filter(chunk => chunk.length > 0);
-    if (!base.length) return [];
-    const ordered = randomize ? shuffle(base.slice()) : base.slice();
+    // Build one cycle from raw input. When wrapping is needed, this is re-run so
+    // randomization/offset behaviors can reroll instead of replaying a fixed cycle.
+    const buildCycle = () => {
+      const chunks = parseInput(raw || '', config.sentenceMode, config.regex, config.size, firstChunkBehavior);
+      const base = chunks.filter(chunk => chunk.length > 0);
+      if (!base.length) return [];
+      return randomize ? shuffle(base.slice()) : base.slice();
+    };
+    let cycle = buildCycle();
+    if (!cycle.length) return [];
     const max = singlePass
       ? Number.POSITIVE_INFINITY
       : Math.max(0, parseInt(limit, 10) || 0);
@@ -710,8 +716,8 @@
     let length = 0;
     if (singlePass) {
       // Single-pass output never wraps; the limit is ignored so chunks emit once.
-      for (let idx = 0; idx < ordered.length && (allowOverflow ? length <= max : length < max); idx += 1) {
-        const chunk = ordered[idx];
+      for (let idx = 0; idx < cycle.length && (allowOverflow ? length <= max : length < max); idx += 1) {
+        const chunk = cycle[idx];
         if (!chunk) continue;
         const remaining = max - length;
         if (chunk.length <= remaining) {
@@ -732,10 +738,15 @@
     }
     let idx = 0;
     while (allowOverflow ? length <= max : length < max) {
-      const chunk = ordered[idx % ordered.length];
+      if (idx >= cycle.length) {
+        cycle = buildCycle();
+        idx = 0;
+        if (!cycle.length) break;
+      }
+      const chunk = cycle[idx];
       idx += 1;
       if (!chunk) {
-        if (idx > ordered.length * 2) break;
+        if (idx > cycle.length * 2) break;
         continue;
       }
       const remaining = max - length;
@@ -763,20 +774,24 @@
     randomize,
     singlePass = false,
     singlePassFitMode = SINGLE_PASS_FIT_MODES.SMALLEST,
-    allowOverflow = false
+    allowOverflow = false,
+    options = {}
   ) {
-    const normalized = lists
-      .filter(Array.isArray)
-      .map(list => list.filter(chunk => typeof chunk === 'string'));
+    const refreshers = Array.isArray(options?.refreshers) ? options.refreshers : [];
+    const normalized = (Array.isArray(lists) ? lists : []).map((list, index) => ({
+      list: Array.isArray(list) ? list.filter(chunk => typeof chunk === 'string') : [],
+      refresh: typeof refreshers[index] === 'function' ? refreshers[index] : null,
+      position: 0
+    }));
     if (
       singlePass &&
       singlePassFitMode === SINGLE_PASS_FIT_MODES.SMALLEST &&
-      normalized.some(list => list.length === 0)
+      normalized.some(source => source.list.length === 0)
     ) {
       // Fit-to-smallest should stop immediately when any child has no chunks.
       return [];
     }
-    const sources = normalized.filter(list => list.length);
+    const sources = normalized.filter(source => source.list.length);
     if (!sources.length) return [];
     const max = singlePass
       ? Number.POSITIVE_INFINITY
@@ -784,20 +799,38 @@
     if (!max) return [];
     const out = [];
     let length = 0;
+    const refreshSourceOnWrap = (source, cycleToken = 0) => {
+      if (!source) return false;
+      if (source.position < source.list.length) return true;
+      if (!source.refresh) {
+        source.position = 0;
+        return source.list.length > 0;
+      }
+      const next = source.refresh(cycleToken);
+      const normalizedNext = Array.isArray(next) ? next.filter(chunk => typeof chunk === 'string') : [];
+      if (!normalizedNext.length) return false;
+      source.list = normalizedNext;
+      source.position = 0;
+      return true;
+    };
     if (singlePass) {
       const orderBase = Array.from({ length: sources.length }, (_, i) => i);
       const cycleCount = singlePassFitMode === SINGLE_PASS_FIT_MODES.LARGEST
-        ? Math.max(...sources.map(list => list.length))
-        : Math.min(...sources.map(list => list.length));
+        ? Math.max(...sources.map(source => source.list.length))
+        : Math.min(...sources.map(source => source.list.length));
       for (let cycle = 0; cycle < cycleCount && (allowOverflow ? length <= max : length < max); cycle += 1) {
         const order = randomize ? shuffle(orderBase.slice()) : orderBase;
         let cycleOverflowed = false;
         for (const idx of order) {
-          const list = sources[idx];
-          const chunkIndex = singlePassFitMode === SINGLE_PASS_FIT_MODES.LARGEST
-            ? cycle % list.length
-            : cycle;
-          const chunk = list[chunkIndex];
+          const source = sources[idx];
+          if (!source?.list?.length) continue;
+          if (singlePassFitMode === SINGLE_PASS_FIT_MODES.LARGEST) {
+            if (!refreshSourceOnWrap(source, cycle)) continue;
+          } else if (source.position >= source.list.length) {
+            continue;
+          }
+          const chunk = source.list[source.position];
+          source.position += 1;
           if (chunk == null) continue;
           const remaining = max - length;
           if (chunk.length <= remaining) {
@@ -821,7 +854,7 @@
       return out;
     }
 
-    const positions = sources.map(() => 0);
+    let cycleToken = 0;
     while (allowOverflow ? length <= max : length < max) {
       const order = randomize
         ? shuffle(Array.from({ length: sources.length }, (_, i) => i))
@@ -830,11 +863,11 @@
       let grew = false;
       let cycleOverflowed = false;
       for (const idx of order) {
-        const list = sources[idx];
-        if (!list.length) continue;
-        const pos = positions[idx];
-        const chunk = list[pos % list.length];
-        positions[idx] = pos + 1;
+        const source = sources[idx];
+        if (!source?.list?.length) continue;
+        if (!refreshSourceOnWrap(source, cycleToken)) continue;
+        const chunk = source.list[source.position];
+        source.position += 1;
         if (chunk == null) continue;
         const remaining = max - length;
         if (chunk.length <= remaining) {
@@ -860,6 +893,7 @@
       if (!added) break;
       if (!grew) break;
       if (allowOverflow && cycleOverflowed) return out;
+      cycleToken += 1;
     }
     return out;
   }
@@ -1013,23 +1047,59 @@
           .filter(Boolean)
       : [];
 
-    const lists = children.map(child => {
-      if (child.classList.contains('mix-box')) return evaluateMixBox(child, { root, visiting, cache });
-      if (child.classList.contains('variable-box')) return evaluateVariableBox(child, { root, visiting, cache });
-      return evaluateChunkBox(child, { root, visiting, cache });
+    const evaluateChild = (child, cacheScope = '') => {
+      const childContext = {
+        root,
+        visiting,
+        cache,
+        cacheScope: cacheScope || context?.cacheScope || ''
+      };
+      if (child.classList.contains('mix-box')) return evaluateMixBox(child, childContext);
+      if (child.classList.contains('variable-box')) return evaluateVariableBox(child, childContext);
+      return evaluateChunkBox(child, childContext);
+    };
+
+    // Repeat-capable modes should rebuild child source lists on wrap so randomized
+    // children reroll instead of replaying one frozen list.
+    const getRefreshKey = (child, index) => {
+      if (child.classList.contains('variable-box')) {
+        const targetId = child.querySelector('.variable-select')?.value || child.dataset.targetId || '';
+        return targetId || child?.dataset?.boxId || `child-${index + 1}`;
+      }
+      return child?.dataset?.boxId || `child-${index + 1}`;
+    };
+    const rerollCache = new Map();
+    const refreshers = children.map((child, index) => cycleToken => {
+      const refreshKey = getRefreshKey(child, index);
+      const sharedRerollKey = `${refreshKey}:${cycleToken}`;
+      if (rerollCache.has(sharedRerollKey)) {
+        return rerollCache.get(sharedRerollKey).slice();
+      }
+      const rerollScopeBase = context?.cacheScope ? `${context.cacheScope}/reroll` : 'reroll';
+      const rerollScope = `${rerollScopeBase}:${boxId || 'mix'}:${sharedRerollKey}`;
+      const rerolled = evaluateChild(child, rerollScope).slice();
+      rerollCache.set(sharedRerollKey, rerolled.slice());
+      return rerolled;
     });
+
+    // Seed evaluations keep the incoming scope so variables can share cached output
+    // with directly referenced siblings on the first pass.
+    const lists = children.map(child => evaluateChild(child, context?.cacheScope || ''));
 
     const mixLimit = dropoutMode ? Number.POSITIVE_INFINITY : limit;
     const mixExact = dropoutMode ? false : exact;
     const mixSinglePass = dropoutMode ? true : singlePass;
     const mixFitMode = dropoutMode ? SINGLE_PASS_FIT_MODES.LARGEST : singlePassFitMode;
+    const wrapsCanRepeat = !dropoutMode && (!mixSinglePass || mixFitMode === SINGLE_PASS_FIT_MODES.LARGEST);
     const mixedBase = mixChunkLists(
       lists,
       mixLimit,
       mixExact,
       interleaveRandomize,
       mixSinglePass,
-      mixFitMode
+      mixFitMode,
+      false,
+      wrapsCanRepeat ? { refreshers } : {}
     );
     const mixedOrdered = fullRandomize ? shuffle(mixedBase.slice()) : mixedBase;
     const mixed = dropoutMode ? dropChunksToLimit(mixedOrdered, limit) : mixedOrdered;
