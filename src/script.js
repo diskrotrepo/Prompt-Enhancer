@@ -1078,6 +1078,28 @@
   const MIX_COLOR_VARIANTS = 6;
   const CHUNK_COLOR_VARIANTS = 6;
 
+  // Keep generated ids above any loaded numeric suffix so new boxes never
+  // reuse existing data-box-id values (which would collide in evaluation cache keys).
+  function reserveBoxId(id) {
+    if (typeof id !== 'string') return;
+    const match = id.match(/-(\d+)$/);
+    if (!match) return;
+    const numeric = parseInt(match[1], 10);
+    if (!isNaN(numeric) && numeric > idCounter) idCounter = numeric;
+  }
+
+  // Respect persisted ids when present; otherwise mint a fresh id from the shared counter.
+  function resolveBoxId(configId, prefix) {
+    if (typeof configId === 'string' && configId.trim()) {
+      const stableId = configId.trim();
+      reserveBoxId(stableId);
+      return stableId;
+    }
+    const generatedId = `${prefix}-${++idCounter}`;
+    reserveBoxId(generatedId);
+    return generatedId;
+  }
+
   function pickRandomVariant(max, avoid = []) {
     const avoidSet = new Set((Array.isArray(avoid) ? avoid : [avoid]).filter(Boolean).map(String));
     if (avoidSet.size >= max) return String(Math.floor(Math.random() * max) + 1);
@@ -1199,7 +1221,7 @@
     const delimiterSize = fragment.querySelector('.delimiter-size');
     const delimiterSizeCustom = fragment.querySelector('.delimiter-size-custom');
 
-    box.dataset.boxId = config.id || `mix-${++idCounter}`;
+    box.dataset.boxId = resolveBoxId(config.id, 'mix');
     box.dataset.color = String(
       config.color || pickRandomVariant(MIX_COLOR_VARIANTS, [context.parentColor, context.previousColor])
     );
@@ -1297,7 +1319,7 @@
     const delimiterSize = fragment.querySelector('.delimiter-size');
     const delimiterSizeCustom = fragment.querySelector('.delimiter-size-custom');
 
-    box.dataset.boxId = config.id || `chunk-${++idCounter}`;
+    box.dataset.boxId = resolveBoxId(config.id, 'chunk');
     box.dataset.color = String(
       config.color || pickRandomVariant(CHUNK_COLOR_VARIANTS, [context.parentColor, context.previousColor])
     );
@@ -1358,7 +1380,7 @@
     const box = fragment.querySelector('.variable-box');
     const select = fragment.querySelector('.variable-select');
 
-    box.dataset.boxId = config.id || `var-${++idCounter}`;
+    box.dataset.boxId = resolveBoxId(config.id, 'var');
     if (config.targetId) box.dataset.targetId = config.targetId;
     if (select && config.targetId) select.value = config.targetId;
     return wrapper;

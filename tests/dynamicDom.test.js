@@ -121,4 +121,52 @@ describe('Dynamic mix DOM', () => {
     const second = root.querySelector('.mix-box .mix-output-text')?.textContent || '';
     expect(second).toBe(first);
   });
+
+  test('loaded ids are reserved so generated child ids stay unique and do not leak cached output', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+
+    // Seed the global counter first, then load state that mixes explicit ids with a generated child id.
+    main.applyMixState(null, root);
+    main.applyMixState({
+      mixes: [
+        {
+          type: 'mix',
+          id: 'mix-1',
+          title: 'space insertions',
+          preserve: true,
+          orderMode: 'canonical',
+          lengthMode: 'fit-largest',
+          children: [
+            {
+              type: 'chunk',
+              id: 'chunk-2',
+              text: 'LYRIC_A ',
+              lengthMode: 'exact-once',
+              orderMode: 'canonical',
+              firstChunkBehavior: 'size',
+              delimiter: { mode: 'whitespace', custom: '', size: 1 }
+            },
+            {
+              type: 'chunk',
+              text: '\n',
+              lengthMode: 'exact-once',
+              orderMode: 'canonical',
+              firstChunkBehavior: 'size',
+              delimiter: { mode: 'newline', custom: '', size: 1 }
+            }
+          ]
+        }
+      ]
+    }, root);
+
+    main.generate(root);
+
+    const ids = Array.from(root.querySelectorAll('.chunk-box')).map(box => box.dataset.boxId);
+    expect(new Set(ids).size).toBe(ids.length);
+
+    const output = root.querySelector('.mix-box .mix-output-text')?.textContent || '';
+    expect(output.includes('\n')).toBe(true);
+    expect((output.match(/LYRIC_A/g) || []).length).toBe(1);
+  });
 });
