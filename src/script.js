@@ -7,7 +7,7 @@
   // - Box evaluation
   // - Box creation + state serialization (hydrates custom size/length controls)
   // - UI helpers + event wiring
-  // - Window management + data load/save (locks initial window width)
+  // - Window management + app module hooks + data load/save
   // - Initialization
 
   // ======== Utilities ========
@@ -2633,9 +2633,36 @@
     setupHelpMode(win || scope);
   }
 
+  // App modules live in dedicated files under src/apps and register themselves
+  // on window.PromptEnhancerAppModules to keep this core shell monolith focused.
+  function readAppModule(appKey) {
+    if (!appKey || typeof window === 'undefined') return null;
+    const registry = window.PromptEnhancerAppModules;
+    if (!registry || typeof registry !== 'object') return null;
+    const moduleDef = registry[appKey];
+    return moduleDef && typeof moduleDef.initialize === 'function' ? moduleDef : null;
+  }
+
+  function initializeAppWindow(clone, windowType, instanceId, appKey) {
+    if (!clone || !appKey) return;
+    const moduleDef = readAppModule(appKey);
+    if (!moduleDef) return;
+    try {
+      moduleDef.initialize(clone, { windowType, instanceId });
+    } catch (err) {
+      /* ignore app module init failures so core windowing still works */
+    }
+  }
+
   const WINDOW_DEFS = {
     prompts: { templateId: 'window-prompts-template', label: 'Prompt Enhancer', icon: 'icon-prompts' },
     audio: { templateId: 'window-audio-template', label: 'Audio Interpolator', icon: 'icon-audio' },
+    openrouter: {
+      templateId: 'window-openrouter-template',
+      label: 'OpenRouter Completion',
+      icon: 'icon-openrouter',
+      appKey: 'openrouter-completions'
+    },
     diskrot: { templateId: 'window-diskrot-template', label: '///diskrot', icon: 'icon-diskrot' },
     about: { templateId: 'window-about-template', label: 'About', icon: 'icon-about' }
   };
@@ -2643,6 +2670,7 @@
   const windowCounts = {
     prompts: 0,
     audio: 0,
+    openrouter: 0,
     diskrot: 0,
     about: 0
   };
@@ -2809,6 +2837,7 @@
       setupMixEvents(root);
       setupPromptControls(clone);
     }
+    initializeAppWindow(clone, windowType, instanceId, def.appKey);
     syncCollapseButtons(clone);
     focusWindow(instanceId);
   }

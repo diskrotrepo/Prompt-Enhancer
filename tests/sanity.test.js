@@ -114,6 +114,13 @@ function runSanityCase(testCase) {
   const runAction = (action, root, actionResults) => {
     const normalized = normalizeAction(action);
     const { type } = normalized;
+    if (type === 'openWindow') {
+      const windowType = typeof normalized.windowType === 'string' ? normalized.windowType : '';
+      if (!windowType) return;
+      const menuItem = window.document.querySelector(`.menu-item[data-window=\"${windowType}\"]`);
+      if (menuItem) menuItem.click();
+      return;
+    }
     if (type === 'openPromptsWindow') {
       const menuItem = window.document.querySelector('.menu-item[data-window=\"prompts\"]');
       if (menuItem) menuItem.click();
@@ -223,6 +230,8 @@ function runSanityCase(testCase) {
     getActiveWindow()?.querySelector('.prompt-menu-item[data-action="load-preset"]') ||
     window.document.querySelector('.prompt-window:not(.window-template) .prompt-menu-item[data-action="load-preset"]')
   );
+  const hasOpenRouterMenu = !!window.document.querySelector('.menu-item[data-window="openrouter"]');
+  const openRouterWindowCount = window.document.querySelectorAll('.openrouter-window:not(.window-template)').length;
   const result = {
     id: testCase.id,
     output,
@@ -249,6 +258,8 @@ function runSanityCase(testCase) {
     mixCollapsed,
     chunkCollapsed,
     hasLoadPresetMenu,
+    hasOpenRouterMenu,
+    openRouterWindowCount,
     mixCopiedText: actionResults.mixCopiedText,
     chunkCopiedText: actionResults.chunkCopiedText,
     promptCount,
@@ -353,6 +364,12 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'hasLoadPresetMenu')) {
         expect(result.hasLoadPresetMenu).toBe(expected.hasLoadPresetMenu);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasOpenRouterMenu')) {
+        expect(result.hasOpenRouterMenu).toBe(expected.hasOpenRouterMenu);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'openRouterWindowCount')) {
+        expect(result.openRouterWindowCount).toBe(expected.openRouterWindowCount);
       }
     });
   });

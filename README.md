@@ -4,6 +4,7 @@ Prompt Enhancer is a modular list-mixing tool. Chunking boxes turn raw text into
 
 Open `src/index.html` to use the tool. Add lists inside mixing boxes, set per-box limits, and press **Generate Mixes**. You can save your configuration to a file or reload it later. On narrow screens, button rows automatically wrap so text labels stay within their section.
 Prompt menu presets load from `src/presets/index.js` via `window.PromptEnhancerPresetCatalog`. Add or update catalog entries there with inline preset `state` objects.
+Window apps can register from dedicated monolithic files under `src/apps/` through `window.PromptEnhancerAppModules`, which keeps app-specific behavior out of the core shell file.
 
 The code is intentionally kept in a single `script.js` file so an LLM can search through the entire logic easily. Comments and a small table of contents guide navigation. Following the **50% Rule**, even small clarifications or tests compound into a much more reliable project.
 
@@ -212,6 +213,10 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Prompt menu includes Load Preset submenu** — `prompt_menu_load_preset_item`
 - **Prompt menu save flow** — `prompt_menu_save_flow`
 - **Local storage load** — `local_storage_load`
+
+#### Window apps
+
+- **OpenRouter Completion app appears in the menu and opens its own window** — `openrouter_app_window`
 
 - **Color presets**  
   Custom color presets are global across boxes, persist in saved state, and missing preset ids fall back to Auto on load.

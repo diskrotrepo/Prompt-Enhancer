@@ -289,6 +289,12 @@
       "lengthMode": "fit-smallest"
     },
     {
+      "id": "openrouter_app_window",
+      "output": "",
+      "hasOpenRouterMenu": true,
+      "openRouterWindowCount": 1
+    },
+    {
       "id": "dropout_mix_reaches_tail_chunks",
       "output": "a6 b6 a7 b7 a8 b8 ",
       "lengthMode": "dropout"

@@ -1,6 +1,6 @@
 # AGENT Instructions
 
-The client code is consolidated into a single file `script.js`. Organize that file into clear sections:
+The core shell code is consolidated into `script.js`, while optional app-specific modules can live in their own monolithic files under `src/apps/<app-name>/` and register via `window.PromptEnhancerAppModules`. Organize `script.js` into clear sections:
 
 - pure, side-effect free utilities at the top
 - UI helpers below them
@@ -8,8 +8,8 @@ The client code is consolidated into a single file `script.js`. Organize that fi
 
 Favor side-effect free helpers grouped together and keep UI logic separate. Document each function so its inputs and outputs are clear.
 
-This monolithic style is intentional to simplify searching for issues when working alongside an LLM. Comments should be thorough so the file acts as an outline of program flow.
-Add a short table of contents at the top of `script.js` and keep it updated. Follow the **50% Rule**—small, clear comments and improvements accumulate into dependable code.
+This monolithic style is intentional to simplify searching for issues when working alongside an LLM. Comments should be thorough so each file acts as an outline of program flow.
+Add a short table of contents at the top of `script.js` and each app module file, and keep them updated. Follow the **50% Rule**—small, clear comments and improvements accumulate into dependable code.
 
 ## Applying the 50% Rule to LLM Collaboration
 

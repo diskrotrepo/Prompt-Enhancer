@@ -462,6 +462,10 @@ textarea,
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='8' width='4' height='16' fill='%231b1b22'/%3E%3Crect x='10' y='4' width='4' height='24' fill='%230ea5e9'/%3E%3Crect x='16' y='10' width='4' height='12' fill='%231b1b22'/%3E%3Crect x='22' y='6' width='4' height='20' fill='%23f97316'/%3E%3Crect x='28' y='12' width='2' height='8' fill='%231b1b22'/%3E%3C/svg%3E");
 }
 
+.icon-openrouter {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='%230f172a'/%3E%3Cpath d='M11 22V10h5.5c3.3 0 5.5 2.4 5.5 6s-2.2 6-5.5 6zm3-2h2.2c1.9 0 3-1.4 3-4s-1.1-4-3-4H14z' fill='%2322d3ee'/%3E%3C/svg%3E");
+}
+
 .icon-diskrot {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M12 6h4L8 26H4z' fill='%23000000'/%3E%3Cpath d='M20 6h4L16 26h-4z' fill='%23000000'/%3E%3Cpath d='M28 6h4L24 26h-4z' fill='%23000000'/%3E%3C/svg%3E");
 }
@@ -821,6 +825,121 @@ textarea,
 .audio-window > .box-body {
   padding: 0;
   overflow: hidden;
+}
+
+.openrouter-window {
+  border-color: rgba(74, 136, 156, 0.9);
+  color: #e7fbff;
+  background:
+    radial-gradient(circle at 16% 20%, rgba(78, 154, 178, 0.24) 0 16px, transparent 20px),
+    radial-gradient(circle at 72% 30%, rgba(48, 118, 140, 0.24) 0 14px, transparent 18px),
+    radial-gradient(circle at 34% 74%, rgba(38, 102, 124, 0.2) 0 18px, transparent 22px),
+    linear-gradient(135deg, rgba(28, 64, 80, 0.98), rgba(18, 38, 52, 0.98));
+  height: min(78vh, 760px);
+  min-height: 360px;
+  width: min(980px, 92vw);
+}
+
+.openrouter-window .box-header {
+  background: linear-gradient(90deg, rgba(72, 176, 196, 0.95), rgba(44, 128, 152, 0.92));
+  border-color: rgba(104, 200, 220, 0.78);
+}
+
+.openrouter-window > .box-body {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.openrouter-window label,
+.openrouter-window .box-title {
+  color: #ecfcff;
+}
+
+.openrouter-app {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.openrouter-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.openrouter-app .control-block textarea,
+.openrouter-app .control-block input[type=text],
+.openrouter-app .control-block input[type=password],
+.openrouter-app .control-block input[type=number] {
+  width: 100%;
+}
+
+.openrouter-model-row {
+  margin-top: 0.35rem;
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.openrouter-model-picker {
+  width: 100%;
+}
+
+.openrouter-refresh-models {
+  margin-top: 0;
+  white-space: nowrap;
+}
+
+.openrouter-prompt {
+  min-height: 170px;
+  resize: vertical;
+}
+
+.openrouter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.openrouter-actions .add-button {
+  margin-top: 0;
+}
+
+.openrouter-status {
+  margin-top: -0.1rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 5px;
+  font-size: 0.76rem;
+  letter-spacing: 0.03em;
+  color: #d9f9ff;
+  background: rgba(8, 22, 34, 0.5);
+  border: 1px solid rgba(118, 196, 212, 0.28);
+}
+
+.openrouter-status.is-error {
+  color: #ffe7e7;
+  background: rgba(70, 18, 18, 0.54);
+  border-color: rgba(234, 128, 128, 0.45);
+}
+
+.openrouter-output .input-row {
+  margin-top: 0.2rem;
+}
+
+.openrouter-output-text {
+  margin: 0;
+  padding: 0.65rem;
+  min-height: 170px;
+  max-height: 340px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #f3fdff;
+  background: rgba(6, 16, 24, 0.56);
+  border: 1px solid rgba(126, 202, 216, 0.25);
 }
 
 .audio-frame,

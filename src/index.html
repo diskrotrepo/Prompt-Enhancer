@@ -43,6 +43,11 @@
                 Audio Interpolator
               </div>
               <div class="menu-separator" role="separator"></div>
+              <div class="menu-item" data-window="openrouter" role="menuitem">
+                <span class="menu-icon icon-openrouter" aria-hidden="true"></span>
+                OpenRouter Completion
+              </div>
+              <div class="menu-separator" role="separator"></div>
               <div class="menu-item" data-window="diskrot" role="menuitem">
                 <span class="menu-icon icon-diskrot" aria-hidden="true"></span>
                 diskrot
@@ -392,6 +397,71 @@
               <div class="resize-handle" aria-hidden="true"></div>
             </div>
 
+            <div id="window-openrouter-template" class="window-shell box-shell app-window openrouter-window window-template" data-template="openrouter">
+              <div class="box-header window-header">
+                <span class="box-title" aria-label="OpenRouter Completion window title">OpenRouter Completion</span>
+                <div class="button-col">
+                  <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Minimize" data-expanded="-" data-collapsed="+">-</button>
+                  <button type="button" class="toggle-button icon-button maximize-toggle" title="Maximize">□</button>
+                  <button type="button" class="delete-button icon-button remove-box" title="Close">X</button>
+                </div>
+              </div>
+              <div class="box-body">
+                <div class="openrouter-app" data-help="OpenRouter completion workspace." data-help-detail="Configure endpoint, model, and prompt, then send a completions request to OpenRouter and inspect or copy the returned text.">
+                  <div class="openrouter-grid">
+                    <div class="control-block">
+                      <label>Endpoint</label>
+                      <input type="text" class="openrouter-endpoint" value="https://openrouter.ai/api/v1/completions" data-help="OpenRouter completions endpoint." data-help-detail="Default points to OpenRouter completions. You can override this for compatible proxies that expose the same API contract.">
+                    </div>
+                    <div class="control-block">
+                      <label>Model</label>
+                      <input type="text" class="openrouter-model" value="openai/gpt-4o-mini" data-help="Model id to send in the completion request." data-help-detail="Use an OpenRouter model slug, such as openai/gpt-4o-mini. You can type manually or pick one from the live model list below.">
+                      <div class="input-row openrouter-model-row">
+                        <select class="openrouter-model-picker" data-help="Live list of models from OpenRouter." data-help-detail="Loads model ids directly from OpenRouter API. With an API key, it prefers your user-filtered model list. Selecting an entry updates the model field above.">
+                          <option value="">Load models...</option>
+                        </select>
+                        <button type="button" class="add-button openrouter-refresh-models" data-help="Refresh model list from OpenRouter." data-help-detail="Fetches the latest model catalog. If an API key is set, it first tries /models/user; otherwise it uses the public /models list.">Refresh</button>
+                      </div>
+                    </div>
+                    <div class="control-block">
+                      <label>Max Tokens</label>
+                      <input type="number" class="openrouter-max-tokens" min="1" step="1" value="300" data-help="Maximum completion tokens to request." data-help-detail="Higher values allow longer completions but may increase cost and latency.">
+                    </div>
+                    <div class="control-block">
+                      <label>Temperature</label>
+                      <input type="number" class="openrouter-temperature" min="0" max="2" step="0.1" value="1" data-help="Sampling temperature for completion randomness." data-help-detail="Lower values are more deterministic; higher values increase variation.">
+                    </div>
+                    <div class="control-block">
+                      <label>API Key</label>
+                      <input type="password" class="openrouter-api-key" placeholder="sk-or-v1-..." autocomplete="off" data-help="OpenRouter API key sent as Bearer token." data-help-detail="This key is used only for the outgoing request from your browser session. It is not persisted by this app.">
+                    </div>
+                    <div class="control-block">
+                      <label>Title (optional)</label>
+                      <input type="text" class="openrouter-title" placeholder="Prompt Enhancer" data-help="Optional X-Title header value." data-help-detail="Set a human-readable application name for OpenRouter request metadata.">
+                    </div>
+                  </div>
+                  <div class="control-block">
+                    <label>Prompt</label>
+                    <textarea class="openrouter-prompt" rows="8" placeholder="Write the completion prompt here..." data-help="Prompt text sent to the completions API." data-help-detail="Enter the text prefix you want the model to continue. The result appears in the output panel below."></textarea>
+                  </div>
+                  <div class="openrouter-actions">
+                    <button type="button" class="add-button openrouter-send" data-help="Send a completion request to OpenRouter." data-help-detail="Submits endpoint, model, params, and prompt. The button is disabled while the request is in flight.">Send Completion</button>
+                    <button type="button" class="add-button openrouter-copy-output" data-help="Copy the output panel text." data-help-detail="Copies the current completion output text to your clipboard.">Copy Output</button>
+                  </div>
+                  <div class="openrouter-status" role="status" aria-live="polite">Ready.</div>
+                  <div class="openrouter-output" data-help="Completion output returned by OpenRouter." data-help-detail="Shows the first completion text returned by the API response.">
+                    <div class="label-row">
+                      <label>Output</label>
+                    </div>
+                    <div class="input-row">
+                      <pre class="openrouter-output-text"></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="resize-handle" aria-hidden="true"></div>
+            </div>
+
             <div id="window-diskrot-template" class="window-shell box-shell app-window diskrot-window window-template" data-template="diskrot">
               <div class="box-header window-header">
                 <span class="box-title" aria-label="Diskrot window title">///diskrot</span>
@@ -417,6 +487,8 @@
   <script src="default_list.js"></script>
   <!-- Load preset catalog (inline preset states) -->
   <script src="presets/index.js"></script>
+  <!-- Load app modules (kept outside the core monolith) -->
+  <script src="apps/openrouter-completions/app.js"></script>
   <!-- Then load main application logic -->
   <script src="script.js"></script>
 </body>

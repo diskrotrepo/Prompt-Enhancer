@@ -2527,6 +2527,17 @@
       }
     },
     {
+      "id": "openrouter_app_window",
+      "description": "OpenRouter Completion appears in the app menu and opens as its own window.",
+      "random": 0,
+      "actions": [
+        {
+          "type": "openWindow",
+          "windowType": "openrouter"
+        }
+      ]
+    },
+    {
       "id": "dropout_mix_reaches_tail_chunks",
       "description": "Dropout uses a full canonical one-pass source so late chunks can survive removals.",
       "random": 0,

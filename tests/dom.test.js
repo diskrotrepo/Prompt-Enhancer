@@ -21,11 +21,13 @@ describe('New mixing layout', () => {
     const glyph = dom.window.document.getElementById('menu-start');
     const prompts = dom.window.document.getElementById('window-prompts-template');
     const audio = dom.window.document.getElementById('window-audio-template');
+    const openrouter = dom.window.document.getElementById('window-openrouter-template');
     const about = dom.window.document.getElementById('window-about-template');
     expect(menu).not.toBeNull();
     expect(glyph).not.toBeNull();
     expect(prompts).not.toBeNull();
     expect(audio).not.toBeNull();
+    expect(openrouter).not.toBeNull();
     expect(about).not.toBeNull();
   });
 });
