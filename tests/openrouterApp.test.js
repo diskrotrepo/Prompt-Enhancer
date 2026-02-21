@@ -190,12 +190,14 @@ describe('OpenRouter app module', () => {
     const providerSelect = appWindow.querySelector('.openrouter-provider');
     const keyInput = appWindow.querySelector('.openrouter-api-key');
     const modelPicker = appWindow.querySelector('.openrouter-model-picker');
+    const topKInput = appWindow.querySelector('.openrouter-top-k');
     const promptInput = appWindow.querySelector('.openrouter-prompt');
     const sendButton = appWindow.querySelector('.openrouter-send');
     const copyButton = appWindow.querySelector('.openrouter-copy-output');
     const output = appWindow.querySelector('.openrouter-output-text');
     const status = appWindow.querySelector('.openrouter-status');
     expect(providerSelect.value).toBe('fireworks');
+    expect(topKInput.max).toBe('100');
     await flush();
     await flush();
     keyInput.value = 'fw-test-key';

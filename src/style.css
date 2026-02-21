@@ -846,8 +846,12 @@ textarea,
 }
 
 .openrouter-window > .box-body {
-  overflow-x: hidden;
-  overflow-y: auto;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  scrollbar-gutter: auto;
 }
 
 .openrouter-window label,
@@ -858,7 +862,21 @@ textarea,
 .openrouter-app {
   display: flex;
   flex-direction: column;
+  gap: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+.openrouter-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
   gap: 0.7rem;
+  padding: 0.75rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .openrouter-grid {
@@ -870,29 +888,38 @@ textarea,
 .openrouter-app .control-block textarea,
 .openrouter-app .control-block input[type=text],
 .openrouter-app .control-block input[type=password],
-.openrouter-app .control-block input[type=number] {
+.openrouter-app .control-block input[type=number],
+.openrouter-app .control-block input[type=range],
+.openrouter-app .control-block select {
   width: 100%;
-}
-
-.openrouter-model-row {
-  margin-top: 0.35rem;
-  display: grid;
-  gap: 0.45rem;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
 }
 
 .openrouter-model-picker {
   width: 100%;
+  margin-bottom: 0.5rem;
 }
 
-.openrouter-refresh-models {
-  margin-top: 0;
-  white-space: nowrap;
+.openrouter-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.openrouter-slider-value {
+  min-width: 2.6rem;
+  text-align: right;
+  font-size: 0.76rem;
+  color: #d4f7ff;
 }
 
 .openrouter-prompt {
   min-height: 170px;
+  resize: vertical;
+}
+
+.openrouter-stop {
+  min-height: 54px;
+  max-height: 130px;
   resize: vertical;
 }
 
@@ -906,14 +933,46 @@ textarea,
   margin-top: 0;
 }
 
-.openrouter-settings-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
+.openrouter-actions .openrouter-send {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: linear-gradient(
+    120deg,
+    #ff5f6d 0%,
+    #ffc371 18%,
+    #ffee58 36%,
+    #66bb6a 52%,
+    #29b6f6 68%,
+    #7e57c2 84%,
+    #ff5f6d 100%
+  );
+  background-size: 190% 190%;
+  color: #080d14;
+  font-weight: 700;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
-.openrouter-settings-actions .add-button {
-  margin-top: 0;
+.openrouter-actions .openrouter-send:hover {
+  background: linear-gradient(
+    120deg,
+    #ff5f6d 0%,
+    #ffc371 18%,
+    #ffee58 36%,
+    #66bb6a 52%,
+    #29b6f6 68%,
+    #7e57c2 84%,
+    #ff5f6d 100%
+  );
+  filter: saturate(1.08) brightness(1.03);
+  background-position: 100% 0;
+}
+
+.openrouter-actions .openrouter-send:disabled {
+  opacity: 0.7;
+  filter: grayscale(0.2);
+}
+
+.openrouter-file-menu {
+  margin-bottom: 0.2rem;
 }
 
 .openrouter-status {
@@ -922,6 +981,7 @@ textarea,
   border-radius: 5px;
   font-size: 0.76rem;
   letter-spacing: 0.03em;
+  white-space: pre-line;
   color: #d9f9ff;
   background: rgba(8, 22, 34, 0.5);
   border: 1px solid rgba(118, 196, 212, 0.28);
@@ -935,6 +995,27 @@ textarea,
 
 .openrouter-output .input-row {
   margin-top: 0.2rem;
+}
+
+.openrouter-output .label-row {
+  width: 100%;
+}
+
+.openrouter-output .label-row .button-col {
+  margin-left: auto;
+}
+
+.openrouter-output .label-row .openrouter-copy-output {
+  margin-right: 0;
+  color: #d8f5ff;
+  border-color: rgba(126, 202, 216, 0.4);
+  background: linear-gradient(180deg, rgba(16, 42, 56, 0.94), rgba(10, 28, 40, 0.94));
+}
+
+.openrouter-output .label-row .openrouter-copy-output:hover {
+  color: #f3fdff;
+  border-color: rgba(160, 226, 238, 0.62);
+  background: linear-gradient(180deg, rgba(24, 58, 76, 0.96), rgba(14, 38, 52, 0.96));
 }
 
 .openrouter-output-text {

@@ -30,6 +30,7 @@
     { id: 'meta-llama/Meta-Llama-3.1-405B', name: 'Llama 3.1 405B', contextLength: null },
     { id: 'meta-llama/Meta-Llama-3.1-405B-Base', name: 'Llama 3.1 405B Base', contextLength: null }
   ]);
+  const TOP_K_MAX = 100;
   const DEFAULT_SETTINGS_FILE_NAME = 'completion-providers-encrypted-settings.json';
   const PBKDF2_ITERATIONS = 250000;
 
@@ -589,7 +590,7 @@
       maxTokens: Math.round(readNumberInput(maxTokensInput, 300, 1, 200000)),
       temperature: readNumberInput(temperatureInput, 1, 0, 2),
       topP: readNumberInput(topPInput, 1, 0, 1),
-      topK: Math.round(readNumberInput(topKInput, 40, 0, 500)),
+      topK: Math.round(readNumberInput(topKInput, 40, 0, TOP_K_MAX)),
       presencePenalty: readNumberInput(presencePenaltyInput, 0, -2, 2),
       frequencyPenalty: readNumberInput(frequencyPenaltyInput, 0, -2, 2),
       stopText: String(stopInput?.value || ''),
@@ -645,7 +646,7 @@
     if (maxTokensInput) maxTokensInput.value = String(Math.round(readNumberInput({ value: settings?.maxTokens }, 300, 1, 200000)));
     if (temperatureInput) temperatureInput.value = String(readNumberInput({ value: settings?.temperature }, 1, 0, 2));
     if (topPInput) topPInput.value = String(readNumberInput({ value: settings?.topP }, 1, 0, 1));
-    if (topKInput) topKInput.value = String(Math.round(readNumberInput({ value: settings?.topK }, 40, 0, 500)));
+    if (topKInput) topKInput.value = String(Math.round(readNumberInput({ value: settings?.topK }, 40, 0, TOP_K_MAX)));
     if (presencePenaltyInput) presencePenaltyInput.value = String(readNumberInput({ value: settings?.presencePenalty }, 0, -2, 2));
     if (frequencyPenaltyInput) frequencyPenaltyInput.value = String(readNumberInput({ value: settings?.frequencyPenalty }, 0, -2, 2));
     if (stopInput) stopInput.value = String(settings?.stopText || '');
@@ -967,7 +968,7 @@
         const maxTokens = Math.round(readNumberInput(maxTokensInput, 300, 1, 200000));
         const temperature = readNumberInput(temperatureInput, 1, 0, 2);
         const topP = readNumberInput(topPInput, 1, 0, 1);
-        const topK = Math.round(readNumberInput(topKInput, 40, 0, 500));
+        const topK = Math.round(readNumberInput(topKInput, 40, 0, TOP_K_MAX));
         const presencePenalty = readNumberInput(presencePenaltyInput, 0, -2, 2);
         const frequencyPenalty = readNumberInput(frequencyPenaltyInput, 0, -2, 2);
         const stop = parseStopSequences(stopInput?.value);

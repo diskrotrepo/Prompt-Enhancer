@@ -460,7 +460,7 @@
                       <div class="control-block">
                         <label>Top K</label>
                         <div class="openrouter-slider-row">
-                          <input type="range" class="openrouter-top-k" min="0" max="500" step="1" value="40" data-help="Top-k token cutoff." data-help-detail="Limits sampling to the highest-probability K tokens. Primarily used by Fireworks models. Set to 0 to disable.">
+                          <input type="range" class="openrouter-top-k" min="0" max="100" step="1" value="40" data-help="Top-k token cutoff." data-help-detail="Limits sampling to the highest-probability K tokens (0-100). Primarily used by Fireworks models. Set to 0 to disable.">
                           <span class="openrouter-slider-value openrouter-top-k-value">40</span>
                         </div>
                       </div>
@@ -489,7 +489,7 @@
                     </div>
                     <div class="control-block">
                       <label>Stop Sequences (optional, one per line)</label>
-                      <textarea class="openrouter-stop" rows="3" placeholder="Example:\n\n###\nEND" data-help="Optional stop sequences." data-help-detail="Provide one stop sequence per line. Generation ends when any sequence is matched."></textarea>
+                      <textarea class="openrouter-stop" rows="2" placeholder="Example:\n###\nEND" data-help="Optional stop sequences." data-help-detail="Provide one stop sequence per line. Generation ends when any sequence is matched."></textarea>
                     </div>
                     <div class="control-block">
                       <label>Prompt</label>
@@ -497,12 +497,14 @@
                     </div>
                     <div class="openrouter-actions">
                       <button type="button" class="add-button openrouter-send" data-help="Send a completion request." data-help-detail="Submits endpoint, model, params, and prompt to the selected provider. The button is disabled while the request is in flight.">Send Completion</button>
-                      <button type="button" class="add-button openrouter-copy-output" data-help="Copy the output panel text." data-help-detail="Copies the current completion output text to your clipboard.">Copy Output</button>
                     </div>
                     <div class="openrouter-status" role="status" aria-live="polite">Ready.</div>
                     <div class="openrouter-output" data-help="Completion output returned by the selected provider." data-help-detail="Shows the first completion text returned by the API response.">
                       <div class="label-row">
                         <label>Output</label>
+                        <div class="button-col">
+                          <button type="button" class="copy-button icon-button openrouter-copy-output" title="Copy output" data-help="Copy the output panel text." data-help-detail="Copies the current completion output text to your clipboard.">&#128203;</button>
+                        </div>
                       </div>
                       <div class="input-row">
                         <pre class="openrouter-output-text"></pre>
