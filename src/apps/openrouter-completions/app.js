@@ -8,11 +8,29 @@
   // - App registration
 
   const APP_KEY = 'openrouter-completions';
-  const DEFAULT_ENDPOINT = 'https://openrouter.ai/api/v1/completions';
-  const MODELS_PUBLIC_ENDPOINT = 'https://openrouter.ai/api/v1/models';
-  const MODELS_USER_ENDPOINT = 'https://openrouter.ai/api/v1/models/user';
-  const DEFAULT_MODEL = 'openai/gpt-4o-mini';
-  const DEFAULT_SETTINGS_FILE_NAME = 'openrouter-encrypted-settings.json';
+  const PROVIDER_KEYS = Object.freeze({
+    FIREWORKS: 'fireworks',
+    HYPERBOLIC: 'hyperbolic'
+  });
+  const PROVIDER_OPTIONS = Object.freeze({
+    [PROVIDER_KEYS.FIREWORKS]: {
+      label: 'Fireworks',
+      defaultEndpoint: 'https://api.fireworks.ai/inference/v1/completions'
+    },
+    [PROVIDER_KEYS.HYPERBOLIC]: {
+      label: 'Hyperbolic',
+      defaultEndpoint: 'https://api.hyperbolic.xyz/v1/completions'
+    }
+  });
+  const DEFAULT_PROVIDER_KEY = PROVIDER_KEYS.FIREWORKS;
+  const FIREWORKS_MODELS_ENDPOINT = 'https://api.fireworks.ai/v1/models';
+  const FIREWORKS_MODELS_FALLBACK_ENDPOINT = 'https://api.fireworks.ai/inference/v1/models';
+  const HYPERBOLIC_MODELS_ENDPOINT = 'https://api.hyperbolic.xyz/v1/models';
+  const HYPERBOLIC_FALLBACK_MODELS = Object.freeze([
+    { id: 'meta-llama/Meta-Llama-3.1-405B', name: 'Llama 3.1 405B', contextLength: null },
+    { id: 'meta-llama/Meta-Llama-3.1-405B-Base', name: 'Llama 3.1 405B Base', contextLength: null }
+  ]);
+  const DEFAULT_SETTINGS_FILE_NAME = 'completion-providers-encrypted-settings.json';
   const PBKDF2_ITERATIONS = 250000;
 
   function ensureAppRegistry() {
@@ -35,9 +53,54 @@
     return value;
   }
 
-  function normalizeEndpoint(value) {
+  function formatSliderValue(value, digits = 2) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '';
+    return n.toFixed(digits).replace(/\.?0+$/, '');
+  }
+
+  function formatDisableableSliderValue(value, digits, disabled) {
+    const formatted = formatSliderValue(value, digits) || '0';
+    return disabled ? `${formatted} (disabled)` : formatted;
+  }
+
+  function parseStopSequences(value) {
+    const lines = String(value || '')
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(Boolean);
+    return lines.length ? lines : undefined;
+  }
+
+  function promptForSettingsPassword(action) {
+    if (typeof window === 'undefined' || typeof window.prompt !== 'function') return null;
+    const message = action === 'save'
+      ? 'Enter a password to encrypt settings:'
+      : 'Enter the password to decrypt settings:';
+    return window.prompt(message, '');
+  }
+
+  function getProviderOption(providerKey) {
+    return PROVIDER_OPTIONS[providerKey] || PROVIDER_OPTIONS[DEFAULT_PROVIDER_KEY];
+  }
+
+  function normalizeProviderKey(value) {
+    const key = toTrimmedString(value).toLowerCase();
+    return PROVIDER_OPTIONS[key] ? key : DEFAULT_PROVIDER_KEY;
+  }
+
+  function defaultEndpointForProvider(providerKey) {
+    return getProviderOption(providerKey).defaultEndpoint;
+  }
+
+  function normalizeEndpoint(value, providerKey = DEFAULT_PROVIDER_KEY) {
     const raw = toTrimmedString(value);
-    return raw || DEFAULT_ENDPOINT;
+    return raw || defaultEndpointForProvider(providerKey);
+  }
+
+  function isChatCompletionsEndpoint(endpoint) {
+    const value = String(endpoint || '').toLowerCase();
+    return /\/chat\/completions(?:$|[/?#])/.test(value);
   }
 
   function writeStatus(statusEl, message, isError = false) {
@@ -46,28 +109,74 @@
     statusEl.classList.toggle('is-error', !!isError);
   }
 
-  // OpenRouter completions typically returns choices[0].text, but some compatible
-  // routes may shape data closer to chat-style payloads, so we read both.
+  function toNumberOrNull(value) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  function formatCredits(value) {
+    const amount = toNumberOrNull(value);
+    if (amount == null) return 'n/a';
+    const fixed = amount < 0.01 ? amount.toFixed(8) : amount.toFixed(6);
+    return fixed.replace(/0+$/, '').replace(/\.$/, '');
+  }
+
+  function readUsageBreakdown(usage) {
+    const completionTokens = toNumberOrNull(usage?.completion_tokens);
+    const totalTokens = toNumberOrNull(usage?.total_tokens);
+    const promptFromUsage = toNumberOrNull(usage?.prompt_tokens);
+    const promptTokens =
+      promptFromUsage != null
+        ? promptFromUsage
+        : totalTokens != null && completionTokens != null
+          ? Math.max(0, totalTokens - completionTokens)
+          : null;
+    return {
+      promptTokens,
+      completionTokens,
+      totalTokens,
+      reasoningTokens: toNumberOrNull(usage?.completion_tokens_details?.reasoning_tokens),
+      cachedPromptTokens: toNumberOrNull(usage?.prompt_tokens_details?.cached_tokens),
+      costCredits: toNumberOrNull(usage?.cost),
+      upstreamCostCredits: toNumberOrNull(usage?.cost_details?.upstream_inference_cost)
+    };
+  }
+
+  function buildBillingStatusMessage(usage, options = {}) {
+    const details = readUsageBreakdown(usage);
+    const lines = ['Completed.'];
+    lines.push(`Output tokens (billed output): ${details.completionTokens ?? 'n/a'}`);
+    lines.push(`Input tokens (billed input): ${details.promptTokens ?? 'n/a'}`);
+    lines.push(`Total tokens (input + output): ${details.totalTokens ?? 'n/a'}`);
+    if (details.reasoningTokens != null) {
+      lines.push(`Reasoning tokens: ${details.reasoningTokens}`);
+    }
+    if (details.cachedPromptTokens != null) {
+      lines.push(`Cached input tokens: ${details.cachedPromptTokens}`);
+    }
+    lines.push(`Request cost (credits): ${formatCredits(details.costCredits)}`);
+    if (details.upstreamCostCredits != null) {
+      lines.push(`Upstream inference cost (credits): ${formatCredits(details.upstreamCostCredits)}`);
+    }
+    if (options.costFromGeneration === true) {
+      lines.push('Billing source: generation stats (native accounting)');
+    }
+    return lines.join('\n');
+  }
+
+  // This app is strict completions mode. We only accept text-completion payloads
+  // so models that behave like chat responders are surfaced as unsupported here.
   function readCompletionText(payload) {
     const choice = Array.isArray(payload?.choices) ? payload.choices[0] : null;
     if (!choice || typeof choice !== 'object') return '';
-    if (typeof choice.text === 'string') return choice.text;
-    const messageContent = choice?.message?.content;
-    if (Array.isArray(messageContent)) {
-      return messageContent
-        .map(part => (typeof part?.text === 'string' ? part.text : ''))
-        .join('');
-    }
-    if (typeof messageContent === 'string') return messageContent;
-    return '';
+    return typeof choice.text === 'string' ? choice.text : '';
   }
 
-  function buildHeaders(apiKey, title) {
+  function buildHeaders(apiKey) {
     const headers = {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`
     };
-    if (title) headers['X-Title'] = title;
     return headers;
   }
 
@@ -246,24 +355,52 @@
 
   async function requestCompletion(config) {
     const {
+      providerKey,
       endpoint,
       apiKey,
-      title,
       model,
       prompt,
       maxTokens,
-      temperature
+      temperature,
+      topP,
+      topK,
+      presencePenalty,
+      frequencyPenalty,
+      stop
     } = config;
+    const includeTopP = Number.isFinite(topP) && topP > 0;
+    const includeTopK = Number.isFinite(topK) && topK > 0;
+    const includePresencePenalty = Number.isFinite(presencePenalty) && presencePenalty !== 0;
+    const includeFrequencyPenalty = Number.isFinite(frequencyPenalty) && frequencyPenalty !== 0;
+    const requestBody =
+      providerKey === PROVIDER_KEYS.HYPERBOLIC
+        ? {
+            model,
+            prompt,
+            max_tokens: maxTokens,
+            ...(includeTopP ? { top_p: topP } : {}),
+            ...(includePresencePenalty ? { presence_penalty: presencePenalty } : {}),
+            ...(includeFrequencyPenalty ? { frequency_penalty: frequencyPenalty } : {}),
+            temperature,
+            ...(stop ? { stop } : {}),
+            stream: false
+          }
+        : {
+            model,
+            prompt,
+            max_tokens: maxTokens,
+            ...(includeTopP ? { top_p: topP } : {}),
+            ...(includeTopK ? { top_k: topK } : {}),
+            ...(includePresencePenalty ? { presence_penalty: presencePenalty } : {}),
+            ...(includeFrequencyPenalty ? { frequency_penalty: frequencyPenalty } : {}),
+            temperature,
+            ...(stop ? { stop } : {}),
+            stream: false
+          };
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: buildHeaders(apiKey, title),
-      body: JSON.stringify({
-        model,
-        prompt,
-        max_tokens: maxTokens,
-        temperature,
-        stream: false
-      })
+      headers: buildHeaders(apiKey),
+      body: JSON.stringify(requestBody)
     });
     if (!response.ok) {
       const message = await readErrorMessage(response);
@@ -271,22 +408,31 @@
     }
     const payload = await response.json();
     const completion = readCompletionText(payload);
+    if (!completion && payload?.object !== 'text_completion') {
+      throw new Error(
+        'Model returned a chat-style response. Use a completion-capable model for pure continuation.'
+      );
+    }
     return {
+      id: toTrimmedString(payload?.id),
       text: completion,
       usage: payload?.usage || null
     };
   }
 
-  function normalizeModelEntries(payload) {
-    const data = Array.isArray(payload?.data) ? payload.data : [];
+  function normalizeSimpleModelEntries(payload) {
+    const data = Array.isArray(payload?.data)
+      ? payload.data
+      : Array.isArray(payload?.models)
+        ? payload.models
+        : [];
     const unique = new Map();
     data.forEach(entry => {
-      const id = toTrimmedString(entry?.id || entry?.slug || entry?.name);
-      if (!id) return;
-      if (unique.has(id)) return;
+      const id = toTrimmedString(entry?.id || entry?.name);
+      if (!id || unique.has(id)) return;
       unique.set(id, {
         id,
-        name: toTrimmedString(entry?.name || ''),
+        name: toTrimmedString(entry?.display_name || entry?.name || ''),
         contextLength: Number.isFinite(entry?.context_length) ? entry.context_length : null
       });
     });
@@ -304,7 +450,7 @@
     modelPicker.innerHTML = '';
     const placeholder = document.createElement('option');
     placeholder.value = '';
-    placeholder.textContent = entries.length ? `Select model (${entries.length} loaded)...` : 'No models loaded';
+    placeholder.textContent = entries.length ? `Select model (${entries.length} loaded)...` : 'No completion models found';
     modelPicker.appendChild(placeholder);
     entries.forEach(entry => {
       const option = document.createElement('option');
@@ -315,13 +461,37 @@
     const current = toTrimmedString(activeModel);
     if (current && entries.some(entry => entry.id === current)) {
       modelPicker.value = current;
+    } else if (entries.length) {
+      modelPicker.value = entries[0].id;
     } else {
       modelPicker.value = '';
     }
   }
 
-  async function requestModelCatalog(endpoint, apiKey) {
-    const response = await fetch(endpoint, {
+  async function requestFireworksModelCatalog(apiKey) {
+    const endpoints = [FIREWORKS_MODELS_ENDPOINT, FIREWORKS_MODELS_FALLBACK_ENDPOINT];
+    let lastError = null;
+    for (let i = 0; i < endpoints.length; i += 1) {
+      const response = await fetch(endpoints[i], {
+        headers: buildOptionalAuthHeaders(apiKey)
+      });
+      if (response.ok) {
+        const payload = await response.json();
+        return normalizeSimpleModelEntries(payload);
+      }
+      const message = await readErrorMessage(response);
+      const error = new Error(message);
+      error.status = response.status;
+      lastError = error;
+      if (![404, 405].includes(response.status)) {
+        throw error;
+      }
+    }
+    throw lastError || new Error('Model list load failed');
+  }
+
+  async function requestHyperbolicModelCatalog(apiKey) {
+    const response = await fetch(HYPERBOLIC_MODELS_ENDPOINT, {
       headers: buildOptionalAuthHeaders(apiKey)
     });
     if (!response.ok) {
@@ -331,94 +501,158 @@
       throw error;
     }
     const payload = await response.json();
-    return normalizeModelEntries(payload);
+    return normalizeSimpleModelEntries(payload);
   }
 
-  // Pull live models from OpenRouter. If a key is present, try user catalog first,
-  // then fall back to the public catalog to keep the picker usable.
+  // Pull live models from the active provider and render completion-capable options.
   async function loadModels(config) {
     const {
+      providerKey,
       apiKey,
-      modelInput,
       modelPicker,
-      refreshButton,
-      statusEl
+      statusEl,
+      excludedModelIds
     } = config;
     if (!modelPicker) return;
     if (typeof fetch !== 'function') {
       writeStatus(statusEl, 'Model list unavailable: fetch is not supported in this environment.', true);
       return;
     }
-    if (refreshButton) refreshButton.disabled = true;
+    const provider = normalizeProviderKey(providerKey);
+    const providerLabel = getProviderOption(provider).label;
     const key = toTrimmedString(apiKey);
-    writeStatus(statusEl, key ? 'Loading models for this API key...' : 'Loading public model list...');
+    if (!key) {
+      renderModelPicker(modelPicker, [], modelPicker.value);
+      writeStatus(statusEl, `Enter a ${providerLabel} API key to load models.`, true);
+      return;
+    }
+    writeStatus(statusEl, `Loading ${providerLabel} models for this API key...`);
     let entries = [];
     let source = '';
     let keyCatalogError = '';
     try {
-      if (key) {
-        entries = await requestModelCatalog(MODELS_USER_ENDPOINT, key);
-        source = '/models/user';
-      }
-      if (!entries.length) {
-        entries = await requestModelCatalog(MODELS_PUBLIC_ENDPOINT, key);
-        source = '/models';
-      }
-      renderModelPicker(modelPicker, entries, modelInput?.value);
-      writeStatus(statusEl, `Loaded ${entries.length} models from ${source}.`);
-    } catch (err) {
-      keyCatalogError = err && err.message ? err.message : 'request failed';
-      renderModelPicker(modelPicker, [], modelInput?.value);
-      if (!key && (err?.status === 401 || err?.status === 403)) {
-        writeStatus(statusEl, 'Enter an API key to load models.', true);
+      if (provider === PROVIDER_KEYS.HYPERBOLIC) {
+        entries = await requestHyperbolicModelCatalog(key);
+        source = '/v1/models';
+        if (!entries.length) {
+          entries = HYPERBOLIC_FALLBACK_MODELS.slice();
+          source = 'fallback catalog';
+        }
       } else {
-        writeStatus(statusEl, `Model list load failed: ${keyCatalogError}`, true);
+        entries = await requestFireworksModelCatalog(key);
+        source = '/v1/models';
       }
-    } finally {
-      if (refreshButton) refreshButton.disabled = false;
+      if (excludedModelIds && excludedModelIds.size) {
+        entries = entries.filter(entry => !excludedModelIds.has(entry.id));
+      }
+      renderModelPicker(modelPicker, entries, modelPicker.value);
+      writeStatus(statusEl, `Loaded ${entries.length} completion models from ${providerLabel} ${source}.`);
+    } catch (err) {
+      if (provider === PROVIDER_KEYS.HYPERBOLIC && key && ![401, 403].includes(err?.status)) {
+        const fallbackEntries = HYPERBOLIC_FALLBACK_MODELS.filter(entry => !excludedModelIds?.has(entry.id));
+        renderModelPicker(modelPicker, fallbackEntries, modelPicker.value);
+        writeStatus(statusEl, `Loaded ${fallbackEntries.length} fallback Hyperbolic models.`);
+        return;
+      }
+      keyCatalogError = err && err.message ? err.message : 'request failed';
+      renderModelPicker(modelPicker, [], modelPicker.value);
+      writeStatus(statusEl, `${providerLabel} model list load failed: ${keyCatalogError}`, true);
     }
   }
 
-  function collectOpenRouterSettings(inputs) {
+  function collectOpenRouterSettings(inputs, providerApiKeys) {
     const {
+      providerSelect,
       endpointInput,
-      modelInput,
-      maxTokensInput,
-      temperatureInput,
-      apiKeyInput,
-      titleInput
-    } = inputs;
-    return {
-      endpoint: normalizeEndpoint(endpointInput?.value),
-      model: toTrimmedString(modelInput?.value) || DEFAULT_MODEL,
-      maxTokens: Math.round(readNumberInput(maxTokensInput, 300, 1, 200000)),
-      temperature: readNumberInput(temperatureInput, 1, 0, 2),
-      apiKey: toTrimmedString(apiKeyInput?.value),
-      title: toTrimmedString(titleInput?.value)
-    };
-  }
-
-  function applyOpenRouterSettings(inputs, settings) {
-    const {
-      endpointInput,
-      modelInput,
       modelPicker,
       maxTokensInput,
       temperatureInput,
+      topPInput,
+      topKInput,
+      presencePenaltyInput,
+      frequencyPenaltyInput,
+      stopInput,
       apiKeyInput,
-      titleInput
+      titleInput,
+      promptInput
     } = inputs;
-    if (endpointInput) endpointInput.value = normalizeEndpoint(settings?.endpoint);
-    if (modelInput) modelInput.value = toTrimmedString(settings?.model) || DEFAULT_MODEL;
+    const provider = normalizeProviderKey(providerSelect?.value);
+    const apiKeys = {
+      [PROVIDER_KEYS.FIREWORKS]: toTrimmedString(providerApiKeys?.[PROVIDER_KEYS.FIREWORKS]),
+      [PROVIDER_KEYS.HYPERBOLIC]: toTrimmedString(providerApiKeys?.[PROVIDER_KEYS.HYPERBOLIC])
+    };
+    apiKeys[provider] = toTrimmedString(apiKeyInput?.value);
+    return {
+      provider,
+      endpoint: normalizeEndpoint(endpointInput?.value, provider),
+      model: toTrimmedString(modelPicker?.value),
+      maxTokens: Math.round(readNumberInput(maxTokensInput, 300, 1, 200000)),
+      temperature: readNumberInput(temperatureInput, 1, 0, 2),
+      topP: readNumberInput(topPInput, 1, 0, 1),
+      topK: Math.round(readNumberInput(topKInput, 40, 0, 500)),
+      presencePenalty: readNumberInput(presencePenaltyInput, 0, -2, 2),
+      frequencyPenalty: readNumberInput(frequencyPenaltyInput, 0, -2, 2),
+      stopText: String(stopInput?.value || ''),
+      apiKeys,
+      apiKey: apiKeys[provider],
+      title: toTrimmedString(titleInput?.value),
+      prompt: String(promptInput?.value || '')
+    };
+  }
+
+  function applyOpenRouterSettings(inputs, settings, providerApiKeys) {
+    const {
+      providerSelect,
+      endpointInput,
+      modelPicker,
+      maxTokensInput,
+      temperatureInput,
+      topPInput,
+      topKInput,
+      presencePenaltyInput,
+      frequencyPenaltyInput,
+      stopInput,
+      apiKeyInput,
+      titleInput,
+      promptInput
+    } = inputs;
+    const nextProvider = providerSelect
+      ? normalizeProviderKey(settings?.provider)
+      : DEFAULT_PROVIDER_KEY;
+    if (providerSelect) providerSelect.value = nextProvider;
+    const loadedApiKeys = {
+      [PROVIDER_KEYS.FIREWORKS]: '',
+      [PROVIDER_KEYS.HYPERBOLIC]: ''
+    };
+    if (settings?.apiKeys && typeof settings.apiKeys === 'object') {
+      loadedApiKeys[PROVIDER_KEYS.FIREWORKS] = toTrimmedString(settings.apiKeys[PROVIDER_KEYS.FIREWORKS]);
+      loadedApiKeys[PROVIDER_KEYS.HYPERBOLIC] = toTrimmedString(settings.apiKeys[PROVIDER_KEYS.HYPERBOLIC]);
+    }
+    const legacyApiKey = toTrimmedString(settings?.apiKey);
+    if (legacyApiKey && !loadedApiKeys[nextProvider]) {
+      loadedApiKeys[nextProvider] = legacyApiKey;
+    }
+    if (providerApiKeys) {
+      providerApiKeys[PROVIDER_KEYS.FIREWORKS] = loadedApiKeys[PROVIDER_KEYS.FIREWORKS];
+      providerApiKeys[PROVIDER_KEYS.HYPERBOLIC] = loadedApiKeys[PROVIDER_KEYS.HYPERBOLIC];
+    }
+    if (endpointInput) endpointInput.value = normalizeEndpoint(settings?.endpoint, nextProvider);
     if (modelPicker) {
-      const requestedModel = modelInput?.value || '';
+      const requestedModel = toTrimmedString(settings?.model);
       const hasOption = Array.from(modelPicker.options || []).some(option => option.value === requestedModel);
       modelPicker.value = hasOption ? requestedModel : '';
     }
     if (maxTokensInput) maxTokensInput.value = String(Math.round(readNumberInput({ value: settings?.maxTokens }, 300, 1, 200000)));
     if (temperatureInput) temperatureInput.value = String(readNumberInput({ value: settings?.temperature }, 1, 0, 2));
-    if (apiKeyInput) apiKeyInput.value = toTrimmedString(settings?.apiKey);
+    if (topPInput) topPInput.value = String(readNumberInput({ value: settings?.topP }, 1, 0, 1));
+    if (topKInput) topKInput.value = String(Math.round(readNumberInput({ value: settings?.topK }, 40, 0, 500)));
+    if (presencePenaltyInput) presencePenaltyInput.value = String(readNumberInput({ value: settings?.presencePenalty }, 0, -2, 2));
+    if (frequencyPenaltyInput) frequencyPenaltyInput.value = String(readNumberInput({ value: settings?.frequencyPenalty }, 0, -2, 2));
+    if (stopInput) stopInput.value = String(settings?.stopText || '');
+    if (apiKeyInput) apiKeyInput.value = loadedApiKeys[nextProvider];
     if (titleInput) titleInput.value = toTrimmedString(settings?.title);
+    if (promptInput) promptInput.value = String(settings?.prompt || '');
+    return nextProvider;
   }
 
   function copyToClipboard(text) {
@@ -433,84 +667,192 @@
     const root = windowEl?.querySelector?.('.openrouter-app');
     if (!root || root.dataset.bound === 'true') return;
 
+    const providerSelect = root.querySelector('.openrouter-provider');
     const endpointInput = root.querySelector('.openrouter-endpoint');
-    const modelInput = root.querySelector('.openrouter-model');
     const modelPicker = root.querySelector('.openrouter-model-picker');
-    const refreshModelsButton = root.querySelector('.openrouter-refresh-models');
     const maxTokensInput = root.querySelector('.openrouter-max-tokens');
     const temperatureInput = root.querySelector('.openrouter-temperature');
+    const temperatureValue = root.querySelector('.openrouter-temperature-value');
+    const topPInput = root.querySelector('.openrouter-top-p');
+    const topPValue = root.querySelector('.openrouter-top-p-value');
+    const topKInput = root.querySelector('.openrouter-top-k');
+    const topKValue = root.querySelector('.openrouter-top-k-value');
+    const presencePenaltyInput = root.querySelector('.openrouter-presence-penalty');
+    const presencePenaltyValue = root.querySelector('.openrouter-presence-penalty-value');
+    const frequencyPenaltyInput = root.querySelector('.openrouter-frequency-penalty');
+    const frequencyPenaltyValue = root.querySelector('.openrouter-frequency-penalty-value');
+    const stopInput = root.querySelector('.openrouter-stop');
     const apiKeyInput = root.querySelector('.openrouter-api-key');
     const titleInput = root.querySelector('.openrouter-title');
-    const settingsPasswordInput = root.querySelector('.openrouter-settings-password');
     const promptInput = root.querySelector('.openrouter-prompt');
     const sendButton = root.querySelector('.openrouter-send');
     const copyButton = root.querySelector('.openrouter-copy-output');
-    const saveSettingsButton = root.querySelector('.openrouter-save-settings');
-    const loadSettingsButton = root.querySelector('.openrouter-load-settings');
+    const fileMenuToggle = root.querySelector('.openrouter-menu-start');
+    const fileMenuDropdown = root.querySelector('.openrouter-menu-dropdown');
     const loadSettingsFileInput = root.querySelector('.openrouter-load-settings-file');
     const outputEl = root.querySelector('.openrouter-output-text');
     const statusEl = root.querySelector('.openrouter-status');
+    const providerApiKeys = {
+      [PROVIDER_KEYS.FIREWORKS]: '',
+      [PROVIDER_KEYS.HYPERBOLIC]: ''
+    };
+    const excludedModelIdsByProvider = {
+      [PROVIDER_KEYS.FIREWORKS]: new Set(),
+      [PROVIDER_KEYS.HYPERBOLIC]: new Set()
+    };
+    let activeProvider = normalizeProviderKey(providerSelect?.value);
+
+    const getExcludedModelIds = providerKey => {
+      const key = normalizeProviderKey(providerKey);
+      if (!excludedModelIdsByProvider[key]) excludedModelIdsByProvider[key] = new Set();
+      return excludedModelIdsByProvider[key];
+    };
+    const syncApiKeyInputFromProvider = () => {
+      if (apiKeyInput) apiKeyInput.value = providerApiKeys[activeProvider] || '';
+    };
+    const syncEndpointForProvider = previousProvider => {
+      if (!endpointInput) return;
+      const current = toTrimmedString(endpointInput.value);
+      const previousDefault = defaultEndpointForProvider(previousProvider);
+      if (!current || current === previousDefault) {
+        endpointInput.value = defaultEndpointForProvider(activeProvider);
+      }
+    };
+
+    const syncSliderValues = () => {
+      const topP = Number(topPInput?.value);
+      const topK = Number(topKInput?.value);
+      const presencePenalty = Number(presencePenaltyInput?.value);
+      const frequencyPenalty = Number(frequencyPenaltyInput?.value);
+      if (temperatureValue) temperatureValue.textContent = formatSliderValue(temperatureInput?.value, 2);
+      if (topPValue) {
+        topPValue.textContent = formatDisableableSliderValue(
+          topPInput?.value,
+          2,
+          Number.isFinite(topP) && topP <= 0
+        );
+      }
+      if (topKValue) {
+        topKValue.textContent = formatDisableableSliderValue(
+          topKInput?.value,
+          0,
+          Number.isFinite(topK) && topK <= 0
+        );
+      }
+      if (presencePenaltyValue) {
+        presencePenaltyValue.textContent = formatDisableableSliderValue(
+          presencePenaltyInput?.value,
+          1,
+          Number.isFinite(presencePenalty) && presencePenalty === 0
+        );
+      }
+      if (frequencyPenaltyValue) {
+        frequencyPenaltyValue.textContent = formatDisableableSliderValue(
+          frequencyPenaltyInput?.value,
+          1,
+          Number.isFinite(frequencyPenalty) && frequencyPenalty === 0
+        );
+      }
+    };
+    const bindSliderValue = input => {
+      if (!input) return;
+      input.addEventListener('input', syncSliderValues);
+      input.addEventListener('change', syncSliderValues);
+    };
+    bindSliderValue(temperatureInput);
+    bindSliderValue(topPInput);
+    bindSliderValue(topKInput);
+    bindSliderValue(presencePenaltyInput);
+    bindSliderValue(frequencyPenaltyInput);
+    syncSliderValues();
 
     if (titleInput && !toTrimmedString(titleInput.value)) {
       titleInput.value = 'Prompt Enhancer';
     }
 
-    if (modelPicker) {
-      modelPicker.addEventListener('change', () => {
-        const nextModel = toTrimmedString(modelPicker.value);
-        if (!nextModel || !modelInput) return;
-        modelInput.value = nextModel;
-      });
+    if (endpointInput && !toTrimmedString(endpointInput.value)) {
+      endpointInput.value = defaultEndpointForProvider(activeProvider);
     }
 
-    if (refreshModelsButton) {
-      refreshModelsButton.addEventListener('click', () => {
+    if (providerSelect) {
+      providerSelect.addEventListener('change', () => {
+        const previousProvider = activeProvider;
+        providerApiKeys[previousProvider] = toTrimmedString(apiKeyInput?.value);
+        activeProvider = normalizeProviderKey(providerSelect.value);
+        syncApiKeyInputFromProvider();
+        syncEndpointForProvider(previousProvider);
+        renderModelPicker(modelPicker, [], '');
         loadModels({
-          apiKey: apiKeyInput?.value,
-          modelInput,
+          providerKey: activeProvider,
+          apiKey: providerApiKeys[activeProvider],
           modelPicker,
-          refreshButton: refreshModelsButton,
-          statusEl
+          statusEl,
+          excludedModelIds: getExcludedModelIds(activeProvider)
         });
       });
     }
 
     if (apiKeyInput) {
-      apiKeyInput.addEventListener('change', () => {
+      const refreshModelsFromKey = () => {
+        providerApiKeys[activeProvider] = toTrimmedString(apiKeyInput.value);
         loadModels({
-          apiKey: apiKeyInput.value,
-          modelInput,
+          providerKey: activeProvider,
+          apiKey: providerApiKeys[activeProvider],
           modelPicker,
-          refreshButton: refreshModelsButton,
-          statusEl
+          statusEl,
+          excludedModelIds: getExcludedModelIds(activeProvider)
         });
-      });
+      };
+      apiKeyInput.addEventListener('change', refreshModelsFromKey);
+      apiKeyInput.addEventListener('blur', refreshModelsFromKey);
     }
 
     const settingsInputs = {
+      providerSelect,
       endpointInput,
-      modelInput,
       modelPicker,
       maxTokensInput,
       temperatureInput,
+      topPInput,
+      topKInput,
+      presencePenaltyInput,
+      frequencyPenaltyInput,
+      stopInput,
       apiKeyInput,
-      titleInput
+      titleInput,
+      promptInput
     };
 
-    if (saveSettingsButton) {
-      saveSettingsButton.addEventListener('click', async () => {
-        const password = settingsPasswordInput?.value || '';
-        if (!password) {
-          writeStatus(statusEl, 'Enter a password before saving encrypted settings.', true);
-          return;
-        }
-        if (!hasCryptoSupport()) {
-          writeStatus(statusEl, 'Encrypted save is unavailable: browser crypto support is missing.', true);
-          return;
-        }
-        saveSettingsButton.disabled = true;
+    let settingsBusy = false;
+    const runSettingsTask = async task => {
+      if (settingsBusy) return;
+      settingsBusy = true;
+      try {
+        await task();
+      } finally {
+        settingsBusy = false;
+      }
+    };
+
+    const handleSaveEncryptedSettings = async () => {
+      const passwordRaw = promptForSettingsPassword('save');
+      if (passwordRaw == null) {
+        writeStatus(statusEl, 'Encrypted save cancelled.', true);
+        return;
+      }
+      const password = String(passwordRaw);
+      if (!password) {
+        writeStatus(statusEl, 'Password is required to save encrypted settings.', true);
+        return;
+      }
+      if (!hasCryptoSupport()) {
+        writeStatus(statusEl, 'Encrypted save is unavailable: browser crypto support is missing.', true);
+        return;
+      }
+      await runSettingsTask(async () => {
         try {
-          const settings = collectOpenRouterSettings(settingsInputs);
+          providerApiKeys[activeProvider] = toTrimmedString(apiKeyInput?.value);
+          const settings = collectOpenRouterSettings(settingsInputs, providerApiKeys);
           const payload = await encryptSettings(password, settings);
           const stored = downloadEncryptedSettings(payload);
           writeStatus(
@@ -520,67 +862,130 @@
           );
         } catch (err) {
           writeStatus(statusEl, `Encrypted save failed: ${err?.message || 'unknown error'}`, true);
-        } finally {
-          saveSettingsButton.disabled = false;
         }
       });
-    }
+    };
 
-    if (loadSettingsButton) {
-      loadSettingsButton.addEventListener('click', () => {
-        loadSettingsFileInput?.click();
+    const handleLoadEncryptedSettings = async file => {
+      const passwordRaw = promptForSettingsPassword('load');
+      if (passwordRaw == null) {
+        writeStatus(statusEl, 'Encrypted load cancelled.', true);
+        return;
+      }
+      const password = String(passwordRaw);
+      if (!password) {
+        writeStatus(statusEl, 'Password is required to load encrypted settings.', true);
+        return;
+      }
+      if (!hasCryptoSupport()) {
+        writeStatus(statusEl, 'Encrypted load is unavailable: browser crypto support is missing.', true);
+        return;
+      }
+      if (!file) return;
+      await runSettingsTask(async () => {
+        try {
+          const payload = await readEncryptedSettingsFile(file);
+          const settings = await decryptSettings(password, payload);
+          const loadedProvider = applyOpenRouterSettings(settingsInputs, settings, providerApiKeys);
+          syncSliderValues();
+          activeProvider = normalizeProviderKey(loadedProvider);
+          await loadModels({
+            providerKey: activeProvider,
+            apiKey: providerApiKeys[activeProvider],
+            modelPicker,
+            statusEl,
+            excludedModelIds: getExcludedModelIds(activeProvider)
+          });
+          if (modelPicker) {
+            const requestedModel = toTrimmedString(settings?.model);
+            const hasOption = Array.from(modelPicker.options || []).some(option => option.value === requestedModel);
+            if (requestedModel && hasOption) modelPicker.value = requestedModel;
+          }
+          if (!statusEl?.classList?.contains('is-error')) {
+            writeStatus(statusEl, 'Encrypted settings loaded from file.');
+          }
+        } catch (err) {
+          writeStatus(statusEl, err?.message || 'Encrypted settings could not be loaded.', true);
+        }
       });
+    };
+
+    if (fileMenuToggle && fileMenuDropdown && !fileMenuToggle.dataset.bound) {
+      const closeFileMenu = () => {
+        fileMenuDropdown.classList.remove('open');
+        fileMenuDropdown.setAttribute('aria-hidden', 'true');
+        fileMenuToggle.setAttribute('aria-expanded', 'false');
+      };
+      const openFileMenu = () => {
+        fileMenuDropdown.classList.add('open');
+        fileMenuDropdown.setAttribute('aria-hidden', 'false');
+        fileMenuToggle.setAttribute('aria-expanded', 'true');
+      };
+      fileMenuToggle.addEventListener('click', event => {
+        event.stopPropagation();
+        if (fileMenuDropdown.classList.contains('open')) {
+          closeFileMenu();
+        } else {
+          openFileMenu();
+        }
+      });
+      root.addEventListener('click', event => {
+        if (event.target.closest('.openrouter-file-menu')) return;
+        closeFileMenu();
+      });
+      fileMenuDropdown.addEventListener('click', async event => {
+        const item = event.target.closest('.prompt-menu-item[data-action]');
+        if (!item) return;
+        const action = item.dataset.action;
+        if (action === 'save-settings') {
+          await handleSaveEncryptedSettings();
+        } else if (action === 'load-settings') {
+          loadSettingsFileInput?.click();
+        }
+        closeFileMenu();
+      });
+      fileMenuToggle.dataset.bound = 'true';
     }
 
     if (loadSettingsFileInput) {
       loadSettingsFileInput.addEventListener('change', async event => {
         const file = event?.target?.files?.[0] || null;
         loadSettingsFileInput.value = '';
-        const password = settingsPasswordInput?.value || '';
-        if (!password) {
-          writeStatus(statusEl, 'Enter the password used for encrypted settings.', true);
-          return;
-        }
-        if (!hasCryptoSupport()) {
-          writeStatus(statusEl, 'Encrypted load is unavailable: browser crypto support is missing.', true);
-          return;
-        }
-        if (!file) return;
-        loadSettingsButton && (loadSettingsButton.disabled = true);
-        try {
-          const payload = await readEncryptedSettingsFile(file);
-          const settings = await decryptSettings(password, payload);
-          applyOpenRouterSettings(settingsInputs, settings);
-          await loadModels({
-            apiKey: apiKeyInput?.value,
-            modelInput,
-            modelPicker,
-            refreshButton: refreshModelsButton,
-            statusEl
-          });
-          if (!statusEl?.classList?.contains('is-error')) {
-            writeStatus(statusEl, 'Encrypted settings loaded from file.');
-          }
-        } catch (err) {
-          writeStatus(statusEl, err?.message || 'Encrypted settings could not be loaded.', true);
-        } finally {
-          loadSettingsButton && (loadSettingsButton.disabled = false);
-        }
+        await handleLoadEncryptedSettings(file);
       });
     }
 
     if (sendButton) {
       sendButton.addEventListener('click', async () => {
+        const providerKey = activeProvider;
+        const providerLabel = getProviderOption(providerKey).label;
         const apiKey = toTrimmedString(apiKeyInput?.value);
-        const model = toTrimmedString(modelInput?.value) || DEFAULT_MODEL;
+        providerApiKeys[providerKey] = apiKey;
+        const model = toTrimmedString(modelPicker?.value);
         const prompt = promptInput?.value || '';
-        const endpoint = normalizeEndpoint(endpointInput?.value);
-        const title = toTrimmedString(titleInput?.value);
+        const endpoint = normalizeEndpoint(endpointInput?.value, providerKey);
         const maxTokens = Math.round(readNumberInput(maxTokensInput, 300, 1, 200000));
         const temperature = readNumberInput(temperatureInput, 1, 0, 2);
+        const topP = readNumberInput(topPInput, 1, 0, 1);
+        const topK = Math.round(readNumberInput(topKInput, 40, 0, 500));
+        const presencePenalty = readNumberInput(presencePenaltyInput, 0, -2, 2);
+        const frequencyPenalty = readNumberInput(frequencyPenaltyInput, 0, -2, 2);
+        const stop = parseStopSequences(stopInput?.value);
 
+        if (isChatCompletionsEndpoint(endpoint)) {
+          writeStatus(
+            statusEl,
+            'This app is completions-only. Use /completions (prompt), not /chat/completions.',
+            true
+          );
+          return;
+        }
         if (!apiKey) {
-          writeStatus(statusEl, 'Enter an OpenRouter API key first.', true);
+          writeStatus(statusEl, `Enter a ${providerLabel} API key first.`, true);
+          return;
+        }
+        if (!model) {
+          writeStatus(statusEl, 'Select a completion model first.', true);
           return;
         }
         if (!prompt.trim()) {
@@ -593,19 +998,44 @@
 
         try {
           const result = await requestCompletion({
+            providerKey,
             endpoint,
             apiKey,
-            title,
             model,
             prompt,
             maxTokens,
-            temperature
+            temperature,
+            topP,
+            topK,
+            presencePenalty,
+            frequencyPenalty,
+            stop
           });
           if (outputEl) outputEl.textContent = result.text || '';
-          const tokenSummary = result.usage?.total_tokens ? ` (${result.usage.total_tokens} tokens)` : '';
-          writeStatus(statusEl, `Completed${tokenSummary}.`);
+          writeStatus(
+            statusEl,
+            buildBillingStatusMessage(result.usage || null),
+            false
+          );
         } catch (err) {
           const message = err && err.message ? err.message : 'Request failed';
+          if (/reasoning is mandatory for this endpoint and cannot be disabled/i.test(message)) {
+            const excludedModelIds = getExcludedModelIds(providerKey);
+            if (model) excludedModelIds.add(model);
+            await loadModels({
+              providerKey,
+              apiKey: providerApiKeys[providerKey],
+              modelPicker,
+              statusEl,
+              excludedModelIds
+            });
+            writeStatus(
+              statusEl,
+              `Request failed: ${message}\nModel filtered out for completions-only mode.`,
+              true
+            );
+            return;
+          }
           writeStatus(statusEl, `Request failed: ${message}`, true);
         } finally {
           sendButton.disabled = false;
@@ -628,11 +1058,11 @@
     root.dataset.bound = 'true';
     writeStatus(statusEl, 'Ready.');
     loadModels({
-      apiKey: apiKeyInput?.value,
-      modelInput,
+      providerKey: activeProvider,
+      apiKey: providerApiKeys[activeProvider],
       modelPicker,
-      refreshButton: refreshModelsButton,
-      statusEl
+      statusEl,
+      excludedModelIds: getExcludedModelIds(activeProvider)
     });
   }
 

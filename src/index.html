@@ -45,7 +45,7 @@
               <div class="menu-separator" role="separator"></div>
               <div class="menu-item" data-window="openrouter" role="menuitem">
                 <span class="menu-icon icon-openrouter" aria-hidden="true"></span>
-                OpenRouter Completion
+                Completion API
               </div>
               <div class="menu-separator" role="separator"></div>
               <div class="menu-item" data-window="diskrot" role="menuitem">
@@ -399,7 +399,7 @@
 
             <div id="window-openrouter-template" class="window-shell box-shell app-window openrouter-window window-template" data-template="openrouter">
               <div class="box-header window-header">
-                <span class="box-title" aria-label="OpenRouter Completion window title">OpenRouter Completion</span>
+                <span class="box-title" aria-label="Completion API window title">Completion API</span>
                 <div class="button-col">
                   <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Minimize" data-expanded="-" data-collapsed="+">-</button>
                   <button type="button" class="toggle-button icon-button maximize-toggle" title="Maximize">□</button>
@@ -407,63 +407,106 @@
                 </div>
               </div>
               <div class="box-body">
-                <div class="openrouter-app" data-help="OpenRouter completion workspace." data-help-detail="Configure endpoint, model, and prompt, then send a completions request to OpenRouter and inspect or copy the returned text.">
-                  <div class="openrouter-grid">
-                    <div class="control-block">
-                      <label>Endpoint</label>
-                      <input type="text" class="openrouter-endpoint" value="https://openrouter.ai/api/v1/completions" data-help="OpenRouter completions endpoint." data-help-detail="Default points to OpenRouter completions. You can override this for compatible proxies that expose the same API contract.">
+                <div class="openrouter-app" data-help="Completion API workspace." data-help-detail="Configure provider, endpoint, model, and prompt, then send a raw completion request and inspect or copy the returned text.">
+                  <div class="prompt-menu openrouter-file-menu">
+                    <button type="button" class="prompt-menu-start openrouter-menu-start" aria-haspopup="true" aria-expanded="false" data-help="Open encrypted settings file menu." data-help-detail="Use this file menu to save encrypted completion settings to a JSON file or load them back from an encrypted settings file.">
+                      <span class="prompt-menu-glyph" aria-hidden="true">///</span>
+                      <span class="prompt-menu-label">file</span>
+                    </button>
+                    <div class="prompt-menu-dropdown openrouter-menu-dropdown" role="menu" aria-hidden="true">
+                      <div class="prompt-menu-item" data-action="save-settings" role="menuitem" data-help="Encrypt settings and download them as a file." data-help-detail="Encrypts endpoint, model, max tokens, temperature, title, prompt, and API key with your password, then downloads a JSON settings file.">Save Encrypted Settings</div>
+                      <div class="prompt-menu-item" data-action="load-settings" role="menuitem" data-help="Load an encrypted settings file and decrypt it." data-help-detail="Opens a file picker for a saved encrypted settings JSON file, then decrypts it using the password field.">Load Encrypted Settings</div>
                     </div>
+                    <div class="prompt-menu-spacer" aria-hidden="true"></div>
+                  </div>
+                  <input type="file" class="openrouter-load-settings-file" accept="application/json,.json" style="display:none">
+                  <div class="openrouter-content">
+                    <div class="openrouter-grid">
+                      <div class="control-block">
+                        <label>Provider</label>
+                        <select class="openrouter-provider" data-help="Completion provider." data-help-detail="Choose Fireworks or Hyperbolic. API key, endpoint defaults, and model loading are scoped to the selected provider.">
+                          <option value="fireworks" selected>Fireworks</option>
+                          <option value="hyperbolic">Hyperbolic</option>
+                        </select>
+                      </div>
+                      <div class="control-block">
+                        <label>Endpoint</label>
+                        <input type="text" class="openrouter-endpoint" value="https://api.fireworks.ai/inference/v1/completions" data-help="Completions endpoint for the selected provider." data-help-detail="Defaults to the selected provider's /completions endpoint. Requests are sent as raw prompt completion calls.">
+                      </div>
                     <div class="control-block">
                       <label>Model</label>
-                      <input type="text" class="openrouter-model" value="openai/gpt-4o-mini" data-help="Model id to send in the completion request." data-help-detail="Use an OpenRouter model slug, such as openai/gpt-4o-mini. You can type manually or pick one from the live model list below.">
-                      <div class="input-row openrouter-model-row">
-                        <select class="openrouter-model-picker" data-help="Live list of models from OpenRouter." data-help-detail="Loads model ids directly from OpenRouter API. With an API key, it prefers your user-filtered model list. Selecting an entry updates the model field above.">
-                          <option value="">Load models...</option>
-                        </select>
-                        <button type="button" class="add-button openrouter-refresh-models" data-help="Refresh model list from OpenRouter." data-help-detail="Fetches the latest model catalog. If an API key is set, it first tries /models/user; otherwise it uses the public /models list.">Refresh</button>
+                      <select class="openrouter-model-picker" data-help="Completion-compatible models from the selected provider." data-help-detail="This dropdown is auto-loaded from the selected provider.">
+                        <option value="">Loading completion models...</option>
+                      </select>
+                    </div>
+                      <div class="control-block">
+                        <label>Max Tokens</label>
+                      <input type="number" class="openrouter-max-tokens" min="1" step="1" value="300" data-help="Maximum completion tokens to request." data-help-detail="Sets max_tokens for the selected provider's completion request.">
+                      </div>
+                      <div class="control-block">
+                        <label>Temperature</label>
+                        <div class="openrouter-slider-row">
+                          <input type="range" class="openrouter-temperature" min="0" max="2" step="0.01" value="1" data-help="Sampling temperature for completion randomness." data-help-detail="Lower values are more deterministic; higher values increase variation.">
+                          <span class="openrouter-slider-value openrouter-temperature-value">1</span>
+                        </div>
+                      </div>
+                      <div class="control-block">
+                        <label>Top P</label>
+                        <div class="openrouter-slider-row">
+                          <input type="range" class="openrouter-top-p" min="0" max="1" step="0.01" value="1" data-help="Nucleus sampling probability mass." data-help-detail="Limits token sampling to the smallest token set whose cumulative probability exceeds this value. Set to 0 to disable.">
+                          <span class="openrouter-slider-value openrouter-top-p-value">1</span>
+                        </div>
+                      </div>
+                      <div class="control-block">
+                        <label>Top K</label>
+                        <div class="openrouter-slider-row">
+                          <input type="range" class="openrouter-top-k" min="0" max="500" step="1" value="40" data-help="Top-k token cutoff." data-help-detail="Limits sampling to the highest-probability K tokens. Primarily used by Fireworks models. Set to 0 to disable.">
+                          <span class="openrouter-slider-value openrouter-top-k-value">40</span>
+                        </div>
+                      </div>
+                      <div class="control-block">
+                        <label>Presence Penalty</label>
+                        <div class="openrouter-slider-row">
+                          <input type="range" class="openrouter-presence-penalty" min="-2" max="2" step="0.1" value="0" data-help="Penalty for already-seen tokens." data-help-detail="Positive values push the model toward introducing new concepts; negative values can encourage repetition. Set to 0 to disable.">
+                          <span class="openrouter-slider-value openrouter-presence-penalty-value">0</span>
+                        </div>
+                      </div>
+                      <div class="control-block">
+                        <label>Frequency Penalty</label>
+                        <div class="openrouter-slider-row">
+                          <input type="range" class="openrouter-frequency-penalty" min="-2" max="2" step="0.1" value="0" data-help="Penalty for repeated token frequency." data-help-detail="Positive values reduce verbatim repetition by penalizing frequently emitted tokens. Set to 0 to disable.">
+                          <span class="openrouter-slider-value openrouter-frequency-penalty-value">0</span>
+                        </div>
+                      </div>
+                      <div class="control-block">
+                        <label>API Key</label>
+                        <input type="password" class="openrouter-api-key" placeholder="Provider API key..." autocomplete="off" data-help="Provider API key sent as Bearer token." data-help-detail="A separate API key is tracked in-memory for each provider and can be saved only in encrypted settings files.">
+                      </div>
+                      <div class="control-block">
+                        <label>Title (optional)</label>
+                        <input type="text" class="openrouter-title" placeholder="Prompt Enhancer" data-help="Optional request title." data-help-detail="Reserved for provider metadata headers where supported.">
                       </div>
                     </div>
                     <div class="control-block">
-                      <label>Max Tokens</label>
-                      <input type="number" class="openrouter-max-tokens" min="1" step="1" value="300" data-help="Maximum completion tokens to request." data-help-detail="Higher values allow longer completions but may increase cost and latency.">
+                      <label>Stop Sequences (optional, one per line)</label>
+                      <textarea class="openrouter-stop" rows="3" placeholder="Example:\n\n###\nEND" data-help="Optional stop sequences." data-help-detail="Provide one stop sequence per line. Generation ends when any sequence is matched."></textarea>
                     </div>
                     <div class="control-block">
-                      <label>Temperature</label>
-                      <input type="number" class="openrouter-temperature" min="0" max="2" step="0.1" value="1" data-help="Sampling temperature for completion randomness." data-help-detail="Lower values are more deterministic; higher values increase variation.">
+                      <label>Prompt</label>
+                      <textarea class="openrouter-prompt" rows="8" placeholder="Write the completion prompt here..." data-help="Prompt text sent to the completions API." data-help-detail="Enter the text prefix you want the model to continue. The result appears in the output panel below."></textarea>
                     </div>
-                    <div class="control-block">
-                      <label>API Key</label>
-                      <input type="password" class="openrouter-api-key" placeholder="sk-or-v1-..." autocomplete="off" data-help="OpenRouter API key sent as Bearer token." data-help-detail="This key is used only for the outgoing request from your browser session. It is not persisted by this app.">
+                    <div class="openrouter-actions">
+                      <button type="button" class="add-button openrouter-send" data-help="Send a completion request." data-help-detail="Submits endpoint, model, params, and prompt to the selected provider. The button is disabled while the request is in flight.">Send Completion</button>
+                      <button type="button" class="add-button openrouter-copy-output" data-help="Copy the output panel text." data-help-detail="Copies the current completion output text to your clipboard.">Copy Output</button>
                     </div>
-                    <div class="control-block">
-                      <label>Title (optional)</label>
-                      <input type="text" class="openrouter-title" placeholder="Prompt Enhancer" data-help="Optional X-Title header value." data-help-detail="Set a human-readable application name for OpenRouter request metadata.">
-                    </div>
-                    <div class="control-block">
-                      <label>Settings Password</label>
-                      <input type="password" class="openrouter-settings-password" placeholder="Password for encrypted settings" autocomplete="off" data-help="Password used to encrypt and decrypt saved OpenRouter settings." data-help-detail="Choose a password and use it when saving or loading encrypted settings. The password itself is never stored.">
-                    </div>
-                  </div>
-                  <div class="control-block">
-                    <label>Prompt</label>
-                    <textarea class="openrouter-prompt" rows="8" placeholder="Write the completion prompt here..." data-help="Prompt text sent to the completions API." data-help-detail="Enter the text prefix you want the model to continue. The result appears in the output panel below."></textarea>
-                  </div>
-                  <div class="openrouter-actions">
-                    <button type="button" class="add-button openrouter-send" data-help="Send a completion request to OpenRouter." data-help-detail="Submits endpoint, model, params, and prompt. The button is disabled while the request is in flight.">Send Completion</button>
-                    <button type="button" class="add-button openrouter-copy-output" data-help="Copy the output panel text." data-help-detail="Copies the current completion output text to your clipboard.">Copy Output</button>
-                  </div>
-                  <div class="openrouter-settings-actions">
-                    <button type="button" class="add-button openrouter-save-settings" data-help="Encrypt settings and download them as a file." data-help-detail="Encrypts endpoint, model, max tokens, temperature, title, and API key with your password, then downloads a .json settings file.">Save Encrypted Settings</button>
-                    <button type="button" class="add-button openrouter-load-settings" data-help="Load an encrypted settings file and decrypt it." data-help-detail="Opens a file picker for a saved encrypted settings JSON file, then decrypts it using the password field.">Load Encrypted Settings</button>
-                    <input type="file" class="openrouter-load-settings-file" accept="application/json,.json" style="display:none">
-                  </div>
-                  <div class="openrouter-status" role="status" aria-live="polite">Ready.</div>
-                  <div class="openrouter-output" data-help="Completion output returned by OpenRouter." data-help-detail="Shows the first completion text returned by the API response.">
-                    <div class="label-row">
-                      <label>Output</label>
-                    </div>
-                    <div class="input-row">
-                      <pre class="openrouter-output-text"></pre>
+                    <div class="openrouter-status" role="status" aria-live="polite">Ready.</div>
+                    <div class="openrouter-output" data-help="Completion output returned by the selected provider." data-help-detail="Shows the first completion text returned by the API response.">
+                      <div class="label-row">
+                        <label>Output</label>
+                      </div>
+                      <div class="input-row">
+                        <pre class="openrouter-output-text"></pre>
+                      </div>
                     </div>
                   </div>
                 </div>
