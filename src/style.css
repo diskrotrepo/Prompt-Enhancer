@@ -906,6 +906,16 @@ textarea,
   margin-top: 0;
 }
 
+.openrouter-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.openrouter-settings-actions .add-button {
+  margin-top: 0;
+}
+
 .openrouter-status {
   margin-top: -0.1rem;
   padding: 0.45rem 0.55rem;

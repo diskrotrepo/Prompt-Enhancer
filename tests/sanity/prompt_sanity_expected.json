@@ -292,7 +292,8 @@
       "id": "openrouter_app_window",
       "output": "",
       "hasOpenRouterMenu": true,
-      "openRouterWindowCount": 1
+      "openRouterWindowCount": 1,
+      "hasOpenRouterEncryptedSettingsControls": true
     },
     {
       "id": "dropout_mix_reaches_tail_chunks",

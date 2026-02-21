@@ -12,6 +12,8 @@
   const MODELS_PUBLIC_ENDPOINT = 'https://openrouter.ai/api/v1/models';
   const MODELS_USER_ENDPOINT = 'https://openrouter.ai/api/v1/models/user';
   const DEFAULT_MODEL = 'openai/gpt-4o-mini';
+  const DEFAULT_SETTINGS_FILE_NAME = 'openrouter-encrypted-settings.json';
+  const PBKDF2_ITERATIONS = 250000;
 
   function ensureAppRegistry() {
     if (typeof window === 'undefined') return null;
@@ -73,6 +75,156 @@
     const headers = {};
     if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
     return headers;
+  }
+
+  function getWebCrypto() {
+    if (typeof globalThis === 'undefined') return null;
+    return globalThis.crypto || null;
+  }
+
+  function hasCryptoSupport() {
+    const cryptoApi = getWebCrypto();
+    return !!(cryptoApi && cryptoApi.subtle && typeof cryptoApi.getRandomValues === 'function');
+  }
+
+  function bytesToBase64(bytes) {
+    const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    let binary = '';
+    for (let i = 0; i < view.length; i += 1) {
+      binary += String.fromCharCode(view[i]);
+    }
+    return btoa(binary);
+  }
+
+  function base64ToBytes(value) {
+    const binary = atob(String(value || ''));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  function utf8ToBytes(text) {
+    const encoded = unescape(encodeURIComponent(String(text)));
+    const bytes = new Uint8Array(encoded.length);
+    for (let i = 0; i < encoded.length; i += 1) {
+      bytes[i] = encoded.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  function bytesToUtf8(bytes) {
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 1) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return decodeURIComponent(escape(binary));
+  }
+
+  async function deriveAesKey(password, saltBytes, usages) {
+    const cryptoApi = getWebCrypto();
+    const keyMaterial = await cryptoApi.subtle.importKey(
+      'raw',
+      utf8ToBytes(password),
+      { name: 'PBKDF2' },
+      false,
+      ['deriveKey']
+    );
+    return cryptoApi.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt: saltBytes,
+        iterations: PBKDF2_ITERATIONS,
+        hash: 'SHA-256'
+      },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      usages
+    );
+  }
+
+  async function encryptSettings(password, settings) {
+    const cryptoApi = getWebCrypto();
+    const salt = cryptoApi.getRandomValues(new Uint8Array(16));
+    const iv = cryptoApi.getRandomValues(new Uint8Array(12));
+    const key = await deriveAesKey(password, salt, ['encrypt']);
+    const plaintext = utf8ToBytes(JSON.stringify(settings));
+    const encrypted = await cryptoApi.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      plaintext
+    );
+    return {
+      version: 1,
+      kdf: {
+        name: 'PBKDF2',
+        hash: 'SHA-256',
+        iterations: PBKDF2_ITERATIONS,
+        salt: bytesToBase64(salt)
+      },
+      cipher: {
+        name: 'AES-GCM',
+        iv: bytesToBase64(iv),
+        data: bytesToBase64(encrypted)
+      }
+    };
+  }
+
+  async function decryptSettings(password, payload) {
+    const salt = base64ToBytes(payload?.kdf?.salt);
+    const iv = base64ToBytes(payload?.cipher?.iv);
+    const encrypted = base64ToBytes(payload?.cipher?.data);
+    const key = await deriveAesKey(password, salt, ['decrypt']);
+    const cryptoApi = getWebCrypto();
+    try {
+      const decrypted = await cryptoApi.subtle.decrypt(
+        { name: 'AES-GCM', iv },
+        key,
+        encrypted
+      );
+      return JSON.parse(bytesToUtf8(new Uint8Array(decrypted)));
+    } catch (err) {
+      throw new Error('Invalid password or corrupted encrypted settings.');
+    }
+  }
+
+  function downloadEncryptedSettings(payload, fileName = DEFAULT_SETTINGS_FILE_NAME) {
+    if (typeof document === 'undefined' || typeof URL === 'undefined') return false;
+    try {
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = toTrimmedString(fileName) || DEFAULT_SETTINGS_FILE_NAME;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  async function readEncryptedSettingsFile(file) {
+    if (!file) throw new Error('No file selected.');
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(String(reader.result || ''));
+          if (!parsed || typeof parsed !== 'object') {
+            reject(new Error('Selected file does not contain valid encrypted settings JSON.'));
+            return;
+          }
+          resolve(parsed);
+        } catch (err) {
+          reject(new Error('Selected file does not contain valid JSON.'));
+        }
+      };
+      reader.onerror = () => reject(new Error('Failed to read selected settings file.'));
+      reader.readAsText(file);
+    });
   }
 
   async function readErrorMessage(response) {
@@ -227,6 +379,48 @@
     }
   }
 
+  function collectOpenRouterSettings(inputs) {
+    const {
+      endpointInput,
+      modelInput,
+      maxTokensInput,
+      temperatureInput,
+      apiKeyInput,
+      titleInput
+    } = inputs;
+    return {
+      endpoint: normalizeEndpoint(endpointInput?.value),
+      model: toTrimmedString(modelInput?.value) || DEFAULT_MODEL,
+      maxTokens: Math.round(readNumberInput(maxTokensInput, 300, 1, 200000)),
+      temperature: readNumberInput(temperatureInput, 1, 0, 2),
+      apiKey: toTrimmedString(apiKeyInput?.value),
+      title: toTrimmedString(titleInput?.value)
+    };
+  }
+
+  function applyOpenRouterSettings(inputs, settings) {
+    const {
+      endpointInput,
+      modelInput,
+      modelPicker,
+      maxTokensInput,
+      temperatureInput,
+      apiKeyInput,
+      titleInput
+    } = inputs;
+    if (endpointInput) endpointInput.value = normalizeEndpoint(settings?.endpoint);
+    if (modelInput) modelInput.value = toTrimmedString(settings?.model) || DEFAULT_MODEL;
+    if (modelPicker) {
+      const requestedModel = modelInput?.value || '';
+      const hasOption = Array.from(modelPicker.options || []).some(option => option.value === requestedModel);
+      modelPicker.value = hasOption ? requestedModel : '';
+    }
+    if (maxTokensInput) maxTokensInput.value = String(Math.round(readNumberInput({ value: settings?.maxTokens }, 300, 1, 200000)));
+    if (temperatureInput) temperatureInput.value = String(readNumberInput({ value: settings?.temperature }, 1, 0, 2));
+    if (apiKeyInput) apiKeyInput.value = toTrimmedString(settings?.apiKey);
+    if (titleInput) titleInput.value = toTrimmedString(settings?.title);
+  }
+
   function copyToClipboard(text) {
     if (!text) return Promise.resolve(false);
     if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
@@ -247,9 +441,13 @@
     const temperatureInput = root.querySelector('.openrouter-temperature');
     const apiKeyInput = root.querySelector('.openrouter-api-key');
     const titleInput = root.querySelector('.openrouter-title');
+    const settingsPasswordInput = root.querySelector('.openrouter-settings-password');
     const promptInput = root.querySelector('.openrouter-prompt');
     const sendButton = root.querySelector('.openrouter-send');
     const copyButton = root.querySelector('.openrouter-copy-output');
+    const saveSettingsButton = root.querySelector('.openrouter-save-settings');
+    const loadSettingsButton = root.querySelector('.openrouter-load-settings');
+    const loadSettingsFileInput = root.querySelector('.openrouter-load-settings-file');
     const outputEl = root.querySelector('.openrouter-output-text');
     const statusEl = root.querySelector('.openrouter-status');
 
@@ -286,6 +484,88 @@
           refreshButton: refreshModelsButton,
           statusEl
         });
+      });
+    }
+
+    const settingsInputs = {
+      endpointInput,
+      modelInput,
+      modelPicker,
+      maxTokensInput,
+      temperatureInput,
+      apiKeyInput,
+      titleInput
+    };
+
+    if (saveSettingsButton) {
+      saveSettingsButton.addEventListener('click', async () => {
+        const password = settingsPasswordInput?.value || '';
+        if (!password) {
+          writeStatus(statusEl, 'Enter a password before saving encrypted settings.', true);
+          return;
+        }
+        if (!hasCryptoSupport()) {
+          writeStatus(statusEl, 'Encrypted save is unavailable: browser crypto support is missing.', true);
+          return;
+        }
+        saveSettingsButton.disabled = true;
+        try {
+          const settings = collectOpenRouterSettings(settingsInputs);
+          const payload = await encryptSettings(password, settings);
+          const stored = downloadEncryptedSettings(payload);
+          writeStatus(
+            statusEl,
+            stored ? 'Encrypted settings file downloaded.' : 'Failed to download encrypted settings file.',
+            !stored
+          );
+        } catch (err) {
+          writeStatus(statusEl, `Encrypted save failed: ${err?.message || 'unknown error'}`, true);
+        } finally {
+          saveSettingsButton.disabled = false;
+        }
+      });
+    }
+
+    if (loadSettingsButton) {
+      loadSettingsButton.addEventListener('click', () => {
+        loadSettingsFileInput?.click();
+      });
+    }
+
+    if (loadSettingsFileInput) {
+      loadSettingsFileInput.addEventListener('change', async event => {
+        const file = event?.target?.files?.[0] || null;
+        loadSettingsFileInput.value = '';
+        const password = settingsPasswordInput?.value || '';
+        if (!password) {
+          writeStatus(statusEl, 'Enter the password used for encrypted settings.', true);
+          return;
+        }
+        if (!hasCryptoSupport()) {
+          writeStatus(statusEl, 'Encrypted load is unavailable: browser crypto support is missing.', true);
+          return;
+        }
+        if (!file) return;
+        loadSettingsButton && (loadSettingsButton.disabled = true);
+        try {
+          const payload = await readEncryptedSettingsFile(file);
+          const settings = await decryptSettings(password, payload);
+          applyOpenRouterSettings(settingsInputs, settings);
+          await loadModels({
+            apiKey: apiKeyInput?.value,
+            modelInput,
+            modelPicker,
+            refreshButton: refreshModelsButton,
+            statusEl
+          });
+          if (!statusEl?.classList?.contains('is-error')) {
+            writeStatus(statusEl, 'Encrypted settings loaded from file.');
+          }
+        } catch (err) {
+          writeStatus(statusEl, err?.message || 'Encrypted settings could not be loaded.', true);
+        } finally {
+          loadSettingsButton && (loadSettingsButton.disabled = false);
+        }
       });
     }
 

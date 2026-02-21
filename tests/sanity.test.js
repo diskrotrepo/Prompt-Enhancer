@@ -232,6 +232,12 @@ function runSanityCase(testCase) {
   );
   const hasOpenRouterMenu = !!window.document.querySelector('.menu-item[data-window="openrouter"]');
   const openRouterWindowCount = window.document.querySelectorAll('.openrouter-window:not(.window-template)').length;
+  const hasOpenRouterEncryptedSettingsControls = !!(
+    window.document.querySelector('.openrouter-save-settings') &&
+    window.document.querySelector('.openrouter-load-settings') &&
+    window.document.querySelector('.openrouter-load-settings-file') &&
+    window.document.querySelector('.openrouter-settings-password')
+  );
   const result = {
     id: testCase.id,
     output,
@@ -260,6 +266,7 @@ function runSanityCase(testCase) {
     hasLoadPresetMenu,
     hasOpenRouterMenu,
     openRouterWindowCount,
+    hasOpenRouterEncryptedSettingsControls,
     mixCopiedText: actionResults.mixCopiedText,
     chunkCopiedText: actionResults.chunkCopiedText,
     promptCount,
@@ -370,6 +377,9 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'openRouterWindowCount')) {
         expect(result.openRouterWindowCount).toBe(expected.openRouterWindowCount);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasOpenRouterEncryptedSettingsControls')) {
+        expect(result.hasOpenRouterEncryptedSettingsControls).toBe(expected.hasOpenRouterEncryptedSettingsControls);
       }
     });
   });

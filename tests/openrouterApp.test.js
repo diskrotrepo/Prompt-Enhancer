@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { webcrypto } = require('crypto');
 const { createDom, registerDomCleanup } = require('./helpers/dom');
 
 const ROOT = path.join(__dirname, '..');
@@ -11,6 +12,25 @@ const OPENROUTER_APP_PATH = path.join(ROOT, 'src', 'apps', 'openrouter-completio
 
 function flush() {
   return new Promise(resolve => setTimeout(resolve, 0));
+}
+
+async function waitFor(predicate, attempts = 120) {
+  for (let i = 0; i < attempts; i += 1) {
+    const result = predicate();
+    if (result) return result;
+    // Give async handlers and crypto operations time to settle.
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  return null;
+}
+
+async function blobToText(window, blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new window.FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Failed to read blob text'));
+    reader.readAsText(blob);
+  });
 }
 
 function setupDom() {
@@ -33,6 +53,38 @@ function setupDom() {
       configurable: true
     });
   }
+  try {
+    window.crypto = webcrypto;
+  } catch (err) {
+    Object.defineProperty(window, 'crypto', {
+      value: webcrypto,
+      configurable: true
+    });
+  }
+  if (!window.crypto.getRandomValues) {
+    window.crypto.getRandomValues = (...args) => webcrypto.getRandomValues(...args);
+  }
+  if (!window.crypto.subtle) {
+    window.crypto.subtle = webcrypto.subtle;
+  }
+  if (!window.URL) window.URL = {};
+  const downloadedBlobs = [];
+  const downloads = [];
+  window.URL.createObjectURL = jest.fn(blob => {
+    downloadedBlobs.push(blob);
+    return `blob:mock-${downloadedBlobs.length}`;
+  });
+  window.URL.revokeObjectURL = jest.fn();
+  const originalCreate = window.document.createElement.bind(window.document);
+  window.document.createElement = tagName => {
+    const el = originalCreate(tagName);
+    if (String(tagName).toLowerCase() === 'a') {
+      el.click = () => {
+        downloads.push({ download: el.download, href: el.href });
+      };
+    }
+    return el;
+  };
   window.fetch = jest.fn((url, init) => {
     const target = String(url || '');
     if (target.includes('/models/user') || target.includes('/models')) {
@@ -66,7 +118,7 @@ function setupDom() {
   if (window.document.readyState === 'loading') {
     window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
   }
-  return { window, clipboardWrites };
+  return { window, clipboardWrites, downloadedBlobs, downloads };
 }
 
 describe('OpenRouter app module', () => {
@@ -113,6 +165,67 @@ describe('OpenRouter app module', () => {
     copyButton.click();
     await flush();
     expect(clipboardWrites[clipboardWrites.length - 1]).toBe('result text');
+  });
+
+  test('encrypts settings to a file and loads them back with password', async () => {
+    const { window, downloadedBlobs, downloads } = setupDom();
+    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
+    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    expect(appWindow).not.toBeNull();
+
+    const endpointInput = appWindow.querySelector('.openrouter-endpoint');
+    const modelInput = appWindow.querySelector('.openrouter-model');
+    const maxTokensInput = appWindow.querySelector('.openrouter-max-tokens');
+    const temperatureInput = appWindow.querySelector('.openrouter-temperature');
+    const apiKeyInput = appWindow.querySelector('.openrouter-api-key');
+    const titleInput = appWindow.querySelector('.openrouter-title');
+    const passwordInput = appWindow.querySelector('.openrouter-settings-password');
+    const saveButton = appWindow.querySelector('.openrouter-save-settings');
+    const loadButton = appWindow.querySelector('.openrouter-load-settings');
+    const loadFileInput = appWindow.querySelector('.openrouter-load-settings-file');
+
+    endpointInput.value = 'https://openrouter.ai/api/v1/completions';
+    modelInput.value = 'anthropic/claude-3.5-haiku';
+    maxTokensInput.value = '777';
+    temperatureInput.value = '1.4';
+    apiKeyInput.value = 'sk-live-secret-value';
+    titleInput.value = 'Encrypted Settings Test';
+    passwordInput.value = 'correct horse battery staple';
+
+    saveButton.click();
+    await waitFor(() => downloads.length > 0);
+    expect(downloads.length).toBeGreaterThan(0);
+    expect(downloads[downloads.length - 1].download).toBe('openrouter-encrypted-settings.json');
+    expect(downloadedBlobs.length).toBeGreaterThan(0);
+    const encryptedRaw = await blobToText(window, downloadedBlobs[downloadedBlobs.length - 1]);
+    expect(encryptedRaw).not.toContain('sk-live-secret-value');
+
+    endpointInput.value = '';
+    modelInput.value = '';
+    maxTokensInput.value = '1';
+    temperatureInput.value = '0';
+    apiKeyInput.value = '';
+    titleInput.value = '';
+
+    loadButton.click();
+    const encryptedFile = new window.File(
+      [encryptedRaw],
+      'openrouter-encrypted-settings.json',
+      { type: 'application/json' }
+    );
+    Object.defineProperty(loadFileInput, 'files', {
+      value: [encryptedFile],
+      configurable: true
+    });
+    loadFileInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() => apiKeyInput.value === 'sk-live-secret-value');
+
+    expect(endpointInput.value).toBe('https://openrouter.ai/api/v1/completions');
+    expect(modelInput.value).toBe('anthropic/claude-3.5-haiku');
+    expect(maxTokensInput.value).toBe('777');
+    expect(temperatureInput.value).toBe('1.4');
+    expect(apiKeyInput.value).toBe('sk-live-secret-value');
+    expect(titleInput.value).toBe('Encrypted Settings Test');
   });
 });
 
