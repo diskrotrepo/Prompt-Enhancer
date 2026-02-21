@@ -217,7 +217,9 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 #### Window apps
 
 - **OpenRouter Completion app appears in the menu and opens its own window** — `openrouter_app_window`
-- **OpenRouter encrypted settings controls exist (password + file save/load)** — `openrouter_app_window`
+- **OpenRouter encrypted settings file actions live in the top file menu (password + file save/load)** — `openrouter_app_window`
+- **OpenRouter model picker is dropdown-only and filtered to completion-oriented models (chat/instruct models excluded)** — `openrouter_app_window`
+- **OpenRouter completion status breaks out billed input/output/total tokens and request cost when usage data is available** — `openrouter_app_window`
 
 - **Color presets**  
   Custom color presets are global across boxes, persist in saved state, and missing preset ids fall back to Auto on load.

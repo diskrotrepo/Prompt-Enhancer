@@ -233,10 +233,10 @@ function runSanityCase(testCase) {
   const hasOpenRouterMenu = !!window.document.querySelector('.menu-item[data-window="openrouter"]');
   const openRouterWindowCount = window.document.querySelectorAll('.openrouter-window:not(.window-template)').length;
   const hasOpenRouterEncryptedSettingsControls = !!(
-    window.document.querySelector('.openrouter-save-settings') &&
-    window.document.querySelector('.openrouter-load-settings') &&
-    window.document.querySelector('.openrouter-load-settings-file') &&
-    window.document.querySelector('.openrouter-settings-password')
+    window.document.querySelector('.openrouter-menu-start') &&
+    window.document.querySelector('.openrouter-menu-dropdown .prompt-menu-item[data-action="save-settings"]') &&
+    window.document.querySelector('.openrouter-menu-dropdown .prompt-menu-item[data-action="load-settings"]') &&
+    window.document.querySelector('.openrouter-load-settings-file')
   );
   const result = {
     id: testCase.id,
