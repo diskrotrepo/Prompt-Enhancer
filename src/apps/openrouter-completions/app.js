@@ -26,8 +26,13 @@
   const FIREWORKS_MODELS_ENDPOINT = 'https://api.fireworks.ai/v1/models';
   const FIREWORKS_MODELS_FALLBACK_ENDPOINT = 'https://api.fireworks.ai/inference/v1/models';
   const HYPERBOLIC_MODELS_ENDPOINT = 'https://api.hyperbolic.xyz/v1/models';
+  const HYPERBOLIC_BASE_COMPLETION_MODEL_IDS = new Set([
+    'meta-llama/meta-llama-3.1-405b-base',
+    'meta-llama/meta-llama-3.1-405b-base-fp8',
+    'meta-llama/meta-llama-3.1-405b-base-bf16',
+    'meta-llama/meta-llama-3.1-405b-base-instructless'
+  ]);
   const HYPERBOLIC_FALLBACK_MODELS = Object.freeze([
-    { id: 'meta-llama/Meta-Llama-3.1-405B', name: 'Llama 3.1 405B', contextLength: null },
     { id: 'meta-llama/Meta-Llama-3.1-405B-Base', name: 'Llama 3.1 405B Base', contextLength: null }
   ]);
   const TOP_K_MAX = 100;
@@ -73,6 +78,18 @@
     return lines.length ? lines : undefined;
   }
 
+  function toLowerArray(value) {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map(item => String(item || '').trim().toLowerCase())
+      .filter(Boolean);
+  }
+
+  function includesAny(text, patterns) {
+    const target = String(text || '').toLowerCase();
+    return patterns.some(pattern => pattern.test(target));
+  }
+
   function promptForSettingsPassword(action) {
     if (typeof window === 'undefined' || typeof window.prompt !== 'function') return null;
     const message = action === 'save'
@@ -115,11 +132,196 @@
     return Number.isFinite(parsed) ? parsed : null;
   }
 
-  function formatCredits(value) {
+  function parseNumberLoose(value) {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value !== 'string') return null;
+    const cleaned = value.trim().replace(/[$,_\s]/g, '');
+    if (!cleaned) return null;
+    const parsed = Number(cleaned);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  function firstNumber(values) {
+    for (let i = 0; i < values.length; i += 1) {
+      const parsed = parseNumberLoose(values[i]);
+      if (parsed != null) return parsed;
+    }
+    return null;
+  }
+
+  function readPath(target, path) {
+    if (!target || typeof target !== 'object') return undefined;
+    return String(path)
+      .split('.')
+      .reduce((acc, key) => (acc && typeof acc === 'object' ? acc[key] : undefined), target);
+  }
+
+  function readFirstPathNumber(target, paths) {
+    for (let i = 0; i < paths.length; i += 1) {
+      const parsed = parseNumberLoose(readPath(target, paths[i]));
+      if (parsed != null) return parsed;
+    }
+    return null;
+  }
+
+  function formatUsd(value) {
     const amount = toNumberOrNull(value);
     if (amount == null) return 'n/a';
     const fixed = amount < 0.01 ? amount.toFixed(8) : amount.toFixed(6);
     return fixed.replace(/0+$/, '').replace(/\.$/, '');
+  }
+
+  function readModelPricing(modelEntry) {
+    if (!modelEntry || typeof modelEntry !== 'object') return null;
+    const inputUsdPerToken = readFirstPathNumber(modelEntry, [
+      'pricing.input',
+      'pricing.prompt',
+      'pricing.input_token',
+      'pricing.prompt_token',
+      'input_cost_per_token',
+      'prompt_cost_per_token',
+      'input_price_per_token',
+      'prompt_price_per_token',
+      'input_token_price',
+      'prompt_token_price'
+    ]);
+    const outputUsdPerToken = readFirstPathNumber(modelEntry, [
+      'pricing.output',
+      'pricing.completion',
+      'pricing.output_token',
+      'pricing.completion_token',
+      'output_cost_per_token',
+      'completion_cost_per_token',
+      'output_price_per_token',
+      'completion_price_per_token',
+      'output_token_price',
+      'completion_token_price'
+    ]);
+    const cachedInputUsdPerToken = readFirstPathNumber(modelEntry, [
+      'pricing.cached_input',
+      'pricing.cache_read',
+      'cached_input_cost_per_token',
+      'cache_read_cost_per_token',
+      'cached_input_price_per_token',
+      'cache_read_price_per_token'
+    ]);
+
+    const inputUsdPerMillion = readFirstPathNumber(modelEntry, [
+      'pricing.input_per_million',
+      'pricing.prompt_per_million',
+      'input_cost_per_million',
+      'prompt_cost_per_million',
+      'input_price_per_million',
+      'prompt_price_per_million'
+    ]);
+    const outputUsdPerMillion = readFirstPathNumber(modelEntry, [
+      'pricing.output_per_million',
+      'pricing.completion_per_million',
+      'output_cost_per_million',
+      'completion_cost_per_million',
+      'output_price_per_million',
+      'completion_price_per_million'
+    ]);
+    const cachedInputUsdPerMillion = readFirstPathNumber(modelEntry, [
+      'pricing.cached_input_per_million',
+      'pricing.cache_read_per_million',
+      'cached_input_cost_per_million',
+      'cache_read_cost_per_million',
+      'cached_input_price_per_million',
+      'cache_read_price_per_million'
+    ]);
+    const flatUsdPerToken = readFirstPathNumber(modelEntry, [
+      'pricing.token',
+      'price_per_token',
+      'token_price',
+      'serverless_price_per_token'
+    ]);
+    const flatUsdPerMillion = readFirstPathNumber(modelEntry, [
+      'pricing.token_per_million',
+      'price_per_million',
+      'price_per_million_tokens',
+      'serverless_price_per_million',
+      'serverless_price_per_million_tokens'
+    ]);
+
+    const flatRate = flatUsdPerToken != null
+      ? flatUsdPerToken
+      : flatUsdPerMillion != null
+        ? flatUsdPerMillion / 1000000
+        : null;
+    const inputRate = inputUsdPerToken != null
+      ? inputUsdPerToken
+      : inputUsdPerMillion != null
+        ? inputUsdPerMillion / 1000000
+        : flatRate;
+    const outputRate = outputUsdPerToken != null
+      ? outputUsdPerToken
+      : outputUsdPerMillion != null
+        ? outputUsdPerMillion / 1000000
+        : flatRate;
+    const cachedRate = cachedInputUsdPerToken != null
+      ? cachedInputUsdPerToken
+      : cachedInputUsdPerMillion != null
+        ? cachedInputUsdPerMillion / 1000000
+        : inputRate;
+
+    if (inputRate == null && outputRate == null) return null;
+    return {
+      inputUsdPerToken: inputRate != null ? inputRate : outputRate,
+      outputUsdPerToken: outputRate != null ? outputRate : inputRate,
+      cachedInputUsdPerToken: cachedRate
+    };
+  }
+
+  function normalizeCompletionUsage(payload) {
+    const source =
+      payload?.usage ||
+      payload?.token_usage ||
+      payload?.usage_stats ||
+      payload?.usage_metadata ||
+      payload?.metrics?.usage ||
+      null;
+    const usage = source && typeof source === 'object' ? { ...source } : {};
+
+    const promptTokens = firstNumber([
+      usage.prompt_tokens,
+      usage.input_tokens,
+      payload?.prompt_tokens,
+      payload?.input_tokens
+    ]);
+    const completionTokens = firstNumber([
+      usage.completion_tokens,
+      usage.output_tokens,
+      payload?.completion_tokens,
+      payload?.output_tokens
+    ]);
+    const totalTokens = firstNumber([
+      usage.total_tokens,
+      usage.tokens,
+      payload?.total_tokens
+    ]);
+    const costUsd = firstNumber([
+      usage.cost,
+      usage.total_cost,
+      usage.request_cost,
+      usage.billing_cost,
+      usage?.cost_details?.total_cost,
+      usage?.cost_details?.upstream_inference_cost,
+      payload?.cost,
+      payload?.total_cost,
+      payload?.request_cost,
+      payload?.billing_cost,
+      payload?.billing?.cost,
+      payload?.cost_details?.total_cost,
+      payload?.cost_details?.upstream_inference_cost
+    ]);
+
+    if (promptTokens != null) usage.prompt_tokens = promptTokens;
+    if (completionTokens != null) usage.completion_tokens = completionTokens;
+    if (totalTokens != null) usage.total_tokens = totalTokens;
+    if (costUsd != null && usage.cost == null) usage.cost = costUsd;
+
+    return Object.keys(usage).length ? usage : null;
   }
 
   function readUsageBreakdown(usage) {
@@ -138,13 +340,42 @@
       totalTokens,
       reasoningTokens: toNumberOrNull(usage?.completion_tokens_details?.reasoning_tokens),
       cachedPromptTokens: toNumberOrNull(usage?.prompt_tokens_details?.cached_tokens),
-      costCredits: toNumberOrNull(usage?.cost),
-      upstreamCostCredits: toNumberOrNull(usage?.cost_details?.upstream_inference_cost)
+      costUsd: firstNumber([
+        usage?.cost,
+        usage?.total_cost,
+        usage?.request_cost,
+        usage?.billing_cost
+      ]),
+      upstreamCostUsd: firstNumber([
+        usage?.cost_details?.upstream_inference_cost,
+        usage?.cost_details?.total_cost
+      ])
     };
+  }
+
+  function estimateUsageCostUsd(usage, modelPricing) {
+    if (!usage || !modelPricing) return null;
+    const details = readUsageBreakdown(usage);
+    if (details.promptTokens == null || details.completionTokens == null) return null;
+    const inputRate = toNumberOrNull(modelPricing?.inputUsdPerToken);
+    const outputRate = toNumberOrNull(modelPricing?.outputUsdPerToken);
+    if (inputRate == null || outputRate == null) return null;
+    const cachedTokensRaw = toNumberOrNull(details.cachedPromptTokens);
+    const cachedTokens = cachedTokensRaw == null
+      ? 0
+      : Math.max(0, Math.min(details.promptTokens, cachedTokensRaw));
+    const uncachedPromptTokens = Math.max(0, details.promptTokens - cachedTokens);
+    const cachedInputRate = toNumberOrNull(modelPricing?.cachedInputUsdPerToken) ?? inputRate;
+    return (
+      uncachedPromptTokens * inputRate +
+      cachedTokens * cachedInputRate +
+      details.completionTokens * outputRate
+    );
   }
 
   function buildBillingStatusMessage(usage, options = {}) {
     const details = readUsageBreakdown(usage);
+    const estimatedCostUsd = toNumberOrNull(options.estimatedCostUsd);
     const lines = ['Completed.'];
     lines.push(`Output tokens (billed output): ${details.completionTokens ?? 'n/a'}`);
     lines.push(`Input tokens (billed input): ${details.promptTokens ?? 'n/a'}`);
@@ -155,9 +386,20 @@
     if (details.cachedPromptTokens != null) {
       lines.push(`Cached input tokens: ${details.cachedPromptTokens}`);
     }
-    lines.push(`Request cost (credits): ${formatCredits(details.costCredits)}`);
-    if (details.upstreamCostCredits != null) {
-      lines.push(`Upstream inference cost (credits): ${formatCredits(details.upstreamCostCredits)}`);
+    if (details.costUsd != null) {
+      lines.push(`Request cost (USD): $${formatUsd(details.costUsd)}`);
+    } else if (estimatedCostUsd != null) {
+      lines.push(`Estimated request cost (USD): $${formatUsd(estimatedCostUsd)}`);
+      lines.push('Billing source: token estimate from model pricing');
+    } else {
+      lines.push('Request cost (USD): n/a');
+      lines.push('Billing source: provider did not return request cost');
+    }
+    if (details.upstreamCostUsd != null) {
+      lines.push(`Upstream inference cost (USD): $${formatUsd(details.upstreamCostUsd)}`);
+    }
+    if (details.costUsd != null && estimatedCostUsd != null) {
+      lines.push(`Estimated request cost (USD): $${formatUsd(estimatedCostUsd)}`);
     }
     if (options.costFromGeneration === true) {
       lines.push('Billing source: generation stats (native accounting)');
@@ -417,7 +659,7 @@
     return {
       id: toTrimmedString(payload?.id),
       text: completion,
-      usage: payload?.usage || null
+      usage: normalizeCompletionUsage(payload)
     };
   }
 
@@ -434,7 +676,22 @@
       unique.set(id, {
         id,
         name: toTrimmedString(entry?.display_name || entry?.name || ''),
-        contextLength: Number.isFinite(entry?.context_length) ? entry.context_length : null
+        contextLength: Number.isFinite(entry?.context_length) ? entry.context_length : null,
+        pricing: readModelPricing(entry),
+        supportedParameters: Array.isArray(entry?.supported_parameters)
+          ? entry.supported_parameters
+          : null,
+        inputModalities: Array.isArray(entry?.architecture?.input_modalities)
+          ? entry.architecture.input_modalities
+          : Array.isArray(entry?.input_modalities)
+            ? entry.input_modalities
+            : null,
+        outputModalities: Array.isArray(entry?.architecture?.output_modalities)
+          ? entry.architecture.output_modalities
+          : Array.isArray(entry?.output_modalities)
+            ? entry.output_modalities
+            : null,
+        task: toTrimmedString(entry?.task || entry?.type || entry?.modality || '')
       });
     });
     return Array.from(unique.values()).sort((a, b) => a.id.localeCompare(b.id));
@@ -444,6 +701,65 @@
     const namePart = entry.name && entry.name !== entry.id ? ` - ${entry.name}` : '';
     const ctxPart = Number.isFinite(entry.contextLength) ? ` (${entry.contextLength} ctx)` : '';
     return `${entry.id}${namePart}${ctxPart}`;
+  }
+
+  function isHyperbolicBaseCompletionModel(entry) {
+    const id = toTrimmedString(entry?.id).toLowerCase();
+    return HYPERBOLIC_BASE_COMPLETION_MODEL_IDS.has(id);
+  }
+
+  function isLikelyTextCompletionModel(entry) {
+    const inputModalities = toLowerArray(entry?.inputModalities);
+    const outputModalities = toLowerArray(entry?.outputModalities);
+    if (inputModalities.length && !inputModalities.includes('text')) return false;
+    if (outputModalities.length && !outputModalities.includes('text')) return false;
+
+    const task = toTrimmedString(entry?.task).toLowerCase();
+    if (
+      includesAny(task, [
+        /image/,
+        /vision/,
+        /audio/,
+        /speech/,
+        /embed/,
+        /rerank/,
+        /moderation/,
+        /transcrib/
+      ])
+    ) {
+      return false;
+    }
+
+    const identity = `${entry?.id || ''} ${entry?.name || ''}`;
+    return !includesAny(identity, [
+      /sdxl/,
+      /stable[-\s]?diffusion/,
+      /flux/,
+      /controlnet/,
+      /whisper/,
+      /\btts\b/,
+      /text[-\s]?to[-\s]?speech/,
+      /speech[-\s]?to[-\s]?text/,
+      /\bembedding(s)?\b/,
+      /\brerank(er)?\b/,
+      /\bvision\b/,
+      /\bvl\b/,
+      /\bimage\b/
+    ]);
+  }
+
+  function supportsCompletionsByMetadata(entry) {
+    const params = toLowerArray(entry?.supportedParameters);
+    if (!params.length) return null;
+    if (!params.includes('prompt')) return false;
+    if (
+      params.includes('max_tokens') ||
+      params.includes('max_new_tokens') ||
+      params.includes('max_completion_tokens')
+    ) {
+      return true;
+    }
+    return false;
   }
 
   function renderModelPicker(modelPicker, entries, activeModel) {
@@ -512,7 +828,8 @@
       apiKey,
       modelPicker,
       statusEl,
-      excludedModelIds
+      excludedModelIds,
+      modelPricingById
     } = config;
     if (!modelPicker) return;
     if (typeof fetch !== 'function') {
@@ -523,6 +840,7 @@
     const providerLabel = getProviderOption(provider).label;
     const key = toTrimmedString(apiKey);
     if (!key) {
+      if (modelPricingById) modelPricingById.clear();
       renderModelPicker(modelPicker, [], modelPicker.value);
       writeStatus(statusEl, `Enter a ${providerLabel} API key to load models.`, true);
       return;
@@ -535,27 +853,39 @@
       if (provider === PROVIDER_KEYS.HYPERBOLIC) {
         entries = await requestHyperbolicModelCatalog(key);
         source = '/v1/models';
+        entries = entries.filter(isHyperbolicBaseCompletionModel);
         if (!entries.length) {
           entries = HYPERBOLIC_FALLBACK_MODELS.slice();
-          source = 'fallback catalog';
+          source = 'curated base catalog';
         }
       } else {
         entries = await requestFireworksModelCatalog(key);
         source = '/v1/models';
+        entries = entries.filter(isLikelyTextCompletionModel);
+        entries = entries.filter(entry => supportsCompletionsByMetadata(entry) !== false);
       }
+
       if (excludedModelIds && excludedModelIds.size) {
         entries = entries.filter(entry => !excludedModelIds.has(entry.id));
+      }
+      if (modelPricingById) {
+        modelPricingById.clear();
+        entries.forEach(entry => {
+          if (entry?.pricing) modelPricingById.set(entry.id, entry.pricing);
+        });
       }
       renderModelPicker(modelPicker, entries, modelPicker.value);
       writeStatus(statusEl, `Loaded ${entries.length} completion models from ${providerLabel} ${source}.`);
     } catch (err) {
       if (provider === PROVIDER_KEYS.HYPERBOLIC && key && ![401, 403].includes(err?.status)) {
         const fallbackEntries = HYPERBOLIC_FALLBACK_MODELS.filter(entry => !excludedModelIds?.has(entry.id));
+        if (modelPricingById) modelPricingById.clear();
         renderModelPicker(modelPicker, fallbackEntries, modelPicker.value);
         writeStatus(statusEl, `Loaded ${fallbackEntries.length} fallback Hyperbolic models.`);
         return;
       }
       keyCatalogError = err && err.message ? err.message : 'request failed';
+      if (modelPricingById) modelPricingById.clear();
       renderModelPicker(modelPicker, [], modelPicker.value);
       writeStatus(statusEl, `${providerLabel} model list load failed: ${keyCatalogError}`, true);
     }
@@ -701,12 +1031,21 @@
       [PROVIDER_KEYS.FIREWORKS]: new Set(),
       [PROVIDER_KEYS.HYPERBOLIC]: new Set()
     };
+    const modelPricingByProvider = {
+      [PROVIDER_KEYS.FIREWORKS]: new Map(),
+      [PROVIDER_KEYS.HYPERBOLIC]: new Map()
+    };
     let activeProvider = normalizeProviderKey(providerSelect?.value);
 
     const getExcludedModelIds = providerKey => {
       const key = normalizeProviderKey(providerKey);
       if (!excludedModelIdsByProvider[key]) excludedModelIdsByProvider[key] = new Set();
       return excludedModelIdsByProvider[key];
+    };
+    const getModelPricingMap = providerKey => {
+      const key = normalizeProviderKey(providerKey);
+      if (!modelPricingByProvider[key]) modelPricingByProvider[key] = new Map();
+      return modelPricingByProvider[key];
     };
     const syncApiKeyInputFromProvider = () => {
       if (apiKeyInput) apiKeyInput.value = providerApiKeys[activeProvider] || '';
@@ -788,7 +1127,8 @@
           apiKey: providerApiKeys[activeProvider],
           modelPicker,
           statusEl,
-          excludedModelIds: getExcludedModelIds(activeProvider)
+          excludedModelIds: getExcludedModelIds(activeProvider),
+          modelPricingById: getModelPricingMap(activeProvider)
         });
       });
     }
@@ -801,7 +1141,8 @@
           apiKey: providerApiKeys[activeProvider],
           modelPicker,
           statusEl,
-          excludedModelIds: getExcludedModelIds(activeProvider)
+          excludedModelIds: getExcludedModelIds(activeProvider),
+          modelPricingById: getModelPricingMap(activeProvider)
         });
       };
       apiKeyInput.addEventListener('change', refreshModelsFromKey);
@@ -895,7 +1236,8 @@
             apiKey: providerApiKeys[activeProvider],
             modelPicker,
             statusEl,
-            excludedModelIds: getExcludedModelIds(activeProvider)
+            excludedModelIds: getExcludedModelIds(activeProvider),
+            modelPricingById: getModelPricingMap(activeProvider)
           });
           if (modelPicker) {
             const requestedModel = toTrimmedString(settings?.model);
@@ -1013,9 +1355,11 @@
             stop
           });
           if (outputEl) outputEl.textContent = result.text || '';
+          const modelPricing = getModelPricingMap(providerKey).get(model) || null;
+          const estimatedCostUsd = estimateUsageCostUsd(result.usage, modelPricing);
           writeStatus(
             statusEl,
-            buildBillingStatusMessage(result.usage || null),
+            buildBillingStatusMessage(result.usage || null, { estimatedCostUsd }),
             false
           );
         } catch (err) {
@@ -1028,7 +1372,8 @@
               apiKey: providerApiKeys[providerKey],
               modelPicker,
               statusEl,
-              excludedModelIds
+              excludedModelIds,
+              modelPricingById: getModelPricingMap(providerKey)
             });
             writeStatus(
               statusEl,
@@ -1063,7 +1408,8 @@
       apiKey: providerApiKeys[activeProvider],
       modelPicker,
       statusEl,
-      excludedModelIds: getExcludedModelIds(activeProvider)
+      excludedModelIds: getExcludedModelIds(activeProvider),
+      modelPricingById: getModelPricingMap(activeProvider)
     });
   }
 
