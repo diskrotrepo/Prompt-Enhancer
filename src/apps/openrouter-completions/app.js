@@ -26,14 +26,11 @@
   const FIREWORKS_MODELS_ENDPOINT = 'https://api.fireworks.ai/v1/models';
   const FIREWORKS_MODELS_FALLBACK_ENDPOINT = 'https://api.fireworks.ai/inference/v1/models';
   const HYPERBOLIC_MODELS_ENDPOINT = 'https://api.hyperbolic.xyz/v1/models';
-  const HYPERBOLIC_BASE_COMPLETION_MODEL_IDS = new Set([
-    'meta-llama/meta-llama-3.1-405b-base',
-    'meta-llama/meta-llama-3.1-405b-base-fp8',
-    'meta-llama/meta-llama-3.1-405b-base-bf16',
-    'meta-llama/meta-llama-3.1-405b-base-instructless'
+  const HYPERBOLIC_COMPLETION_MODEL_IDS = new Set([
+    'meta-llama/meta-llama-3.1-405b'
   ]);
   const HYPERBOLIC_FALLBACK_MODELS = Object.freeze([
-    { id: 'meta-llama/Meta-Llama-3.1-405B-Base', name: 'Llama 3.1 405B Base', contextLength: null }
+    { id: 'meta-llama/Meta-Llama-3.1-405B', name: 'Llama 3.1 405B', contextLength: null }
   ]);
   const TOP_K_MAX = 100;
   const DEFAULT_SETTINGS_FILE_NAME = 'completion-providers-encrypted-settings.json';
@@ -703,9 +700,9 @@
     return `${entry.id}${namePart}${ctxPart}`;
   }
 
-  function isHyperbolicBaseCompletionModel(entry) {
+  function isHyperbolicCompletionModel(entry) {
     const id = toTrimmedString(entry?.id).toLowerCase();
-    return HYPERBOLIC_BASE_COMPLETION_MODEL_IDS.has(id);
+    return HYPERBOLIC_COMPLETION_MODEL_IDS.has(id);
   }
 
   function isLikelyTextCompletionModel(entry) {
@@ -853,10 +850,10 @@
       if (provider === PROVIDER_KEYS.HYPERBOLIC) {
         entries = await requestHyperbolicModelCatalog(key);
         source = '/v1/models';
-        entries = entries.filter(isHyperbolicBaseCompletionModel);
+        entries = entries.filter(isHyperbolicCompletionModel);
         if (!entries.length) {
           entries = HYPERBOLIC_FALLBACK_MODELS.slice();
-          source = 'curated base catalog';
+          source = 'curated catalog';
         }
       } else {
         entries = await requestFireworksModelCatalog(key);

@@ -124,8 +124,8 @@ function setupDom() {
         json: async () => ({
           data: [
             {
-              id: 'meta-llama/Meta-Llama-3.1-405B-Base',
-              name: 'Llama 3.1 405B Base',
+              id: 'meta-llama/Meta-Llama-3.1-405B',
+              name: 'Llama 3.1 405B',
               context_length: 131072
             }
           ]
@@ -266,7 +266,7 @@ describe('OpenRouter app module', () => {
     keyInput.value = 'hb-test-key';
     keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
     await waitFor(() => (status.textContent || '').includes('Loaded'));
-    expect(modelPicker?.textContent || '').toContain('meta-llama/Meta-Llama-3.1-405B-Base');
+    expect(modelPicker?.textContent || '').toContain('meta-llama/Meta-Llama-3.1-405B');
 
     promptInput.value = 'POEM 11';
     sendButton.click();
@@ -281,7 +281,7 @@ describe('OpenRouter app module', () => {
     const payload = JSON.parse(requestInit.body);
     expect(requestUrl).toBe('https://api.hyperbolic.xyz/v1/completions');
     expect(requestInit.headers.Authorization).toBe('Bearer hb-test-key');
-    expect(payload.model).toBe('meta-llama/Meta-Llama-3.1-405B-Base');
+    expect(payload.model).toBe('meta-llama/Meta-Llama-3.1-405B');
     expect(payload.prompt).toBe('POEM 11');
     expect(payload.max_tokens).toBe(300);
     expect(payload.temperature).toBe(1);
@@ -414,7 +414,7 @@ describe('OpenRouter app module', () => {
     expect(modelPicker?.textContent || '').not.toContain('accounts/fireworks/models/chat-only-model');
   });
 
-  test('restricts hyperbolic model picker to curated 405B base model only', async () => {
+  test('restricts hyperbolic model picker to curated 405B model only', async () => {
     const { window } = setupDom();
     window.fetch = jest.fn((url, init) => {
       const target = String(url || '');
@@ -424,8 +424,8 @@ describe('OpenRouter app module', () => {
           json: async () => ({
             data: [
               {
-                id: 'meta-llama/Meta-Llama-3.1-405B-Base',
-                name: 'Llama 3.1 405B Base',
+                id: 'meta-llama/Meta-Llama-3.1-405B',
+                name: 'Llama 3.1 405B',
                 context_length: 131072
               },
               {
@@ -457,7 +457,7 @@ describe('OpenRouter app module', () => {
     keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
     await waitFor(() => (status.textContent || '').includes('Loaded'));
 
-    expect(modelPicker?.textContent || '').toContain('meta-llama/Meta-Llama-3.1-405B-Base');
+    expect(modelPicker?.textContent || '').toContain('meta-llama/Meta-Llama-3.1-405B');
     expect(modelPicker?.textContent || '').not.toContain('vendor/unsupported-chat-model');
     expect(status.textContent).toContain('Loaded 1 completion models');
   });
