@@ -2491,6 +2491,84 @@
       }
     },
     {
+      "id": "duplicate_loaded_ids_are_rekeyed",
+      "description": "Duplicate loaded ids are re-keyed on load so sibling mixes stay isolated.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "id": "host",
+            "title": "Host",
+            "limit": 1000,
+            "lengthMode": "fit-smallest",
+            "preserve": true,
+            "orderMode": "canonical",
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "mix",
+                "id": "dup-mix",
+                "title": "Source A",
+                "limit": 1000,
+                "lengthMode": "fit-smallest",
+                "preserve": true,
+                "orderMode": "canonical",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                },
+                "children": [
+                  {
+                    "type": "chunk",
+                    "id": "dup-chunk",
+                    "text": "A ",
+                    "limit": 1000,
+                    "lengthMode": "exact-once",
+                    "orderMode": "canonical",
+                    "delimiter": {
+                      "mode": "whitespace",
+                      "size": 1
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "mix",
+                "id": "dup-mix",
+                "title": "Source B",
+                "limit": 1000,
+                "lengthMode": "fit-smallest",
+                "preserve": true,
+                "orderMode": "canonical",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                },
+                "children": [
+                  {
+                    "type": "chunk",
+                    "id": "dup-chunk",
+                    "text": "B ",
+                    "limit": 1000,
+                    "lengthMode": "exact-once",
+                    "orderMode": "canonical",
+                    "delimiter": {
+                      "mode": "whitespace",
+                      "size": 1
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "local_storage_load",
       "description": "Persisted mix data loads on startup before defaults.",
       "random": 0,

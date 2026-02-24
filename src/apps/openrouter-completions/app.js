@@ -70,8 +70,7 @@
   function parseStopSequences(value) {
     const lines = String(value || '')
       .split(/\r?\n/)
-      .map(line => line.trim())
-      .filter(Boolean);
+      .filter(line => line.length > 0);
     return lines.length ? lines : undefined;
   }
 
@@ -826,10 +825,14 @@
       modelPicker,
       statusEl,
       excludedModelIds,
-      modelPricingById
+      modelPricingById,
+      isRequestStale
     } = config;
+    const stale = typeof isRequestStale === 'function' ? isRequestStale : () => false;
     if (!modelPicker) return;
+    if (stale()) return;
     if (typeof fetch !== 'function') {
+      if (stale()) return;
       writeStatus(statusEl, 'Model list unavailable: fetch is not supported in this environment.', true);
       return;
     }
@@ -837,11 +840,13 @@
     const providerLabel = getProviderOption(provider).label;
     const key = toTrimmedString(apiKey);
     if (!key) {
+      if (stale()) return;
       if (modelPricingById) modelPricingById.clear();
       renderModelPicker(modelPicker, [], modelPicker.value);
       writeStatus(statusEl, `Enter a ${providerLabel} API key to load models.`, true);
       return;
     }
+    if (stale()) return;
     writeStatus(statusEl, `Loading ${providerLabel} models for this API key...`);
     let entries = [];
     let source = '';
@@ -865,6 +870,7 @@
       if (excludedModelIds && excludedModelIds.size) {
         entries = entries.filter(entry => !excludedModelIds.has(entry.id));
       }
+      if (stale()) return;
       if (modelPricingById) {
         modelPricingById.clear();
         entries.forEach(entry => {
@@ -874,6 +880,7 @@
       renderModelPicker(modelPicker, entries, modelPicker.value);
       writeStatus(statusEl, `Loaded ${entries.length} completion models from ${providerLabel} ${source}.`);
     } catch (err) {
+      if (stale()) return;
       if (provider === PROVIDER_KEYS.HYPERBOLIC && key && ![401, 403].includes(err?.status)) {
         const fallbackEntries = HYPERBOLIC_FALLBACK_MODELS.filter(entry => !excludedModelIds?.has(entry.id));
         if (modelPricingById) modelPricingById.clear();
@@ -1033,6 +1040,7 @@
       [PROVIDER_KEYS.HYPERBOLIC]: new Map()
     };
     let activeProvider = normalizeProviderKey(providerSelect?.value);
+    let modelLoadRequestToken = 0;
 
     const getExcludedModelIds = providerKey => {
       const key = normalizeProviderKey(providerKey);
@@ -1054,6 +1062,23 @@
       if (!current || current === previousDefault) {
         endpointInput.value = defaultEndpointForProvider(activeProvider);
       }
+    };
+    const loadModelsForProvider = (providerKey, apiKey) => {
+      const requestedProvider = normalizeProviderKey(providerKey);
+      const requestToken = ++modelLoadRequestToken;
+      return loadModels({
+        providerKey: requestedProvider,
+        apiKey,
+        modelPicker,
+        statusEl,
+        excludedModelIds: getExcludedModelIds(requestedProvider),
+        modelPricingById: getModelPricingMap(requestedProvider),
+        isRequestStale: () => {
+          if (requestToken !== modelLoadRequestToken) return true;
+          const currentProvider = normalizeProviderKey(providerSelect?.value || activeProvider);
+          return currentProvider !== requestedProvider;
+        }
+      });
     };
 
     const syncSliderValues = () => {
@@ -1119,28 +1144,14 @@
         syncApiKeyInputFromProvider();
         syncEndpointForProvider(previousProvider);
         renderModelPicker(modelPicker, [], '');
-        loadModels({
-          providerKey: activeProvider,
-          apiKey: providerApiKeys[activeProvider],
-          modelPicker,
-          statusEl,
-          excludedModelIds: getExcludedModelIds(activeProvider),
-          modelPricingById: getModelPricingMap(activeProvider)
-        });
+        loadModelsForProvider(activeProvider, providerApiKeys[activeProvider]);
       });
     }
 
     if (apiKeyInput) {
       const refreshModelsFromKey = () => {
         providerApiKeys[activeProvider] = toTrimmedString(apiKeyInput.value);
-        loadModels({
-          providerKey: activeProvider,
-          apiKey: providerApiKeys[activeProvider],
-          modelPicker,
-          statusEl,
-          excludedModelIds: getExcludedModelIds(activeProvider),
-          modelPricingById: getModelPricingMap(activeProvider)
-        });
+        loadModelsForProvider(activeProvider, providerApiKeys[activeProvider]);
       };
       apiKeyInput.addEventListener('change', refreshModelsFromKey);
       apiKeyInput.addEventListener('blur', refreshModelsFromKey);
@@ -1228,14 +1239,7 @@
           const loadedProvider = applyOpenRouterSettings(settingsInputs, settings, providerApiKeys);
           syncSliderValues();
           activeProvider = normalizeProviderKey(loadedProvider);
-          await loadModels({
-            providerKey: activeProvider,
-            apiKey: providerApiKeys[activeProvider],
-            modelPicker,
-            statusEl,
-            excludedModelIds: getExcludedModelIds(activeProvider),
-            modelPricingById: getModelPricingMap(activeProvider)
-          });
+          await loadModelsForProvider(activeProvider, providerApiKeys[activeProvider]);
           if (modelPicker) {
             const requestedModel = toTrimmedString(settings?.model);
             const hasOption = Array.from(modelPicker.options || []).some(option => option.value === requestedModel);
@@ -1364,14 +1368,7 @@
           if (/reasoning is mandatory for this endpoint and cannot be disabled/i.test(message)) {
             const excludedModelIds = getExcludedModelIds(providerKey);
             if (model) excludedModelIds.add(model);
-            await loadModels({
-              providerKey,
-              apiKey: providerApiKeys[providerKey],
-              modelPicker,
-              statusEl,
-              excludedModelIds,
-              modelPricingById: getModelPricingMap(providerKey)
-            });
+            await loadModelsForProvider(providerKey, providerApiKeys[providerKey]);
             writeStatus(
               statusEl,
               `Request failed: ${message}\nModel filtered out for completions-only mode.`,
@@ -1400,14 +1397,7 @@
 
     root.dataset.bound = 'true';
     writeStatus(statusEl, 'Ready.');
-    loadModels({
-      providerKey: activeProvider,
-      apiKey: providerApiKeys[activeProvider],
-      modelPicker,
-      statusEl,
-      excludedModelIds: getExcludedModelIds(activeProvider),
-      modelPricingById: getModelPricingMap(activeProvider)
-    });
+    loadModelsForProvider(activeProvider, providerApiKeys[activeProvider]);
   }
 
   function initialize(windowEl) {

@@ -284,6 +284,11 @@
       "lengthMode": "fit-largest"
     },
     {
+      "id": "duplicate_loaded_ids_are_rekeyed",
+      "output": "A B ",
+      "mixCount": 3
+    },
+    {
       "id": "local_storage_load",
       "output": "p ",
       "lengthMode": "fit-smallest"

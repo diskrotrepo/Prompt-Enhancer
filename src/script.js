@@ -1159,14 +1159,26 @@
   }
 
   // Respect persisted ids when present; otherwise mint a fresh id from the shared counter.
-  function resolveBoxId(configId, prefix) {
+  // During state hydration, duplicate ids are rekeyed so cache keys cannot collide across boxes.
+  function resolveBoxId(configId, prefix, idRegistry = null) {
+    const claimedIds = idRegistry?.claimedIds instanceof Set ? idRegistry.claimedIds : null;
+    const claimId = candidate => {
+      if (!claimedIds) return true;
+      if (claimedIds.has(candidate)) return false;
+      claimedIds.add(candidate);
+      return true;
+    };
     if (typeof configId === 'string' && configId.trim()) {
       const stableId = configId.trim();
       reserveBoxId(stableId);
-      return stableId;
+      if (claimId(stableId)) return stableId;
     }
-    const generatedId = `${prefix}-${++idCounter}`;
+    let generatedId = `${prefix}-${++idCounter}`;
     reserveBoxId(generatedId);
+    while (!claimId(generatedId)) {
+      generatedId = `${prefix}-${++idCounter}`;
+      reserveBoxId(generatedId);
+    }
     return generatedId;
   }
 
@@ -1291,7 +1303,7 @@
     const delimiterSize = fragment.querySelector('.delimiter-size');
     const delimiterSizeCustom = fragment.querySelector('.delimiter-size-custom');
 
-    box.dataset.boxId = resolveBoxId(config.id, 'mix');
+    box.dataset.boxId = resolveBoxId(config.id, 'mix', context.idRegistry);
     box.dataset.color = String(
       config.color || pickRandomVariant(MIX_COLOR_VARIANTS, [context.parentColor, context.previousColor])
     );
@@ -1345,17 +1357,19 @@
         if (child.type === 'mix') {
           const childWrapper = createMixWrapper(child, {
             parentColor: box.dataset.color,
-            previousColor: prevColor
+            previousColor: prevColor,
+            idRegistry: context.idRegistry
           });
           childContainer.appendChild(childWrapper);
           prevColor = childWrapper.querySelector('.mix-box')?.dataset.color || prevColor;
         } else if (child.type === 'variable') {
-          const childWrapper = createVariableWrapper(child);
+          const childWrapper = createVariableWrapper(child, { idRegistry: context.idRegistry });
           childContainer.appendChild(childWrapper);
         } else {
           const childWrapper = createChunkWrapper(child, {
             parentColor: box.dataset.color,
-            previousColor: prevColor
+            previousColor: prevColor,
+            idRegistry: context.idRegistry
           });
           childContainer.appendChild(childWrapper);
           prevColor = childWrapper.querySelector('.chunk-box')?.dataset.color || prevColor;
@@ -1389,7 +1403,7 @@
     const delimiterSize = fragment.querySelector('.delimiter-size');
     const delimiterSizeCustom = fragment.querySelector('.delimiter-size-custom');
 
-    box.dataset.boxId = resolveBoxId(config.id, 'chunk');
+    box.dataset.boxId = resolveBoxId(config.id, 'chunk', context.idRegistry);
     box.dataset.color = String(
       config.color || pickRandomVariant(CHUNK_COLOR_VARIANTS, [context.parentColor, context.previousColor])
     );
@@ -1443,14 +1457,14 @@
     return wrapper;
   }
 
-  function createVariableWrapper(config = {}) {
+  function createVariableWrapper(config = {}, context = {}) {
     const template = document.getElementById('variable-box-template');
     const fragment = template.content.cloneNode(true);
     const wrapper = fragment.querySelector('.variable-wrapper');
     const box = fragment.querySelector('.variable-box');
     const select = fragment.querySelector('.variable-select');
 
-    box.dataset.boxId = resolveBoxId(config.id, 'var');
+    box.dataset.boxId = resolveBoxId(config.id, 'var', context.idRegistry);
     if (config.targetId) box.dataset.targetId = config.targetId;
     if (select && config.targetId) select.value = config.targetId;
     return wrapper;
@@ -1581,6 +1595,7 @@
     if (!root) return;
     root.innerHTML = '';
     loadColorPresets(state);
+    const idRegistry = { claimedIds: new Set() };
     const mixes = Array.isArray(state?.mixes) && state.mixes.length
       ? state.mixes
       : [
@@ -1590,12 +1605,12 @@
     let prevChunkColor = null;
     mixes.forEach(cfg => {
       if (cfg?.type === 'chunk') {
-        const wrapper = createChunkWrapper(cfg, { previousColor: prevChunkColor });
+        const wrapper = createChunkWrapper(cfg, { previousColor: prevChunkColor, idRegistry });
         root.appendChild(wrapper);
         prevChunkColor = wrapper.querySelector('.chunk-box')?.dataset.color || prevChunkColor;
         return;
       }
-      const wrapper = createMixWrapper(cfg, { previousColor: prevMixColor });
+      const wrapper = createMixWrapper(cfg, { previousColor: prevMixColor, idRegistry });
       root.appendChild(wrapper);
       prevMixColor = wrapper.querySelector('.mix-box')?.dataset.color || prevMixColor;
     });

@@ -540,6 +540,115 @@ describe('OpenRouter app module', () => {
     expect(keyInput.value).toBe('hb-key');
   });
 
+  test('ignores stale provider model responses when switching providers quickly', async () => {
+    const { window } = setupDom();
+    window.fetch = jest.fn(url => {
+      const target = String(url || '');
+      if (target.includes('fireworks.ai/v1/models') || target.includes('fireworks.ai/inference/v1/models')) {
+        return new Promise(resolve => {
+          setTimeout(() => {
+            resolve({
+              ok: true,
+              json: async () => ({
+                data: [
+                  {
+                    id: 'accounts/fireworks/models/fw-stale',
+                    name: 'Fireworks Stale',
+                    context_length: 123,
+                    supported_parameters: ['prompt', 'max_tokens', 'temperature']
+                  }
+                ]
+              })
+            });
+          }, 80);
+        });
+      }
+      if (target.includes('hyperbolic.xyz/v1/models')) {
+        return new Promise(resolve => {
+          setTimeout(() => {
+            resolve({
+              ok: true,
+              json: async () => ({
+                data: [
+                  {
+                    id: 'meta-llama/Meta-Llama-3.1-405B',
+                    name: 'Hyperbolic Fresh',
+                    context_length: 456
+                  }
+                ]
+              })
+            });
+          }, 10);
+        });
+      }
+      if (target.includes('/completions')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            id: 'gen-test-race',
+            choices: [{ text: 'ok' }],
+            usage: { prompt_tokens: 2, completion_tokens: 1, total_tokens: 3, cost: 0.0001 }
+          })
+        });
+      }
+      return Promise.resolve({
+        ok: false,
+        status: 404,
+        json: async () => ({ message: 'Not Found' })
+      });
+    });
+
+    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
+    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    const providerSelect = appWindow.querySelector('.openrouter-provider');
+    const keyInput = appWindow.querySelector('.openrouter-api-key');
+    const modelPicker = appWindow.querySelector('.openrouter-model-picker');
+    const status = appWindow.querySelector('.openrouter-status');
+
+    keyInput.value = 'fw-race-key';
+    keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+
+    providerSelect.value = 'hyperbolic';
+    providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    keyInput.value = 'hb-race-key';
+    keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+
+    await new Promise(resolve => setTimeout(resolve, 140));
+
+    expect(providerSelect.value).toBe('hyperbolic');
+    expect(status.textContent || '').toContain('Hyperbolic');
+    expect(modelPicker?.textContent || '').toContain('meta-llama/Meta-Llama-3.1-405B');
+    expect(modelPicker?.textContent || '').not.toContain('accounts/fireworks/models/fw-stale');
+  });
+
+  test('preserves stop sequence leading and trailing spaces in completions payload', async () => {
+    const { window } = setupDom();
+    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
+    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    const keyInput = appWindow.querySelector('.openrouter-api-key');
+    const promptInput = appWindow.querySelector('.openrouter-prompt');
+    const stopInput = appWindow.querySelector('.openrouter-stop');
+    const sendButton = appWindow.querySelector('.openrouter-send');
+    const status = appWindow.querySelector('.openrouter-status');
+
+    keyInput.value = 'fw-test-key';
+    keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() => (status.textContent || '').includes('Loaded'));
+
+    promptInput.value = 'continue';
+    stopInput.value = ' END\nEND ';
+    sendButton.click();
+    await flush();
+    await flush();
+
+    const completionCall = window.fetch.mock.calls.find(call =>
+      String(call[0] || '').includes('fireworks.ai/inference/v1/completions')
+    );
+    expect(completionCall).toBeDefined();
+    const payload = JSON.parse(completionCall[1].body);
+    expect(payload.stop).toEqual([' END', 'END ']);
+  });
+
   test('encrypts settings to a file and loads them back with password', async () => {
     const { window, downloadedBlobs, downloads } = setupDom();
     window.document.querySelector('.menu-item[data-window="openrouter"]').click();

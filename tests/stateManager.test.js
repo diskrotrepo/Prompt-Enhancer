@@ -57,6 +57,28 @@ function runGeneratedChunkOutput(state, randomSequence = [0]) {
   return root.querySelector('.chunk-box .chunk-output-text')?.textContent || '';
 }
 
+function runGeneratedOutputs(state, randomSequence = [0]) {
+  loadBody();
+  const root = document.querySelector('.mix-root');
+  main.applyMixState(state, root);
+  const originalRandom = Math.random;
+  let randomIndex = 0;
+  Math.random = () => {
+    if (randomIndex < randomSequence.length) {
+      const next = randomSequence[randomIndex];
+      randomIndex += 1;
+      return next;
+    }
+    return randomSequence[randomSequence.length - 1] || 0;
+  };
+  try {
+    main.generate(root);
+  } finally {
+    Math.random = originalRandom;
+  }
+  return Array.from(root.querySelectorAll('.mix-box .mix-output-text')).map(node => node.textContent || '');
+}
+
 describe('Mix state roundtrip', () => {
   test('exportMixState and applyMixState preserve structure', () => {
     loadBody();
@@ -435,5 +457,121 @@ describe('Mix state roundtrip', () => {
       const viaDuplicate = runGeneratedOutput(duplicatedState, randomSequence);
       expect(viaVariable).toBe(viaDuplicate);
     });
+  });
+
+  test('duplicate loaded ids are rekeyed so sibling mixes do not share cached output', () => {
+    const state = {
+      mixes: [
+        {
+          type: 'mix',
+          id: 'host',
+          title: 'Host',
+          limit: 1000,
+          lengthMode: 'fit-smallest',
+          preserve: true,
+          orderMode: 'canonical',
+          delimiter: { mode: 'whitespace', size: 1 },
+          children: [
+            {
+              type: 'mix',
+              id: 'dup-mix',
+              title: 'Source A',
+              limit: 1000,
+              lengthMode: 'fit-smallest',
+              preserve: true,
+              orderMode: 'canonical',
+              delimiter: { mode: 'whitespace', size: 1 },
+              children: [
+                {
+                  type: 'chunk',
+                  id: 'dup-chunk',
+                  text: 'A ',
+                  lengthMode: 'exact-once',
+                  orderMode: 'canonical',
+                  delimiter: { mode: 'whitespace', size: 1 }
+                }
+              ]
+            },
+            {
+              type: 'mix',
+              id: 'dup-mix',
+              title: 'Source B',
+              limit: 1000,
+              lengthMode: 'fit-smallest',
+              preserve: true,
+              orderMode: 'canonical',
+              delimiter: { mode: 'whitespace', size: 1 },
+              children: [
+                {
+                  type: 'chunk',
+                  id: 'dup-chunk',
+                  text: 'B ',
+                  lengthMode: 'exact-once',
+                  orderMode: 'canonical',
+                  delimiter: { mode: 'whitespace', size: 1 }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    main.applyMixState(state, root);
+    const ids = Array.from(root.querySelectorAll('.mix-box, .chunk-box, .variable-box'))
+      .map(box => box.dataset.boxId)
+      .filter(Boolean);
+    expect(new Set(ids).size).toBe(ids.length);
+    main.generate(root);
+    expect(root.querySelector('.mix-box .mix-output-text')?.textContent || '').toBe('A B ');
+  });
+
+  test('top-level mixes with duplicate child ids stay isolated after hydration', () => {
+    const outputs = runGeneratedOutputs({
+      mixes: [
+        {
+          type: 'mix',
+          id: 'mix-a',
+          title: 'Mix A',
+          limit: 1000,
+          lengthMode: 'fit-smallest',
+          preserve: true,
+          orderMode: 'canonical',
+          delimiter: { mode: 'whitespace', size: 1 },
+          children: [
+            {
+              type: 'chunk',
+              id: 'dup-chunk',
+              text: 'A1 A2 ',
+              lengthMode: 'exact-once',
+              orderMode: 'canonical',
+              delimiter: { mode: 'whitespace', size: 1 }
+            }
+          ]
+        },
+        {
+          type: 'mix',
+          id: 'mix-b',
+          title: 'Mix B',
+          limit: 1000,
+          lengthMode: 'fit-smallest',
+          preserve: true,
+          orderMode: 'canonical',
+          delimiter: { mode: 'whitespace', size: 1 },
+          children: [
+            {
+              type: 'chunk',
+              id: 'dup-chunk',
+              text: 'B1 B2 ',
+              lengthMode: 'exact-once',
+              orderMode: 'canonical',
+              delimiter: { mode: 'whitespace', size: 1 }
+            }
+          ]
+        }
+      ]
+    });
+    expect(outputs).toEqual(['A1 A2 ', 'B1 B2 ']);
   });
 });

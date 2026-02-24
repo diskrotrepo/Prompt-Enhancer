@@ -212,6 +212,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Collapsed mix/string UI state roundtrips through save/load** — `collapsed_state_persisted`
 - **Prompt menu includes Load Preset submenu** — `prompt_menu_load_preset_item`
 - **Prompt menu save flow** — `prompt_menu_save_flow`
+- **Duplicate loaded ids are re-keyed during hydration so cache keys stay isolated across boxes** — `duplicate_loaded_ids_are_rekeyed`
 - **Local storage load** — `local_storage_load`
 
 #### Window apps
