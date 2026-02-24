@@ -220,6 +220,36 @@ describe('Window behavior', () => {
     expect(wordCount(newMixTitle)).toBeLessThanOrEqual(3);
     expect(wordCount(newChunkTitle)).toBeLessThanOrEqual(3);
   });
+
+  test('procedural naming avoids local-reference dominance', () => {
+    const { window } = setupDom();
+    openWindow(window, 'prompts');
+
+    const promptWindow = window.document.querySelector('.app-window[data-window="prompts"]');
+    const root = promptWindow?.querySelector('.mix-root');
+    const addMixButton = promptWindow?.querySelector('.add-root-mix');
+    const addStringButton = promptWindow?.querySelector('.add-root-chunk');
+    expect(root).not.toBeNull();
+    expect(addMixButton).not.toBeNull();
+    expect(addStringButton).not.toBeNull();
+
+    for (let i = 0; i < 28; i += 1) {
+      addMixButton.click();
+      addStringButton.click();
+    }
+
+    const titles = Array.from(root.querySelectorAll('.mix-box .box-title, .chunk-box .box-title'))
+      .map(titleEl => (titleEl?.value || titleEl?.textContent || '').trim().toLowerCase())
+      .filter(Boolean)
+      .filter(value => !/^mix$|^string$/i.test(value));
+    expect(titles.length).toBeGreaterThan(20);
+
+    const localPattern = /\b(haifa|kishon|carmel|akko|galilee|jezreel|debrecen|cement|shipyard|foundry|terminals|workshops)\b/i;
+    const localCount = titles.filter(value => localPattern.test(value)).length;
+    const haifaCount = titles.filter(value => /\bhaifa\b/i.test(value)).length;
+    expect(localCount / titles.length).toBeLessThanOrEqual(0.32);
+    expect(haifaCount / titles.length).toBeLessThanOrEqual(0.08);
+  });
 });
 
 describe('Window edge layout policy', () => {

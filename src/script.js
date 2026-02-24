@@ -1152,6 +1152,11 @@
   const MIX_COLOR_VARIANTS = 6;
   const CHUNK_COLOR_VARIANTS = 6;
   let proceduralTitleCounter = 0;
+  const proceduralReferenceUsage = new Map();
+  const proceduralCategoryUsage = new Map();
+  let proceduralGeneratedTitleCount = 0;
+  let proceduralLocalTitleCount = 0;
+  const MAX_LOCAL_REFERENCE_RATIO = 0.24;
   const TITLE_ADJECTIVES = Object.freeze([
     'ashen',
     'salt',
@@ -1198,11 +1203,34 @@
     'Caves of Qud'
   ]);
   const SUNO_EASTER_EGG_NAMES = Object.freeze([
+    'diskrot',
     'sirbitesalot',
     'yolkhead',
     'Alex Ayers',
     'Mikey Schulman',
     'Kakermix',
+    'Allison',
+    'Ari',
+    'IO',
+    'p8ntmstrG',
+    'misscalamity',
+    'Subcreation',
+    'Taboovector',
+    'TiGonn',
+    'Vocondus',
+    'Christian',
+    'Andre Andre',
+    'Falcon',
+    'Furry',
+    'GTZY',
+    'Lucid',
+    'Neffy',
+    'Oakwood',
+    'OffChune',
+    'wellaways',
+    'xranoxxd',
+    'Jonathan Fly',
+    'greyplains',
     'bela'
   ]);
   const POLISH_POET_REFERENCES = Object.freeze([
@@ -1214,17 +1242,20 @@
   ]);
   const INDUSTRIAL_REFERENCES = Object.freeze([
     'cement factory',
-    'Haifa Refinery',
-    'Haifa Chemicals',
     'Kishon Foundry',
-    'Carmel Plant'
+    'Carmel Plant',
+    'bay terminals',
+    'port workshops',
+    'Akko Shipyard'
   ]);
   const PLACE_REFERENCES = Object.freeze([
     'debrecen',
-    'haifa',
     'haifa bay',
     'kishon',
-    'carmel'
+    'carmel',
+    'akko',
+    'galilee',
+    'jezreel'
   ]);
 
   // Keep generated ids above any loaded numeric suffix so new boxes never
@@ -1320,33 +1351,92 @@
     const factory = pickTitleToken(INDUSTRIAL_REFERENCES, seed, 7);
     const place = pickTitleToken(PLACE_REFERENCES, seed, 8);
     return [
-      `${adjective} ${noun}`,
-      `${roguelike} ${noun}`,
-      `${suno} ${noun}`,
-      `${poet} ${noun}`,
-      `${factory} ${noun}`,
-      `${place} ${noun}`,
-      `${adjective} ${place}`,
-      `${poet} debrecen`,
-      roguelikeLong
+      { text: `${adjective} ${noun}`, key: `adj:${adjective}|noun:${noun}`, category: 'core' },
+      { text: `${roguelike} ${noun}`, key: `roguelike:${roguelike}|noun:${noun}`, category: 'roguelike' },
+      { text: `${roguelike} ${adjective}`, key: `roguelike:${roguelike}|adj:${adjective}`, category: 'roguelike' },
+      { text: `${suno} ${noun}`, key: `suno:${suno}|noun:${noun}`, category: 'suno' },
+      { text: `${adjective} ${suno}`, key: `adj:${adjective}|suno:${suno}`, category: 'suno' },
+      { text: `${suno} ${roguelike}`, key: `suno:${suno}|roguelike:${roguelike}`, category: 'suno' },
+      { text: `${poet} ${noun}`, key: `poet:${poet}|noun:${noun}`, category: 'poet' },
+      { text: `${poet} debrecen`, key: `poet:${poet}|debrecen`, category: 'poet', local: true },
+      { text: `${factory} ${noun}`, key: `factory:${factory}|noun:${noun}`, category: 'industrial', local: true },
+      { text: `${place} ${noun}`, key: `place:${place}|noun:${noun}`, category: 'place', local: true },
+      { text: roguelikeLong, key: `roguelike:${roguelikeLong}`, category: 'roguelike' }
     ];
+  }
+
+  function readProceduralReferenceUsage(key) {
+    if (!key) return 0;
+    return proceduralReferenceUsage.get(key) || 0;
+  }
+
+  function readProceduralCategoryUsage(category) {
+    if (!category) return 0;
+    return proceduralCategoryUsage.get(category) || 0;
+  }
+
+  function bumpProceduralReferenceUsage(key) {
+    if (!key) return;
+    proceduralReferenceUsage.set(key, readProceduralReferenceUsage(key) + 1);
+  }
+
+  function bumpProceduralCategoryUsage(category) {
+    if (!category) return;
+    proceduralCategoryUsage.set(category, readProceduralCategoryUsage(category) + 1);
+  }
+
+  function projectedLocalReferenceRatio(isLocalCandidate) {
+    const projectedTotal = proceduralGeneratedTitleCount + 1;
+    if (!projectedTotal) return 0;
+    const projectedLocal = proceduralLocalTitleCount + (isLocalCandidate ? 1 : 0);
+    return projectedLocal / projectedTotal;
   }
 
   function buildProceduralTitle(type, seed, attempt = 0) {
     const candidates = buildProceduralTitleCandidates(type, seed)
-      .map(value => toTrimmedString(value))
-      .filter(value => value && countWords(value) <= 3);
-    if (!candidates.length) return '';
-    return candidates[(seed + attempt) % candidates.length];
+      .map(entry => ({
+        text: toTrimmedString(entry?.text),
+        key: toTrimmedString(entry?.key),
+        category: toTrimmedString(entry?.category),
+        local: entry?.local === true
+      }))
+      .filter(entry => entry.text && countWords(entry.text) <= 3);
+    if (!candidates.length) return null;
+    const start = Math.abs(seed * 11 + attempt * 5 + 3) % candidates.length;
+    let bestEntry = null;
+    let bestScore = Number.POSITIVE_INFINITY;
+    for (let offset = 0; offset < candidates.length; offset += 1) {
+      const candidate = candidates[(start + offset) % candidates.length];
+      const referenceUsage = readProceduralReferenceUsage(candidate.key);
+      const categoryUsage = readProceduralCategoryUsage(candidate.category);
+      const localRatioPenalty =
+        candidate.local && projectedLocalReferenceRatio(true) > MAX_LOCAL_REFERENCE_RATIO ? 5000 : 0;
+      const score = categoryUsage * 100 + referenceUsage * 10 + localRatioPenalty;
+      if (score < bestScore) {
+        bestEntry = candidate;
+        bestScore = score;
+      }
+    }
+    return bestEntry;
+  }
+
+  function commitProceduralTitleSelection(entry) {
+    if (!entry) return;
+    bumpProceduralReferenceUsage(entry.key);
+    bumpProceduralCategoryUsage(entry.category);
+    proceduralGeneratedTitleCount += 1;
+    if (entry.local) proceduralLocalTitleCount += 1;
   }
 
   function generateProceduralTitle(type, scope) {
     const existing = collectExistingBoxTitles(scope);
     for (let attempt = 0; attempt < 120; attempt += 1) {
       const seed = ++proceduralTitleCounter + idCounter;
-      const candidate = buildProceduralTitle(type, seed, attempt);
+      const selected = buildProceduralTitle(type, seed, attempt);
+      const candidate = selected?.text || '';
       const normalized = normalizeBoxTitle(candidate);
       if (!normalized || existing.has(normalized)) continue;
+      commitProceduralTitleSelection(selected);
       return candidate;
     }
     return type === 'mix' ? `mix ${idCounter + proceduralTitleCounter + 1}` : `string ${idCounter + proceduralTitleCounter + 1}`;
