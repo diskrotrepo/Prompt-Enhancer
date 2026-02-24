@@ -254,7 +254,7 @@ textarea,
 .menu-start {
   position: relative;
   height: 100%;
-  width: 52px;
+  width: 86px;
   padding: 0;
   display: flex;
   align-items: center;
@@ -283,13 +283,28 @@ textarea,
   transform: translateY(-1px);
 }
 
+.menu-glyph-slashes {
+  display: inline-flex;
+  align-items: center;
+}
+
 .menu-glyph .slash {
   display: inline-block;
+  color: #000;
   font-weight: 900;
   transform: scaleY(1.08);
-  text-shadow:
-    0 0 6px rgba(255, 255, 255, 0.35),
-    0 0 10px currentColor;
+  text-shadow: none;
+}
+
+.menu-glyph-tag {
+  margin-left: 0.14rem;
+  color: #000;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  transform: translateY(0.02rem);
 }
 
 .menu-start::after {
@@ -308,9 +323,9 @@ textarea,
   box-shadow: 0 0 8px rgba(180, 210, 255, 0.5);
 }
 
-.slash-red { color: #e11d48; }
-.slash-yellow { color: #facc15; }
-.slash-blue { color: #38bdf8; }
+.slash-red { color: #000; }
+.slash-yellow { color: #000; }
+.slash-blue { color: #000; }
 
 .menu-dropdown {
   position: absolute;
