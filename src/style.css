@@ -451,23 +451,23 @@ textarea,
 }
 
 .icon-prompts {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M10 12c-2.8 0-5 2.2-5 5 0 2.4 1.6 4.5 3.8 4.9 0 2.2 1.8 4.1 4 4.1h2v-5H12v-3h1v-3h-1v-3h2v-3h-2z' fill='%231b1b22'/%3E%3Cpath d='M22 12c2.8 0 5 2.2 5 5 0 2.4-1.6 4.5-3.8 4.9 0 2.2-1.8 4.1-4 4.1h-2v-5h2v-3h-1v-3h1v-3h-2v-3h2z' fill='%231b1b22'/%3E%3Cpath d='M14 5c0-2 2-3 2-5 2 2 4 4 4 7 0 3-2 5-4 6 1-2-1-3-2-4 1-1 1-2 0-4z' fill='%23f97316'/%3E%3Cpath d='M12 7c0-1 1-2 1-3 1 1 2 2 2 4 0 2-1 3-2 4 0-1-1-2-1-3z' fill='%23facc15'/%3E%3C/svg%3E");
+  background-image: url("assets/icons/prompts.svg");
 }
 
 .icon-about {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='%239f1239'/%3E%3Crect x='15' y='13' width='2' height='9' fill='%23fff'/%3E%3Ccircle cx='16' cy='10' r='1.6' fill='%23fff'/%3E%3C/svg%3E");
+  background-image: url("assets/icons/about.svg");
 }
 
 .icon-audio {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='8' width='4' height='16' fill='%231b1b22'/%3E%3Crect x='10' y='4' width='4' height='24' fill='%230ea5e9'/%3E%3Crect x='16' y='10' width='4' height='12' fill='%231b1b22'/%3E%3Crect x='22' y='6' width='4' height='20' fill='%23f97316'/%3E%3Crect x='28' y='12' width='2' height='8' fill='%231b1b22'/%3E%3C/svg%3E");
+  background-image: url("assets/icons/audio.svg");
 }
 
 .icon-openrouter {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='%230f172a'/%3E%3Cpath d='M11 22V10h5.5c3.3 0 5.5 2.4 5.5 6s-2.2 6-5.5 6zm3-2h2.2c1.9 0 3-1.4 3-4s-1.1-4-3-4H14z' fill='%2322d3ee'/%3E%3C/svg%3E");
+  background-image: url("assets/icons/openrouter.svg");
 }
 
 .icon-diskrot {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M12 6h4L8 26H4z' fill='%23000000'/%3E%3Cpath d='M20 6h4L16 26h-4z' fill='%23000000'/%3E%3Cpath d='M28 6h4L24 26h-4z' fill='%23000000'/%3E%3C/svg%3E");
+  background-image: url("assets/icons/diskrot.svg");
 }
 
 .menu-icon {
