@@ -609,6 +609,7 @@
     } = config;
     const includeTopP = Number.isFinite(topP) && topP > 0;
     const includeTopK = Number.isFinite(topK) && topK > 0;
+    const includeMaxTokens = Number.isFinite(maxTokens) && maxTokens > 0;
     const includePresencePenalty = Number.isFinite(presencePenalty) && presencePenalty !== 0;
     const includeFrequencyPenalty = Number.isFinite(frequencyPenalty) && frequencyPenalty !== 0;
     const requestBody =
@@ -616,7 +617,7 @@
         ? {
             model,
             prompt,
-            max_tokens: maxTokens,
+            ...(includeMaxTokens ? { max_tokens: maxTokens } : {}),
             ...(includeTopP ? { top_p: topP } : {}),
             ...(includePresencePenalty ? { presence_penalty: presencePenalty } : {}),
             ...(includeFrequencyPenalty ? { frequency_penalty: frequencyPenalty } : {}),
@@ -627,7 +628,7 @@
         : {
             model,
             prompt,
-            max_tokens: maxTokens,
+            ...(includeMaxTokens ? { max_tokens: maxTokens } : {}),
             ...(includeTopP ? { top_p: topP } : {}),
             ...(includeTopK ? { top_k: topK } : {}),
             ...(includePresencePenalty ? { presence_penalty: presencePenalty } : {}),
@@ -921,10 +922,10 @@
       provider,
       endpoint: normalizeEndpoint(endpointInput?.value, provider),
       model: toTrimmedString(modelPicker?.value),
-      maxTokens: Math.round(readNumberInput(maxTokensInput, 300, 1, 200000)),
+      maxTokens: Math.round(readNumberInput(maxTokensInput, 0, 0, 200000)),
       temperature: readNumberInput(temperatureInput, 1, 0, 2),
-      topP: readNumberInput(topPInput, 1, 0, 1),
-      topK: Math.round(readNumberInput(topKInput, 40, 0, TOP_K_MAX)),
+      topP: readNumberInput(topPInput, 0, 0, 1),
+      topK: Math.round(readNumberInput(topKInput, 0, 0, TOP_K_MAX)),
       presencePenalty: readNumberInput(presencePenaltyInput, 0, -2, 2),
       frequencyPenalty: readNumberInput(frequencyPenaltyInput, 0, -2, 2),
       stopText: String(stopInput?.value || ''),
@@ -977,10 +978,10 @@
       const hasOption = Array.from(modelPicker.options || []).some(option => option.value === requestedModel);
       modelPicker.value = hasOption ? requestedModel : '';
     }
-    if (maxTokensInput) maxTokensInput.value = String(Math.round(readNumberInput({ value: settings?.maxTokens }, 300, 1, 200000)));
+    if (maxTokensInput) maxTokensInput.value = String(Math.round(readNumberInput({ value: settings?.maxTokens }, 0, 0, 200000)));
     if (temperatureInput) temperatureInput.value = String(readNumberInput({ value: settings?.temperature }, 1, 0, 2));
-    if (topPInput) topPInput.value = String(readNumberInput({ value: settings?.topP }, 1, 0, 1));
-    if (topKInput) topKInput.value = String(Math.round(readNumberInput({ value: settings?.topK }, 40, 0, TOP_K_MAX)));
+    if (topPInput) topPInput.value = String(readNumberInput({ value: settings?.topP }, 0, 0, 1));
+    if (topKInput) topKInput.value = String(Math.round(readNumberInput({ value: settings?.topK }, 0, 0, TOP_K_MAX)));
     if (presencePenaltyInput) presencePenaltyInput.value = String(readNumberInput({ value: settings?.presencePenalty }, 0, -2, 2));
     if (frequencyPenaltyInput) frequencyPenaltyInput.value = String(readNumberInput({ value: settings?.frequencyPenalty }, 0, -2, 2));
     if (stopInput) stopInput.value = String(settings?.stopText || '');
@@ -1308,10 +1309,10 @@
         const model = toTrimmedString(modelPicker?.value);
         const prompt = promptInput?.value || '';
         const endpoint = normalizeEndpoint(endpointInput?.value, providerKey);
-        const maxTokens = Math.round(readNumberInput(maxTokensInput, 300, 1, 200000));
+        const maxTokens = Math.round(readNumberInput(maxTokensInput, 0, 0, 200000));
         const temperature = readNumberInput(temperatureInput, 1, 0, 2);
-        const topP = readNumberInput(topPInput, 1, 0, 1);
-        const topK = Math.round(readNumberInput(topKInput, 40, 0, TOP_K_MAX));
+        const topP = readNumberInput(topPInput, 0, 0, 1);
+        const topK = Math.round(readNumberInput(topKInput, 0, 0, TOP_K_MAX));
         const presencePenalty = readNumberInput(presencePenaltyInput, 0, -2, 2);
         const frequencyPenalty = readNumberInput(frequencyPenaltyInput, 0, -2, 2);
         const stop = parseStopSequences(stopInput?.value);

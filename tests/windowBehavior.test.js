@@ -188,6 +188,38 @@ describe('Window behavior', () => {
     expect(firstOutput).toBe('alpha ');
     expect(secondOutput).toBe('beta ');
   });
+
+  test('root add buttons create new mix and string boxes', () => {
+    const { window } = setupDom();
+    openWindow(window, 'prompts');
+
+    const promptWindow = window.document.querySelector('.app-window[data-window="prompts"]');
+    const root = promptWindow?.querySelector('.mix-root');
+    const addMixButton = promptWindow?.querySelector('.add-root-mix');
+    const addStringButton = promptWindow?.querySelector('.add-root-chunk');
+    expect(root).not.toBeNull();
+    expect(addMixButton).not.toBeNull();
+    expect(addStringButton).not.toBeNull();
+
+    const initialMixCount = root.querySelectorAll('.mix-box').length;
+    const initialChunkCount = root.querySelectorAll('.chunk-box').length;
+
+    addMixButton.click();
+    addStringButton.click();
+
+    const mixBoxes = Array.from(root.querySelectorAll('.mix-box'));
+    const chunkBoxes = Array.from(root.querySelectorAll('.chunk-box'));
+    expect(mixBoxes.length).toBe(initialMixCount + 1);
+    expect(chunkBoxes.length).toBe(initialChunkCount + 1);
+
+    const newMixTitle = mixBoxes[mixBoxes.length - 1]?.querySelector('.box-title')?.value || '';
+    const newChunkTitle = chunkBoxes[chunkBoxes.length - 1]?.querySelector('.box-title')?.value || '';
+    const wordCount = value => String(value).trim().split(/\s+/).filter(Boolean).length;
+    expect(newMixTitle.trim()).not.toMatch(/^mix$/i);
+    expect(newChunkTitle.trim()).not.toMatch(/^string$/i);
+    expect(wordCount(newMixTitle)).toBeLessThanOrEqual(3);
+    expect(wordCount(newChunkTitle)).toBeLessThanOrEqual(3);
+  });
 });
 
 describe('Window edge layout policy', () => {

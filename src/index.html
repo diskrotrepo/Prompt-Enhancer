@@ -441,7 +441,7 @@
                     </div>
                       <div class="control-block">
                         <label>Max Tokens</label>
-                      <input type="number" class="openrouter-max-tokens" min="1" step="1" value="300" data-help="Maximum completion tokens to request." data-help-detail="Sets max_tokens for the selected provider's completion request.">
+                      <input type="number" class="openrouter-max-tokens" min="0" step="1" value="0" data-help="Maximum completion tokens to request." data-help-detail="Sets max_tokens for the selected provider's completion request. Set to 0 to omit max_tokens and use provider defaults.">
                       </div>
                       <div class="control-block">
                         <label>Temperature</label>
@@ -453,15 +453,15 @@
                       <div class="control-block">
                         <label>Top P</label>
                         <div class="openrouter-slider-row">
-                          <input type="range" class="openrouter-top-p" min="0" max="1" step="0.01" value="1" data-help="Nucleus sampling probability mass." data-help-detail="Limits token sampling to the smallest token set whose cumulative probability exceeds this value. Set to 0 to disable.">
-                          <span class="openrouter-slider-value openrouter-top-p-value">1</span>
+                          <input type="range" class="openrouter-top-p" min="0" max="1" step="0.01" value="0" data-help="Nucleus sampling probability mass." data-help-detail="Limits token sampling to the smallest token set whose cumulative probability exceeds this value. Set to 0 to disable.">
+                          <span class="openrouter-slider-value openrouter-top-p-value">0</span>
                         </div>
                       </div>
                       <div class="control-block">
                         <label>Top K</label>
                         <div class="openrouter-slider-row">
-                          <input type="range" class="openrouter-top-k" min="0" max="100" step="1" value="40" data-help="Top-k token cutoff." data-help-detail="Limits sampling to the highest-probability K tokens (0-100). Primarily used by Fireworks models. Set to 0 to disable.">
-                          <span class="openrouter-slider-value openrouter-top-k-value">40</span>
+                          <input type="range" class="openrouter-top-k" min="0" max="100" step="1" value="0" data-help="Top-k token cutoff." data-help-detail="Limits sampling to the highest-probability K tokens (0-100). Primarily used by Fireworks models. Set to 0 to disable.">
+                          <span class="openrouter-slider-value openrouter-top-k-value">0</span>
                         </div>
                       </div>
                       <div class="control-block">

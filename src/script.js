@@ -16,6 +16,10 @@
     return String(string).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
+  function toTrimmedString(value) {
+    return typeof value === 'string' ? value.trim() : '';
+  }
+
   // Delimiter parsing uses two custom modes:
   // - Match-all: the full string is the delimiter (legacy "custom" maps here).
   // - Match-any: any character in the custom input acts as a delimiter.
@@ -1147,6 +1151,81 @@
   let idCounter = 0;
   const MIX_COLOR_VARIANTS = 6;
   const CHUNK_COLOR_VARIANTS = 6;
+  let proceduralTitleCounter = 0;
+  const TITLE_ADJECTIVES = Object.freeze([
+    'ashen',
+    'salt',
+    'iron',
+    'quiet',
+    'deep',
+    'hollow',
+    'radiant',
+    'amber',
+    'lunar',
+    'feral'
+  ]);
+  const MIX_TITLE_NOUNS = Object.freeze([
+    'vault',
+    'signal',
+    'engine',
+    'canticle',
+    'relay',
+    'forge',
+    'circuit',
+    'kernel'
+  ]);
+  const STRING_TITLE_NOUNS = Object.freeze([
+    'line',
+    'phrase',
+    'verse',
+    'string',
+    'echo',
+    'note',
+    'thread',
+    'shard'
+  ]);
+  const ROGUELIKE_REFERENCE_SHORT = Object.freeze([
+    'Qud',
+    'NetHack',
+    'ADOM',
+    'Angband',
+    'Brogue',
+    'Moria',
+    'ToME',
+    'Crawl'
+  ]);
+  const ROGUELIKE_REFERENCE_LONG = Object.freeze([
+    'Caves of Qud'
+  ]);
+  const SUNO_EASTER_EGG_NAMES = Object.freeze([
+    'sirbitesalot',
+    'yolkhead',
+    'Alex Ayers',
+    'Mikey Schulman',
+    'Kakermix',
+    'bela'
+  ]);
+  const POLISH_POET_REFERENCES = Object.freeze([
+    'Szymborska',
+    'Milosz',
+    'Herbert',
+    'Tuwim',
+    'Lec'
+  ]);
+  const INDUSTRIAL_REFERENCES = Object.freeze([
+    'cement factory',
+    'Haifa Refinery',
+    'Haifa Chemicals',
+    'Kishon Foundry',
+    'Carmel Plant'
+  ]);
+  const PLACE_REFERENCES = Object.freeze([
+    'debrecen',
+    'haifa',
+    'haifa bay',
+    'kishon',
+    'carmel'
+  ]);
 
   // Keep generated ids above any loaded numeric suffix so new boxes never
   // reuse existing data-box-id values (which would collide in evaluation cache keys).
@@ -1192,6 +1271,85 @@
       attempts += 1;
     }
     return choice;
+  }
+
+  function normalizeBoxTitle(value) {
+    return toTrimmedString(value).toLowerCase();
+  }
+
+  function resolveTitleScope(scope) {
+    if (!scope) return document.querySelector('.mix-root');
+    if (scope.classList?.contains('mix-root')) return scope;
+    const inScopeRoot = scope.querySelector?.('.mix-root');
+    if (inScopeRoot) return inScopeRoot;
+    const windowRoot = scope.closest?.('.app-window')?.querySelector?.('.mix-root');
+    return windowRoot || document.querySelector('.mix-root');
+  }
+
+  function collectExistingBoxTitles(scope) {
+    const root = resolveTitleScope(scope);
+    if (!root) return new Set();
+    const existing = new Set();
+    root
+      .querySelectorAll('.mix-box .box-title, .chunk-box .box-title')
+      .forEach(titleEl => {
+        const raw = typeof titleEl.value === 'string' ? titleEl.value : titleEl.textContent;
+        const normalized = normalizeBoxTitle(raw);
+        if (normalized) existing.add(normalized);
+      });
+    return existing;
+  }
+
+  function pickTitleToken(list, seed, salt) {
+    if (!Array.isArray(list) || !list.length) return '';
+    const index = Math.abs(seed * 73 + salt * 29 + 17) % list.length;
+    return list[index];
+  }
+
+  function countWords(value) {
+    return toTrimmedString(value).split(/\s+/).filter(Boolean).length;
+  }
+
+  function buildProceduralTitleCandidates(type, seed) {
+    const noun = pickTitleToken(type === 'mix' ? MIX_TITLE_NOUNS : STRING_TITLE_NOUNS, seed, 1);
+    const adjective = pickTitleToken(TITLE_ADJECTIVES, seed, 2);
+    const roguelike = pickTitleToken(ROGUELIKE_REFERENCE_SHORT, seed, 3);
+    const roguelikeLong = pickTitleToken(ROGUELIKE_REFERENCE_LONG, seed, 4);
+    const suno = pickTitleToken(SUNO_EASTER_EGG_NAMES, seed, 5);
+    const poet = pickTitleToken(POLISH_POET_REFERENCES, seed, 6);
+    const factory = pickTitleToken(INDUSTRIAL_REFERENCES, seed, 7);
+    const place = pickTitleToken(PLACE_REFERENCES, seed, 8);
+    return [
+      `${adjective} ${noun}`,
+      `${roguelike} ${noun}`,
+      `${suno} ${noun}`,
+      `${poet} ${noun}`,
+      `${factory} ${noun}`,
+      `${place} ${noun}`,
+      `${adjective} ${place}`,
+      `${poet} debrecen`,
+      roguelikeLong
+    ];
+  }
+
+  function buildProceduralTitle(type, seed, attempt = 0) {
+    const candidates = buildProceduralTitleCandidates(type, seed)
+      .map(value => toTrimmedString(value))
+      .filter(value => value && countWords(value) <= 3);
+    if (!candidates.length) return '';
+    return candidates[(seed + attempt) % candidates.length];
+  }
+
+  function generateProceduralTitle(type, scope) {
+    const existing = collectExistingBoxTitles(scope);
+    for (let attempt = 0; attempt < 120; attempt += 1) {
+      const seed = ++proceduralTitleCounter + idCounter;
+      const candidate = buildProceduralTitle(type, seed, attempt);
+      const normalized = normalizeBoxTitle(candidate);
+      if (!normalized || existing.has(normalized)) continue;
+      return candidate;
+    }
+    return type === 'mix' ? `mix ${idCounter + proceduralTitleCounter + 1}` : `string ${idCounter + proceduralTitleCounter + 1}`;
   }
 
   function initToggleButton(btn, force) {
@@ -2087,14 +2245,18 @@
   function appendRootMix(root) {
     if (!root) return;
     const prevColor = findPreviousBoxColor(root, '.mix-box');
-    root.appendChild(createMixWrapper({ title: 'Mix' }, { previousColor: prevColor }));
+    root.appendChild(
+      createMixWrapper({ title: generateProceduralTitle('mix', root) }, { previousColor: prevColor })
+    );
   }
 
   function appendRootChunk(root) {
     if (!root) return;
     // Strings use their own palette, so track the most recent chunk color separately.
     const prevColor = findPreviousBoxColor(root, '.chunk-box');
-    root.appendChild(createChunkWrapper({ title: 'String' }, { previousColor: prevColor }));
+    root.appendChild(
+      createChunkWrapper({ title: generateProceduralTitle('chunk', root) }, { previousColor: prevColor })
+    );
   }
 
   // Copy helper shared by mix output + string input buttons.
@@ -2200,7 +2362,10 @@
         handle: btn => {
           const mixBox = btn.closest('.mix-box');
           appendChildWithColor(mixBox, prevColor =>
-            createChunkWrapper({}, { parentColor: mixBox?.dataset.color, previousColor: prevColor })
+            createChunkWrapper(
+              { title: generateProceduralTitle('chunk', mixBox || root) },
+              { parentColor: mixBox?.dataset.color, previousColor: prevColor }
+            )
           );
           refreshChildControls(mixBox || document);
           syncTextareaHeights(mixBox || document);
@@ -2211,7 +2376,10 @@
         handle: btn => {
           const mixBox = btn.closest('.mix-box');
           appendChildWithColor(mixBox, prevColor =>
-            createMixWrapper({ title: 'Mix' }, { parentColor: mixBox?.dataset.color, previousColor: prevColor })
+            createMixWrapper(
+              { title: generateProceduralTitle('mix', mixBox || root) },
+              { parentColor: mixBox?.dataset.color, previousColor: prevColor }
+            )
           );
           refreshChildControls(mixBox || document);
           updatePreserveMode(mixBox || document);

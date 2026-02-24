@@ -224,9 +224,9 @@ describe('OpenRouter app module', () => {
     expect(payload.model).toBe('accounts/fireworks/models/llama-v3p1-70b-instruct');
     expect(payload.prompt).toBe('finish this sentence');
     expect(payload.messages).toBeUndefined();
-    expect(payload.max_tokens).toBe(300);
-    expect(payload.top_p).toBe(1);
-    expect(payload.top_k).toBe(40);
+    expect(payload.max_tokens).toBeUndefined();
+    expect(payload.top_p).toBeUndefined();
+    expect(payload.top_k).toBeUndefined();
     expect(payload.presence_penalty).toBeUndefined();
     expect(payload.frequency_penalty).toBeUndefined();
     expect(payload.stop).toBeUndefined();
@@ -283,9 +283,9 @@ describe('OpenRouter app module', () => {
     expect(requestInit.headers.Authorization).toBe('Bearer hb-test-key');
     expect(payload.model).toBe('meta-llama/Meta-Llama-3.1-405B');
     expect(payload.prompt).toBe('POEM 11');
-    expect(payload.max_tokens).toBe(300);
+    expect(payload.max_tokens).toBeUndefined();
     expect(payload.temperature).toBe(1);
-    expect(payload.top_p).toBe(1);
+    expect(payload.top_p).toBeUndefined();
     expect(payload.top_k).toBeUndefined();
     expect(payload.presence_penalty).toBeUndefined();
     expect(payload.frequency_penalty).toBeUndefined();
