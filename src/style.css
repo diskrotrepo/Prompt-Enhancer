@@ -714,10 +714,10 @@ textarea,
 
 .root-actions {
   margin-top: auto;
-  position: sticky;
-  bottom: 0;
-  padding: 0.5rem 0 0;
-  background: linear-gradient(180deg, rgba(18, 22, 32, 0), rgba(18, 22, 32, 0.65));
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.4rem;
+  padding-top: 0.5rem;
 }
 
 .root-actions .add-button {
