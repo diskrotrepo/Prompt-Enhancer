@@ -1157,6 +1157,23 @@
   let proceduralGeneratedTitleCount = 0;
   let proceduralLocalTitleCount = 0;
   const MAX_LOCAL_REFERENCE_RATIO = 0.24;
+  function createProceduralSeed() {
+    try {
+      const cryptoApi = globalThis?.crypto;
+      if (cryptoApi?.getRandomValues) {
+        const seed = new Uint32Array(1);
+        cryptoApi.getRandomValues(seed);
+        return seed[0] >>> 0;
+      }
+    } catch (_) {}
+    return Math.floor(Math.random() * 0xffffffff) >>> 0;
+  }
+  let proceduralNonceState = createProceduralSeed();
+  function nextProceduralNonce() {
+    // LCG step: cheap per-title entropy so fresh reloads do not replay the same sequence.
+    proceduralNonceState = (proceduralNonceState * 1664525 + 1013904223) >>> 0;
+    return proceduralNonceState;
+  }
   const TITLE_ADJECTIVES = Object.freeze([
     'ashen',
     'salt',
@@ -1431,7 +1448,7 @@
   function generateProceduralTitle(type, scope) {
     const existing = collectExistingBoxTitles(scope);
     for (let attempt = 0; attempt < 120; attempt += 1) {
-      const seed = ++proceduralTitleCounter + idCounter;
+      const seed = ++proceduralTitleCounter + idCounter + nextProceduralNonce();
       const selected = buildProceduralTitle(type, seed, attempt);
       const candidate = selected?.text || '';
       const normalized = normalizeBoxTitle(candidate);

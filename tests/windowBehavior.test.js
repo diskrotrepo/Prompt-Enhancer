@@ -41,6 +41,28 @@ function dispatchPointer(window, target, type, coords = {}) {
   target.dispatchEvent(event);
 }
 
+function sampleProceduralTitles(rounds = 16) {
+  const { window } = setupDom();
+  openWindow(window, 'prompts');
+  const promptWindow = window.document.querySelector('.app-window[data-window="prompts"]');
+  const root = promptWindow?.querySelector('.mix-root');
+  const addMixButton = promptWindow?.querySelector('.add-root-mix');
+  const addStringButton = promptWindow?.querySelector('.add-root-chunk');
+  for (let i = 0; i < rounds; i += 1) {
+    addMixButton.click();
+    addStringButton.click();
+  }
+  const mixTitles = Array.from(root.querySelectorAll('.mix-box .box-title'))
+    .map(titleEl => (titleEl?.value || titleEl?.textContent || '').trim())
+    .filter(Boolean)
+    .slice(1, rounds + 1);
+  const chunkTitles = Array.from(root.querySelectorAll('.chunk-box .box-title'))
+    .map(titleEl => (titleEl?.value || titleEl?.textContent || '').trim())
+    .filter(Boolean)
+    .slice(1, rounds + 1);
+  return { mixTitles, chunkTitles };
+}
+
 describe('Window behavior', () => {
   test('window header collapse hides and taskbar click restores', () => {
     const { window } = setupDom();
@@ -249,6 +271,18 @@ describe('Window behavior', () => {
     const haifaCount = titles.filter(value => /\bhaifa\b/i.test(value)).length;
     expect(localCount / titles.length).toBeLessThanOrEqual(0.32);
     expect(haifaCount / titles.length).toBeLessThanOrEqual(0.08);
+  });
+
+  test('procedural naming sequence changes across fresh reloads', () => {
+    const first = sampleProceduralTitles(18);
+    const second = sampleProceduralTitles(18);
+    const sameMix =
+      first.mixTitles.length === second.mixTitles.length &&
+      first.mixTitles.every((value, index) => value === second.mixTitles[index]);
+    const sameChunk =
+      first.chunkTitles.length === second.chunkTitles.length &&
+      first.chunkTitles.every((value, index) => value === second.chunkTitles[index]);
+    expect(sameMix && sameChunk).toBe(false);
   });
 });
 
