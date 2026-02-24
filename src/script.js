@@ -2911,37 +2911,59 @@
   function setupWindowControls() {
     const area = document.getElementById('window-area');
     if (!area) return;
+    const controlHandlers = [
+      {
+        className: 'collapse-toggle',
+        handle: ({ win, btn, instanceId }) => {
+          if (instanceId) {
+            win.classList.add('is-hidden');
+            win.classList.remove('is-collapsed');
+            setCollapseButton(btn, false);
+            if (currentFocusInstance === instanceId) currentFocusInstance = null;
+            clearTaskbarActive();
+            return;
+          }
+          const collapsed = win.classList.toggle('is-collapsed');
+          setCollapseButton(btn, collapsed);
+        }
+      },
+      {
+        className: 'maximize-toggle',
+        handle: ({ win }) => {
+          if (isMobileLayout()) {
+            win.classList.add('is-maximized');
+            return;
+          }
+          win.classList.toggle('is-maximized');
+        }
+      },
+      {
+        className: 'remove-box',
+        handle: ({ instanceId }) => {
+          if (instanceId) closeWindow(instanceId);
+        }
+      }
+    ];
+    const dispatchWindowControl = (btn, context) => {
+      for (let i = 0; i < controlHandlers.length; i += 1) {
+        const handler = controlHandlers[i];
+        if (!handler || !handler.className || typeof handler.handle !== 'function') continue;
+        if (!btn.classList.contains(handler.className)) continue;
+        handler.handle(context);
+        return true;
+      }
+      return false;
+    };
     area.addEventListener('click', event => {
-      const btn = event.target.closest('button');
+      const eventTarget = toEventElement(event.target);
+      if (!eventTarget) return;
+      const btn = eventTarget.closest('button');
       if (!btn) return;
       if (btn.closest('.mix-box') || btn.closest('.chunk-box')) return;
       const win = btn.closest('.app-window');
       if (!win) return;
       const instanceId = win.dataset.instance;
-      if (btn.classList.contains('collapse-toggle')) {
-        if (instanceId) {
-          win.classList.add('is-hidden');
-          win.classList.remove('is-collapsed');
-          setCollapseButton(btn, false);
-          if (currentFocusInstance === instanceId) currentFocusInstance = null;
-          clearTaskbarActive();
-        } else {
-          const collapsed = win.classList.toggle('is-collapsed');
-          setCollapseButton(btn, collapsed);
-        }
-        return;
-      }
-    if (btn.classList.contains('maximize-toggle')) {
-        if (isMobileLayout()) {
-          win.classList.add('is-maximized');
-          return;
-        }
-        win.classList.toggle('is-maximized');
-        return;
-      }
-      if (btn.classList.contains('remove-box')) {
-        if (instanceId) closeWindow(instanceId);
-      }
+      dispatchWindowControl(btn, { win, btn, instanceId });
     });
   }
 
