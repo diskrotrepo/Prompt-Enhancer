@@ -2616,6 +2616,15 @@
       ]
     },
     {
+      "id": "multi_prompt_windows_open",
+      "description": "Opening Prompt Enhancer twice creates two prompt windows and two taskbar buttons.",
+      "random": 0,
+      "actions": [
+        "openPromptsWindow",
+        "openPromptsWindow"
+      ]
+    },
+    {
       "id": "dropout_mix_reaches_tail_chunks",
       "description": "Dropout uses a full canonical one-pass source so late chunks can survive removals.",
       "random": 0,

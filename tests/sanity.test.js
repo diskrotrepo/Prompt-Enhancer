@@ -232,6 +232,8 @@ function runSanityCase(testCase) {
   );
   const hasOpenRouterMenu = !!window.document.querySelector('.menu-item[data-window="openrouter"]');
   const openRouterWindowCount = window.document.querySelectorAll('.openrouter-window:not(.window-template)').length;
+  const promptWindowCount = window.document.querySelectorAll('.app-window[data-window="prompts"]:not(.window-template)').length;
+  const taskbarButtonCount = window.document.querySelectorAll('#taskbar .taskbar-button').length;
   const hasOpenRouterEncryptedSettingsControls = !!(
     window.document.querySelector('.openrouter-menu-start') &&
     window.document.querySelector('.openrouter-menu-dropdown .prompt-menu-item[data-action="save-settings"]') &&
@@ -266,6 +268,8 @@ function runSanityCase(testCase) {
     hasLoadPresetMenu,
     hasOpenRouterMenu,
     openRouterWindowCount,
+    promptWindowCount,
+    taskbarButtonCount,
     hasOpenRouterEncryptedSettingsControls,
     mixCopiedText: actionResults.mixCopiedText,
     chunkCopiedText: actionResults.chunkCopiedText,
@@ -377,6 +381,12 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'openRouterWindowCount')) {
         expect(result.openRouterWindowCount).toBe(expected.openRouterWindowCount);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'promptWindowCount')) {
+        expect(result.promptWindowCount).toBe(expected.promptWindowCount);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'taskbarButtonCount')) {
+        expect(result.taskbarButtonCount).toBe(expected.taskbarButtonCount);
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'hasOpenRouterEncryptedSettingsControls')) {
         expect(result.hasOpenRouterEncryptedSettingsControls).toBe(expected.hasOpenRouterEncryptedSettingsControls);

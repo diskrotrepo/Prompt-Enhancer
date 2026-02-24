@@ -301,6 +301,12 @@
       "hasOpenRouterEncryptedSettingsControls": true
     },
     {
+      "id": "multi_prompt_windows_open",
+      "output": "",
+      "promptWindowCount": 2,
+      "taskbarButtonCount": 2
+    },
+    {
       "id": "dropout_mix_reaches_tail_chunks",
       "output": "a6 b6 a7 b7 a8 b8 ",
       "lengthMode": "dropout"

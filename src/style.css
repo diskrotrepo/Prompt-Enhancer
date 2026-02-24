@@ -230,7 +230,7 @@ textarea,
 #desktop {
   position: relative;
   min-height: 100vh;
-  padding-top: calc(var(--taskbar-height) + var(--taskbar-padding));
+  padding-top: var(--taskbar-height);
   width: 100%;
 }
 
@@ -482,7 +482,7 @@ textarea,
 
 #window-area {
   position: relative;
-  min-height: calc(100vh - var(--taskbar-height) - var(--taskbar-padding));
+  min-height: calc(100vh - var(--taskbar-height));
   padding: 0;
 }
 

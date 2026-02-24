@@ -2140,209 +2140,271 @@
     }
   }
 
+  // Normalize delegated event targets to Elements before using closest().
+  function toEventElement(target) {
+    return target && typeof target.closest === 'function' ? target : null;
+  }
+
+  // Class-based dispatch keeps delegated button handling explicit and ordered.
+  function dispatchButtonAction(button, handlers) {
+    if (!button || !Array.isArray(handlers)) return false;
+    for (let i = 0; i < handlers.length; i += 1) {
+      const handler = handlers[i];
+      if (!handler || !handler.className || typeof handler.handle !== 'function') continue;
+      if (!button.classList.contains(handler.className)) continue;
+      handler.handle(button);
+      return true;
+    }
+    return false;
+  }
+
+  // Selector-based dispatch for delegated input/change events.
+  function dispatchClosestAction(target, handlers) {
+    if (!target || !Array.isArray(handlers)) return false;
+    for (let i = 0; i < handlers.length; i += 1) {
+      const handler = handlers[i];
+      if (!handler || !handler.selector || typeof handler.handle !== 'function') continue;
+      const match = target.closest(handler.selector);
+      if (!match) continue;
+      handler.handle(match, target);
+      return true;
+    }
+    return false;
+  }
+
   function setupMixEvents(root) {
     if (!root || root.dataset.eventsReady) return;
     root.dataset.eventsReady = 'true';
     syncTextareaHeights(root);
-    root.addEventListener('click', event => {
-      const btn = event.target.closest('button');
-      if (!btn) return;
+    const refreshChildControls = scope => {
+      const target = scope || document;
+      setupDelimiterControls(target);
+      setupSizeControls(target);
+      syncCollapseButtons(target);
+      refreshColorPresetSelects(target);
+      refreshVariableOptions(target);
+    };
 
-      if (btn.classList.contains('add-chunk-child')) {
-        const mixBox = btn.closest('.mix-box');
-        const childContainer = mixBox?.querySelector('.mix-children');
-        if (childContainer) {
-          const prevChild = childContainer.lastElementChild;
-          const prevColor = prevChild?.querySelector('.mix-box, .chunk-box')?.dataset.color || null;
-          childContainer.appendChild(
+    const appendChildWithColor = (mixBox, createChild) => {
+      const childContainer = mixBox?.querySelector('.mix-children');
+      if (!childContainer || typeof createChild !== 'function') return;
+      const prevChild = childContainer.lastElementChild;
+      const prevColor = prevChild?.querySelector('.mix-box, .chunk-box')?.dataset.color || null;
+      const wrapper = createChild(prevColor);
+      if (wrapper) childContainer.appendChild(wrapper);
+    };
+
+    const clickHandlers = [
+      {
+        className: 'add-chunk-child',
+        handle: btn => {
+          const mixBox = btn.closest('.mix-box');
+          appendChildWithColor(mixBox, prevColor =>
             createChunkWrapper({}, { parentColor: mixBox?.dataset.color, previousColor: prevColor })
           );
+          refreshChildControls(mixBox || document);
+          syncTextareaHeights(mixBox || document);
         }
-        setupDelimiterControls(mixBox || document);
-        setupSizeControls(mixBox || document);
-        syncCollapseButtons(mixBox || document);
-        syncTextareaHeights(mixBox || document);
-        refreshColorPresetSelects(mixBox || document);
-        refreshVariableOptions(mixBox || document);
-        return;
-      }
-
-      if (btn.classList.contains('add-mix-child')) {
-        const mixBox = btn.closest('.mix-box');
-        const childContainer = mixBox?.querySelector('.mix-children');
-        if (childContainer) {
-          const prevChild = childContainer.lastElementChild;
-          const prevColor = prevChild?.querySelector('.mix-box, .chunk-box')?.dataset.color || null;
-          childContainer.appendChild(
+      },
+      {
+        className: 'add-mix-child',
+        handle: btn => {
+          const mixBox = btn.closest('.mix-box');
+          appendChildWithColor(mixBox, prevColor =>
             createMixWrapper({ title: 'Mix' }, { parentColor: mixBox?.dataset.color, previousColor: prevColor })
           );
+          refreshChildControls(mixBox || document);
+          updatePreserveMode(mixBox || document);
         }
-        setupDelimiterControls(mixBox || document);
-        setupSizeControls(mixBox || document);
-        syncCollapseButtons(mixBox || document);
-        updatePreserveMode(mixBox || document);
-        refreshColorPresetSelects(mixBox || document);
-        refreshVariableOptions(mixBox || document);
-        return;
-      }
-
-      if (btn.classList.contains('add-variable-child')) {
-        const mixBox = btn.closest('.mix-box');
-        const childContainer = mixBox?.querySelector('.mix-children');
-        if (childContainer) childContainer.appendChild(createVariableWrapper());
-        syncCollapseButtons(mixBox || document);
-        refreshColorPresetSelects(mixBox || document);
-        refreshVariableOptions(mixBox || document);
-        return;
-      }
-
-      if (btn.classList.contains('remove-box')) {
-        // Resolve the wrapper from the nearest prompt box first so nested variable deletes
-        // cannot climb to an ancestor mix wrapper.
-        const box = btn.closest('.variable-box, .chunk-box, .mix-box');
-        const wrapper = box?.closest('.variable-wrapper, .chunk-wrapper, .mix-wrapper');
-        if (!wrapper) return;
-        wrapper.remove();
-        updateEmptyState(root);
-        refreshVariableOptions(root);
-        return;
-      }
-
-      if (btn.classList.contains('collapse-toggle')) {
-        const box = btn.closest('.box-shell');
-        if (box) {
+      },
+      {
+        className: 'add-variable-child',
+        handle: btn => {
+          const mixBox = btn.closest('.mix-box');
+          const childContainer = mixBox?.querySelector('.mix-children');
+          if (childContainer) childContainer.appendChild(createVariableWrapper());
+          syncCollapseButtons(mixBox || document);
+          refreshColorPresetSelects(mixBox || document);
+          refreshVariableOptions(mixBox || document);
+        }
+      },
+      {
+        className: 'remove-box',
+        handle: btn => {
+          // Resolve the wrapper from the nearest prompt box first so nested variable deletes
+          // cannot climb to an ancestor mix wrapper.
+          const box = btn.closest('.variable-box, .chunk-box, .mix-box');
+          const wrapper = box?.closest('.variable-wrapper, .chunk-wrapper, .mix-wrapper');
+          if (!wrapper) return;
+          wrapper.remove();
+          updateEmptyState(root);
+          refreshVariableOptions(root);
+        }
+      },
+      {
+        className: 'collapse-toggle',
+        handle: btn => {
+          const box = btn.closest('.box-shell');
+          if (!box) return;
           const collapsed = box.classList.toggle('is-collapsed');
           setCollapseButton(btn, collapsed);
         }
-        return;
+      },
+      {
+        className: 'color-toggle',
+        handle: btn => {
+          const box = btn.closest('.mix-box, .chunk-box');
+          const panel = box?.querySelector('.color-controls');
+          if (!panel) return;
+          const isHidden = panel.classList.toggle('is-hidden');
+          btn.classList.toggle('active', !isHidden);
+        }
+      },
+      {
+        className: 'copy-output',
+        handle: btn => {
+          const box = btn.closest('.mix-box');
+          const output = box?.querySelector('.mix-output-text');
+          if (!output) return;
+          copyTextWithFeedback(output.textContent || '', btn);
+        }
+      },
+      {
+        className: 'copy-input',
+        handle: btn => {
+          const box = btn.closest('.chunk-box');
+          if (!box) return;
+          // Refresh output so randomization + limits are reflected before copying.
+          evaluateChunkBox(box);
+          const output = box.querySelector('.chunk-output-text');
+          const fallback = box.querySelector('.chunk-input');
+          const text = output?.textContent || fallback?.value || '';
+          copyTextWithFeedback(text, btn);
+        }
+      },
+      {
+        className: 'save-color-preset',
+        handle: btn => {
+          const box = btn.closest('.mix-box, .chunk-box');
+          if (!box) return;
+          const nameInput = box.querySelector('.color-preset-name');
+          const colorInput = box.querySelector('.color-custom-input');
+          const preset = upsertCustomPreset(nameInput?.value || '', colorInput?.value || '');
+          if (!preset) return;
+          if (nameInput) nameInput.value = '';
+          refreshColorPresetSelects(root);
+          setBoxColorMode(box, 'preset', preset.id);
+          syncColorControls(box);
+        }
+      },
+      {
+        className: 'toggle-button',
+        handle: btn => {
+          toggleButton(btn);
+        }
       }
+    ];
 
-      if (btn.classList.contains('color-toggle')) {
-        const box = btn.closest('.mix-box, .chunk-box');
-        const panel = box?.querySelector('.color-controls');
-        if (!panel) return;
-        const isHidden = panel.classList.toggle('is-hidden');
-        btn.classList.toggle('active', !isHidden);
-        return;
+    const inputHandlers = [
+      {
+        selector: '.chunk-input',
+        handle: textarea => {
+          autoResizeTextarea(textarea);
+          const box = textarea.closest('.chunk-box');
+          if (box) updateEmptyChunkMode(box);
+        }
+      },
+      {
+        selector: '.mix-box .box-title, .chunk-box .box-title',
+        handle: () => {
+          refreshVariableOptions(root);
+        }
+      },
+      {
+        selector: '.color-custom-input',
+        handle: colorInput => {
+          const box = colorInput.closest('.mix-box, .chunk-box');
+          if (!box) return;
+          setBoxColorMode(box, 'custom', colorInput.value);
+          const select = box.querySelector('.color-preset-select');
+          if (select) select.value = 'custom';
+          syncColorControls(box);
+        }
+      },
+      {
+        selector: '.delimiter-size-custom',
+        handle: sizeInput => {
+          const box = sizeInput.closest('.mix-box, .chunk-box');
+          if (box) updateFirstChunkBehaviorLabels(box);
+        }
       }
+    ];
 
-      if (btn.classList.contains('copy-output')) {
-        const box = btn.closest('.mix-box');
-        const output = box?.querySelector('.mix-output-text');
-        if (!output) return;
-        const text = output.textContent || '';
-        copyTextWithFeedback(text, btn);
-        return;
+    const changeHandlers = [
+      {
+        selector: '.delimiter-size',
+        handle: select => {
+          const chunkBox = select.closest('.chunk-box');
+          if (chunkBox) {
+            updateFirstChunkBehaviorLabels(chunkBox);
+            return;
+          }
+          const mixBox = select.closest('.mix-box');
+          if (mixBox) updatePreserveMode(mixBox);
+        }
+      },
+      {
+        selector: '.length-mode',
+        handle: select => {
+          const box = select.closest('.mix-box, .chunk-box');
+          if (box) updateLengthModeState(box);
+        }
+      },
+      {
+        selector: '.color-preset-select',
+        handle: select => {
+          const box = select.closest('.mix-box, .chunk-box');
+          if (!box) return;
+          if (select.value === 'auto') {
+            setBoxColorMode(box, 'auto');
+          } else if (select.value === 'custom') {
+            const colorInput = box.querySelector('.color-custom-input');
+            setBoxColorMode(box, 'custom', colorInput?.value || getAutoColorHex(box));
+          } else {
+            setBoxColorMode(box, 'preset', select.value);
+          }
+          syncColorControls(box);
+        }
+      },
+      {
+        selector: '.variable-select',
+        handle: variableSelect => {
+          const box = variableSelect.closest('.variable-box');
+          if (!box) return;
+          box.dataset.targetId = variableSelect.value || '';
+          refreshVariableOptions(root);
+        }
       }
+    ];
 
-      if (btn.classList.contains('copy-input')) {
-        const box = btn.closest('.chunk-box');
-        if (!box) return;
-        // Refresh output so randomization + limits are reflected before copying.
-        evaluateChunkBox(box);
-        const output = box.querySelector('.chunk-output-text');
-        const fallback = box.querySelector('.chunk-input');
-        const text = output?.textContent || fallback?.value || '';
-        copyTextWithFeedback(text, btn);
-        return;
-      }
-
-      if (btn.classList.contains('save-color-preset')) {
-        const box = btn.closest('.mix-box, .chunk-box');
-        if (!box) return;
-        const nameInput = box.querySelector('.color-preset-name');
-        const colorInput = box.querySelector('.color-custom-input');
-        const preset = upsertCustomPreset(nameInput?.value || '', colorInput?.value || '');
-        if (!preset) return;
-        if (nameInput) nameInput.value = '';
-        refreshColorPresetSelects(root);
-        setBoxColorMode(box, 'preset', preset.id);
-        syncColorControls(box);
-        return;
-      }
-
-      if (btn.classList.contains('toggle-button')) {
-        toggleButton(btn);
-      }
+    root.addEventListener('click', event => {
+      const eventTarget = toEventElement(event.target);
+      if (!eventTarget) return;
+      const button = eventTarget.closest('button');
+      if (!button) return;
+      dispatchButtonAction(button, clickHandlers);
     });
 
     root.addEventListener('input', event => {
-      const textarea = event.target.closest('.chunk-input');
-      if (!textarea) return;
-      autoResizeTextarea(textarea);
-      const box = textarea.closest('.chunk-box');
-      if (box) updateEmptyChunkMode(box);
-    });
-
-    root.addEventListener('input', event => {
-      const titleInput = event.target.closest('.mix-box .box-title, .chunk-box .box-title');
-      if (!titleInput) return;
-      refreshVariableOptions(root);
+      const eventTarget = toEventElement(event.target);
+      if (!eventTarget) return;
+      dispatchClosestAction(eventTarget, inputHandlers);
     });
 
     root.addEventListener('change', event => {
-      const select = event.target.closest('.delimiter-size');
-      if (!select) return;
-      const chunkBox = select.closest('.chunk-box');
-      if (chunkBox) {
-        updateFirstChunkBehaviorLabels(chunkBox);
-        return;
-      }
-      const mixBox = select.closest('.mix-box');
-      if (mixBox) {
-        updatePreserveMode(mixBox);
-      }
-    });
-
-    root.addEventListener('change', event => {
-      const select = event.target.closest('.length-mode');
-      if (!select) return;
-      const box = select.closest('.mix-box, .chunk-box');
-      if (box) updateLengthModeState(box);
-    });
-
-    root.addEventListener('change', event => {
-      const select = event.target.closest('.color-preset-select');
-      if (!select) return;
-      const box = select.closest('.mix-box, .chunk-box');
-      if (!box) return;
-      if (select.value === 'auto') {
-        setBoxColorMode(box, 'auto');
-      } else if (select.value === 'custom') {
-        const colorInput = box.querySelector('.color-custom-input');
-        setBoxColorMode(box, 'custom', colorInput?.value || getAutoColorHex(box));
-      } else {
-        setBoxColorMode(box, 'preset', select.value);
-      }
-      syncColorControls(box);
-    });
-
-    root.addEventListener('change', event => {
-      const variableSelect = event.target.closest('.variable-select');
-      if (!variableSelect) return;
-      const box = variableSelect.closest('.variable-box');
-      if (box) {
-        box.dataset.targetId = variableSelect.value || '';
-        refreshVariableOptions(root);
-      }
-    });
-
-    root.addEventListener('input', event => {
-      const colorInput = event.target.closest('.color-custom-input');
-      if (!colorInput) return;
-      const box = colorInput.closest('.mix-box, .chunk-box');
-      if (!box) return;
-      setBoxColorMode(box, 'custom', colorInput.value);
-      const select = box.querySelector('.color-preset-select');
-      if (select) select.value = 'custom';
-      syncColorControls(box);
-    });
-
-    root.addEventListener('input', event => {
-      const sizeInput = event.target.closest('.delimiter-size-custom');
-      if (!sizeInput) return;
-      const box = sizeInput.closest('.mix-box, .chunk-box');
-      if (box) updateFirstChunkBehaviorLabels(box);
+      const eventTarget = toEventElement(event.target);
+      if (!eventTarget) return;
+      dispatchClosestAction(eventTarget, changeHandlers);
     });
   }
 
@@ -2390,53 +2452,21 @@
       refreshColorPresetSelects(scope);
       refreshVariableOptions(scope);
     };
-    const addEmpty = scope.querySelector('.add-empty-mix');
-    if (addEmpty && !addEmpty.dataset.bound) {
-      addEmpty.addEventListener('click', () => {
+    const bindRootAddButton = (selector, appendFn) => {
+      const button = scope.querySelector(selector);
+      if (!button || button.dataset.bound) return;
+      button.addEventListener('click', () => {
         const root = scope.querySelector('.mix-root');
-        if (root) {
-          appendRootMix(root);
-          finalizeRootAdd(root);
-        }
+        if (!root) return;
+        appendFn(root);
+        finalizeRootAdd(root);
       });
-      addEmpty.dataset.bound = 'true';
-    }
-
-    const addRoot = scope.querySelector('.add-root-mix');
-    if (addRoot && !addRoot.dataset.bound) {
-      addRoot.addEventListener('click', () => {
-        const root = scope.querySelector('.mix-root');
-        if (root) {
-          appendRootMix(root);
-          finalizeRootAdd(root);
-        }
-      });
-      addRoot.dataset.bound = 'true';
-    }
-
-    const addEmptyChunk = scope.querySelector('.add-empty-chunk');
-    if (addEmptyChunk && !addEmptyChunk.dataset.bound) {
-      addEmptyChunk.addEventListener('click', () => {
-        const root = scope.querySelector('.mix-root');
-        if (root) {
-          appendRootChunk(root);
-          finalizeRootAdd(root);
-        }
-      });
-      addEmptyChunk.dataset.bound = 'true';
-    }
-
-    const addRootChunk = scope.querySelector('.add-root-chunk');
-    if (addRootChunk && !addRootChunk.dataset.bound) {
-      addRootChunk.addEventListener('click', () => {
-        const root = scope.querySelector('.mix-root');
-        if (root) {
-          appendRootChunk(root);
-          finalizeRootAdd(root);
-        }
-      });
-      addRootChunk.dataset.bound = 'true';
-    }
+      button.dataset.bound = 'true';
+    };
+    bindRootAddButton('.add-empty-mix', appendRootMix);
+    bindRootAddButton('.add-root-mix', appendRootMix);
+    bindRootAddButton('.add-empty-chunk', appendRootChunk);
+    bindRootAddButton('.add-root-chunk', appendRootChunk);
 
     const loadInput = scope.querySelector('.load-mix-file');
     // File naming is per-window: Save reuses the stored name; Save As prompts and updates the title.
@@ -2601,6 +2631,33 @@
         if (event.target.closest('.prompt-menu')) return;
         closeMenu();
       });
+      const promptMenuActions = {
+        open: () => {
+          // Open uses the hidden file input.
+          loadInput?.click();
+          return { closeMenuAfter: true };
+        },
+        'load-preset': item => {
+          const isOpen = item.classList.contains('open');
+          if (isOpen) {
+            closePresetMenu();
+          } else {
+            openPresetMenu();
+            refreshPresetEntries();
+          }
+          return { closeMenuAfter: false };
+        },
+        save: () => {
+          // Save exports the current mix state as JSON.
+          saveMix();
+          return { closeMenuAfter: true };
+        },
+        'save-as': () => {
+          // Save As always prompts for a new name.
+          saveMixAs();
+          return { closeMenuAfter: true };
+        }
+      };
       // Prompt menu actions mirror visible items (open/load preset/save/save as).
       menuDropdown.addEventListener('click', async event => {
         const presetRow = event.target.closest('.prompt-menu-subitem[data-action="load-preset-file"]');
@@ -2612,26 +2669,10 @@
         const item = event.target.closest('.prompt-menu-item');
         if (!item) return;
         const action = item.dataset.action;
-        if (action === 'open') {
-          // Open uses the hidden file input.
-          loadInput?.click();
-        } else if (action === 'load-preset') {
-          const isOpen = item.classList.contains('open');
-          if (isOpen) {
-            closePresetMenu();
-          } else {
-            openPresetMenu();
-            refreshPresetEntries();
-          }
-          return;
-        } else if (action === 'save') {
-          // Save exports the current mix state as JSON.
-          saveMix();
-        } else if (action === 'save-as') {
-          // Save As always prompts for a new name.
-          saveMixAs();
-        }
-        closeMenu();
+        const handler = action ? promptMenuActions[action] : null;
+        if (!handler) return;
+        const result = handler(item) || {};
+        if (result.closeMenuAfter !== false) closeMenu();
       });
       menuToggle.dataset.bound = 'true';
     }

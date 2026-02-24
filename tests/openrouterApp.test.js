@@ -794,6 +794,60 @@ describe('OpenRouter app module', () => {
     expect(apiKeyInput.value).toBe('hb-key-persisted');
   });
 
+  test('encrypted settings save reports cancellation when password prompt is dismissed', async () => {
+    const { window, downloads } = setupDom();
+    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
+    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    const status = appWindow.querySelector('.openrouter-status');
+
+    window.prompt.mockReturnValueOnce(null);
+    await clickOpenRouterFileAction(window, appWindow, 'save-settings');
+    await flush();
+
+    expect(status.textContent).toContain('Encrypted save cancelled.');
+    expect(downloads.length).toBe(0);
+  });
+
+  test('encrypted settings load surfaces wrong-password errors and keeps current values', async () => {
+    const { window, downloadedBlobs, downloads } = setupDom();
+    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
+    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+
+    const apiKeyInput = appWindow.querySelector('.openrouter-api-key');
+    const titleInput = appWindow.querySelector('.openrouter-title');
+    const loadFileInput = appWindow.querySelector('.openrouter-load-settings-file');
+    const status = appWindow.querySelector('.openrouter-status');
+
+    apiKeyInput.value = 'secret-key-before-save';
+    titleInput.value = 'Saved Title';
+
+    window.prompt.mockReturnValueOnce('correct-password');
+    await clickOpenRouterFileAction(window, appWindow, 'save-settings');
+    await waitFor(() => downloads.length > 0);
+    expect(downloadedBlobs.length).toBeGreaterThan(0);
+    const encryptedRaw = await blobToText(window, downloadedBlobs[downloadedBlobs.length - 1]);
+
+    apiKeyInput.value = '';
+    titleInput.value = '';
+    window.prompt.mockReturnValueOnce('wrong-password');
+    await clickOpenRouterFileAction(window, appWindow, 'load-settings');
+    const encryptedFile = new window.File(
+      [encryptedRaw],
+      'completion-providers-encrypted-settings.json',
+      { type: 'application/json' }
+    );
+    Object.defineProperty(loadFileInput, 'files', {
+      value: [encryptedFile],
+      configurable: true
+    });
+    loadFileInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() => (status.textContent || '').includes('Invalid password or corrupted encrypted settings.'));
+
+    expect(status.textContent).toContain('Invalid password or corrupted encrypted settings.');
+    expect(apiKeyInput.value).toBe('');
+    expect(titleInput.value).toBe('');
+  });
+
   test('filters out models that require mandatory reasoning after first failure', async () => {
     const { window } = setupDom();
     window.fetch = jest.fn((url, init) => {
