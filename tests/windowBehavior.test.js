@@ -243,7 +243,7 @@ describe('Window behavior', () => {
     expect(wordCount(newChunkTitle)).toBeLessThanOrEqual(3);
   });
 
-  test('procedural naming avoids local-reference dominance', () => {
+  test('procedural naming uses only name pool with type prefixes', () => {
     const { window } = setupDom();
     openWindow(window, 'prompts');
 
@@ -260,17 +260,62 @@ describe('Window behavior', () => {
       addStringButton.click();
     }
 
-    const titles = Array.from(root.querySelectorAll('.mix-box .box-title, .chunk-box .box-title'))
-      .map(titleEl => (titleEl?.value || titleEl?.textContent || '').trim().toLowerCase())
-      .filter(Boolean)
-      .filter(value => !/^mix$|^string$/i.test(value));
-    expect(titles.length).toBeGreaterThan(20);
+    const allowedNames = new Set([
+      'diskrot',
+      'sirbitesalot',
+      'yolkhead',
+      'alex ayers',
+      'mikey schulman',
+      'kakermix',
+      'allison',
+      'ari',
+      'io',
+      'p8ntmstrg',
+      'misscalamity',
+      'subcreation',
+      'taboovector',
+      'tigonn',
+      'vocondus',
+      'christian',
+      'andre andre',
+      'falcon',
+      'furry',
+      'gtzy',
+      'lucid',
+      'neffy',
+      'oakwood',
+      'offchune',
+      'wellaways',
+      'xranoxxd',
+      'jonathan fly',
+      'greyplains',
+      'bela'
+    ]);
+    const disallowedGeography = /\b(haifa|kishon|carmel|akko|galilee|jezreel|debrecen|cement|shipyard|foundry|terminals|workshops)\b/i;
 
-    const localPattern = /\b(haifa|kishon|carmel|akko|galilee|jezreel|debrecen|cement|shipyard|foundry|terminals|workshops)\b/i;
-    const localCount = titles.filter(value => localPattern.test(value)).length;
-    const haifaCount = titles.filter(value => /\bhaifa\b/i.test(value)).length;
-    expect(localCount / titles.length).toBeLessThanOrEqual(0.32);
-    expect(haifaCount / titles.length).toBeLessThanOrEqual(0.08);
+    const mixTitles = Array.from(root.querySelectorAll('.mix-box .box-title'))
+      .map(titleEl => (titleEl?.value || titleEl?.textContent || '').trim())
+      .filter(Boolean)
+      .slice(1);
+    const chunkTitles = Array.from(root.querySelectorAll('.chunk-box .box-title'))
+      .map(titleEl => (titleEl?.value || titleEl?.textContent || '').trim())
+      .filter(Boolean)
+      .slice(1);
+    expect(mixTitles.length).toBeGreaterThan(10);
+    expect(chunkTitles.length).toBeGreaterThan(10);
+
+    mixTitles.forEach(title => {
+      expect(title.toLowerCase().startsWith('mix ')).toBe(true);
+      const name = title.slice(4).trim().toLowerCase();
+      expect(allowedNames.has(name)).toBe(true);
+      expect(disallowedGeography.test(title)).toBe(false);
+    });
+    chunkTitles.forEach(title => {
+      expect(title.toLowerCase().startsWith('string ')).toBe(true);
+      const name = title.slice(7).trim().toLowerCase();
+      expect(allowedNames.has(name)).toBe(true);
+      expect(disallowedGeography.test(title)).toBe(false);
+    });
   });
 
   test('procedural naming sequence changes across fresh reloads', () => {
