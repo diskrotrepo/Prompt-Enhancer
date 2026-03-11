@@ -1090,6 +1090,9 @@
     // with directly referenced siblings on the first pass.
     const lists = children.map(child => evaluateChild(child, context?.cacheScope || ''));
 
+    // Dropout uses the active order mode in two phases:
+    // - Randomize interleave changes the seeded one-pass source before deletions.
+    // - Full randomize shuffles only the surviving chunks after deletions finish.
     const mixLimit = dropoutMode ? Number.POSITIVE_INFINITY : limit;
     const mixExact = dropoutMode ? false : exact;
     const mixSinglePass = dropoutMode ? true : singlePass;
@@ -1105,8 +1108,13 @@
       false,
       wrapsCanRepeat ? { refreshers } : {}
     );
-    const mixedOrdered = fullRandomize ? shuffle(mixedBase.slice()) : mixedBase;
-    const mixed = dropoutMode ? dropChunksToLimit(mixedOrdered, limit) : mixedOrdered;
+    const mixedOrdered = dropoutMode
+      ? mixedBase
+      : fullRandomize
+        ? shuffle(mixedBase.slice())
+        : mixedBase;
+    const dropped = dropoutMode ? dropChunksToLimit(mixedOrdered, limit) : mixedOrdered;
+    const mixed = dropoutMode && fullRandomize ? shuffle(dropped.slice()) : dropped;
     const outputString = mixed.join('');
     if (outputEl) outputEl.textContent = outputString;
 
