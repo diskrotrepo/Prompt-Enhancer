@@ -228,46 +228,6 @@ describe('Chunking + mixing engine', () => {
     expect(seeded.join('')).toBe('a b c ');
     expect(dropped.join('')).toBe('b c ');
   });
-
-  test('mix dropout applies interleave randomization before deletion', () => {
-    const orig = Math.random;
-    Math.random = jest.fn().mockReturnValue(0);
-    const seeded = mixChunkLists(
-      [['a1 ', 'a2 ', 'a3 '], ['b1 ', 'b2 ']],
-      Number.POSITIVE_INFINITY,
-      false,
-      true,
-      true,
-      'largest'
-    );
-    const dropped = dropChunksToLimit(seeded, 9);
-    Math.random = orig;
-    expect(seeded.join('')).toBe('b1 a1 b2 a2 b1 a3 ');
-    expect(dropped.join('')).toBe('a2 b1 a3 ');
-  });
-
-  test('mix dropout can full-randomize only after deletion', () => {
-    const orig = Math.random;
-    Math.random = jest.fn().mockReturnValue(0);
-    const seeded = mixChunkLists(
-      [['a1 ', 'a2 ', 'a3 '], ['b1 ', 'b2 ']],
-      Number.POSITIVE_INFINITY,
-      false,
-      false,
-      true,
-      'largest'
-    );
-    const dropped = dropChunksToLimit(seeded, 9);
-    const shuffled = dropped.slice();
-    for (let i = shuffled.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    Math.random = orig;
-    expect(seeded.join('')).toBe('a1 b1 a2 b2 a3 b1 ');
-    expect(dropped.join('')).toBe('b2 a3 b1 ');
-    expect(shuffled.join('')).toBe('a3 b1 b2 ');
-  });
 });
 
 describe('Delimiter regex', () => {

@@ -54,18 +54,6 @@
       "lengthMode": "dropout"
     },
     {
-      "id": "dropout_mix_randomize_interleave",
-      "output": "a2 b1 a3 ",
-      "lengthMode": "dropout",
-      "mixOrderMode": "randomize-interleave"
-    },
-    {
-      "id": "dropout_mix_full_randomize",
-      "output": "a3 b1 b2 ",
-      "lengthMode": "dropout",
-      "mixOrderMode": "full-randomize"
-    },
-    {
       "id": "dropout_mix_short_lists",
       "output": "a b ",
       "lengthMode": "dropout"

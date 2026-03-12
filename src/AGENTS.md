@@ -39,9 +39,6 @@ Mix modes are **Canonical order**, **Randomize interleave**, and **Full
 randomize**. String modes are **Canonical order** and **Full randomize**.
 Canonical keeps deterministic order, Randomize interleave shuffles source-list
 order each cycle, and Full randomize shuffles the final chunk list.
-For mix Dropout mode, Randomize interleave affects the seeded one-pass source
-before deletions, while Full randomize shuffles only the surviving chunks after
-deletions.
 
 ### Delimiter Controls
 
@@ -81,9 +78,6 @@ as any child list runs out; Fit to Largest repeats shorter child lists until the
 longest child list is exhausted. Dropout builds a full one-pass source list
 first, then removes random chunks (with recounts) until total output is at or
 below the limit.
-In mix Dropout mode, keep the order-mode split clear: Randomize interleave
-changes the seeded source ordering before removal, while Full randomize applies
-only after random chunk deletion finishes.
 Only the fit modes disable the length limit input for mixes because they run a
 single constrained pass. Chunk boxes support **Exactly Once** and **Dropout**:
 Exactly Once ignores the limit and emits one pass, while Dropout builds one full

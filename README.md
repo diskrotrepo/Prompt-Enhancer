@@ -22,10 +22,7 @@ Length modes then decide how the length limit is enforced:
 - **Fit to Smallest / Fit to Largest / Exactly Once** run a one-pass traversal of source lists.
 - **Dropout** first builds a full one-pass source list, then repeatedly removes random chunks and recounts until total length is `<= limit`.
 
-Dropout order handling depends on the selected mix order mode:
-- Canonical order seeds canonically, and surviving chunks keep canonical relative order.
-- Randomize interleave shuffles source-list order during dropout seeding, then preserves the surviving relative order from that seeded pass.
-- Full randomize seeds canonically, removes random chunks, then shuffles only the surviving chunks.
+For Dropout in canonical order, surviving chunks keep canonical relative order; randomness controls which chunks remain.
 When a mode wraps a shorter list (for example Fit to Largest or non-single-pass repeat), the wrapped source is regenerated from its base state so randomized children reroll instead of replaying one frozen cycle.
 
 ## Shared terminology
@@ -171,8 +168,6 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Fit to Smallest (mix)** — `fit_smallest_mix`
 - **Fit to Largest (mix)** — `fit_largest_mix`
 - **Dropout on mixes (full one-pass seed, then random chunk removal to limit)** — `dropout_mix`
-- **Dropout with randomize interleave uses randomized seeded order before removals** — `dropout_mix_randomize_interleave`
-- **Dropout with full randomize shuffles only the surviving chunks after removals** — `dropout_mix_full_randomize`
 - **Dropout on short mixes still builds one full pass before removal** — `dropout_mix_short_lists`
 - **Dropout on strings (full one-pass seed, then random chunk removal)** — `root_string_dropout`
 - **Dropout can keep late canonical chunks because seeding starts from a full one-pass list** — `dropout_mix_reaches_tail_chunks`
