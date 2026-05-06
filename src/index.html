@@ -7,14 +7,17 @@
   <title>Prompt Enhancer</title>
   <link rel="stylesheet" href="style.css">
 
-  <!-- Google Analytics tracking -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-D5NMHFTQDK"></script>
+  <!-- Google Analytics tracking: load the active production measurement stream before configuring gtag. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-L46ZWJ1FBE"></script>
   <script>
+    // Keep the shared dataLayer queue available before the remote gtag script finishes loading.
     window.dataLayer = window.dataLayer || [];
+    // Queue analytics commands in order so initialization and stream configuration stay deterministic.
     function gtag() { dataLayer.push(arguments); }
     gtag('js', new Date());
 
-    gtag('config', 'G-D5NMHFTQDK');
+    // Send page data to the current Prompt Enhancer Google Analytics property.
+    gtag('config', 'G-L46ZWJ1FBE');
   </script>
 </head>
 
