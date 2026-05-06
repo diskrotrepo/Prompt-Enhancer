@@ -21,6 +21,13 @@ function setupDom(options = {}) {
     addEventListener: () => {},
     removeEventListener: () => {}
   }));
+  if (options.persistedState && window.localStorage) {
+    const raw =
+      typeof options.persistedState === 'string'
+        ? options.persistedState
+        : JSON.stringify(options.persistedState);
+    window.localStorage.setItem('promptEnhancerMixData', raw);
+  }
   window.eval(fs.readFileSync(SCRIPT_PATH, 'utf8'));
   if (window.document.readyState === 'loading') {
     window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
@@ -209,6 +216,59 @@ describe('Window behavior', () => {
     const secondOutput = promptWindows[1].querySelector('.mix-output-text')?.textContent || '';
     expect(firstOutput).toBe('alpha ');
     expect(secondOutput).toBe('beta ');
+  });
+
+  test('persisted local storage seeds opened prompt windows', () => {
+    const { window } = setupDom({
+      persistedState: {
+        mixes: [
+          {
+            type: 'mix',
+            title: 'Persisted Window',
+            preserve: true,
+            lengthMode: 'fit-smallest',
+            orderMode: 'canonical',
+            children: [
+              { type: 'chunk', text: 'persisted ', lengthMode: 'exact-once', orderMode: 'canonical' }
+            ]
+          }
+        ]
+      }
+    });
+    openWindow(window, 'prompts');
+
+    const promptWindow = window.document.querySelector('.app-window[data-window="prompts"]');
+    promptWindow.querySelector('.generate-button').click();
+
+    expect(promptWindow.querySelector('.mix-output-text')?.textContent || '').toBe('persisted ');
+  });
+
+  test('beforeunload persists the active prompt window instead of the template', () => {
+    const { window } = setupDom();
+    openWindow(window, 'prompts');
+
+    const promptWindow = window.document.querySelector('.app-window[data-window="prompts"]');
+    const root = promptWindow?.querySelector('.mix-root');
+    window.PromptMixer.applyMixState({
+      mixes: [
+        {
+          type: 'mix',
+          title: 'Runtime Window',
+          preserve: true,
+          lengthMode: 'fit-smallest',
+          orderMode: 'canonical',
+          children: [
+            { type: 'chunk', title: 'Runtime String', text: 'runtime ', lengthMode: 'exact-once', orderMode: 'canonical' }
+          ]
+        }
+      ]
+    }, root);
+
+    window.dispatchEvent(new window.Event('beforeunload'));
+    const saved = JSON.parse(window.localStorage.getItem('promptEnhancerMixData') || '{}');
+
+    expect(saved.mixes?.[0]?.title).toBe('Runtime Window');
+    expect(saved.mixes?.[0]?.children?.[0]?.text).toBe('runtime ');
   });
 
   test('root add buttons create new mix and string boxes', () => {

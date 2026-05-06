@@ -217,6 +217,10 @@
       "output": "b1 a1 b2 a2 b3 a3 b4 a4 "
     },
     {
+      "id": "mix_rechunk_visible_output",
+      "output": "c d a b "
+    },
+    {
       "id": "variable_cycle_guard",
       "output": "a "
     },
@@ -238,6 +242,13 @@
       "chunkOutput": "abc ",
       "mixCopiedText": "abc ",
       "chunkCopiedText": "abc "
+    },
+    {
+      "id": "copy_empty_chunk_output",
+      "output": "",
+      "chunkOutput": "",
+      "chunkLengthMode": "allow",
+      "chunkCopiedText": ""
     },
     {
       "id": "color_preset_shared",
@@ -292,6 +303,11 @@
       "id": "local_storage_load",
       "output": "p ",
       "lengthMode": "fit-smallest"
+    },
+    {
+      "id": "local_storage_prompt_window_load",
+      "output": "q ",
+      "promptWindowCount": 1
     },
     {
       "id": "openrouter_app_window",

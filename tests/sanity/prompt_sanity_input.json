@@ -1996,6 +1996,42 @@
       }
     },
     {
+      "id": "mix_rechunk_visible_output",
+      "description": "A mix with Preserve chunks off displays the final rechunked output.",
+      "randomSequence": [
+        0.5
+      ],
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Visible Rechunk",
+            "lengthMode": "fit-smallest",
+            "preserve": false,
+            "orderMode": "canonical",
+            "firstChunkBehavior": "random-start",
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a b c d ",
+                "lengthMode": "exact-once",
+                "orderMode": "canonical",
+                "firstChunkBehavior": "size",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "variable_cycle_guard",
       "description": "Variable cycles are skipped to avoid infinite recursion.",
       "random": 0,
@@ -2256,6 +2292,35 @@
                 }
               }
             ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "copy_empty_chunk_output",
+      "description": "String copy keeps intentionally empty generated output instead of falling back to raw input.",
+      "random": 0,
+      "actions": [
+        {
+          "type": "openPromptsWindow"
+        },
+        {
+          "type": "copyChunkOutput"
+        }
+      ],
+      "state": {
+        "mixes": [
+          {
+            "type": "chunk",
+            "title": "Empty Copy",
+            "text": "abcdef ",
+            "limit": 2,
+            "lengthMode": "allow",
+            "orderMode": "canonical",
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            }
           }
         ]
       }
@@ -2603,6 +2668,43 @@
           }
         ]
       }
+    },
+    {
+      "id": "local_storage_prompt_window_load",
+      "description": "Persisted mix data seeds a newly opened Prompt Enhancer window.",
+      "random": 0,
+      "persistedState": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Persisted Window",
+            "lengthMode": "fit-smallest",
+            "preserve": true,
+            "orderMode": "canonical",
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "q ",
+                "lengthMode": "exact-once",
+                "orderMode": "canonical",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "openPromptsWindow"
+        }
+      ]
     },
     {
       "id": "openrouter_app_window",

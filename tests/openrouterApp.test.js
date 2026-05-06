@@ -649,6 +649,64 @@ describe('OpenRouter app module', () => {
     expect(payload.stop).toEqual([' END', 'END ']);
   });
 
+  test('accepts successful empty completion text when stop sequences halt immediately', async () => {
+    const { window } = setupDom();
+    window.fetch = jest.fn((url, init) => {
+      const target = String(url || '');
+      if (target.includes('fireworks.ai/v1/models') || target.includes('fireworks.ai/inference/v1/models')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            data: [
+              {
+                id: 'accounts/fireworks/models/empty-stop-model',
+                name: 'Empty Stop Model',
+                supported_parameters: ['prompt', 'max_tokens', 'temperature']
+              }
+            ]
+          })
+        });
+      }
+      if (target.includes('fireworks.ai/inference/v1/completions')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            id: 'fw-empty-stop',
+            choices: [{ text: '' }],
+            usage: { prompt_tokens: 3, completion_tokens: 0, total_tokens: 3, cost: 0 }
+          })
+        });
+      }
+      return Promise.resolve({
+        ok: false,
+        status: 404,
+        json: async () => ({ message: 'Not Found' })
+      });
+    });
+
+    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
+    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    const keyInput = appWindow.querySelector('.openrouter-api-key');
+    const promptInput = appWindow.querySelector('.openrouter-prompt');
+    const stopInput = appWindow.querySelector('.openrouter-stop');
+    const sendButton = appWindow.querySelector('.openrouter-send');
+    const output = appWindow.querySelector('.openrouter-output-text');
+    const status = appWindow.querySelector('.openrouter-status');
+
+    keyInput.value = 'fw-test-key';
+    keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() => (status.textContent || '').includes('Loaded'));
+
+    promptInput.value = 'STOP';
+    stopInput.value = 'STOP';
+    sendButton.click();
+    await waitFor(() => (status.textContent || '').includes('Completed.'));
+
+    expect(output.textContent).toBe('');
+    expect(status.textContent).toContain('Output tokens (billed output): 0');
+    expect(status.textContent).not.toContain('chat-style response');
+  });
+
   test('encrypts settings to a file and loads them back with password', async () => {
     const { window, downloadedBlobs, downloads } = setupDom();
     window.document.querySelector('.menu-item[data-window="openrouter"]').click();

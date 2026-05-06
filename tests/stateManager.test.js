@@ -232,6 +232,36 @@ describe('Mix state roundtrip', () => {
     expect(output).toBe('a b ');
   });
 
+  test('visible mix output reflects the rechunked result when preserve is off', () => {
+    const output = runGeneratedOutput(
+      {
+        mixes: [
+          {
+            type: 'mix',
+            title: 'Visible Rechunk',
+            lengthMode: 'fit-smallest',
+            preserve: false,
+            orderMode: 'canonical',
+            firstChunkBehavior: 'random-start',
+            delimiter: { mode: 'whitespace', size: 1 },
+            children: [
+              {
+                type: 'chunk',
+                text: 'a b c d ',
+                lengthMode: 'exact-once',
+                orderMode: 'canonical',
+                firstChunkBehavior: 'size',
+                delimiter: { mode: 'whitespace', size: 1 }
+              }
+            ]
+          }
+        ]
+      },
+      [0.5]
+    );
+    expect(output).toBe('c d a b ');
+  });
+
   test('order mode roundtrips for mixes and strings', () => {
     loadBody();
     const root = document.querySelector('.mix-root');

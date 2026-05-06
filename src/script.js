@@ -1108,8 +1108,11 @@
     const mixedOrdered = fullRandomize ? shuffle(mixedBase.slice()) : mixedBase;
     const mixed = dropoutMode ? dropChunksToLimit(mixedOrdered, limit) : mixedOrdered;
     const outputString = mixed.join('');
-    if (outputEl) outputEl.textContent = outputString;
 
+    // Stage 2 is the user-facing chunk list: Preserve returns child chunks directly,
+    // while rechunking can rotate or regroup the text before this mix returns it.
+    // The Output panel must mirror this final list so parents, copy buttons, and
+    // visible text all describe the same setting effects.
     // Dropout already enforces final length, so rechunking should not repeat output.
     const reChunkSinglePass = dropoutMode ? true : singlePass;
     const reChunkLimit = dropoutMode ? Number.POSITIVE_INFINITY : limit;
@@ -1124,6 +1127,7 @@
           reChunkSinglePass,
           firstChunkBehavior
         );
+    if (outputEl) outputEl.textContent = result.join('');
     if (boxId) visiting.delete(boxId);
     if (cache && cacheKey) cache.set(cacheKey, result.slice());
     return result.slice();
@@ -2445,7 +2449,8 @@
           evaluateChunkBox(box);
           const output = box.querySelector('.chunk-output-text');
           const fallback = box.querySelector('.chunk-input');
-          const text = output?.textContent || fallback?.value || '';
+          // Empty output can be intentional, so only fall back when the output node is absent.
+          const text = output ? output.textContent : fallback?.value || '';
           copyTextWithFeedback(text, btn);
         }
       },
@@ -3036,6 +3041,8 @@
     applyMobileWindowState(clone);
     clone.querySelectorAll('[data-bound]').forEach(el => el.removeAttribute('data-bound'));
     clone.querySelectorAll('[data-events-ready]').forEach(el => el.removeAttribute('data-events-ready'));
+    clone.querySelectorAll('[data-delimiter-init]').forEach(el => el.removeAttribute('data-delimiter-init'));
+    clone.querySelectorAll('[data-size-init]').forEach(el => el.removeAttribute('data-size-init'));
     const area = document.getElementById('window-area');
     if (!area) return;
     area.appendChild(clone);
@@ -3056,7 +3063,21 @@
     schedule(() => positionNewWindow(clone));
     if (windowType === 'prompts') {
       const root = clone.querySelector('.mix-root');
-      if (root) applyMixState(null, root);
+      // Prompt windows inherit the hydrated template state. That keeps localStorage
+      // and preset-loaded templates meaningful instead of resetting every new window.
+      if (root && !root.children.length) applyMixState(null, root);
+      if (root) {
+        // Cloned DOM keeps attributes but not listeners, so rebuild all setting-control
+        // affordances before the user edits delimiter, size, length, or variable fields.
+        setupDelimiterControls(root);
+        setupSizeControls(root);
+        root.querySelectorAll('.mix-box').forEach(updatePreserveMode);
+        root.querySelectorAll('.mix-box, .chunk-box').forEach(updateLengthModeState);
+        root.querySelectorAll('.chunk-box').forEach(updateEmptyChunkMode);
+        refreshColorPresetSelects(root);
+        refreshVariableOptions(root);
+        syncTextareaHeights(root);
+      }
       setupMixEvents(root);
       setupPromptControls(clone);
     }
@@ -3294,11 +3315,39 @@
 
   const STORAGE_KEY = 'promptEnhancerMixData';
 
-  function exportData() {
-    return JSON.stringify(exportMixState(), null, 2);
+  // Persistence root priority:
+  // 1. Explicit root passed by a caller.
+  // 2. Focused/top real Prompt Enhancer window.
+  // 3. Hydrated hidden template used to seed new prompt windows.
+  // This prevents the shared .mix-root selector from silently saving stale template state.
+  function resolvePromptPersistenceRoot(rootEl = null) {
+    // Event handlers may pass click/beforeunload events; only a real mix root is explicit.
+    if (rootEl?.classList?.contains?.('mix-root')) return rootEl;
+    const focusedWindow = currentFocusInstance ? getWindowByInstance(currentFocusInstance) : null;
+    if (
+      focusedWindow?.dataset?.window === 'prompts' &&
+      !focusedWindow.classList.contains('window-template')
+    ) {
+      const focusedRoot = focusedWindow.querySelector('.mix-root');
+      if (focusedRoot) return focusedRoot;
+    }
+    const topPromptWindow = getTopWindowByType('prompts');
+    const topRoot = topPromptWindow?.querySelector?.('.mix-root');
+    if (topRoot) return topRoot;
+    const firstRuntimeRoot = document.querySelector('.app-window[data-window="prompts"]:not(.window-template) .mix-root');
+    if (firstRuntimeRoot) return firstRuntimeRoot;
+    return (
+      document.querySelector('#window-prompts-template .mix-root') ||
+      document.querySelector('.window-template[data-template="prompts"] .mix-root') ||
+      document.querySelector('.mix-root')
+    );
   }
 
-  function importData(raw) {
+  function exportData(rootEl = null) {
+    return JSON.stringify(exportMixState(resolvePromptPersistenceRoot(rootEl)), null, 2);
+  }
+
+  function importData(raw, rootEl = null) {
     if (!raw) return;
     let data = raw;
     if (typeof raw === 'string') {
@@ -3308,32 +3357,32 @@
         return;
       }
     }
-    applyMixState(data);
-    persist();
+    applyMixState(data, resolvePromptPersistenceRoot(rootEl));
+    persist(rootEl);
   }
 
-  function persist() {
+  function persist(rootEl = null) {
     if (typeof localStorage === 'undefined') return;
     try {
-      localStorage.setItem(STORAGE_KEY, exportData());
+      localStorage.setItem(STORAGE_KEY, exportData(rootEl));
     } catch (err) {
       /* ignore */
     }
   }
 
-  function loadPersisted() {
+  function loadPersisted(rootEl = null) {
     if (typeof localStorage === 'undefined') return false;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return false;
-      importData(raw);
+      importData(raw, rootEl);
       return true;
     } catch (err) {
       return false;
     }
   }
 
-  function resetData() {
+  function resetData(rootEl = null) {
     if (typeof localStorage !== 'undefined') {
       try {
         localStorage.removeItem(STORAGE_KEY);
@@ -3341,7 +3390,7 @@
         /* ignore */
       }
     }
-    applyMixState(null);
+    applyMixState(null, resolvePromptPersistenceRoot(rootEl));
   }
 
   function setupDataButtons() {
@@ -3378,7 +3427,7 @@
     }
 
     if (resetBtn) {
-      resetBtn.addEventListener('click', resetData);
+      resetBtn.addEventListener('click', () => resetData());
     }
   }
 
@@ -3418,7 +3467,9 @@
       window.addEventListener('orientationchange', handler);
     }
     if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', persist);
+      // beforeunload passes an Event object; call persist with no argument so
+      // root selection still follows the prompt-window priority order above.
+      window.addEventListener('beforeunload', () => persist());
     }
   }
 

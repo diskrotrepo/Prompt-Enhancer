@@ -160,6 +160,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Preserve chunks off enables controls** — `preserve_off_enables_controls`
 - **Nested rechunk behavior (shared fixture)** — `nested_rechunk`
 - **Rechunk pass not randomized** — `rechunk_no_random`
+- **Visible mix output reflects the final rechunked list** — `mix_rechunk_visible_output`
 
 #### Length modes
 
@@ -200,6 +201,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 #### Output + copy behavior
 
 - **Copy buttons use generated output** — `copy_output_behavior`
+- **Copy buttons preserve intentionally empty generated string output** — `copy_empty_chunk_output`
 
 #### Color presets
 
@@ -214,6 +216,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Prompt menu save flow** — `prompt_menu_save_flow`
 - **Duplicate loaded ids are re-keyed during hydration so cache keys stay isolated across boxes** — `duplicate_loaded_ids_are_rekeyed`
 - **Local storage load** — `local_storage_load`
+- **Local storage state seeds newly opened Prompt Enhancer windows** — `local_storage_prompt_window_load`
 
 #### Window apps
 
@@ -221,6 +224,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **OpenRouter encrypted settings file actions live in the top file menu (password + file save/load)** — `openrouter_app_window`
 - **OpenRouter model picker is dropdown-only and filtered to completion-oriented models (chat/instruct models excluded)** — `openrouter_app_window`
 - **OpenRouter completion status breaks out billed input/output/total tokens and request cost when usage data is available** — `openrouter_app_window`
+- **OpenRouter treats empty completion text as a successful blank response when stop sequences halt immediately** — `tests/openrouterApp.test.js`
 - **Multiple Prompt Enhancer windows can be opened in one session and each gets its own taskbar button** — `multi_prompt_windows_open`
 
 - **Color presets**  

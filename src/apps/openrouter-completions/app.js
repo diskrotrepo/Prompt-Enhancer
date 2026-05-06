@@ -405,10 +405,21 @@
 
   // This app is strict completions mode. We only accept text-completion payloads
   // so models that behave like chat responders are surfaced as unsupported here.
-  function readCompletionText(payload) {
+  // Empty string text is still a valid completion, especially when stop sequences
+  // end generation immediately, so the presence of the text field matters.
+  function readCompletionChoice(payload) {
     const choice = Array.isArray(payload?.choices) ? payload.choices[0] : null;
-    if (!choice || typeof choice !== 'object') return '';
-    return typeof choice.text === 'string' ? choice.text : '';
+    return choice && typeof choice === 'object' ? choice : null;
+  }
+
+  function hasCompletionText(payload) {
+    const choice = readCompletionChoice(payload);
+    return typeof choice?.text === 'string';
+  }
+
+  function readCompletionText(payload) {
+    const choice = readCompletionChoice(payload);
+    return typeof choice?.text === 'string' ? choice.text : '';
   }
 
   function buildHeaders(apiKey) {
@@ -647,8 +658,9 @@
       throw new Error(message);
     }
     const payload = await response.json();
-    const completion = readCompletionText(payload);
-    if (!completion && payload?.object !== 'text_completion') {
+    const hasText = hasCompletionText(payload);
+    const completion = hasText ? readCompletionText(payload) : '';
+    if (!hasText && payload?.object !== 'text_completion') {
       throw new Error(
         'Model returned a chat-style response. Use a completion-capable model for pure continuation.'
       );
