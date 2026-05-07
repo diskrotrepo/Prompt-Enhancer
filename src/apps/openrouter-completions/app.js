@@ -1004,9 +1004,10 @@
   }
 
   function copyToClipboard(text) {
-    if (!text) return Promise.resolve(false);
+    const value = String(text ?? '');
     if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-      return navigator.clipboard.writeText(text).then(() => true).catch(() => false);
+      // Empty completions are valid output; copy the exact panel text, even when blank.
+      return navigator.clipboard.writeText(value).then(() => true).catch(() => false);
     }
     return Promise.resolve(false);
   }

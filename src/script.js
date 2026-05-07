@@ -415,6 +415,33 @@
     return FIRST_CHUNK_BEHAVIORS.BETWEEN;
   }
 
+  // Serialization reads the intended setting, not just the temporary visible control state.
+  // Preserve chunks locks the first-chunk select to Size X while remembering the prior value.
+  function readSerializableFirstChunkBehavior(boxEl) {
+    const select = boxEl?.querySelector?.('.first-chunk-select');
+    if (select?.dataset?.prevValue) {
+      return coerceFirstChunkBehavior(select.dataset.prevValue);
+    }
+    return readFirstChunkBehavior(boxEl);
+  }
+
+  // Empty strings display an "Empty chunk" delimiter lock, but saved state should
+  // remember the delimiter the user will get back after typing text again.
+  function readSerializableDelimiterConfig(boxEl) {
+    const runtimeConfig = getDelimiterConfig(boxEl);
+    const select = boxEl?.querySelector?.('.delimiter-select');
+    const selectedMode = normalizeDelimiterMode(select ? select.value : runtimeConfig.mode);
+    const rememberedMode =
+      selectedMode === EMPTY_CHUNK_DELIMITER_MODE && select?.dataset?.prevValue
+        ? normalizeDelimiterMode(select.dataset.prevValue)
+        : selectedMode;
+    const mode = rememberedMode === EMPTY_CHUNK_DELIMITER_MODE ? 'whitespace' : rememberedMode;
+    return {
+      ...runtimeConfig,
+      mode
+    };
+  }
+
   function getFirstChunkBehaviorConfig(config) {
     // Default to fixed-size first chunks so canonical ordering stays deterministic
     // until users explicitly pick a randomized first-chunk mode.
@@ -1094,7 +1121,7 @@
     const mixExact = dropoutMode ? false : exact;
     const mixSinglePass = dropoutMode ? true : singlePass;
     const mixFitMode = dropoutMode ? SINGLE_PASS_FIT_MODES.LARGEST : singlePassFitMode;
-    const wrapsCanRepeat = !dropoutMode && (!mixSinglePass || mixFitMode === SINGLE_PASS_FIT_MODES.LARGEST);
+    const wrapsCanRepeat = !mixSinglePass || mixFitMode === SINGLE_PASS_FIT_MODES.LARGEST;
     const mixedBase = mixChunkLists(
       lists,
       mixLimit,
@@ -1105,7 +1132,10 @@
       false,
       wrapsCanRepeat ? { refreshers } : {}
     );
-    const mixedOrdered = fullRandomize ? shuffle(mixedBase.slice()) : mixedBase;
+    // Preserve mode already has the final chunk list here; rechunked mixes must
+    // delay Full randomize until after the second-stage chunk list is rebuilt.
+    const shuffleBeforeLength = fullRandomize && preserve;
+    const mixedOrdered = shuffleBeforeLength ? shuffle(mixedBase.slice()) : mixedBase;
     const mixed = dropoutMode ? dropChunksToLimit(mixedOrdered, limit) : mixedOrdered;
     const outputString = mixed.join('');
 
@@ -1116,7 +1146,7 @@
     // Dropout already enforces final length, so rechunking should not repeat output.
     const reChunkSinglePass = dropoutMode ? true : singlePass;
     const reChunkLimit = dropoutMode ? Number.POSITIVE_INFINITY : limit;
-    const result = preserve
+    const resultBase = preserve
       ? mixed
       : buildChunkList(
           outputString,
@@ -1127,6 +1157,8 @@
           reChunkSinglePass,
           firstChunkBehavior
         );
+    // Full randomize means the output chunks users see/copy/pass upward are shuffled.
+    const result = fullRandomize && !preserve ? shuffle(resultBase.slice()) : resultBase;
     if (outputEl) outputEl.textContent = result.join('');
     if (boxId) visiting.delete(boxId);
     if (cache && cacheKey) cache.set(cacheKey, result.slice());
@@ -1645,7 +1677,7 @@
     const titleInput = box.querySelector('.box-title');
     const input = box.querySelector('.chunk-input');
     const limitInput = box.querySelector('.length-input');
-    const delimiter = getDelimiterConfig(box);
+    const delimiter = readSerializableDelimiterConfig(box);
     const colorState = getBoxColorState(box);
     const orderMode = readChunkOrderMode(box);
     const collapsed = box.classList.contains('is-collapsed');
@@ -1658,7 +1690,7 @@
       lengthMode: readChunkLengthMode(box),
       exact: readExactMode(box),
       singlePass: readSinglePassMode(box),
-      firstChunkBehavior: readFirstChunkBehavior(box),
+      firstChunkBehavior: readSerializableFirstChunkBehavior(box),
       color: colorState.autoColor,
       colorMode: colorState.mode,
       colorValue: colorState.value,
@@ -1688,7 +1720,7 @@
   function serializeMixBox(box) {
     const titleInput = box.querySelector('.box-title');
     const limitInput = box.querySelector('.length-input');
-    const delimiter = getDelimiterConfig(box);
+    const delimiter = readSerializableDelimiterConfig(box);
     const sizeSelect = box.querySelector('.delimiter-size');
     const singlePass = readSinglePassMode(box);
     const preserve = sizeSelect?.value === 'preserve';
@@ -1717,7 +1749,7 @@
       exact: readExactMode(box),
       singlePass,
       ...(singlePass ? { singlePassMode: readSinglePassFitMode(box) } : {}),
-      firstChunkBehavior: readFirstChunkBehavior(box),
+      firstChunkBehavior: readSerializableFirstChunkBehavior(box),
       color: colorState.autoColor,
       colorMode: colorState.mode,
       colorValue: colorState.value,
@@ -1836,7 +1868,8 @@
         if (!customRow) return;
         const isCustom = isCustomDelimiterMode(select.value);
         customRow.style.display = isCustom ? 'block' : 'none';
-        if (!isCustom && customInput) customInput.value = '';
+        // Empty-chunk is a display lock, not a user delimiter change; keep hidden custom text.
+        if (!isCustom && select.value !== EMPTY_CHUNK_DELIMITER_MODE && customInput) customInput.value = '';
       };
       if (!select.dataset.delimiterInit) {
         select.addEventListener('change', toggle);
@@ -1864,6 +1897,7 @@
     const isEmpty = (input?.value || '') === '';
 
     if (isEmpty) {
+      const previousDelimiterValue = delimiterSelect.value;
       let emptyOption = delimiterSelect.querySelector(`option[value="${EMPTY_CHUNK_DELIMITER_MODE}"]`);
       if (!emptyOption) {
         emptyOption = document.createElement('option');
@@ -1871,8 +1905,8 @@
         emptyOption.textContent = 'Empty chunk';
         delimiterSelect.insertBefore(emptyOption, delimiterSelect.firstChild);
       }
-      if (delimiterSelect.value !== EMPTY_CHUNK_DELIMITER_MODE) {
-        delimiterSelect.dataset.prevValue = delimiterSelect.value;
+      if (previousDelimiterValue && previousDelimiterValue !== EMPTY_CHUNK_DELIMITER_MODE) {
+        delimiterSelect.dataset.prevValue = previousDelimiterValue;
       }
       delimiterSelect.value = EMPTY_CHUNK_DELIMITER_MODE;
       delimiterSelect.disabled = true;
@@ -1929,6 +1963,9 @@
       }
     }
     if (block.querySelector('.length-input') && readSinglePassMode(box)) {
+      if (box?.classList?.contains('mix-box')) {
+        return 'Disabled because Fit to Smallest and Fit to Largest run one constrained pass and ignore length limits.';
+      }
       return 'Disabled because Exactly Once outputs each chunk one time and ignores length limits.';
     }
     if (block.querySelector('.delimiter-select, .delimiter-custom, .delimiter-size, .delimiter-size-custom, .first-chunk-select')) {

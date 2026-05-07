@@ -650,7 +650,7 @@ describe('OpenRouter app module', () => {
   });
 
   test('accepts successful empty completion text when stop sequences halt immediately', async () => {
-    const { window } = setupDom();
+    const { window, clipboardWrites } = setupDom();
     window.fetch = jest.fn((url, init) => {
       const target = String(url || '');
       if (target.includes('fireworks.ai/v1/models') || target.includes('fireworks.ai/inference/v1/models')) {
@@ -692,6 +692,7 @@ describe('OpenRouter app module', () => {
     const sendButton = appWindow.querySelector('.openrouter-send');
     const output = appWindow.querySelector('.openrouter-output-text');
     const status = appWindow.querySelector('.openrouter-status');
+    const copyButton = appWindow.querySelector('.openrouter-copy-output');
 
     keyInput.value = 'fw-test-key';
     keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
@@ -705,6 +706,10 @@ describe('OpenRouter app module', () => {
     expect(output.textContent).toBe('');
     expect(status.textContent).toContain('Output tokens (billed output): 0');
     expect(status.textContent).not.toContain('chat-style response');
+
+    copyButton.click();
+    await flush();
+    expect(clipboardWrites[clipboardWrites.length - 1]).toBe('');
   });
 
   test('encrypts settings to a file and loads them back with password', async () => {

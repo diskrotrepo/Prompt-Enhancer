@@ -262,6 +262,86 @@ describe('Mix state roundtrip', () => {
     expect(output).toBe('c d a b ');
   });
 
+  test('full randomize shuffles the final rechunked chunk list', () => {
+    const output = runGeneratedOutput(
+      {
+        mixes: [
+          {
+            type: 'mix',
+            title: 'Full Random Rechunk',
+            limit: 1000,
+            lengthMode: 'fit-smallest',
+            preserve: false,
+            orderMode: 'full-randomize',
+            firstChunkBehavior: 'size',
+            delimiter: { mode: 'whitespace', size: 2 },
+            children: [
+              {
+                type: 'chunk',
+                text: 'a1 a2 a3 a4 ',
+                lengthMode: 'exact-once',
+                orderMode: 'canonical',
+                firstChunkBehavior: 'size',
+                delimiter: { mode: 'whitespace', size: 1 }
+              },
+              {
+                type: 'chunk',
+                text: 'b1 b2 b3 b4 ',
+                lengthMode: 'exact-once',
+                orderMode: 'canonical',
+                firstChunkBehavior: 'size',
+                delimiter: { mode: 'whitespace', size: 1 }
+              }
+            ]
+          }
+        ]
+      },
+      [0]
+    );
+    // Rechunking creates pairs first; Full randomize then shuffles those returned chunks.
+    expect(output).toBe('a2 b2 a3 b3 a4 b4 a1 b1 ');
+  });
+
+  test('dropout mix seed rerolls wrapped randomized children', () => {
+    const output = runGeneratedOutput(
+      {
+        mixes: [
+          {
+            type: 'mix',
+            id: 'host',
+            title: 'Dropout Reroll Probe',
+            limit: 1000,
+            lengthMode: 'dropout',
+            preserve: true,
+            orderMode: 'canonical',
+            delimiter: { mode: 'whitespace', size: 1 },
+            children: [
+              {
+                type: 'chunk',
+                id: 'lyrics',
+                text: 'L1 L2 L3 L4 ',
+                lengthMode: 'exact-once',
+                orderMode: 'canonical',
+                delimiter: { mode: 'whitespace', size: 1 }
+              },
+              {
+                type: 'chunk',
+                id: 'spacer',
+                text: 'a b ',
+                lengthMode: 'exact-once',
+                orderMode: 'full-randomize',
+                delimiter: { mode: 'whitespace', size: 1 }
+              }
+            ]
+          }
+        ]
+      },
+      [0, 0.99]
+    );
+    // The short randomized child rerolls on wrap, so the second spacer cycle differs.
+    expect(output).toBe('L1 b L2 a L3 a L4 b ');
+  });
+
   test('order mode roundtrips for mixes and strings', () => {
     loadBody();
     const root = document.querySelector('.mix-root');
@@ -294,6 +374,52 @@ describe('Mix state roundtrip', () => {
       ?.querySelector('.order-mode');
     expect(mixOrder?.value).toBe('full-randomize');
     expect(chunkOrder?.value).toBe('full-randomize');
+  });
+
+  test('preserve mode exports the remembered first-chunk behavior', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    main.applyMixState({
+      mixes: [
+        {
+          type: 'mix',
+          title: 'Latent First Chunk',
+          preserve: true,
+          firstChunkBehavior: 'random-start',
+          delimiter: { mode: 'whitespace', size: 3 },
+          children: []
+        }
+      ]
+    }, root);
+    const select = root.querySelector('.mix-box .first-chunk-select');
+    expect(select?.disabled).toBe(true);
+    expect(select?.value).toBe('size');
+    expect(select?.dataset.prevValue).toBe('random-start');
+    const exported = main.exportMixState(root);
+    expect(exported.mixes[0].firstChunkBehavior).toBe('random-start');
+  });
+
+  test('blank strings export the delimiter that will resume after typing', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    main.applyMixState({
+      mixes: [
+        {
+          type: 'chunk',
+          title: 'Latent Delimiter',
+          text: '',
+          firstChunkBehavior: 'random-start',
+          delimiter: { mode: 'custom-any', custom: ',.', size: 3 }
+        }
+      ]
+    }, root);
+    const chunk = root.querySelector('.chunk-box');
+    expect(chunk?.querySelector('.delimiter-select')?.value).toBe('empty-chunk');
+    expect(chunk?.querySelector('.delimiter-select')?.dataset.prevValue).toBe('custom-any');
+    expect(chunk?.querySelector('.delimiter-custom')?.value).toBe(',.');
+    const exported = main.exportMixState(root);
+    expect(exported.mixes[0].delimiter).toEqual({ mode: 'custom-any', custom: ',.', size: 3 });
+    expect(exported.mixes[0].firstChunkBehavior).toBe('random-start');
   });
 
   test('collapsed state roundtrips for mixes and strings', () => {

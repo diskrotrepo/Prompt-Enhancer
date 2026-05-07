@@ -2032,6 +2032,52 @@
       }
     },
     {
+      "id": "mix_full_randomize_after_rechunk",
+      "description": "Full randomize shuffles the final rechunked chunks when Preserve chunks is off.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Full Random Rechunk",
+            "limit": 1000,
+            "lengthMode": "fit-smallest",
+            "preserve": false,
+            "orderMode": "full-randomize",
+            "firstChunkBehavior": "size",
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 2
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a1 a2 a3 a4 ",
+                "lengthMode": "exact-once",
+                "orderMode": "canonical",
+                "firstChunkBehavior": "size",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "b1 b2 b3 b4 ",
+                "lengthMode": "exact-once",
+                "orderMode": "canonical",
+                "firstChunkBehavior": "size",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "variable_cycle_guard",
       "description": "Variable cycles are skipped to avoid infinite recursion.",
       "random": 0,
@@ -2549,6 +2595,55 @@
                     }
                   }
                 ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "dropout_mix_rerolls_wrapped_child",
+      "description": "Dropout's Fit to Largest seed reruns wrapped randomized child generation.",
+      "randomSequence": [
+        0,
+        0.99
+      ],
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "id": "host",
+            "title": "Dropout Reroll Probe",
+            "limit": 1000,
+            "lengthMode": "dropout",
+            "preserve": true,
+            "orderMode": "canonical",
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "id": "lyrics",
+                "text": "L1 L2 L3 L4 ",
+                "lengthMode": "exact-once",
+                "orderMode": "canonical",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "id": "spacer",
+                "text": "a b ",
+                "lengthMode": "exact-once",
+                "orderMode": "full-randomize",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
               }
             ]
           }

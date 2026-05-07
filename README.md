@@ -161,6 +161,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Nested rechunk behavior (shared fixture)** — `nested_rechunk`
 - **Rechunk pass not randomized** — `rechunk_no_random`
 - **Visible mix output reflects the final rechunked list** — `mix_rechunk_visible_output`
+- **Full randomize shuffles after final rechunking** — `mix_full_randomize_after_rechunk`
 
 #### Length modes
 
@@ -170,6 +171,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Fit to Largest (mix)** — `fit_largest_mix`
 - **Dropout on mixes (full one-pass seed, then random chunk removal to limit)** — `dropout_mix`
 - **Dropout on short mixes still builds one full pass before removal** — `dropout_mix_short_lists`
+- **Dropout rerolls wrapped randomized children while building its Fit to Largest seed** — `dropout_mix_rerolls_wrapped_child`
 - **Dropout on strings (full one-pass seed, then random chunk removal)** — `root_string_dropout`
 - **Dropout can keep late canonical chunks because seeding starts from a full one-pass list** — `dropout_mix_reaches_tail_chunks`
 - **Fit to Smallest keeps blank-string children (empty chunk slots)** — `fit_smallest_empty_child`
@@ -212,6 +214,8 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 #### File + persistence
 
 - **Collapsed mix/string UI state roundtrips through save/load** — `collapsed_state_persisted`
+- **Preserve chunks remembers hidden first-chunk behavior during export** — `tests/stateManager.test.js`
+- **Blank string export keeps the delimiter that resumes after typing** — `tests/stateManager.test.js`
 - **Prompt menu includes Load Preset submenu** — `prompt_menu_load_preset_item`
 - **Prompt menu save flow** — `prompt_menu_save_flow`
 - **Duplicate loaded ids are re-keyed during hydration so cache keys stay isolated across boxes** — `duplicate_loaded_ids_are_rekeyed`
@@ -225,6 +229,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **OpenRouter model picker is dropdown-only and filtered to completion-oriented models (chat/instruct models excluded)** — `openrouter_app_window`
 - **OpenRouter completion status breaks out billed input/output/total tokens and request cost when usage data is available** — `openrouter_app_window`
 - **OpenRouter treats empty completion text as a successful blank response when stop sequences halt immediately** — `tests/openrouterApp.test.js`
+- **OpenRouter copies intentionally blank completion output without treating it as failure** — `tests/openrouterApp.test.js`
 - **Multiple Prompt Enhancer windows can be opened in one session and each gets its own taskbar button** — `multi_prompt_windows_open`
 
 - **Color presets**  
