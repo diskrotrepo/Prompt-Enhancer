@@ -12,6 +12,9 @@ describe('New mixing layout', () => {
     expect(dom.window.document.getElementById('mix-box-template')).not.toBeNull();
     expect(dom.window.document.getElementById('chunk-box-template')).not.toBeNull();
     expect(dom.window.document.getElementById('variable-box-template')).not.toBeNull();
+    expect(dom.window.document.querySelector('.append-save-file')).not.toBeNull();
+    expect(dom.window.document.getElementById('mix-box-template').content.querySelector('.add-save-child')).not.toBeNull();
+    expect(dom.window.document.querySelector('.add-root-save')).not.toBeNull();
   });
 
   test('tab buttons exist', () => {

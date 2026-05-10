@@ -98,15 +98,18 @@
                 <div class="prompt-body" data-help="Prompt workspace." data-help-detail="This is the main canvas where mixes, strings, and variables live. Use the buttons and boxes here to build and generate your prompt.">
                   <button type="button" class="holo-generate generate-button" data-help="Generate the current mix output." data-help-detail="Runs the mixing engine for every mix and string, applying randomization, length modes, and first-chunk behavior so all output panels update.">GENERATE MIX</button>
                   <input type="file" class="load-mix-file" accept="application/json" style="display:none">
+                  <input type="file" class="append-save-file" accept="application/json,.json" style="display:none">
                   <div class="mix-root"></div>
                   <div class="empty-state">
                     <div class="empty-state-text">No mixes yet.</div>
                     <button type="button" class="add-button add-empty-mix" data-help="Add a new top-level mix." data-help-detail="Creates a fresh mix at the root so you can start building a new prompt structure.">+ Add Mix</button>
                     <button type="button" class="add-button add-empty-chunk" data-help="Add a new top-level string." data-help-detail="Creates a root-level string box so it can be generated on its own or referenced by variables.">+ Add String</button>
+                    <button type="button" class="add-button add-empty-save" data-help="Add a saved prompt enhancer JSON here." data-help-detail="Opens a file picker and appends the saved top-level mixes and strings at the root without replacing this prompt window.">+ Add Save</button>
                   </div>
                   <div class="root-actions">
                     <button type="button" class="add-button add-root-mix" data-help="Add a new top-level mix." data-help-detail="Adds another mix at the root level alongside existing mixes.">+ Add Mix</button>
                     <button type="button" class="add-button add-root-chunk" data-help="Add a new top-level string." data-help-detail="Adds a root-level string box that stays outside mixes but can be generated or referenced.">+ Add String</button>
+                    <button type="button" class="add-button add-root-save" data-help="Append a saved prompt enhancer JSON at the root." data-help-detail="Loads a prompt enhancer save file and adds its saved top-level mixes and strings beside the current root boxes. Existing boxes stay in place.">+ Add Save</button>
                   </div>
                 </div>
                 <div class="help-overlay is-hidden" aria-hidden="true"></div>
@@ -227,6 +230,7 @@
                           <button type="button" class="add-button add-chunk-child" data-help="Add a string to this mix." data-help-detail="Adds a new string box as a child of this mix so its chunks can be included in the output.">+ Add String</button>
                           <button type="button" class="add-button add-mix-child" data-help="Add a nested mix to this mix." data-help-detail="Adds a child mix so you can build multi-level prompt structures and re-chunk submixes.">+ Add Mix</button>
                           <button type="button" class="add-button add-variable-child" data-help="Add a variable reference." data-help-detail="Adds a variable box that points to another mix or string and injects its chunks here.">+ Add Variable</button>
+                          <button type="button" class="add-button add-save-child" data-help="Append a saved prompt enhancer JSON inside this mix." data-help-detail="Opens a file picker and inserts the saved top-level mixes and strings as children of this mix, preserving this mix and its current contents.">+ Add Save</button>
                         </div>
                       </div>
                     </div>

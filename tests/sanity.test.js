@@ -153,6 +153,35 @@ function runSanityCase(testCase) {
       if (btn) btn.click();
       return;
     }
+    if (type === 'appendSaveToFirstMix') {
+      const win = getActiveWindow();
+      const btn = root?.querySelector('.mix-box .add-save-child');
+      const input = win?.querySelector('.append-save-file') || window.document.querySelector('.append-save-file');
+      if (!btn || !input) return;
+      const saveState = normalized.state && typeof normalized.state === 'object'
+        ? normalized.state
+        : { mixes: [] };
+      const previousFileReader = window.FileReader;
+      window.FileReader = class {
+        readAsText(file) {
+          this.result = file?.content || '';
+          if (typeof this.onload === 'function') this.onload();
+        }
+      };
+      btn.click();
+      Object.defineProperty(input, 'files', {
+        value: [
+          {
+            name: normalized.fileName || 'append-save.json',
+            content: JSON.stringify(saveState)
+          }
+        ],
+        configurable: true
+      });
+      input.dispatchEvent(new window.Event('change', { bubbles: true }));
+      window.FileReader = previousFileReader;
+      return;
+    }
     if (type === 'generate') {
       const btn =
         root?.closest('.app-window')?.querySelector('.generate-button') ||

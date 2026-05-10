@@ -3,6 +3,8 @@
 This project is a lightweight web tool written in vanilla JavaScript. Indentation is two spaces with no trailing whitespace.
 Core shell logic lives in `src/script.js`, and app-specific logic can live in standalone monolithic files under `src/apps/<app-name>/` that register through `window.PromptEnhancerAppModules`. Keep each monolith well commented and organized as described in `src/AGENTS.md`. Help Mode uses `data-help` attributes or a central map in `script.js` to surface tooltips; maintain those hints when adding or changing controls. Provide clear, specific `data-help` text for every button, list, and input field—avoid generic phrases.
 
+Prompt files can now be appended through **+ Add Save** controls at the root or inside any mix. Keep append-save behavior distinct from file-menu Open: Open replaces the active prompt state, while Add Save imports saved top-level `mixes` entries into the clicked level and preserves existing boxes.
+
 The project embraces the **50% Rule**: many small, better-than-even improvements compound into reliable software. Document intent and reasoning so later revisions build on that advantage.
 
 ## Applying the 50% Rule to LLM Collaboration

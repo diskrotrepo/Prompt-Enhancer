@@ -121,6 +121,15 @@ omits a trailing `.json` extension for cleaner window labels, and Save As
 auto-appends `.json` to download names when users omit it. Save As prompts for
 the bare title (no `.json` shown in the input).
 
+### Add Save Imports
+
+Root and mix action rows include **+ Add Save** buttons. These buttons open a
+JSON file picker and append the saved top-level `mixes` entries at the clicked
+level instead of replacing the prompt window. Keep this path separate from the
+file-menu **Open** action, seed hydration ids from the receiving prompt tree,
+and remap imported variable targets when ids collide so repeated imports keep
+their internal references local.
+
 ### Preset Menu
 
 Prompt menu **Load Preset** populates from `src/presets/index.js` via

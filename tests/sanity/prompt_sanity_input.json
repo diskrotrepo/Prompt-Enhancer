@@ -2729,6 +2729,85 @@
       }
     },
     {
+      "id": "add_save_appends_saved_mix_into_clicked_mix",
+      "description": "+ Add Save opens the append file path and inserts saved top-level boxes into the clicked mix.",
+      "random": 0,
+      "actions": [
+        {
+          "type": "openPromptsWindow"
+        },
+        {
+          "type": "appendSaveToFirstMix",
+          "fileName": "saved-child.json",
+          "state": {
+            "mixes": [
+              {
+                "type": "mix",
+                "id": "saved-mix",
+                "title": "Saved Mix",
+                "limit": 1000,
+                "lengthMode": "fit-smallest",
+                "preserve": true,
+                "orderMode": "canonical",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                },
+                "children": [
+                  {
+                    "type": "chunk",
+                    "id": "saved-chunk",
+                    "text": "save ",
+                    "limit": 1000,
+                    "lengthMode": "exact-once",
+                    "orderMode": "canonical",
+                    "delimiter": {
+                      "mode": "whitespace",
+                      "size": 1
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "generate"
+        }
+      ],
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "id": "host-add-save",
+            "title": "Host Add Save",
+            "limit": 1000,
+            "lengthMode": "fit-smallest",
+            "preserve": true,
+            "orderMode": "canonical",
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "id": "base-add-save",
+                "text": "base ",
+                "limit": 1000,
+                "lengthMode": "exact-once",
+                "orderMode": "canonical",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "local_storage_load",
       "description": "Persisted mix data loads on startup before defaults.",
       "random": 0,

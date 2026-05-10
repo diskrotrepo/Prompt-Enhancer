@@ -5,7 +5,7 @@
   // - Utilities + shared readers (including color preset helpers)
   // - Chunking + mixing engine (single-pass + first chunk behavior)
   // - Box evaluation
-  // - Box creation + state serialization (hydrates custom size/length controls)
+  // - Box creation + state serialization (hydrates custom size/length controls + append-save imports)
   // - UI helpers + event wiring
   // - Window management + app module hooks + data load/save
   // - Initialization
@@ -498,15 +498,27 @@
     return [...DEFAULT_COLOR_PRESETS, ...customColorPresets];
   }
 
-  function loadColorPresets(state) {
+  function readColorPresetEntries(state) {
     const raw = Array.isArray(state?.colorPresets) ? state.colorPresets : [];
-    customColorPresets = raw
+    return raw
       .map(entry => ({
         id: slugifyPresetName(entry?.name || entry?.id || ''),
         name: typeof entry?.name === 'string' ? entry.name.trim() : '',
         color: normalizeHexColor(entry?.color)
       }))
       .filter(entry => entry.id && entry.name && entry.color);
+  }
+
+  function loadColorPresets(state) {
+    customColorPresets = readColorPresetEntries(state);
+  }
+
+  function mergeColorPresets(state) {
+    // Append-save imports should bring their preset names along without wiping
+    // colors already available in the receiving prompt window.
+    readColorPresetEntries(state).forEach(entry => {
+      upsertCustomPreset(entry.name, entry.color);
+    });
   }
 
   function exportColorPresets() {
@@ -1248,6 +1260,27 @@
     if (!isNaN(numeric) && numeric > idCounter) idCounter = numeric;
   }
 
+  // Hydration registries track ids already present in a prompt tree. Full loads start
+  // empty; append-save imports seed this set from the receiving window before adding boxes.
+  function createHydrationRegistry(rootEl = null) {
+    const registry = { claimedIds: new Set(), idMap: new Map() };
+    if (!rootEl) return registry;
+    rootEl.querySelectorAll('.mix-box, .chunk-box, .variable-box').forEach(box => {
+      const id = box?.dataset?.boxId;
+      if (!id) return;
+      registry.claimedIds.add(id);
+      reserveBoxId(id);
+    });
+    return registry;
+  }
+
+  function rememberResolvedBoxId(idRegistry, originalId, resolvedId) {
+    if (!idRegistry?.idMap || !originalId || !resolvedId) return;
+    // The first instance owns the original id for variable target remapping;
+    // later duplicate ids still get unique DOM ids but remain intentionally ambiguous.
+    if (!idRegistry.idMap.has(originalId)) idRegistry.idMap.set(originalId, resolvedId);
+  }
+
   // Respect persisted ids when present; otherwise mint a fresh id from the shared counter.
   // During state hydration, duplicate ids are rekeyed so cache keys cannot collide across boxes.
   function resolveBoxId(configId, prefix, idRegistry = null) {
@@ -1261,13 +1294,19 @@
     if (typeof configId === 'string' && configId.trim()) {
       const stableId = configId.trim();
       reserveBoxId(stableId);
-      if (claimId(stableId)) return stableId;
+      if (claimId(stableId)) {
+        rememberResolvedBoxId(idRegistry, stableId, stableId);
+        return stableId;
+      }
     }
     let generatedId = `${prefix}-${++idCounter}`;
     reserveBoxId(generatedId);
     while (!claimId(generatedId)) {
       generatedId = `${prefix}-${++idCounter}`;
       reserveBoxId(generatedId);
+    }
+    if (typeof configId === 'string' && configId.trim()) {
+      rememberResolvedBoxId(idRegistry, configId.trim(), generatedId);
     }
     return generatedId;
   }
@@ -1658,9 +1697,46 @@
     const select = fragment.querySelector('.variable-select');
 
     box.dataset.boxId = resolveBoxId(config.id, 'var', context.idRegistry);
-    if (config.targetId) box.dataset.targetId = config.targetId;
-    if (select && config.targetId) select.value = config.targetId;
+    const originalTargetId = typeof config.targetId === 'string' ? config.targetId.trim() : '';
+    const mappedTargetId = originalTargetId && context.idRegistry?.idMap?.get(originalTargetId)
+      ? context.idRegistry.idMap.get(originalTargetId)
+      : originalTargetId;
+    if (originalTargetId) box.dataset.originalTargetId = originalTargetId;
+    if (mappedTargetId) box.dataset.targetId = mappedTargetId;
+    if (select && mappedTargetId) select.value = mappedTargetId;
     return wrapper;
+  }
+
+  function remapHydratedVariableTargets(scope, idRegistry = null) {
+    if (!scope || !idRegistry?.idMap) return;
+    // Variables may appear before their targets in saved JSON. This second pass
+    // catches those forward references after every imported id has been resolved.
+    scope.querySelectorAll('.variable-box').forEach(box => {
+      const originalTargetId = box.dataset.originalTargetId || box.dataset.targetId || '';
+      const mappedTargetId = originalTargetId && idRegistry.idMap.get(originalTargetId)
+        ? idRegistry.idMap.get(originalTargetId)
+        : originalTargetId;
+      const select = box.querySelector('.variable-select');
+      if (mappedTargetId) {
+        box.dataset.targetId = mappedTargetId;
+        if (select) select.value = mappedTargetId;
+      } else {
+        box.dataset.targetId = '';
+        if (select) select.value = '';
+      }
+      delete box.dataset.originalTargetId;
+    });
+  }
+
+  function getSavedMixEntries(state, useDefault = true) {
+    if (Array.isArray(state?.mixes) && state.mixes.length) return state.mixes;
+    return useDefault ? [{ type: 'mix', title: 'Mix', children: [] }] : [];
+  }
+
+  function createWrapperFromState(config = {}, context = {}) {
+    if (config?.type === 'chunk') return createChunkWrapper(config, context);
+    if (config?.type === 'variable') return createVariableWrapper(config, context);
+    return createMixWrapper(config, context);
   }
 
   function getBoxColorState(box) {
@@ -1788,12 +1864,8 @@
     if (!root) return;
     root.innerHTML = '';
     loadColorPresets(state);
-    const idRegistry = { claimedIds: new Set() };
-    const mixes = Array.isArray(state?.mixes) && state.mixes.length
-      ? state.mixes
-      : [
-          { type: 'mix', title: 'Mix', children: [] }
-        ];
+    const idRegistry = createHydrationRegistry();
+    const mixes = getSavedMixEntries(state, true);
     let prevMixColor = null;
     let prevChunkColor = null;
     mixes.forEach(cfg => {
@@ -1807,6 +1879,7 @@
       root.appendChild(wrapper);
       prevMixColor = wrapper.querySelector('.mix-box')?.dataset.color || prevMixColor;
     });
+    remapHydratedVariableTargets(root, idRegistry);
     updateEmptyState(root);
 
     setupDelimiterControls(root);
@@ -1818,6 +1891,67 @@
     refreshColorPresetSelects(root);
     syncTextareaHeights(root);
     refreshVariableOptions(root);
+  }
+
+  function resolveAppendContainer(targetEl) {
+    if (targetEl?.classList?.contains?.('mix-root')) return targetEl;
+    if (targetEl?.classList?.contains?.('mix-children')) return targetEl;
+    if (targetEl?.classList?.contains?.('mix-box')) return targetEl.querySelector('.mix-children');
+    return targetEl?.querySelector?.('.mix-root') || document.querySelector('.mix-root');
+  }
+
+  function resolveRootForAppend(container, rootEl = null) {
+    if (rootEl?.classList?.contains?.('mix-root')) return rootEl;
+    return (
+      container?.closest?.('.mix-root') ||
+      container?.closest?.('.app-window')?.querySelector?.('.mix-root') ||
+      document.querySelector('.mix-root')
+    );
+  }
+
+  function getPreviousChildColor(container) {
+    const previous = container?.lastElementChild?.querySelector?.('.mix-box, .chunk-box');
+    return previous?.dataset?.color || null;
+  }
+
+  function appendMixState(state, targetEl = null, rootEl = null) {
+    const container = resolveAppendContainer(targetEl);
+    if (!container) return 0;
+    const root = resolveRootForAppend(container, rootEl);
+    const entries = getSavedMixEntries(state, true);
+    if (!entries.length) return 0;
+    // Add Save is an append operation: import file presets and boxes without replacing
+    // the receiving tree, the window title, or any existing file name.
+    mergeColorPresets(state);
+    const idRegistry = createHydrationRegistry(root);
+    const parentMix = container.closest?.('.mix-box') || null;
+    let previousColor = getPreviousChildColor(container);
+    let appendedCount = 0;
+    const appendedWrappers = [];
+    entries.forEach(cfg => {
+      const wrapper = createWrapperFromState(cfg, {
+        parentColor: parentMix?.dataset?.color,
+        previousColor,
+        idRegistry
+      });
+      if (!wrapper) return;
+      container.appendChild(wrapper);
+      appendedWrappers.push(wrapper);
+      appendedCount += 1;
+      previousColor = wrapper.querySelector('.mix-box, .chunk-box')?.dataset.color || previousColor;
+    });
+    appendedWrappers.forEach(wrapper => remapHydratedVariableTargets(wrapper, idRegistry));
+    updateEmptyState(root);
+    setupDelimiterControls(container);
+    setupSizeControls(container);
+    syncCollapseButtons(container);
+    container.querySelectorAll('.mix-box').forEach(updatePreserveMode);
+    container.querySelectorAll('.mix-box, .chunk-box').forEach(updateLengthModeState);
+    container.querySelectorAll('.chunk-box').forEach(updateEmptyChunkMode);
+    refreshColorPresetSelects(root || container);
+    syncTextareaHeights(container);
+    refreshVariableOptions(root || container);
+    return appendedCount;
   }
 
   // ======== UI Helpers ========
@@ -2678,6 +2812,8 @@
     bindRootAddButton('.add-root-chunk', appendRootChunk);
 
     const loadInput = scope.querySelector('.load-mix-file');
+    const appendSaveInput = scope.querySelector('.append-save-file');
+    let pendingAppendContainer = null;
     // File naming is per-window: Save reuses the stored name; Save As prompts and updates the title.
     const downloadMix = fileName => {
       const root = scope.querySelector('.mix-root');
@@ -2731,6 +2867,38 @@
         if (!root) return;
         applyMixState(data, root);
         if (file?.name) setFileName(file.name);
+      };
+      reader.readAsText(file);
+    };
+
+    const requestAppendSave = container => {
+      if (!appendSaveInput || !container) return;
+      // The hidden file input cannot store DOM nodes in attributes, so this
+      // closure remembers exactly which "+" level asked for the saved JSON.
+      pendingAppendContainer = container;
+      appendSaveInput.click();
+    };
+
+    const appendSaveFile = file => {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        let data = null;
+        try {
+          data = JSON.parse(reader.result);
+        } catch (err) {
+          pendingAppendContainer = null;
+          return;
+        }
+        const root = scope.querySelector('.mix-root');
+        const target = pendingAppendContainer || root;
+        if (!root || !target || !scope.contains(target)) {
+          pendingAppendContainer = null;
+          return;
+        }
+        appendMixState(data, target, root);
+        finalizeRootAdd(root);
+        pendingAppendContainer = null;
       };
       reader.readAsText(file);
     };
@@ -2893,6 +3061,39 @@
         loadInput.value = '';
       });
       loadInput.dataset.bound = 'true';
+    }
+
+    const bindAppendSaveButton = selector => {
+      const button = scope.querySelector(selector);
+      if (!button || button.dataset.bound) return;
+      button.addEventListener('click', () => {
+        const root = scope.querySelector('.mix-root');
+        if (root) requestAppendSave(root);
+      });
+      button.dataset.bound = 'true';
+    };
+    bindAppendSaveButton('.add-empty-save');
+    bindAppendSaveButton('.add-root-save');
+
+    if (scope?.dataset && !scope.dataset.appendSaveChildReady) {
+      scope.addEventListener('click', event => {
+        const eventTarget = toEventElement(event.target);
+        const button = eventTarget?.closest?.('.add-save-child');
+        if (!button || !scope.contains(button)) return;
+        const mixBox = button.closest('.mix-box');
+        const childContainer = mixBox?.querySelector('.mix-children');
+        requestAppendSave(childContainer);
+      });
+      scope.dataset.appendSaveChildReady = 'true';
+    }
+
+    if (appendSaveInput && !appendSaveInput.dataset.bound) {
+      appendSaveInput.addEventListener('change', event => {
+        const file = event.target.files?.[0];
+        appendSaveFile(file);
+        appendSaveInput.value = '';
+      });
+      appendSaveInput.dataset.bound = 'true';
     }
 
     setupHelpMode(win || scope);
@@ -3520,6 +3721,7 @@
     evaluateMixBox,
     exportMixState,
     applyMixState,
+    appendMixState,
     generate
   };
 

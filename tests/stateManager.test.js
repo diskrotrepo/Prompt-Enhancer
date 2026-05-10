@@ -730,4 +730,68 @@ describe('Mix state roundtrip', () => {
     });
     expect(outputs).toEqual(['A1 A2 ', 'B1 B2 ']);
   });
+
+  test('appendMixState inserts a saved list at the requested mix level and remaps variable targets', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    main.applyMixState({
+      mixes: [
+        {
+          type: 'mix',
+          id: 'host',
+          title: 'Host',
+          limit: 1000,
+          lengthMode: 'fit-smallest',
+          preserve: true,
+          orderMode: 'canonical',
+          delimiter: { mode: 'whitespace', size: 1 },
+          children: [
+            {
+              type: 'chunk',
+              id: 'source',
+              title: 'Existing Source',
+              text: 'old ',
+              lengthMode: 'exact-once',
+              orderMode: 'canonical',
+              delimiter: { mode: 'whitespace', size: 1 }
+            }
+          ]
+        }
+      ]
+    }, root);
+
+    const hostChildren = root.querySelector('.mix-box .mix-children');
+    const added = main.appendMixState({
+      mixes: [
+        {
+          type: 'chunk',
+          id: 'source',
+          title: 'Imported Source',
+          text: 'new ',
+          lengthMode: 'exact-once',
+          orderMode: 'canonical',
+          delimiter: { mode: 'whitespace', size: 1 }
+        },
+        {
+          type: 'variable',
+          id: 'imported-variable',
+          targetId: 'source'
+        }
+      ]
+    }, hostChildren, root);
+
+    expect(added).toBe(2);
+    const ids = Array.from(root.querySelectorAll('.mix-box, .chunk-box, .variable-box'))
+      .map(box => box.dataset.boxId)
+      .filter(Boolean);
+    expect(new Set(ids).size).toBe(ids.length);
+
+    const importedVariable = root.querySelector('.variable-box');
+    const remappedTarget = importedVariable?.dataset.targetId || '';
+    expect(remappedTarget).not.toBe('source');
+    expect(root.querySelector(`[data-box-id="${remappedTarget}"] .chunk-input`)?.value).toBe('new ');
+
+    main.generate(root);
+    expect(root.querySelector('.mix-box .mix-output-text')?.textContent || '').toBe('old new new ');
+  });
 });

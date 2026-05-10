@@ -1,6 +1,6 @@
 # Prompt Enhancer
 
-Prompt Enhancer is a modular list-mixing tool. Chunking boxes turn raw text into delimiter-preserving chunks. Mixing boxes interleave those lists to produce an output string by concatenating chunks only — no delimiter injection. Variable nodes can reference any existing mix or string and forward its chunks unchanged. Everything runs in the browser with no build step.
+Prompt Enhancer is a modular list-mixing tool. Chunking boxes turn raw text into delimiter-preserving chunks. Mixing boxes interleave those lists to produce an output string by concatenating chunks only — no delimiter injection. Variable nodes can reference any existing mix or string and forward its chunks unchanged. **+ Add Save** buttons append saved prompt enhancer JSON boxes into the clicked root or mix level without replacing the current window. Everything runs in the browser with no build step.
 
 Open `src/index.html` to use the tool. Add lists inside mixing boxes, set per-box limits, and press **Generate Mixes**. You can save your configuration to a file or reload it later. On narrow screens, button rows automatically wrap so text labels stay within their section.
 Prompt menu presets load from `src/presets/index.js` via `window.PromptEnhancerPresetCatalog`. Add or update catalog entries there with inline preset `state` objects.
@@ -219,6 +219,8 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Prompt menu includes Load Preset submenu** — `prompt_menu_load_preset_item`
 - **Prompt menu save flow** — `prompt_menu_save_flow`
 - **Duplicate loaded ids are re-keyed during hydration so cache keys stay isolated across boxes** — `duplicate_loaded_ids_are_rekeyed`
+- **+ Add Save appends a saved prompt file into the clicked mix/root level without replacing existing boxes** — `add_save_appends_saved_mix_into_clicked_mix`
+- **+ Add Save remaps imported variable targets when ids collide with existing boxes** — `tests/stateManager.test.js`
 - **Local storage load** — `local_storage_load`
 - **Local storage state seeds newly opened Prompt Enhancer windows** — `local_storage_prompt_window_load`
 
@@ -235,10 +237,13 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Color presets**  
   Custom color presets are global across boxes, persist in saved state, and missing preset ids fall back to Auto on load.
 
-- **File save/load semantics**  
+- **File save/load semantics**
   Save reuses the current file name (prompting if unset). Save As always prompts, appends `.json` when missing, and updates the window title (title omits the `.json` suffix).
 
-- **Preset submenu semantics**  
+- **Add Save append semantics**
+  The root and mix action rows include **+ Add Save**. It opens a JSON file picker, reads the saved `mixes` array, and appends those top-level boxes exactly where the button was clicked. Imported ids are re-keyed against the receiving prompt tree when needed, and variables inside the imported save are remapped to the imported copies.
+
+- **Preset submenu semantics**
   Prompt menu **Load Preset** reads `src/presets/index.js` catalog entries and applies each preset's inline `state` directly. The submenu shows `No presets in catalog` when the catalog is empty.
 
 - **Local persistence**  
