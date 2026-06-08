@@ -3,7 +3,7 @@
 
   // Table of contents:
   // - Utilities + shared readers (including color preset helpers)
-  // - Chunking + mixing engine (single-pass + first chunk behavior)
+  // - Chunking + mixing engine (single-pass + dropout seed traversal + first chunk behavior)
   // - Box evaluation
   // - Box creation + state serialization (hydrates custom size/length controls + append-save imports)
   // - UI helpers + event wiring
@@ -89,9 +89,14 @@
     FULL: 'full-randomize'
   };
 
+  // One-pass traversal modes keep the mix engine explicit:
+  // - Smallest stops the whole mix when any source is exhausted.
+  // - Largest wraps shorter sources to match the longest source.
+  // - All-once walks every source list once and skips sources after exhaustion.
   const SINGLE_PASS_FIT_MODES = {
     SMALLEST: 'smallest',
-    LARGEST: 'largest'
+    LARGEST: 'largest',
+    ALL_ONCE: 'all-once'
   };
 
   function coerceFirstChunkBehavior(value) {
@@ -729,6 +734,8 @@
 
   // ======== Chunking + Mixing Engine ========
   // Single-pass length modes avoid repetition, and first-chunk offsets keep slice points varied.
+  // Dropout seeds use All-once traversal: collect each child chunk once, skip exhausted lists,
+  // then remove random chunks to satisfy the length limit.
 
   function buildChunkList(
     raw,
@@ -858,7 +865,10 @@
     };
     if (singlePass) {
       const orderBase = Array.from({ length: sources.length }, (_, i) => i);
-      const cycleCount = singlePassFitMode === SINGLE_PASS_FIT_MODES.LARGEST
+      const cycleCount = (
+        singlePassFitMode === SINGLE_PASS_FIT_MODES.LARGEST ||
+        singlePassFitMode === SINGLE_PASS_FIT_MODES.ALL_ONCE
+      )
         ? Math.max(...sources.map(source => source.list.length))
         : Math.min(...sources.map(source => source.list.length));
       for (let cycle = 0; cycle < cycleCount && (allowOverflow ? length <= max : length < max); cycle += 1) {
@@ -870,6 +880,7 @@
           if (singlePassFitMode === SINGLE_PASS_FIT_MODES.LARGEST) {
             if (!refreshSourceOnWrap(source, cycle)) continue;
           } else if (source.position >= source.list.length) {
+            // All-once keeps moving through longer siblings after this source is empty.
             continue;
           }
           const chunk = source.list[source.position];
@@ -1132,7 +1143,9 @@
     const mixLimit = dropoutMode ? Number.POSITIVE_INFINITY : limit;
     const mixExact = dropoutMode ? false : exact;
     const mixSinglePass = dropoutMode ? true : singlePass;
-    const mixFitMode = dropoutMode ? SINGLE_PASS_FIT_MODES.LARGEST : singlePassFitMode;
+    // Dropout needs a full seed list, but not Fit-to-Largest wrapping. It walks all
+    // child lists once and treats an exhausted "Exactly Once" child as empty.
+    const mixFitMode = dropoutMode ? SINGLE_PASS_FIT_MODES.ALL_ONCE : singlePassFitMode;
     const wrapsCanRepeat = !mixSinglePass || mixFitMode === SINGLE_PASS_FIT_MODES.LARGEST;
     const mixedBase = mixChunkLists(
       lists,

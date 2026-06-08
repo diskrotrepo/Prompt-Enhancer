@@ -75,9 +75,9 @@ Use these words consistently in code and docs:
 Mix length modes include **Split Final Chunk**, **Delete Final Chunk**, **Fit to
 Smallest**, **Fit to Largest**, and **Dropout**. Fit to Smallest stops as soon
 as any child list runs out; Fit to Largest repeats shorter child lists until the
-longest child list is exhausted. Dropout builds a full one-pass source list
-first, then removes random chunks (with recounts) until total output is at or
-below the limit.
+longest child list is exhausted. Dropout builds a full all-once source list
+first, skipping child lists after they are exhausted, then removes random chunks
+(with recounts) until total output is at or below the limit.
 Only the fit modes disable the length limit input for mixes because they run a
 single constrained pass. Chunk boxes support **Exactly Once** and **Dropout**:
 Exactly Once ignores the limit and emits one pass, while Dropout builds one full

@@ -302,7 +302,7 @@ describe('Mix state roundtrip', () => {
     expect(output).toBe('a2 b2 a3 b3 a4 b4 a1 b1 ');
   });
 
-  test('dropout mix seed rerolls wrapped randomized children', () => {
+  test('mix dropout skips exhausted exact-once children instead of wrapping them', () => {
     const output = runGeneratedOutput(
       {
         mixes: [
@@ -336,10 +336,10 @@ describe('Mix state roundtrip', () => {
           }
         ]
       },
-      [0, 0.99]
+      [0]
     );
-    // The short randomized child rerolls on wrap, so the second spacer cycle differs.
-    expect(output).toBe('L1 b L2 a L3 a L4 b ');
+    // The short randomized child contributes its one shuffled pass, then longer siblings keep going.
+    expect(output).toBe('L1 b L2 a L3 L4 ');
   });
 
   test('order mode roundtrips for mixes and strings', () => {

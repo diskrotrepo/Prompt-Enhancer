@@ -50,7 +50,7 @@
     },
     {
       "id": "dropout_mix",
-      "output": "y c x ",
+      "output": "b y c ",
       "lengthMode": "dropout"
     },
     {
@@ -301,8 +301,8 @@
       "lengthMode": "fit-largest"
     },
     {
-      "id": "dropout_mix_rerolls_wrapped_child",
-      "output": "L1 b L2 a L3 a L4 b ",
+      "id": "dropout_mix_skips_exhausted_exact_once_child",
+      "output": "L1 b L2 a L3 L4 ",
       "lengthMode": "dropout"
     },
     {

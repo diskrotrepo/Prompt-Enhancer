@@ -129,6 +129,11 @@ describe('Chunking + mixing engine', () => {
     expect(mixed.join('')).toBe('a1 b1 a2 b2 a3 b1 ');
   });
 
+  test('mixChunkLists all-once skips exhausted lists without wrapping them', () => {
+    const mixed = mixChunkLists([['a1 ', 'a2 ', 'a3 '], ['b1 ', 'b2 ']], 100, false, false, true, 'all-once');
+    expect(mixed.join('')).toBe('a1 b1 a2 b2 a3 ');
+  });
+
   test('mixChunkLists fit-largest can reroll a wrapped source list', () => {
     const refreshers = [
       null,

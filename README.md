@@ -20,10 +20,10 @@ Length modes then decide how the length limit is enforced:
 - **Split Final Chunk** trims the first chunk that would overflow.
 - **Delete Final Chunk** stops before the first chunk that would overflow.
 - **Fit to Smallest / Fit to Largest / Exactly Once** run a one-pass traversal of source lists.
-- **Dropout** first builds a full one-pass source list, then repeatedly removes random chunks and recounts until total length is `<= limit`.
+- **Dropout** first builds a full all-once source list, skipping any child list after it is exhausted, then repeatedly removes random chunks and recounts until total length is `<= limit`.
 
 For Dropout in canonical order, surviving chunks keep canonical relative order; randomness controls which chunks remain.
-When a mode wraps a shorter list (for example Fit to Largest or non-single-pass repeat), the wrapped source is regenerated from its base state so randomized children reroll instead of replaying one frozen cycle.
+When a mode wraps a shorter list (for example Fit to Largest or non-single-pass repeat), the wrapped source is regenerated from its base state so randomized children reroll instead of replaying one frozen cycle. Dropout does not wrap exhausted children; longer siblings keep contributing their remaining one-pass chunks.
 
 ## Shared terminology
 
@@ -169,9 +169,9 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Delete Final Chunk** — `delete_final_chunk`
 - **Fit to Smallest (mix)** — `fit_smallest_mix`
 - **Fit to Largest (mix)** — `fit_largest_mix`
-- **Dropout on mixes (full one-pass seed, then random chunk removal to limit)** — `dropout_mix`
+- **Dropout on mixes (full all-once seed, then random chunk removal to limit)** — `dropout_mix`
 - **Dropout on short mixes still builds one full pass before removal** — `dropout_mix_short_lists`
-- **Dropout rerolls wrapped randomized children while building its Fit to Largest seed** — `dropout_mix_rerolls_wrapped_child`
+- **Dropout skips exhausted exact-once children instead of wrapping them** — `dropout_mix_skips_exhausted_exact_once_child`
 - **Dropout on strings (full one-pass seed, then random chunk removal)** — `root_string_dropout`
 - **Dropout can keep late canonical chunks because seeding starts from a full one-pass list** — `dropout_mix_reaches_tail_chunks`
 - **Fit to Smallest keeps blank-string children (empty chunk slots)** — `fit_smallest_empty_child`

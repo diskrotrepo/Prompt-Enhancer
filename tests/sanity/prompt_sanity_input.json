@@ -2602,11 +2602,10 @@
       }
     },
     {
-      "id": "dropout_mix_rerolls_wrapped_child",
-      "description": "Dropout's Fit to Largest seed reruns wrapped randomized child generation.",
+      "id": "dropout_mix_skips_exhausted_exact_once_child",
+      "description": "Dropout's one-pass seed skips an exhausted exact-once child instead of wrapping it.",
       "randomSequence": [
-        0,
-        0.99
+        0
       ],
       "state": {
         "mixes": [
