@@ -199,6 +199,8 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Randomized string variable stays consistent** — `variable_random_chunk_consistent`
 - **Multiple variables share one randomized string output** — `variable_random_chunk_multi_reference`
 - **Randomized mix variable matches duplicated submix behavior** — `variable_random_mix_consistent`
+- **Add Variable UI can select and forward a source mix** — `add_variable_ui_selects_source_mix`
+- **Variables fall back to mirrored target ids while option lists rebuild** — `tests/stateManager.test.js`
 
 #### Output + copy behavior
 

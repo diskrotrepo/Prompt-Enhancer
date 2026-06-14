@@ -615,6 +615,62 @@ describe('Mix state roundtrip', () => {
     });
   });
 
+  test('variable evaluation falls back to the mirrored target id when options are stale', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    main.applyMixState({
+      mixes: [
+        {
+          type: 'mix',
+          id: 'host',
+          title: 'Host',
+          limit: 1000,
+          lengthMode: 'fit-smallest',
+          preserve: true,
+          orderMode: 'canonical',
+          delimiter: { mode: 'whitespace', size: 1 },
+          children: [
+            {
+              type: 'mix',
+              id: 'source-mix',
+              title: 'Source Mix',
+              lengthMode: 'fit-smallest',
+              preserve: true,
+              orderMode: 'canonical',
+              delimiter: { mode: 'whitespace', size: 1 },
+              children: [
+                {
+                  type: 'chunk',
+                  id: 'source-string',
+                  text: 'source ',
+                  lengthMode: 'exact-once',
+                  orderMode: 'canonical',
+                  delimiter: { mode: 'whitespace', size: 1 }
+                }
+              ]
+            },
+            {
+              type: 'variable',
+              id: 'source-variable',
+              targetId: 'source-mix'
+            }
+          ]
+        }
+      ]
+    }, root);
+
+    const variable = root.querySelector('.variable-box');
+    const select = variable?.querySelector('.variable-select');
+    expect(select?.value).toBe('source-mix');
+    // Simulate an option-list rebuild window: the select is empty, but the box
+    // still mirrors the intended target in data-target-id.
+    select.innerHTML = '<option value="">Select a mix or string...</option>';
+    select.value = '';
+
+    main.generate(root);
+    expect(root.querySelector('.mix-box .mix-output-text')?.textContent || '').toBe('source source ');
+  });
+
   test('duplicate loaded ids are rekeyed so sibling mixes do not share cached output', () => {
     const state = {
       mixes: [

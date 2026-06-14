@@ -2296,6 +2296,71 @@
       }
     },
     {
+      "id": "add_variable_ui_selects_source_mix",
+      "description": "The Add Variable button can create a variable that selects and forwards a source mix.",
+      "random": 0,
+      "actions": [
+        {
+          "type": "openPromptsWindow"
+        },
+        {
+          "type": "addVariableToMix",
+          "mixId": "ui-variable-host"
+        },
+        {
+          "type": "selectVariableSource",
+          "targetId": "ui-variable-source"
+        },
+        {
+          "type": "generate"
+        }
+      ],
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "id": "ui-variable-host",
+            "title": "UI Variable Host",
+            "limit": 1000,
+            "lengthMode": "fit-smallest",
+            "preserve": true,
+            "orderMode": "canonical",
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": []
+          },
+          {
+            "type": "mix",
+            "id": "ui-variable-source",
+            "title": "UI Variable Source",
+            "limit": 1000,
+            "lengthMode": "fit-smallest",
+            "preserve": true,
+            "orderMode": "canonical",
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "id": "ui-variable-source-string",
+                "text": "mix-grab ",
+                "lengthMode": "exact-once",
+                "orderMode": "canonical",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "copy_output_behavior",
       "description": "Copy buttons use generated output, not raw input.",
       "random": 0,

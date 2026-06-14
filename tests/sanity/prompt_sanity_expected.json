@@ -243,6 +243,13 @@
       "output": "x a a x y b b y z c c z "
     },
     {
+      "id": "add_variable_ui_selects_source_mix",
+      "output": "mix-grab ",
+      "variableTitle": "Copy of UI Variable Source",
+      "mixCount": 2,
+      "variableCount": 1
+    },
+    {
       "id": "copy_output_behavior",
       "output": "abc ",
       "chunkOutput": "abc ",

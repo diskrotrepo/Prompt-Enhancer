@@ -153,6 +153,29 @@ function runSanityCase(testCase) {
       if (btn) btn.click();
       return;
     }
+    if (type === 'addVariableToMix') {
+      const mixId = typeof normalized.mixId === 'string' ? normalized.mixId : '';
+      const mixBox = Array.from(root?.querySelectorAll('.mix-box') || [])
+        .find(box => !mixId || box.dataset.boxId === mixId);
+      const body = Array.from(mixBox?.children || [])
+        .find(child => child.classList?.contains('box-body'));
+      const actionRow = Array.from(body?.children || [])
+        .find(child => child.classList?.contains('mix-actions'));
+      const btn = actionRow?.querySelector('.add-variable-child');
+      if (btn) btn.click();
+      return;
+    }
+    if (type === 'selectVariableSource') {
+      const variableId = typeof normalized.variableId === 'string' ? normalized.variableId : '';
+      const targetId = typeof normalized.targetId === 'string' ? normalized.targetId : '';
+      const variableBox = Array.from(root?.querySelectorAll('.variable-box') || [])
+        .find(box => !variableId || box.dataset.boxId === variableId);
+      const select = variableBox?.querySelector('.variable-select');
+      if (!select || !targetId) return;
+      select.value = targetId;
+      select.dispatchEvent(new window.Event('change', { bubbles: true }));
+      return;
+    }
     if (type === 'appendSaveToFirstMix') {
       const win = getActiveWindow();
       const btn = root?.querySelector('.mix-box .add-save-child');

@@ -1041,8 +1041,7 @@
   }
 
   function evaluateVariableBox(boxEl, context) {
-    const select = boxEl.querySelector('.variable-select');
-    const targetId = select?.value || '';
+    const targetId = readVariableTargetId(boxEl);
     if (!targetId) return [];
     const root = context?.root || document;
     const target = root.querySelector(`[data-box-id="${escapeSelector(targetId)}"]`);
@@ -1117,7 +1116,7 @@
     // children reroll instead of replaying one frozen list.
     const getRefreshKey = (child, index) => {
       if (child.classList.contains('variable-box')) {
-        const targetId = child.querySelector('.variable-select')?.value || child.dataset.targetId || '';
+        const targetId = readVariableTargetId(child);
         return targetId || child?.dataset?.boxId || `child-${index + 1}`;
       }
       return child?.dataset?.boxId || `child-${index + 1}`;
@@ -1468,6 +1467,17 @@
     return box.dataset.boxId || 'Untitled';
   }
 
+  // Variable target resolution has to survive three UI states: live select values,
+  // rebuilt option lists, and saved/imported boxes that already hold data-target-id.
+  function readVariableTargetId(box) {
+    const select = box?.querySelector?.('.variable-select');
+    // Prefer the visible select when it has a value; it reflects the user's latest click.
+    const selectedTargetId = toTrimmedString(select?.value || '');
+    if (selectedTargetId) return selectedTargetId;
+    // Fall back to the mirrored data attribute so temporary empty option lists still resolve.
+    return toTrimmedString(box?.dataset?.targetId || '');
+  }
+
   // Refresh variable selects and omit ancestor mixes so variables cannot target their parent chain.
   function refreshVariableOptions(scope) {
     const windowEl = scope?.closest?.('.app-window') || (scope?.classList?.contains?.('app-window') ? scope : null);
@@ -1495,11 +1505,8 @@
     };
     const selects = (windowEl || root).querySelectorAll('.variable-select');
     selects.forEach(select => {
-      const current =
-        select.value ||
-        select.closest('.variable-box')?.dataset.targetId ||
-        '';
       const box = select.closest('.variable-box');
+      const current = readVariableTargetId(box);
       // Filter ancestor mix ids so variables only target outside mixes.
       const forbiddenIds = getAncestorMixIds(box);
       const allowedSources = sources.filter(source => !forbiddenIds.has(source.id));
@@ -1798,11 +1805,10 @@
   }
 
   function serializeVariableBox(box) {
-    const select = box.querySelector('.variable-select');
     return {
       type: 'variable',
       id: box.dataset.boxId,
-      targetId: select?.value || box.dataset.targetId || ''
+      targetId: readVariableTargetId(box)
     };
   }
 
