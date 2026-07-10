@@ -2,7 +2,7 @@
 
 Prompt Enhancer is a modular list-mixing tool. Chunking boxes turn raw text into delimiter-preserving chunks. Mixing boxes interleave those lists to produce an output string by concatenating chunks only — no delimiter injection. Variable nodes can reference any existing mix or string and forward its chunks unchanged. **+ Add Save** buttons append saved prompt enhancer JSON boxes into the clicked root or mix level without replacing the current window. Everything runs in the browser with no build step.
 
-Open `src/index.html` to use the tool. The UI presents a Windows 3.1 style desktop with a large-shape 90s confetti wallpaper: apps open from the start menu into draggable silver windows with beveled controls, and the focused window carries the navy title bar. Add lists inside mixing boxes, set per-box limits, and press **Generate Mixes**. You can save your configuration to a file or reload it later. On narrow screens, button rows automatically wrap so text labels stay within their section.
+Open `src/index.html` to use the tool. The UI presents a Windows 3.1 style desktop with a procedural large-shape 90s confetti wallpaper: scroll over bare desktop space to travel through an effectively endless field whose shapes, palette, and texture evolve gradually, while app windows keep their own conventional scrolling. Apps open from the start menu into draggable silver windows with beveled controls, and the focused window carries the navy title bar. Add lists inside mixing boxes, set per-box limits, and press **Generate Mixes**. You can save your configuration to a file or reload it later. On narrow screens, button rows automatically wrap so text labels stay within their section.
 Prompt menu presets load from `src/presets/index.js` via `window.PromptEnhancerPresetCatalog`. Add or update catalog entries there with inline preset `state` objects.
 Window apps can register from dedicated monolithic files under `src/apps/` through `window.PromptEnhancerAppModules`, which keeps app-specific behavior out of the core shell file.
 
@@ -242,6 +242,13 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Completion API treats empty completion text as a successful blank response when stop sequences halt immediately** — `tests/openrouterApp.test.js`
 - **Completion API copies intentionally blank output without treating it as failure** — `tests/openrouterApp.test.js`
 - **Multiple Prompt Enhancer windows can be opened in one session and each gets its own taskbar button** — `multi_prompt_windows_open`
+
+#### Procedural desktop wallpaper
+
+- **Wheel or trackpad movement over bare desktop space advances the procedural wallpaper without creating a fourth native scroll region** — `procedural_wallpaper_background_scroll`, `tests/wallpaper.test.js`
+- **Wheel movement inside an app window remains isolated from the wallpaper and available to the window's own scroll body** — `window_wheel_does_not_scroll_wallpaper`, `tests/wallpaper.test.js`
+- **Seeded world bands are deterministic in both directions, preserve the original nine silhouettes, add new shape families, and recycle a bounded visible pool** — `tests/wallpaper.test.js`
+- **Backdrop palettes and texture parameters change continuously with virtual distance while generated fills retain useful contrast** — `tests/wallpaper.test.js`
 
 - **Color presets**  
   Custom color presets are global across boxes, persist in saved state, and missing preset ids fall back to Auto on load.

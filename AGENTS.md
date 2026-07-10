@@ -1,7 +1,7 @@
 # AGENT Instructions for Prompt-Enhancer
 
 This project is a lightweight web tool written in vanilla JavaScript. Indentation is two spaces with no trailing whitespace.
-The UI is a Windows 3.1 style desktop (large-shape 90s confetti over teal, silver beveled windows, navy active title bars); see the Theme section in `src/AGENTS.md` before changing styles so new controls reuse the shared `--w31-*` tokens and bevel recipes.
+The UI is a Windows 3.1 style desktop (procedural large-shape 90s confetti over a gradually changing textured ground, silver beveled windows, navy active title bars); see the Theme section in `src/AGENTS.md` before changing styles so new controls reuse the shared `--w31-*` tokens and bevel recipes.
 Core shell logic lives in `src/script.js`, and app-specific logic can live in standalone monolithic files under `src/apps/<app-name>/` that register through `window.PromptEnhancerAppModules`. Keep each monolith well commented and organized as described in `src/AGENTS.md`. Help Mode uses `data-help` attributes or a central map in `script.js` to surface tooltips; maintain those hints when adding or changing controls. Provide clear, specific `data-help` text for every button, list, and input field—avoid generic phrases.
 
 Prompt files can now be appended through **+ Add Save** controls at the root or inside any mix. Keep append-save behavior distinct from file-menu Open: Open replaces the active prompt state, while Add Save imports saved top-level `mixes` entries into the clicked level and preserves existing boxes.

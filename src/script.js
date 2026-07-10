@@ -3,10 +3,12 @@
 
   // Table of contents:
   // - Utilities + shared readers (including color preset helpers)
+  // - Procedural wallpaper model (palette chapters + deterministic shape bands)
   // - Chunking + mixing engine (single-pass + dropout seed traversal + first chunk behavior)
   // - Box evaluation
   // - Box creation + state serialization (hydrates custom size/length controls + append-save imports)
   // - UI helpers + event wiring
+  // - Procedural wallpaper rendering + background-only input
   // - Window management + app module hooks + shared Help
   // - Initialization
 
@@ -18,6 +20,438 @@
 
   function toTrimmedString(value) {
     return typeof value === 'string' ? value.trim() : '';
+  }
+
+  // ======== Procedural wallpaper model ========
+
+  // The wallpaper owns a private seed and random stream. Prompt shuffling still
+  // uses Math.random, so exploring the desktop can never perturb generated text.
+  const WALLPAPER_SEED = 0x594f4c4b;
+  const WALLPAPER_CHAPTER_SCREENS = 3.2;
+  const WALLPAPER_SHAPE_TYPES = Object.freeze([
+    'disc',
+    'ring',
+    'bar',
+    'diamond',
+    'triangle',
+    'zigzag',
+    'capsule',
+    'checker',
+    'arc',
+    'star',
+    'cross',
+    'bolt',
+    'fan',
+    'frame',
+    'rosette',
+    'domino',
+    'pennant'
+  ]);
+  const WALLPAPER_PATTERNS = Object.freeze([
+    'solid',
+    'stripes',
+    'checker',
+    'dots',
+    'split',
+    'hatch'
+  ]);
+  const WALLPAPER_TEXTURES = Object.freeze([
+    'weave',
+    'micro-check',
+    'scanline',
+    'hatch',
+    'basket',
+    'stipple'
+  ]);
+  const WALLPAPER_MOODS = Object.freeze([
+    { hue: 180, saturation: 90, lightness: 28 },
+    { hue: 226, saturation: 38, lightness: 41 },
+    { hue: 310, saturation: 29, lightness: 39 },
+    { hue: 105, saturation: 24, lightness: 38 },
+    { hue: 8, saturation: 31, lightness: 43 },
+    { hue: 194, saturation: 43, lightness: 36 }
+  ]);
+
+  function positiveModulo(value, divisor) {
+    return ((value % divisor) + divisor) % divisor;
+  }
+
+  function hashWallpaperSeed(value, salt = 0) {
+    let hash = (Number(value) | 0) ^ WALLPAPER_SEED ^ (Number(salt) | 0);
+    hash = Math.imul(hash ^ (hash >>> 16), 0x7feb352d);
+    hash = Math.imul(hash ^ (hash >>> 15), 0x846ca68b);
+    return (hash ^ (hash >>> 16)) >>> 0;
+  }
+
+  function createWallpaperRandom(seed) {
+    let state = seed >>> 0;
+    return () => {
+      state = (state + 0x6d2b79f5) >>> 0;
+      let value = state;
+      value = Math.imul(value ^ (value >>> 15), value | 1);
+      value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+      return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function clampWallpaperValue(value, minimum, maximum) {
+    return Math.max(minimum, Math.min(maximum, value));
+  }
+
+  function smoothWallpaperStep(value) {
+    const clamped = clampWallpaperValue(value, 0, 1);
+    return clamped * clamped * (3 - 2 * clamped);
+  }
+
+  function normalizeWallpaperHue(value) {
+    return positiveModulo(value, 360);
+  }
+
+  function wallpaperColor(hue, saturation, lightness) {
+    const color = {
+      h: normalizeWallpaperHue(hue),
+      s: clampWallpaperValue(saturation, 0, 100),
+      l: clampWallpaperValue(lightness, 0, 100)
+    };
+    color.css = `hsl(${color.h.toFixed(1)} ${color.s.toFixed(1)}% ${color.l.toFixed(1)}%)`;
+    return color;
+  }
+
+  function interpolateWallpaperColor(first, second, amount) {
+    const hueDistance = ((second.h - first.h + 540) % 360) - 180;
+    return wallpaperColor(
+      first.h + hueDistance * amount,
+      first.s + (second.s - first.s) * amount,
+      first.l + (second.l - first.l) * amount
+    );
+  }
+
+  function wallpaperHslToRgb(color) {
+    if (color && Number.isFinite(color.r) && Number.isFinite(color.g) && Number.isFinite(color.b)) {
+      return {
+        r: clampWallpaperValue(color.r, 0, 255),
+        g: clampWallpaperValue(color.g, 0, 255),
+        b: clampWallpaperValue(color.b, 0, 255)
+      };
+    }
+    const hue = normalizeWallpaperHue(Number(color?.h) || 0) / 360;
+    const saturation = clampWallpaperValue(Number(color?.s) || 0, 0, 100) / 100;
+    const lightness = clampWallpaperValue(Number(color?.l) || 0, 0, 100) / 100;
+    if (saturation === 0) {
+      const channel = lightness * 255;
+      return { r: channel, g: channel, b: channel };
+    }
+    const hueToRgb = (p, q, channelHue) => {
+      let activeHue = channelHue;
+      if (activeHue < 0) activeHue += 1;
+      if (activeHue > 1) activeHue -= 1;
+      if (activeHue < 1 / 6) return p + (q - p) * 6 * activeHue;
+      if (activeHue < 1 / 2) return q;
+      if (activeHue < 2 / 3) return p + (q - p) * (2 / 3 - activeHue) * 6;
+      return p;
+    };
+    const q = lightness < 0.5
+      ? lightness * (1 + saturation)
+      : lightness + saturation - lightness * saturation;
+    const p = 2 * lightness - q;
+    return {
+      r: hueToRgb(p, q, hue + 1 / 3) * 255,
+      g: hueToRgb(p, q, hue) * 255,
+      b: hueToRgb(p, q, hue - 1 / 3) * 255
+    };
+  }
+
+  function wallpaperRelativeLuminance(color) {
+    const rgb = wallpaperHslToRgb(color);
+    const channel = value => {
+      const normalized = value / 255;
+      return normalized <= 0.03928
+        ? normalized / 12.92
+        : Math.pow((normalized + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * channel(rgb.r) + 0.7152 * channel(rgb.g) + 0.0722 * channel(rgb.b);
+  }
+
+  function contrastRatio(first, second) {
+    const firstLuminance = wallpaperRelativeLuminance(first);
+    const secondLuminance = wallpaperRelativeLuminance(second);
+    const lighter = Math.max(firstLuminance, secondLuminance);
+    const darker = Math.min(firstLuminance, secondLuminance);
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  function ensureWallpaperContrast(color, background, minimum = 2.35) {
+    let adjusted = wallpaperColor(color.h, color.s, color.l);
+    while (contrastRatio(adjusted, background) < minimum && adjusted.l < 92) {
+      adjusted = wallpaperColor(adjusted.h, adjusted.s, adjusted.l + 2);
+    }
+    return adjusted;
+  }
+
+  function getWallpaperThemeAnchor(chapterIndex) {
+    if (chapterIndex === 0) {
+      const background = wallpaperColor(180, 90.1, 27.8);
+      return {
+        background,
+        accents: [
+          wallpaperColor(6, 83, 59),
+          wallpaperColor(48, 88, 60),
+          wallpaperColor(109, 43, 55),
+          wallpaperColor(228, 65, 54),
+          wallpaperColor(274, 39, 53),
+          wallpaperColor(330, 78, 69)
+        ],
+        cream: wallpaperColor(39, 66, 87)
+      };
+    }
+    const random = createWallpaperRandom(hashWallpaperSeed(chapterIndex, 0x43485054));
+    const moodIndex = 1 + (hashWallpaperSeed(chapterIndex, 0x4d4f4f44) % (WALLPAPER_MOODS.length - 1));
+    const mood = WALLPAPER_MOODS[moodIndex];
+    const background = wallpaperColor(
+      mood.hue + (random() - 0.5) * 18,
+      mood.saturation + (random() - 0.5) * 9,
+      mood.lightness + (random() - 0.5) * 7
+    );
+    const offsets = [38, 76, 132, 188, 244, 310];
+    const accents = offsets.map((offset, index) => {
+      const candidate = wallpaperColor(
+        background.h + offset + (random() - 0.5) * 15,
+        72 + random() * 18,
+        62 + random() * 18 + (index % 2 === 0 ? 2 : 0)
+      );
+      return ensureWallpaperContrast(candidate, background);
+    });
+    return {
+      background,
+      accents,
+      cream: ensureWallpaperContrast(
+        wallpaperColor(38 + (random() - 0.5) * 12, 48 + random() * 20, 86 + random() * 6),
+        background
+      )
+    };
+  }
+
+  function getWallpaperTextureForChapter(chapterIndex) {
+    if (chapterIndex === 0) return 'weave';
+    return WALLPAPER_TEXTURES[hashWallpaperSeed(chapterIndex, 0x54585452) % WALLPAPER_TEXTURES.length];
+  }
+
+  // Palette chapters last several screens. Smoothstep and shortest-hue blending
+  // make color/texture evolution perceptible without ever snapping between moods.
+  function sampleWallpaperPalette(worldScreens = 0) {
+    const chapterPosition = Number(worldScreens || 0) / WALLPAPER_CHAPTER_SCREENS;
+    const chapterIndex = Math.floor(chapterPosition);
+    const chapterProgress = smoothWallpaperStep(chapterPosition - chapterIndex);
+    const current = getWallpaperThemeAnchor(chapterIndex);
+    const next = getWallpaperThemeAnchor(chapterIndex + 1);
+    const background = interpolateWallpaperColor(current.background, next.background, chapterProgress);
+    const accents = current.accents.map((color, index) => ensureWallpaperContrast(
+      interpolateWallpaperColor(color, next.accents[index], chapterProgress),
+      background
+    ));
+    const cream = ensureWallpaperContrast(
+      interpolateWallpaperColor(current.cream, next.cream, chapterProgress),
+      background
+    );
+    const backgroundLower = wallpaperColor(
+      background.h + 7,
+      background.s - 3,
+      background.l - 4
+    );
+    const texture = getWallpaperTextureForChapter(chapterIndex);
+    const nextTexture = getWallpaperTextureForChapter(chapterIndex + 1);
+    return {
+      background,
+      backgroundLower,
+      accents,
+      cream,
+      texture,
+      nextTexture,
+      textureMix: chapterProgress,
+      signature: `${Math.round(background.h)}-${Math.round(background.s)}-${Math.round(background.l)}-${texture}-${nextTexture}`
+    };
+  }
+
+  function normalizeWallpaperPosition(band, offset, bandHeight) {
+    const safeHeight = Math.max(1, Number(bandHeight) || 1);
+    const shift = Math.floor((Number(offset) || 0) / safeHeight);
+    return {
+      band: (Number(band) || 0) + shift,
+      offset: positiveModulo(Number(offset) || 0, safeHeight)
+    };
+  }
+
+  function normalizeWallpaperWheelDelta(event, viewportHeight) {
+    const mode = Number(event?.deltaMode) || 0;
+    let delta = Number(event?.deltaY) || 0;
+    if (mode === 1) delta *= 32;
+    if (mode === 2) delta *= Math.max(1, Number(viewportHeight) || 1);
+    const limit = Math.max(120, (Number(viewportHeight) || 720) * 0.9);
+    return clampWallpaperValue(delta * 0.86, -limit, limit);
+  }
+
+  function getLegacyWallpaperShapes(width, height) {
+    const mobile = width <= 768;
+    const shape = (type, x, y, shapeWidth, shapeHeight, fill, pattern = 'solid', rotation = 0) => ({
+      type,
+      pattern,
+      x,
+      y,
+      width: shapeWidth,
+      height: shapeHeight,
+      rotation,
+      fill,
+      alt: '#f7e8c5',
+      shadow: '#131313'
+    });
+    const discSize = mobile ? 68 : 92;
+    const ringSize = mobile ? 86 : 118;
+    const barWidth = mobile ? 30 : 38;
+    const barHeight = mobile ? 118 : 154;
+    const diamondSize = mobile ? 62 : 82;
+    const triangleWidth = mobile ? 88 : 122;
+    const triangleHeight = mobile ? 76 : 104;
+    const zigzagWidth = mobile ? 138 : 184;
+    const zigzagHeight = mobile ? 48 : 62;
+    const arcSize = mobile ? 92 : 124;
+    return [
+      shape('disc', width * (mobile ? 0.04 : 0.05) + discSize / 2, height * 0.1 + discSize / 2, discSize, discSize, '#f3ce3e'),
+      shape('ring', width * (mobile ? 0.96 : 0.94) - ringSize / 2, height * 0.09 + ringSize / 2, ringSize, ringSize, '#ef70ad'),
+      shape('bar', width * (mobile ? 0.08 : 0.12) + barWidth / 2, height * 0.43 + barHeight / 2, barWidth, barHeight, '#ef513f', 'solid', 27),
+      shape('diamond', width * (mobile ? 0.91 : 0.87) - diamondSize / 2, height * 0.47 + diamondSize / 2, diamondSize, diamondSize, '#3d5bd6', 'solid', 45),
+      shape('triangle', width * (mobile ? 0.22 : 0.27) + triangleWidth / 2, height * 0.92 - triangleHeight / 2, triangleWidth, triangleHeight, '#70bc5a', 'solid', -8),
+      shape('zigzag', width * (mobile ? 0.78 : 0.73) - zigzagWidth / 2, height * 0.93 - zigzagHeight / 2, zigzagWidth, zigzagHeight, '#8d52ba', 'solid', -8),
+      shape('capsule', width * 0.39 + 85, height * 0.13 + 24, 170, 48, '#f3ce3e', 'stripes', -9),
+      shape('checker', width * 0.51 + 54, height * 0.63 + 34, 108, 68, '#3d5bd6', 'checker', 8),
+      shape('arc', width * 0.97 - arcSize / 2, height * 0.96 - arcSize / 2, arcSize, arcSize, '#f3ce3e', 'solid', 14)
+    ];
+  }
+
+  const WALLPAPER_COMPOSITIONS = Object.freeze([
+    [[0.09, 0.15], [0.42, 0.13], [0.84, 0.19], [0.2, 0.47], [0.68, 0.5], [0.38, 0.78], [0.88, 0.82], [0.57, 0.31], [0.08, 0.83]],
+    [[0.08, 0.2], [0.3, 0.1], [0.55, 0.31], [0.78, 0.18], [0.92, 0.45], [0.67, 0.64], [0.4, 0.55], [0.19, 0.78], [0.83, 0.88]],
+    [[0.12, 0.12], [0.82, 0.13], [0.27, 0.35], [0.68, 0.38], [0.08, 0.61], [0.9, 0.62], [0.36, 0.82], [0.7, 0.86], [0.49, 0.58]],
+    [[0.17, 0.17], [0.5, 0.1], [0.86, 0.25], [0.12, 0.49], [0.48, 0.47], [0.8, 0.55], [0.24, 0.84], [0.6, 0.78], [0.94, 0.86]],
+    [[0.08, 0.28], [0.24, 0.09], [0.55, 0.17], [0.87, 0.12], [0.75, 0.43], [0.43, 0.52], [0.13, 0.62], [0.34, 0.87], [0.84, 0.79]]
+  ]);
+
+  function getWallpaperShapeDimensions(type, size) {
+    const dimensions = {
+      bar: [size * 0.32, size * 1.25],
+      zigzag: [size * 1.55, size * 0.52],
+      capsule: [size * 1.5, size * 0.46],
+      checker: [size * 1.25, size * 0.75],
+      cross: [size, size],
+      bolt: [size * 0.72, size * 1.18],
+      fan: [size * 1.18, size * 0.75],
+      domino: [size * 0.62, size * 1.15],
+      pennant: [size * 1.18, size * 0.78]
+    };
+    return dimensions[type] || [size, size];
+  }
+
+  // Each band is regenerated from its signed index instead of stored history.
+  // Composition templates enforce generous negative space; the seeded jitter
+  // supplies novelty while returning to a band reproduces it exactly.
+  function buildWallpaperBand(index, viewportWidth, viewportHeight) {
+    const width = Math.max(320, Number(viewportWidth) || 320);
+    const height = Math.max(480, Number(viewportHeight) || 480);
+    if (Number(index) === 0) {
+      const shapes = getLegacyWallpaperShapes(width, height);
+      return {
+        index: 0,
+        width,
+        height,
+        signature: `legacy-${Math.round(width)}-${Math.round(height)}`,
+        shapes
+      };
+    }
+    const widthBucket = Math.round(width / 120);
+    const random = createWallpaperRandom(hashWallpaperSeed(index, widthBucket));
+    const count = width <= 480 ? 5 : width <= 768 ? 6 : 9;
+    const composition = WALLPAPER_COMPOSITIONS[
+      hashWallpaperSeed(index, 0x434f4d50) % WALLPAPER_COMPOSITIONS.length
+    ];
+    const shufflePositions = positions => {
+      const shuffled = positions.slice();
+      for (let current = shuffled.length - 1; current > 0; current -= 1) {
+        const next = Math.floor(random() * (current + 1));
+        [shuffled[current], shuffled[next]] = [shuffled[next], shuffled[current]];
+      }
+      return shuffled;
+    };
+    // Narrow bands deliberately sample every vertical third. Taking the first
+    // five grid cells would cluster mobile novelty near the top of each screen.
+    const mobilePositions = [
+      ...shufflePositions(composition.filter(position => position[1] < 0.34)).slice(0, 2),
+      ...shufflePositions(composition.filter(position => position[1] >= 0.34 && position[1] < 0.67)).slice(0, count - 4),
+      ...shufflePositions(composition.filter(position => position[1] >= 0.67)).slice(0, 2)
+    ];
+    const selectedPositions = width <= 768
+      ? shufflePositions(mobilePositions)
+      : composition.slice(0, count);
+    const typeDeck = WALLPAPER_SHAPE_TYPES.slice();
+    for (let current = typeDeck.length - 1; current > 0; current -= 1) {
+      const next = Math.floor(random() * (current + 1));
+      [typeDeck[current], typeDeck[next]] = [typeDeck[next], typeDeck[current]];
+    }
+    const shapes = [];
+    for (let positionIndex = 0; positionIndex < count; positionIndex += 1) {
+      const type = typeDeck[positionIndex];
+      const position = selectedPositions[positionIndex];
+      const signatureSize = width <= 480 ? 132 + random() * 24 : 176 + random() * 48;
+      let size = positionIndex === 0
+        ? signatureSize
+        : width <= 480
+          ? 58 + random() * 58
+          : 76 + random() * 74;
+      let [shapeWidth, shapeHeight] = getWallpaperShapeDimensions(type, size);
+      const jitterX = (random() - 0.5) * Math.min(42, width * 0.055);
+      const jitterY = (random() - 0.5) * Math.min(52, height * 0.075);
+      let x = position[0] * width + jitterX;
+      let y = position[1] * height + jitterY;
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        const overlaps = shapes.some(existing => {
+          const distance = Math.hypot(existing.x - x, existing.y - y);
+          const existingRadius = Math.max(existing.width, existing.height) * 0.38;
+          const nextRadius = Math.max(shapeWidth, shapeHeight) * 0.38;
+          return distance < (existingRadius + nextRadius) * 0.72;
+        });
+        if (!overlaps) break;
+        size *= 0.84;
+        [shapeWidth, shapeHeight] = getWallpaperShapeDimensions(type, size);
+      }
+      x = clampWallpaperValue(x, shapeWidth / 2 + 8, width - shapeWidth / 2 - 8);
+      y = clampWallpaperValue(y, shapeHeight / 2 + 8, height - shapeHeight / 2 - 8);
+      const palette = sampleWallpaperPalette(Number(index) + y / height);
+      const colorIndex = hashWallpaperSeed(index, positionIndex * 97) % palette.accents.length;
+      const compatiblePattern = !['ring', 'arc', 'frame'].includes(type);
+      let pattern = compatiblePattern && random() < 0.36
+        ? WALLPAPER_PATTERNS[1 + Math.floor(random() * (WALLPAPER_PATTERNS.length - 1))]
+        : 'solid';
+      if (type === 'capsule') pattern = 'stripes';
+      if (type === 'checker') pattern = 'checker';
+      if (type === 'domino') pattern = 'dots';
+      shapes.push({
+        type,
+        pattern,
+        x,
+        y,
+        width: shapeWidth,
+        height: shapeHeight,
+        rotation: Math.round((random() - 0.5) * 34),
+        fill: palette.accents[colorIndex].css,
+        alt: (random() < 0.52 ? palette.cream : palette.accents[(colorIndex + 2) % palette.accents.length]).css,
+        shadow: '#131313'
+      });
+    }
+    return {
+      index: Number(index),
+      width,
+      height,
+      signature: `${index}-${widthBucket}-${shapes.map(shape => `${shape.type}:${Math.round(shape.x)}:${Math.round(shape.y)}`).join('|')}`,
+      shapes
+    };
   }
 
   // Delimiter parsing uses two custom modes:
@@ -3135,6 +3569,297 @@
     }
   }
 
+  // ======== Procedural wallpaper renderer ========
+
+  function isWallpaperBackgroundTarget(target, area) {
+    if (!area || !target) return false;
+    const element = target.nodeType === 1 ? target : target.parentElement;
+    if (!element || (element !== area && !area.contains(element))) return false;
+    return !element.closest('.app-window, #menu-bar, .menu-dropdown, button, input, textarea, select, iframe');
+  }
+
+  function setWallpaperTexture(element, texture) {
+    if (!element) return;
+    WALLPAPER_TEXTURES.forEach(name => element.classList.remove(`texture-${name}`));
+    element.classList.add(`texture-${texture}`);
+    element.dataset.texture = texture;
+  }
+
+  function getWallpaperTextureDrift(worldPixels, texture) {
+    const recipes = {
+      weave: { speed: 0.08, period: 96 },
+      'micro-check': { speed: 0.0625, period: 96 },
+      scanline: { speed: 0.05, period: 85 },
+      hatch: { speed: 0.071, period: 81 },
+      basket: { speed: 0.056, period: 90 },
+      stipple: { speed: 0.043, period: 713 }
+    };
+    const recipe = recipes[texture] || recipes.weave;
+    return -positiveModulo(worldPixels * recipe.speed, recipe.period);
+  }
+
+  function createProceduralWallpaperShape(descriptor) {
+    const element = document.createElement('span');
+    element.className = 'confetti-shape procedural-confetti';
+    element.dataset.shape = descriptor.type;
+    element.dataset.pattern = descriptor.pattern;
+    element.style.setProperty('--shape-x', `${descriptor.x.toFixed(2)}px`);
+    element.style.setProperty('--shape-y', `${descriptor.y.toFixed(2)}px`);
+    element.style.setProperty('--shape-width', `${descriptor.width.toFixed(2)}px`);
+    element.style.setProperty('--shape-height', `${descriptor.height.toFixed(2)}px`);
+    element.style.setProperty('--shape-rotation', `${descriptor.rotation}deg`);
+    element.style.setProperty('--shape-fill', descriptor.fill);
+    element.style.setProperty('--shape-alt', descriptor.alt);
+    element.style.setProperty('--shape-shadow', descriptor.shadow);
+    return element;
+  }
+
+  function renderWallpaperBand(element, bandIndex, width, height) {
+    const descriptor = buildWallpaperBand(bandIndex, width, height);
+    const fragment = document.createDocumentFragment();
+    descriptor.shapes.forEach(shape => fragment.appendChild(createProceduralWallpaperShape(shape)));
+    element.replaceChildren(fragment);
+    element.dataset.bandIndex = String(bandIndex);
+    element.dataset.signature = descriptor.signature;
+    element.style.height = `${height}px`;
+  }
+
+  function updateWallpaperBackdrop(state) {
+    const worldScreens = state.band + state.offset / state.bandHeight;
+    const palette = sampleWallpaperPalette(worldScreens);
+    const lowerPalette = sampleWallpaperPalette(worldScreens + 1);
+    const reveal = smoothWallpaperStep(Math.min(1, Math.abs(worldScreens) / 0.42));
+    state.backdrop.style.background = `linear-gradient(180deg, ${palette.background.css} 0%, ${palette.backgroundLower.css} 52%, ${lowerPalette.background.css} 100%)`;
+    state.backdrop.style.opacity = String(reveal);
+    setWallpaperTexture(state.textureA, palette.texture);
+    setWallpaperTexture(state.textureB, palette.nextTexture);
+    state.textureA.style.opacity = String(reveal * (1 - palette.textureMix));
+    state.textureB.style.opacity = String(reveal * palette.textureMix);
+    // World-space phases remain attached to a texture recipe when local band
+    // offset wraps or a next-chapter layer becomes the current layer.
+    const worldPixels = state.band * state.bandHeight + state.offset;
+    state.textureA.style.backgroundPositionY = `${getWallpaperTextureDrift(worldPixels, palette.texture)}px`;
+    state.textureB.style.backgroundPositionY = `${getWallpaperTextureDrift(worldPixels, palette.nextTexture)}px`;
+    state.root.dataset.wallpaperTheme = palette.signature;
+  }
+
+  // The pool always covers one band above through two bands below the camera.
+  // Reassigning those same elements keeps memory and DOM size constant forever.
+  function renderWallpaperScene(state) {
+    const firstIndex = state.band - 1;
+    const activeIndices = [firstIndex, firstIndex + 1, firstIndex + 2, firstIndex + 3];
+    const originRelativeY = -state.band * state.bandHeight - state.offset;
+    const originIsNearby = activeIndices.includes(0);
+    state.originBand.hidden = !originIsNearby;
+    if (originIsNearby) {
+      state.originBand.style.height = `${state.bandHeight}px`;
+      state.originBand.style.transform = `translate3d(0, ${originRelativeY.toFixed(2)}px, 0)`;
+    }
+    const generatedIndices = activeIndices.filter(index => index !== 0);
+    state.pool.forEach((bandElement, poolIndex) => {
+      const bandIndex = generatedIndices[poolIndex];
+      if (!Number.isFinite(bandIndex)) {
+        bandElement.hidden = true;
+        return;
+      }
+      bandElement.hidden = false;
+      if (
+        bandElement.dataset.bandIndex !== String(bandIndex) ||
+        bandElement.dataset.width !== String(state.width) ||
+        bandElement.dataset.height !== String(state.bandHeight)
+      ) {
+        renderWallpaperBand(bandElement, bandIndex, state.width, state.bandHeight);
+        bandElement.dataset.width = String(state.width);
+        bandElement.dataset.height = String(state.bandHeight);
+      }
+      const relativeY = (bandIndex - state.band) * state.bandHeight - state.offset;
+      bandElement.style.transform = `translate3d(0, ${relativeY.toFixed(2)}px, 0)`;
+    });
+    updateWallpaperBackdrop(state);
+    state.root.dataset.wallpaperBand = String(state.band);
+    state.root.dataset.wallpaperOffset = state.offset.toFixed(2);
+    state.root.dataset.wallpaperScene = `${state.band}:${Math.round(state.offset)}:${state.root.dataset.wallpaperTheme}`;
+    state.root.dataset.wallpaperPoolSize = String(state.pool.length);
+  }
+
+  function advanceWallpaperState(state, delta) {
+    const normalized = normalizeWallpaperPosition(
+      state.band,
+      state.offset + delta,
+      state.bandHeight
+    );
+    state.band = normalized.band;
+    state.offset = normalized.offset;
+  }
+
+  function queueWallpaperInput(state) {
+    if (state.frameQueued) return;
+    state.frameQueued = true;
+    const schedule = typeof window.requestAnimationFrame === 'function'
+      ? window.requestAnimationFrame.bind(window)
+      : callback => callback();
+    schedule(() => {
+      state.frameQueued = false;
+      const delta = state.pendingDelta;
+      state.pendingDelta = 0;
+      if (!delta) return;
+      advanceWallpaperState(state, delta);
+      renderWallpaperScene(state);
+    });
+  }
+
+  function resizeProceduralWallpaper(state) {
+    const bounds = state.area.getBoundingClientRect();
+    const width = Math.max(320, Math.round(bounds.width || window.innerWidth || 320));
+    const height = Math.max(
+      480,
+      Math.round(bounds.height || (window.innerHeight || 720) - bounds.top)
+    );
+    if (state.width === width && state.bandHeight === height) return;
+    if (state.bandHeight) {
+      const screenPosition = state.band + state.offset / state.bandHeight;
+      state.band = Math.floor(screenPosition);
+      state.offset = positiveModulo(screenPosition, 1) * height;
+    }
+    state.width = width;
+    state.bandHeight = height;
+    renderWallpaperScene(state);
+  }
+
+  function queueWallpaperResize(state) {
+    if (state.resizeQueued) return;
+    state.resizeQueued = true;
+    const schedule = typeof window.requestAnimationFrame === 'function'
+      ? window.requestAnimationFrame.bind(window)
+      : callback => callback();
+    schedule(() => {
+      state.resizeQueued = false;
+      resizeProceduralWallpaper(state);
+    });
+  }
+
+  function setupProceduralWallpaper() {
+    const root = document.querySelector('.desktop-confetti');
+    const area = document.getElementById('window-area');
+    const world = root?.querySelector('.confetti-world');
+    const originBand = root?.querySelector('.confetti-origin-band');
+    const backdrop = root?.querySelector('.confetti-backdrop');
+    const textureA = root?.querySelector('.confetti-texture-a');
+    const textureB = root?.querySelector('.confetti-texture-b');
+    if (!root || !area || !world || !originBand || !backdrop || !textureA || !textureB) return null;
+    if (root.__proceduralWallpaperState) return root.__proceduralWallpaperState;
+    const pool = Array.from({ length: 4 }, () => {
+      const band = document.createElement('div');
+      band.className = 'confetti-band procedural-confetti-band';
+      band.setAttribute('aria-hidden', 'true');
+      world.appendChild(band);
+      return band;
+    });
+    const state = {
+      root,
+      area,
+      world,
+      originBand,
+      backdrop,
+      textureA,
+      textureB,
+      pool,
+      width: 0,
+      bandHeight: 0,
+      band: 0,
+      offset: 0,
+      pendingDelta: 0,
+      frameQueued: false,
+      resizeQueued: false,
+      touchId: null,
+      touchX: 0,
+      touchY: 0,
+      touchStartX: 0,
+      touchStartY: 0,
+      touchClaimed: false
+    };
+    root.__proceduralWallpaperState = state;
+    root.classList.add('is-procedural');
+    root.dataset.wallpaperReady = 'true';
+    root.dataset.wallpaperSeed = String(WALLPAPER_SEED);
+    resizeProceduralWallpaper(state);
+
+    area.addEventListener('wheel', event => {
+      if (event.ctrlKey || event.metaKey || !isWallpaperBackgroundTarget(event.target, area)) return;
+      const delta = normalizeWallpaperWheelDelta(event, state.bandHeight);
+      if (!delta) return;
+      event.preventDefault();
+      state.pendingDelta += delta;
+      queueWallpaperInput(state);
+    }, { passive: false });
+
+    // Touch panning is claimed only when the gesture begins on bare wallpaper;
+    // controls and the three existing window scroll regions remain untouched.
+    area.addEventListener('touchstart', event => {
+      if (!isWallpaperBackgroundTarget(event.target, area)) return;
+      if (event.touches?.length !== 1) {
+        state.touchId = null;
+        state.touchClaimed = false;
+        return;
+      }
+      const touch = event.changedTouches?.[0];
+      if (!touch) return;
+      state.touchId = touch.identifier;
+      state.touchX = touch.clientX;
+      state.touchY = touch.clientY;
+      state.touchStartX = touch.clientX;
+      state.touchStartY = touch.clientY;
+      state.touchClaimed = false;
+    }, { passive: false });
+    area.addEventListener('touchmove', event => {
+      if (state.touchId == null) return;
+      if (event.touches?.length !== 1) {
+        state.touchId = null;
+        state.touchClaimed = false;
+        return;
+      }
+      const touch = Array.from(event.touches || []).find(item => item.identifier === state.touchId);
+      if (!touch) return;
+      const totalX = touch.clientX - state.touchStartX;
+      const totalY = touch.clientY - state.touchStartY;
+      if (!state.touchClaimed) {
+        if (Math.abs(totalY) < 8) return;
+        if (Math.abs(totalX) > Math.abs(totalY) * 0.9) {
+          state.touchId = null;
+          return;
+        }
+        state.touchClaimed = true;
+      }
+      const delta = state.touchY - touch.clientY;
+      state.touchX = touch.clientX;
+      state.touchY = touch.clientY;
+      event.preventDefault();
+      advanceWallpaperState(state, delta);
+      renderWallpaperScene(state);
+    }, { passive: false });
+    const endTouch = event => {
+      if (state.touchId == null) return;
+      const ended = Array.from(event.changedTouches || []).some(item => item.identifier === state.touchId);
+      if (ended) {
+        state.touchId = null;
+        state.touchClaimed = false;
+      }
+    };
+    area.addEventListener('touchend', endTouch);
+    area.addEventListener('touchcancel', endTouch);
+    window.addEventListener('resize', () => queueWallpaperResize(state));
+
+    const reduceMotion = typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)')
+      : null;
+    const syncMotionPreference = () => {
+      root.classList.toggle('reduce-motion', !!reduceMotion?.matches);
+    };
+    syncMotionPreference();
+    reduceMotion?.addEventListener?.('change', syncMotionPreference);
+    return state;
+  }
+
   const WINDOW_DEFS = {
     prompts: { templateId: 'window-prompts-template', label: 'Prompt Enhancer', icon: 'icon-prompts' },
     audio: { templateId: 'window-audio-template', label: 'Audio Interpolator', icon: 'icon-audio' },
@@ -3599,6 +4324,7 @@
     setupDelimiterControls(document);
     setupSizeControls(document);
     setupUIEvents();
+    setupProceduralWallpaper();
     setupWindowControls();
     setupWindowActivation();
     setupWindowDrag();
@@ -3639,6 +4365,15 @@
     exportMixState,
     applyMixState,
     appendMixState,
+    buildWallpaperBand,
+    sampleWallpaperPalette,
+    normalizeWallpaperPosition,
+    normalizeWallpaperWheelDelta,
+    getWallpaperTextureDrift,
+    contrastRatio,
+    isWallpaperBackgroundTarget,
+    setupProceduralWallpaper,
+    WALLPAPER_SHAPE_TYPES,
     generate
   };
 

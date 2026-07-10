@@ -22,4 +22,10 @@ describe('scrolling policy', () => {
     expect(bodyBlock?.[0]).toMatch(/overflow:\s*hidden;/);
     expect(htmlBlock?.[0]).toMatch(/overflow:\s*hidden;/);
   });
+
+  test('procedural wallpaper travel stays virtual and pointer-inert', () => {
+    const wallpaperBlock = css.match(/\.desktop-confetti\s*\{[\s\S]*?\}/);
+    expect(wallpaperBlock?.[0]).toMatch(/overflow:\s*hidden;/);
+    expect(wallpaperBlock?.[0]).toMatch(/pointer-events:\s*none;/);
+  });
 });

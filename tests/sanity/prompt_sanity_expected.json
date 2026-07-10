@@ -349,6 +349,24 @@
       "focusedWindowInstance": "prompts-1"
     },
     {
+      "id": "procedural_wallpaper_background_scroll",
+      "output": "",
+      "wallpaperMoved": true,
+      "wallpaperSceneChanged": true,
+      "wallpaperThemeChanged": true,
+      "wallpaperPoolStable": true,
+      "wallpaperOffsetFinite": true
+    },
+    {
+      "id": "window_wheel_does_not_scroll_wallpaper",
+      "output": "",
+      "wallpaperMoved": false,
+      "wallpaperSceneChanged": false,
+      "wallpaperThemeChanged": false,
+      "wallpaperPoolStable": true,
+      "wallpaperOffsetFinite": true
+    },
+    {
       "id": "dropout_mix_reaches_tail_chunks",
       "output": "a6 b6 a7 b7 a8 b8 ",
       "lengthMode": "dropout"

@@ -2966,6 +2966,33 @@
       ]
     },
     {
+      "id": "procedural_wallpaper_background_scroll",
+      "description": "Repeated wheel movement over bare desktop space advances the procedural scene and theme without growing its rendering pool.",
+      "random": 0,
+      "actions": [
+        {
+          "type": "scrollWallpaper",
+          "target": "background",
+          "deltaY": 900,
+          "repeat": 5
+        }
+      ]
+    },
+    {
+      "id": "window_wheel_does_not_scroll_wallpaper",
+      "description": "Wheel movement inside a Prompt Enhancer body remains isolated from the decorative wallpaper world.",
+      "random": 0,
+      "actions": [
+        "openPromptsWindow",
+        {
+          "type": "scrollWallpaper",
+          "target": "window",
+          "deltaY": 1800,
+          "repeat": 3
+        }
+      ]
+    },
+    {
       "id": "dropout_mix_reaches_tail_chunks",
       "description": "Dropout uses a full canonical one-pass source so late chunks can survive removals.",
       "random": 0,

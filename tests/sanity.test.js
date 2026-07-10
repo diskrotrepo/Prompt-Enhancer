@@ -23,6 +23,13 @@ function runSanityCase(testCase) {
 
   if (window.localStorage) window.localStorage.clear();
   window.alert = () => {};
+  // Wallpaper renders are event-driven; execute their single queued frame now
+  // so fixture observations describe the state produced by each wheel action.
+  window.requestAnimationFrame = callback => {
+    callback(0);
+    return 1;
+  };
+  window.cancelAnimationFrame = () => {};
 
   // Capture downloads + prompts + clipboard to validate non-output behaviors.
   if (!window.URL) window.URL = {};
@@ -124,6 +131,43 @@ function runSanityCase(testCase) {
     if (type === 'openPromptsWindow') {
       const menuItem = window.document.querySelector('.menu-item[data-window=\"prompts\"]');
       if (menuItem) menuItem.click();
+      return;
+    }
+    if (type === 'scrollWallpaper') {
+      if (!actionResults) return;
+      const wallpaper = window.document.querySelector('.desktop-confetti');
+      const target = normalized.target === 'window'
+        ? window.document.querySelector(
+            '.app-window:not(.window-template) .prompt-body, .app-window:not(.window-template) > .box-body'
+          )
+        : window.document.getElementById('window-area');
+      if (!wallpaper || !target) return;
+      const readState = () => ({
+        band: Number(wallpaper.dataset.wallpaperBand),
+        offset: Number(wallpaper.dataset.wallpaperOffset),
+        scene: wallpaper.dataset.wallpaperScene || '',
+        theme: wallpaper.dataset.wallpaperTheme || '',
+        poolSize: Number(wallpaper.dataset.wallpaperPoolSize)
+      });
+      const before = readState();
+      const repeat = Math.max(1, Math.floor(Number(normalized.repeat) || 1));
+      for (let index = 0; index < repeat; index += 1) {
+        const wheel = new window.Event('wheel', { bubbles: true, cancelable: true });
+        Object.defineProperties(wheel, {
+          deltaY: { value: Number(normalized.deltaY) || 0 },
+          deltaMode: { value: Number(normalized.deltaMode) || 0 }
+        });
+        target.dispatchEvent(wheel);
+      }
+      const after = readState();
+      actionResults.wallpaperMoved =
+        after.band !== before.band || after.offset !== before.offset;
+      actionResults.wallpaperSceneChanged = after.scene !== before.scene;
+      actionResults.wallpaperThemeChanged = after.theme !== before.theme;
+      actionResults.wallpaperPoolStable =
+        Number.isFinite(before.poolSize) && after.poolSize === before.poolSize;
+      actionResults.wallpaperOffsetFinite =
+        Number.isFinite(after.band) && Number.isFinite(after.offset);
       return;
     }
     if (type === 'activateFirstPromptBody') {
@@ -251,7 +295,15 @@ function runSanityCase(testCase) {
   // evaluation behavior (state hydration can consume random values for colors).
   setDeterministicRandom();
   window.PromptMixer.generate(root);
-  const actionResults = { mixCopiedText: '', chunkCopiedText: '' };
+  const actionResults = {
+    mixCopiedText: '',
+    chunkCopiedText: '',
+    wallpaperMoved: false,
+    wallpaperSceneChanged: false,
+    wallpaperThemeChanged: false,
+    wallpaperPoolStable: false,
+    wallpaperOffsetFinite: false
+  };
   // Run post-generate actions (copy, menu saves) so outputs are available.
   postActions.forEach(action => runAction(action, root, actionResults));
 
@@ -345,6 +397,11 @@ function runSanityCase(testCase) {
     hasOpenRouterEncryptedSettingsControls,
     hasOpenRouterHelpMode,
     hasOpenRouterSharedCopyControl,
+    wallpaperMoved: actionResults.wallpaperMoved,
+    wallpaperSceneChanged: actionResults.wallpaperSceneChanged,
+    wallpaperThemeChanged: actionResults.wallpaperThemeChanged,
+    wallpaperPoolStable: actionResults.wallpaperPoolStable,
+    wallpaperOffsetFinite: actionResults.wallpaperOffsetFinite,
     mixCopiedText: actionResults.mixCopiedText,
     chunkCopiedText: actionResults.chunkCopiedText,
     promptCount,
@@ -467,6 +524,21 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'hasOpenRouterEncryptedSettingsControls')) {
         expect(result.hasOpenRouterEncryptedSettingsControls).toBe(expected.hasOpenRouterEncryptedSettingsControls);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'wallpaperMoved')) {
+        expect(result.wallpaperMoved).toBe(expected.wallpaperMoved);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'wallpaperSceneChanged')) {
+        expect(result.wallpaperSceneChanged).toBe(expected.wallpaperSceneChanged);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'wallpaperThemeChanged')) {
+        expect(result.wallpaperThemeChanged).toBe(expected.wallpaperThemeChanged);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'wallpaperPoolStable')) {
+        expect(result.wallpaperPoolStable).toBe(expected.wallpaperPoolStable);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'wallpaperOffsetFinite')) {
+        expect(result.wallpaperOffsetFinite).toBe(expected.wallpaperOffsetFinite);
       }
     });
   });

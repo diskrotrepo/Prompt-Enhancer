@@ -116,11 +116,11 @@ silver face so custom hues stay coherent with the theme.
 
 ### Windows 3.1 Theme
 
-`style.css` implements a coherent retro theme: a sparse large-shape 90s
-confetti field over teal, silver (`--w31-face`) window faces, beveled buttons,
-sunken white input fields, and flat colored box headers (warm hues for mixes,
-pink/purple for strings, teal for variables and Completion output). Key rules
-for future changes:
+`style.css` implements a coherent retro theme: a sparse procedural field of
+large 90s confetti over a gradually changing textured ground, silver
+(`--w31-face`) window faces, beveled buttons, sunken white input fields, and
+flat colored box headers (warm hues for mixes, pink/purple for strings, teal
+for variables and Completion output). Key rules for future changes:
 
 - All palette values and bevel recipes live as custom properties in `:root`
   (`--w31-*`, `--bevel-up`, `--bevel-down`, `--bevel-field`, `--etched`).
@@ -133,11 +133,20 @@ for future changes:
 - Scrolling policy is enforced by `tests/scrolling.test.js`: exactly three
   `overflow: auto;` declarations (the window body selectors plus
   `.prompt-body`). Any new inner scroll region must use `overflow-y: auto;`.
+  The wallpaper simulates endless travel with a virtual world offset; it must
+  not make the page or decorative layer into another native scroll region.
 - Primary actions (`.holo-generate`, `.openrouter-send`) share the beveled
   slab + pixel font + rainbow strip treatment; keep new CTAs consistent.
-- Wallpaper accents live in the shared `--w31-confetti-*` palette. Keep shapes
+- Wallpaper accents start from the shared `--w31-confetti-*` palette, while
+  procedural backdrop and shape colors stay scoped to `.desktop-confetti` so
+  the yolk mark and CTA strips do not drift with the wallpaper. Keep shapes
   large, sparse, pointer-inert, and behind `#window-area`; prefer CSS geometry
   over image assets so the desktop stays crisp at every viewport.
+- Procedural wallpaper bands are deterministic by world index, recycle a
+  bounded visible pool, and preserve spatial continuity when users reverse
+  direction. Wheel input advances the wallpaper only from bare desktop space;
+  app-window scrolling must remain native and isolated. Palette and texture
+  samples should vary continuously rather than snapping at band boundaries.
 - Help mode uses the WinHelp-style yellow tooltip (`--w31-tooltip`).
 - App file strips share `.prompt-menu` and a right-side Help control. Workspace
   canvases meet that strip directly: keep the outer prompt `.box-body` at

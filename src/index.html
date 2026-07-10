@@ -66,18 +66,25 @@
             </div>
             <div id="taskbar" class="taskbar"></div>
           </div>
-          <!-- Large, pointer-inert Memphis shapes turn the teal desktop into a
-               restrained 90s confetti field without competing with app windows. -->
+          <!-- The first band keeps the exact original Memphis composition as a
+               no-script fallback and as the anchor of the endless procedural world. -->
           <div class="desktop-confetti" aria-hidden="true">
-            <span class="confetti-shape confetti-disc"></span>
-            <span class="confetti-shape confetti-ring"></span>
-            <span class="confetti-shape confetti-bar"></span>
-            <span class="confetti-shape confetti-diamond"></span>
-            <span class="confetti-shape confetti-triangle"></span>
-            <span class="confetti-shape confetti-zigzag"></span>
-            <span class="confetti-shape confetti-capsule"></span>
-            <span class="confetti-shape confetti-checker"></span>
-            <span class="confetti-shape confetti-arc"></span>
+            <div class="confetti-backdrop"></div>
+            <div class="confetti-texture confetti-texture-a"></div>
+            <div class="confetti-texture confetti-texture-b"></div>
+            <div class="confetti-world">
+              <div class="confetti-band confetti-origin-band" data-band-index="0">
+                <span class="confetti-shape confetti-disc"></span>
+                <span class="confetti-shape confetti-ring"></span>
+                <span class="confetti-shape confetti-bar"></span>
+                <span class="confetti-shape confetti-diamond"></span>
+                <span class="confetti-shape confetti-triangle"></span>
+                <span class="confetti-shape confetti-zigzag"></span>
+                <span class="confetti-shape confetti-capsule"></span>
+                <span class="confetti-shape confetti-checker"></span>
+                <span class="confetti-shape confetti-arc"></span>
+              </div>
+            </div>
           </div>
           <div id="window-area">
             <div id="window-prompts-template" class="window-shell box-shell app-window prompt-window window-template" data-template="prompts">
