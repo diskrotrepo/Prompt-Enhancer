@@ -170,6 +170,75 @@ function runSanityCase(testCase) {
         Number.isFinite(after.band) && Number.isFinite(after.offset);
       return;
     }
+    if (type === 'flingWallpaper') {
+      if (!actionResults) return;
+      const wallpaper = window.document.querySelector('.desktop-confetti');
+      const area = window.document.getElementById('window-area');
+      if (!wallpaper || !area) return;
+      const readState = () => ({
+        band: Number(wallpaper.dataset.wallpaperBand),
+        offset: Number(wallpaper.dataset.wallpaperOffset),
+        scene: wallpaper.dataset.wallpaperScene || '',
+        poolSize: Number(wallpaper.dataset.wallpaperPoolSize),
+        momentum: wallpaper.dataset.wallpaperMomentum || ''
+      });
+      const previousRequestFrame = window.requestAnimationFrame;
+      const previousCancelFrame = window.cancelAnimationFrame;
+      const frameQueue = [];
+      const canceledFrames = new Set();
+      let frameId = 0;
+      let frameTime = 0;
+      window.requestAnimationFrame = callback => {
+        frameId += 1;
+        frameQueue.push({ id: frameId, callback });
+        return frameId;
+      };
+      window.cancelAnimationFrame = id => canceledFrames.add(id);
+      const flushFrames = limit => {
+        let flushed = 0;
+        while (frameQueue.length && flushed < limit) {
+          const frame = frameQueue.shift();
+          if (canceledFrames.has(frame.id)) continue;
+          frameTime += 1000 / 60;
+          frame.callback(frameTime);
+          flushed += 1;
+        }
+      };
+      const dispatchTouch = (eventType, touches, changedTouches, timeStamp) => {
+        const touchEvent = new window.Event(eventType, { bubbles: true, cancelable: true });
+        Object.defineProperties(touchEvent, {
+          touches: { value: touches },
+          changedTouches: { value: changedTouches },
+          timeStamp: { value: timeStamp }
+        });
+        area.dispatchEvent(touchEvent);
+      };
+      const before = readState();
+      const start = { identifier: 41, clientX: 180, clientY: 620 };
+      const firstMove = { identifier: 41, clientX: 180, clientY: 530 };
+      const secondMove = { identifier: 41, clientX: 180, clientY: 440 };
+      dispatchTouch('touchstart', [start], [start], 100);
+      dispatchTouch('touchmove', [firstMove], [firstMove], 116);
+      dispatchTouch('touchmove', [secondMove], [secondMove], 132);
+      const afterDrag = readState();
+      dispatchTouch('touchend', [], [secondMove], 148);
+      const released = readState();
+      flushFrames(1);
+      const afterReleaseFrame = readState();
+      flushFrames(180);
+      const settled = readState();
+      window.requestAnimationFrame = previousRequestFrame;
+      window.cancelAnimationFrame = previousCancelFrame;
+      actionResults.wallpaperMoved =
+        settled.band !== before.band || settled.offset !== before.offset;
+      actionResults.wallpaperMomentumContinued =
+        released.momentum === 'active' && afterReleaseFrame.scene !== afterDrag.scene;
+      actionResults.wallpaperMomentumSettled = settled.momentum === 'idle';
+      actionResults.wallpaperPoolStable = settled.poolSize === before.poolSize;
+      actionResults.wallpaperOffsetFinite =
+        Number.isFinite(settled.band) && Number.isFinite(settled.offset);
+      return;
+    }
     if (type === 'activateFirstPromptBody') {
       const body = window.document.querySelector(
         '.app-window[data-window=\"prompts\"]:not(.window-template) .prompt-body'
@@ -302,7 +371,9 @@ function runSanityCase(testCase) {
     wallpaperSceneChanged: false,
     wallpaperThemeChanged: false,
     wallpaperPoolStable: false,
-    wallpaperOffsetFinite: false
+    wallpaperOffsetFinite: false,
+    wallpaperMomentumContinued: false,
+    wallpaperMomentumSettled: false
   };
   // Run post-generate actions (copy, menu saves) so outputs are available.
   postActions.forEach(action => runAction(action, root, actionResults));
@@ -402,6 +473,8 @@ function runSanityCase(testCase) {
     wallpaperThemeChanged: actionResults.wallpaperThemeChanged,
     wallpaperPoolStable: actionResults.wallpaperPoolStable,
     wallpaperOffsetFinite: actionResults.wallpaperOffsetFinite,
+    wallpaperMomentumContinued: actionResults.wallpaperMomentumContinued,
+    wallpaperMomentumSettled: actionResults.wallpaperMomentumSettled,
     mixCopiedText: actionResults.mixCopiedText,
     chunkCopiedText: actionResults.chunkCopiedText,
     promptCount,
@@ -539,6 +612,12 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'wallpaperOffsetFinite')) {
         expect(result.wallpaperOffsetFinite).toBe(expected.wallpaperOffsetFinite);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'wallpaperMomentumContinued')) {
+        expect(result.wallpaperMomentumContinued).toBe(expected.wallpaperMomentumContinued);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'wallpaperMomentumSettled')) {
+        expect(result.wallpaperMomentumSettled).toBe(expected.wallpaperMomentumSettled);
       }
     });
   });

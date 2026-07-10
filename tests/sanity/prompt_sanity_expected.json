@@ -367,6 +367,15 @@
       "wallpaperOffsetFinite": true
     },
     {
+      "id": "mobile_wallpaper_touch_momentum",
+      "output": "",
+      "wallpaperMoved": true,
+      "wallpaperMomentumContinued": true,
+      "wallpaperMomentumSettled": true,
+      "wallpaperPoolStable": true,
+      "wallpaperOffsetFinite": true
+    },
+    {
       "id": "dropout_mix_reaches_tail_chunks",
       "output": "a6 b6 a7 b7 a8 b8 ",
       "lengthMode": "dropout"

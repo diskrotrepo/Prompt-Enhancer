@@ -7,7 +7,7 @@ This directory contains Jest test suites verifying functionality of the Prompt E
 - **Randomized Sequential Tests**: In addition to deterministic unit tests, create tests that simulate a full user session. Randomly perform a sequence of actions—load, generate, modify, save—and assert that no errors are thrown and the generated output remains valid. Run these sequences multiple times to explore edge cases.
 - **Toggle Map**: For complex option interactions, maintain a table mapping toggle combinations to their expected output. Drive parameterized tests from this table so each scenario is explicitly verified.
 - **Sanity Fixtures**: Keep the real-UI sanity regression in sync (`tests/sanity/`). Any behavior change must update both the input/expected JSON fixtures and the README Heuristic rule index.
-- **Procedural Wallpaper**: Keep deterministic world-model checks and bare-desktop wheel isolation in `wallpaper.test.js`. Assert stable signatures, bounded pool size, continuous palette parameters, and window-scroll isolation; leave subjective composition and texture balance to browser visual QA rather than brittle pixel snapshots.
+- **Procedural Wallpaper**: Keep deterministic world-model checks, bare-desktop wheel isolation, and mobile release-momentum coverage in `wallpaper.test.js`. Assert stable signatures, bounded pool size, continuous palette parameters, touch glide decay/cancellation, and window-scroll isolation; leave subjective composition and texture balance to browser visual QA rather than brittle pixel snapshots.
 
 Remember the **50% Rule**: incremental test improvements build long-term reliability.
 

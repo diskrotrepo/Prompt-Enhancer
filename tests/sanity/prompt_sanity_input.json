@@ -2993,6 +2993,16 @@
       ]
     },
     {
+      "id": "mobile_wallpaper_touch_momentum",
+      "description": "A quick single-finger background drag continues after release, decays to rest, and keeps the procedural band pool bounded.",
+      "random": 0,
+      "actions": [
+        {
+          "type": "flingWallpaper"
+        }
+      ]
+    },
+    {
       "id": "dropout_mix_reaches_tail_chunks",
       "description": "Dropout uses a full canonical one-pass source so late chunks can survive removals.",
       "random": 0,

@@ -31,20 +31,33 @@ const LEGACY_SHAPE_TYPES = [
   'arc'
 ];
 
-// Runtime harness: execute the real desktop shell while making its one-frame
-// wallpaper render deterministic and synchronous for interaction assertions.
-function setupDom() {
+// Runtime harness: most interactions render synchronously; momentum tests use
+// a controllable frame queue so release motion can be observed one step at a time.
+function setupDom(options = {}) {
   const html = fs.readFileSync(HTML_PATH, 'utf8');
   const dom = createDom(html, { runScripts: 'dangerously', url: 'http://localhost' });
   const { window } = dom;
   window.alert = () => {};
-  window.requestAnimationFrame = callback => {
-    callback(0);
-    return 1;
-  };
-  window.cancelAnimationFrame = () => {};
-  window.matchMedia = jest.fn(() => ({
-    matches: false,
+  let frameTime = 0;
+  let frameId = 0;
+  const frameQueue = [];
+  const canceledFrames = new Set();
+  if (options.queuedFrames) {
+    window.requestAnimationFrame = callback => {
+      frameId += 1;
+      frameQueue.push({ id: frameId, callback });
+      return frameId;
+    };
+    window.cancelAnimationFrame = id => canceledFrames.add(id);
+  } else {
+    window.requestAnimationFrame = callback => {
+      callback(0);
+      return 1;
+    };
+    window.cancelAnimationFrame = () => {};
+  }
+  window.matchMedia = jest.fn(query => ({
+    matches: options.reducedMotion === true && query.includes('prefers-reduced-motion'),
     addEventListener: () => {},
     removeEventListener: () => {}
   }));
@@ -52,7 +65,18 @@ function setupDom() {
   if (window.document.readyState === 'loading') {
     window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
   }
-  return { window };
+  const flushAnimationFrames = (limit = 1) => {
+    let flushed = 0;
+    while (frameQueue.length && flushed < limit) {
+      const frame = frameQueue.shift();
+      if (canceledFrames.has(frame.id)) continue;
+      frameTime += 1000 / 60;
+      frame.callback(frameTime);
+      flushed += 1;
+    }
+    return flushed;
+  };
+  return { window, flushAnimationFrames, frameQueue };
 }
 
 // Wheel helper models pixels, lines, and pages without depending on JSDOM's
@@ -67,6 +91,17 @@ function dispatchWheel(window, target, deltaY, deltaMode = 0) {
   return event;
 }
 
+function dispatchTouch(window, target, type, touches, changedTouches, timeStamp) {
+  const event = new window.Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperties(event, {
+    touches: { value: touches },
+    changedTouches: { value: changedTouches },
+    timeStamp: { value: timeStamp }
+  });
+  target.dispatchEvent(event);
+  return event;
+}
+
 function readWallpaperState(window) {
   const layer = window.document.querySelector('.desktop-confetti');
   return {
@@ -76,7 +111,9 @@ function readWallpaperState(window) {
     offset: Number(layer?.dataset.wallpaperOffset),
     scene: layer?.dataset.wallpaperScene || '',
     theme: layer?.dataset.wallpaperTheme || '',
-    poolSize: Number(layer?.dataset.wallpaperPoolSize)
+    poolSize: Number(layer?.dataset.wallpaperPoolSize),
+    momentum: layer?.dataset.wallpaperMomentum || '',
+    momentumVelocity: Number(layer?.dataset.wallpaperMomentumVelocity)
   };
 }
 
@@ -313,6 +350,59 @@ describe('Procedural wallpaper runtime', () => {
     expect(start.defaultPrevented).toBe(false);
     expect(move.defaultPrevented).toBe(false);
     expect(readWallpaperState(window)).toEqual(initial);
+  });
+
+  test('single-finger release carries sampled velocity into a decaying glide', () => {
+    const { window, flushAnimationFrames, frameQueue } = setupDom({ queuedFrames: true });
+    const area = window.document.getElementById('window-area');
+    const touchAt = (y, time) => ({ identifier: 7, clientX: 180, clientY: y, time });
+    const startTouch = touchAt(620, 100);
+    const firstMove = touchAt(535, 116);
+    const secondMove = touchAt(445, 132);
+    const endTouch = touchAt(445, 148);
+
+    dispatchTouch(window, area, 'touchstart', [startTouch], [startTouch], 100);
+    dispatchTouch(window, area, 'touchmove', [firstMove], [firstMove], 116);
+    dispatchTouch(window, area, 'touchmove', [secondMove], [secondMove], 132);
+    const afterDrag = readWallpaperState(window);
+    dispatchTouch(window, area, 'touchend', [], [endTouch], 148);
+    const released = readWallpaperState(window);
+
+    expect(released.momentum).toBe('active');
+    expect(Math.abs(released.momentumVelocity)).toBeGreaterThan(0.1);
+    expect(frameQueue.length).toBeGreaterThan(0);
+    flushAnimationFrames(1);
+    const afterReleaseFrame = readWallpaperState(window);
+    expect(afterReleaseFrame.scene).not.toBe(afterDrag.scene);
+
+    flushAnimationFrames(180);
+    const settled = readWallpaperState(window);
+    const bandHeight = settled.layer.__proceduralWallpaperState.bandHeight;
+    const afterDragWorld = afterDrag.band * bandHeight + afterDrag.offset;
+    const settledWorld = settled.band * bandHeight + settled.offset;
+    const glideDistance = settledWorld - afterDragWorld;
+    expect(settled.momentum).toBe('idle');
+    expect(settled.momentumVelocity).toBe(0);
+    expect(settled.scene).not.toBe(afterDrag.scene);
+    expect(settled.poolSize).toBe(afterDrag.poolSize);
+    expect(glideDistance).toBeGreaterThan(300);
+    expect(glideDistance).toBeLessThan(1200);
+  });
+
+  test('reduced motion keeps touch dragging direct and skips release momentum', () => {
+    const { window, frameQueue } = setupDom({ queuedFrames: true, reducedMotion: true });
+    const area = window.document.getElementById('window-area');
+    const start = { identifier: 9, clientX: 170, clientY: 560 };
+    const move = { identifier: 9, clientX: 170, clientY: 440 };
+
+    dispatchTouch(window, area, 'touchstart', [start], [start], 100);
+    dispatchTouch(window, area, 'touchmove', [move], [move], 116);
+    dispatchTouch(window, area, 'touchend', [], [move], 132);
+
+    const state = readWallpaperState(window);
+    expect(state.offset).toBeGreaterThan(0);
+    expect(state.momentum).toBe('idle');
+    expect(frameQueue.length).toBe(0);
   });
 
   test('long travel recycles one bounded pool while continuing to produce novelty', () => {

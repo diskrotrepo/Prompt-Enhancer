@@ -8,7 +8,7 @@
   // - Box evaluation
   // - Box creation + state serialization (hydrates custom size/length controls + append-save imports)
   // - UI helpers + event wiring
-  // - Procedural wallpaper rendering + background-only input
+  // - Procedural wallpaper rendering + background-only input + touch momentum
   // - Window management + app module hooks + shared Help
   // - Initialization
 
@@ -3692,6 +3692,81 @@
     state.offset = normalized.offset;
   }
 
+  const WALLPAPER_MOMENTUM_FRICTION = 0.94;
+  const WALLPAPER_MOMENTUM_MIN_VELOCITY = 0.025;
+  const WALLPAPER_MOMENTUM_MAX_VELOCITY = 3.2;
+
+  function getWallpaperEventTime(event) {
+    const eventTime = Number(event?.timeStamp);
+    if (Number.isFinite(eventTime) && eventTime > 0) return eventTime;
+    return typeof performance !== 'undefined' && typeof performance.now === 'function'
+      ? performance.now()
+      : Date.now();
+  }
+
+  function decayWallpaperMomentum(velocity, elapsed) {
+    const frameScale = Math.max(0, Number(elapsed) || 0) / (1000 / 60);
+    return velocity * Math.pow(WALLPAPER_MOMENTUM_FRICTION, frameScale);
+  }
+
+  function cancelWallpaperMomentum(state, clearVelocity = true) {
+    if (state.momentumFrame != null && typeof window.cancelAnimationFrame === 'function') {
+      window.cancelAnimationFrame(state.momentumFrame);
+    }
+    state.momentumFrame = null;
+    state.momentumLastTime = 0;
+    if (clearVelocity) state.touchVelocity = 0;
+    state.root.dataset.wallpaperMomentum = 'idle';
+    state.root.dataset.wallpaperMomentumVelocity = '0';
+  }
+
+  // A release glide integrates sampled finger velocity in world space. Friction
+  // is time-based, so 60 Hz and 120 Hz phones travel comparable distances.
+  function startWallpaperMomentum(state) {
+    const schedule = typeof window.requestAnimationFrame === 'function'
+      ? window.requestAnimationFrame.bind(window)
+      : null;
+    if (
+      !schedule ||
+      state.reduceMotion ||
+      Math.abs(state.touchVelocity) < WALLPAPER_MOMENTUM_MIN_VELOCITY
+    ) {
+      cancelWallpaperMomentum(state);
+      return;
+    }
+    const releaseVelocity = clampWallpaperValue(
+      state.touchVelocity,
+      -WALLPAPER_MOMENTUM_MAX_VELOCITY,
+      WALLPAPER_MOMENTUM_MAX_VELOCITY
+    );
+    cancelWallpaperMomentum(state, false);
+    state.touchVelocity = releaseVelocity;
+    state.root.dataset.wallpaperMomentum = 'active';
+    state.root.dataset.wallpaperMomentumVelocity = state.touchVelocity.toFixed(4);
+    const step = timestamp => {
+      state.momentumFrame = null;
+      if (state.reduceMotion) {
+        cancelWallpaperMomentum(state);
+        return;
+      }
+      const frameTime = Number.isFinite(timestamp) ? timestamp : getWallpaperEventTime();
+      const elapsed = state.momentumLastTime
+        ? clampWallpaperValue(frameTime - state.momentumLastTime, 8, 34)
+        : 1000 / 60;
+      state.momentumLastTime = frameTime;
+      advanceWallpaperState(state, state.touchVelocity * elapsed);
+      renderWallpaperScene(state);
+      state.touchVelocity = decayWallpaperMomentum(state.touchVelocity, elapsed);
+      state.root.dataset.wallpaperMomentumVelocity = state.touchVelocity.toFixed(4);
+      if (Math.abs(state.touchVelocity) < WALLPAPER_MOMENTUM_MIN_VELOCITY) {
+        cancelWallpaperMomentum(state);
+        return;
+      }
+      state.momentumFrame = schedule(step);
+    };
+    state.momentumFrame = schedule(step);
+  }
+
   function queueWallpaperInput(state) {
     if (state.frameQueued) return;
     state.frameQueued = true;
@@ -3776,15 +3851,23 @@
       touchY: 0,
       touchStartX: 0,
       touchStartY: 0,
-      touchClaimed: false
+      touchClaimed: false,
+      touchVelocity: 0,
+      touchLastTime: 0,
+      momentumFrame: null,
+      momentumLastTime: 0,
+      reduceMotion: false
     };
     root.__proceduralWallpaperState = state;
     root.classList.add('is-procedural');
     root.dataset.wallpaperReady = 'true';
     root.dataset.wallpaperSeed = String(WALLPAPER_SEED);
+    root.dataset.wallpaperMomentum = 'idle';
+    root.dataset.wallpaperMomentumVelocity = '0';
     resizeProceduralWallpaper(state);
 
     area.addEventListener('wheel', event => {
+      cancelWallpaperMomentum(state);
       if (event.ctrlKey || event.metaKey || !isWallpaperBackgroundTarget(event.target, area)) return;
       const delta = normalizeWallpaperWheelDelta(event, state.bandHeight);
       if (!delta) return;
@@ -3795,7 +3878,9 @@
 
     // Touch panning is claimed only when the gesture begins on bare wallpaper;
     // controls and the three existing window scroll regions remain untouched.
+    // A new contact also stops any prior glide before choosing its next target.
     area.addEventListener('touchstart', event => {
+      cancelWallpaperMomentum(state);
       if (!isWallpaperBackgroundTarget(event.target, area)) return;
       if (event.touches?.length !== 1) {
         state.touchId = null;
@@ -3810,10 +3895,13 @@
       state.touchStartX = touch.clientX;
       state.touchStartY = touch.clientY;
       state.touchClaimed = false;
+      state.touchVelocity = 0;
+      state.touchLastTime = getWallpaperEventTime(event);
     }, { passive: false });
     area.addEventListener('touchmove', event => {
       if (state.touchId == null) return;
       if (event.touches?.length !== 1) {
+        cancelWallpaperMomentum(state);
         state.touchId = null;
         state.touchClaimed = false;
         return;
@@ -3825,38 +3913,66 @@
       if (!state.touchClaimed) {
         if (Math.abs(totalY) < 8) return;
         if (Math.abs(totalX) > Math.abs(totalY) * 0.9) {
+          cancelWallpaperMomentum(state);
           state.touchId = null;
           return;
         }
         state.touchClaimed = true;
       }
       const delta = state.touchY - touch.clientY;
+      const moveTime = getWallpaperEventTime(event);
+      const elapsed = clampWallpaperValue(moveTime - state.touchLastTime, 4, 48);
+      const measuredVelocity = delta / elapsed;
+      state.touchVelocity = clampWallpaperValue(
+        state.touchVelocity * 0.32 + measuredVelocity * 0.68,
+        -WALLPAPER_MOMENTUM_MAX_VELOCITY,
+        WALLPAPER_MOMENTUM_MAX_VELOCITY
+      );
       state.touchX = touch.clientX;
       state.touchY = touch.clientY;
+      state.touchLastTime = moveTime;
       event.preventDefault();
       advanceWallpaperState(state, delta);
       renderWallpaperScene(state);
     }, { passive: false });
-    const endTouch = event => {
+    const endTouch = (event, allowMomentum) => {
       if (state.touchId == null) return;
       const ended = Array.from(event.changedTouches || []).some(item => item.identifier === state.touchId);
       if (ended) {
+        const wasClaimed = state.touchClaimed;
+        const releaseTime = getWallpaperEventTime(event);
+        const idleTime = Math.max(0, releaseTime - state.touchLastTime);
+        state.touchVelocity *= Math.exp(-idleTime / 120);
         state.touchId = null;
         state.touchClaimed = false;
+        if (allowMomentum && wasClaimed) {
+          startWallpaperMomentum(state);
+        } else {
+          cancelWallpaperMomentum(state);
+        }
       }
     };
-    area.addEventListener('touchend', endTouch);
-    area.addEventListener('touchcancel', endTouch);
+    area.addEventListener('touchend', event => endTouch(event, true));
+    area.addEventListener('touchcancel', event => endTouch(event, false));
     window.addEventListener('resize', () => queueWallpaperResize(state));
 
     const reduceMotion = typeof window.matchMedia === 'function'
       ? window.matchMedia('(prefers-reduced-motion: reduce)')
       : null;
     const syncMotionPreference = () => {
-      root.classList.toggle('reduce-motion', !!reduceMotion?.matches);
+      state.reduceMotion = !!reduceMotion?.matches;
+      root.classList.toggle('reduce-motion', state.reduceMotion);
+      if (state.reduceMotion) cancelWallpaperMomentum(state);
     };
     syncMotionPreference();
-    reduceMotion?.addEventListener?.('change', syncMotionPreference);
+    if (typeof reduceMotion?.addEventListener === 'function') {
+      reduceMotion.addEventListener('change', syncMotionPreference);
+    } else if (typeof reduceMotion?.addListener === 'function') {
+      reduceMotion.addListener(syncMotionPreference);
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) cancelWallpaperMomentum(state);
+    });
     return state;
   }
 
