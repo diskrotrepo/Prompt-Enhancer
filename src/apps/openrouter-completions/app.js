@@ -4,7 +4,7 @@
   // Table of contents:
   // - Registry + safe readers
   // - Request/response helpers (completions + model catalog)
-  // - Window binding
+  // - Window binding + shared copy feedback
   // - App registration
 
   const APP_KEY = 'openrouter-completions';
@@ -1003,13 +1003,53 @@
     return nextProvider;
   }
 
-  function copyToClipboard(text) {
+  // Mirror Prompt Enhancer copy controls: a successful write presses the
+  // button green, swaps in a checkmark, then restores its original glyph.
+  function showCopyFeedback(button) {
+    if (!button) return;
+    const originalLabel = button.dataset.originalLabel || button.textContent;
+    const originalTitle = button.dataset.originalTitle || button.title;
+    button.dataset.originalLabel = originalLabel;
+    button.dataset.originalTitle = originalTitle;
+    button.classList.add('copied');
+    button.title = 'Copied!';
+    button.textContent = '✓';
+    clearTimeout(button._copyTimeout);
+    button._copyTimeout = setTimeout(() => {
+      button.classList.remove('copied');
+      button.title = originalTitle;
+      button.textContent = originalLabel;
+    }, 900);
+  }
+
+  function copyToClipboard(text, button) {
     const value = String(text ?? '');
     if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
       // Empty completions are valid output; copy the exact panel text, even when blank.
-      return navigator.clipboard.writeText(value).then(() => true).catch(() => false);
+      return navigator.clipboard.writeText(value)
+        .then(() => {
+          showCopyFeedback(button);
+          return true;
+        })
+        .catch(() => false);
     }
-    return Promise.resolve(false);
+    if (typeof document === 'undefined' || typeof document.execCommand !== 'function') {
+      return Promise.resolve(false);
+    }
+    // Legacy copy keeps the standalone file experience useful in older browsers.
+    const textarea = document.createElement('textarea');
+    textarea.value = value;
+    document.body.appendChild(textarea);
+    textarea.select();
+    let copied = false;
+    try {
+      copied = document.execCommand('copy') !== false;
+    } catch (err) {
+      copied = false;
+    }
+    textarea.remove();
+    if (copied) showCopyFeedback(button);
+    return Promise.resolve(copied);
   }
 
   function initializeOpenRouterWindow(windowEl) {
@@ -1400,12 +1440,11 @@
     if (copyButton) {
       copyButton.addEventListener('click', async () => {
         const outputText = outputEl?.textContent || '';
-        const copied = await copyToClipboard(outputText);
-        writeStatus(
-          statusEl,
-          copied ? 'Output copied.' : 'Copy failed. Clipboard permission may be blocked.',
-          !copied
-        );
+        const copied = await copyToClipboard(outputText, copyButton);
+        // The button itself confirms success, preserving token and cost details in status.
+        if (!copied) {
+          writeStatus(statusEl, 'Copy failed. Clipboard permission may be blocked.', true);
+        }
       });
     }
 

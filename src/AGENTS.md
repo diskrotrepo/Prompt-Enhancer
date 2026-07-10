@@ -116,10 +116,11 @@ silver face so custom hues stay coherent with the theme.
 
 ### Windows 3.1 Theme
 
-`style.css` implements a coherent retro theme: teal desktop, silver
-(`--w31-face`) window faces, beveled buttons, sunken white input fields, and
-flat colored box headers (warm hues for mixes, pink/purple for strings, teal
-for variables). Key rules for future changes:
+`style.css` implements a coherent retro theme: a sparse large-shape 90s
+confetti field over teal, silver (`--w31-face`) window faces, beveled buttons,
+sunken white input fields, and flat colored box headers (warm hues for mixes,
+pink/purple for strings, teal for variables and Completion output). Key rules
+for future changes:
 
 - All palette values and bevel recipes live as custom properties in `:root`
   (`--w31-*`, `--bevel-up`, `--bevel-down`, `--bevel-field`, `--etched`).
@@ -132,7 +133,13 @@ for variables). Key rules for future changes:
   `.prompt-body`). Any new inner scroll region must use `overflow-y: auto;`.
 - Primary actions (`.holo-generate`, `.openrouter-send`) share the beveled
   slab + pixel font + rainbow strip treatment; keep new CTAs consistent.
+- Wallpaper accents live in the shared `--w31-confetti-*` palette. Keep shapes
+  large, sparse, pointer-inert, and behind `#window-area`; prefer CSS geometry
+  over image assets so the desktop stays crisp at every viewport.
 - Help mode uses the WinHelp-style yellow tooltip (`--w31-tooltip`).
+- App file strips share `.prompt-menu`, a right-side Help control, and a sunken
+  workspace ledge immediately below. Generated API output reuses the miniature
+  box header and 26x24 `.copy-output` feedback contract from prompt boxes.
 - Uniform control metrics: icon/header buttons are 26x24 (`min-height: 0`
   beats the global `.toggle-button` minimum), single-line selects and text /
   password / number inputs are exactly 32px tall with no default margins

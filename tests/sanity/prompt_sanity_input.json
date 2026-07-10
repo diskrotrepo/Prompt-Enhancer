@@ -2946,7 +2946,7 @@
     },
     {
       "id": "openrouter_app_window",
-      "description": "OpenRouter Completion appears in the app menu and opens as its own window.",
+      "description": "Completion API opens with encrypted file actions, shared Help mode, and the standard boxed copy control.",
       "random": 0,
       "actions": [
         {

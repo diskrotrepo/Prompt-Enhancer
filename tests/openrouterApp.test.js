@@ -194,10 +194,23 @@ describe('OpenRouter app module', () => {
     const promptInput = appWindow.querySelector('.openrouter-prompt');
     const sendButton = appWindow.querySelector('.openrouter-send');
     const copyButton = appWindow.querySelector('.openrouter-copy-output');
+    const helpButton = appWindow.querySelector('.help-toggle');
     const output = appWindow.querySelector('.openrouter-output-text');
     const status = appWindow.querySelector('.openrouter-status');
+    const fileActions = Array.from(
+      appWindow.querySelectorAll('.openrouter-menu-dropdown .prompt-menu-item[data-action]')
+    ).map(item => item.dataset.action);
     expect(providerSelect.value).toBe('fireworks');
     expect(topKInput.max).toBe('100');
+    expect(fileActions).toEqual(['load-settings', 'save-settings']);
+    expect(helpButton).not.toBeNull();
+    expect(appWindow.dataset.helpReady).toBe('true');
+    helpButton.click();
+    expect(appWindow.classList.contains('help-active')).toBe(true);
+    helpButton.click();
+    expect(appWindow.classList.contains('help-active')).toBe(false);
+    expect(copyButton.classList.contains('copy-output')).toBe(true);
+    expect(copyButton.closest('.openrouter-output-header')).not.toBeNull();
     await flush();
     await flush();
     keyInput.value = 'fw-test-key';
@@ -241,9 +254,13 @@ describe('OpenRouter app module', () => {
     expect(status.textContent).toContain('Total tokens (input + output): 200');
     expect(status.textContent).toContain('Request cost (USD): $0.0042');
 
+    const completedStatus = status.textContent;
     copyButton.click();
     await flush();
     expect(clipboardWrites[clipboardWrites.length - 1]).toBe('result text');
+    expect(copyButton.classList.contains('copied')).toBe(true);
+    expect(copyButton.textContent).toBe('✓');
+    expect(status.textContent).toBe(completedStatus);
   });
 
   test('switches to hyperbolic and sends a hyperbolic completions request', async () => {

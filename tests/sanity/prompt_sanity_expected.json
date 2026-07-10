@@ -337,7 +337,9 @@
       "output": "",
       "hasOpenRouterMenu": true,
       "openRouterWindowCount": 1,
-      "hasOpenRouterEncryptedSettingsControls": true
+      "hasOpenRouterEncryptedSettingsControls": true,
+      "hasOpenRouterHelpMode": true,
+      "hasOpenRouterSharedCopyControl": true
     },
     {
       "id": "multi_prompt_windows_open",

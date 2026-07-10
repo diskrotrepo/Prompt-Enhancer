@@ -2,7 +2,7 @@
 
 Prompt Enhancer is a modular list-mixing tool. Chunking boxes turn raw text into delimiter-preserving chunks. Mixing boxes interleave those lists to produce an output string by concatenating chunks only — no delimiter injection. Variable nodes can reference any existing mix or string and forward its chunks unchanged. **+ Add Save** buttons append saved prompt enhancer JSON boxes into the clicked root or mix level without replacing the current window. Everything runs in the browser with no build step.
 
-Open `src/index.html` to use the tool. The UI presents a Windows 3.1 style desktop: apps open from the start menu into draggable silver windows with beveled controls, and the focused window carries the navy title bar. Add lists inside mixing boxes, set per-box limits, and press **Generate Mixes**. You can save your configuration to a file or reload it later. On narrow screens, button rows automatically wrap so text labels stay within their section.
+Open `src/index.html` to use the tool. The UI presents a Windows 3.1 style desktop with a large-shape 90s confetti wallpaper: apps open from the start menu into draggable silver windows with beveled controls, and the focused window carries the navy title bar. Add lists inside mixing boxes, set per-box limits, and press **Generate Mixes**. You can save your configuration to a file or reload it later. On narrow screens, button rows automatically wrap so text labels stay within their section.
 Prompt menu presets load from `src/presets/index.js` via `window.PromptEnhancerPresetCatalog`. Add or update catalog entries there with inline preset `state` objects.
 Window apps can register from dedicated monolithic files under `src/apps/` through `window.PromptEnhancerAppModules`, which keeps app-specific behavior out of the core shell file.
 
@@ -228,12 +228,14 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 
 #### Window apps
 
-- **OpenRouter Completion app appears in the menu and opens its own window** — `openrouter_app_window`
-- **OpenRouter encrypted settings file actions live in the top file menu (password + file save/load)** — `openrouter_app_window`
-- **OpenRouter model picker is dropdown-only and filtered to completion-oriented models (chat/instruct models excluded)** — `openrouter_app_window`
-- **OpenRouter completion status breaks out billed input/output/total tokens and request cost when usage data is available** — `openrouter_app_window`
-- **OpenRouter treats empty completion text as a successful blank response when stop sequences halt immediately** — `tests/openrouterApp.test.js`
-- **OpenRouter copies intentionally blank completion output without treating it as failure** — `tests/openrouterApp.test.js`
+- **Completion API appears in the menu and opens its own window** — `openrouter_app_window`
+- **Completion API encrypted settings actions live in the top file menu (password + file save/open)** — `openrouter_app_window`
+- **Completion API reuses the shell Help mode and standard boxed copy control** — `openrouter_app_window`
+- **Completion copy feedback preserves the token and cost status readout** — `tests/openrouterApp.test.js`
+- **Completion API model picker is dropdown-only and filtered to completion-oriented models (chat/instruct models excluded)** — `openrouter_app_window`
+- **Completion API status breaks out billed input/output/total tokens and request cost when usage data is available** — `openrouter_app_window`
+- **Completion API treats empty completion text as a successful blank response when stop sequences halt immediately** — `tests/openrouterApp.test.js`
+- **Completion API copies intentionally blank output without treating it as failure** — `tests/openrouterApp.test.js`
 - **Multiple Prompt Enhancer windows can be opened in one session and each gets its own taskbar button** — `multi_prompt_windows_open`
 
 - **Color presets**  

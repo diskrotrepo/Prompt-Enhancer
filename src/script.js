@@ -7,7 +7,7 @@
   // - Box evaluation
   // - Box creation + state serialization (hydrates custom size/length controls + append-save imports)
   // - UI helpers + event wiring
-  // - Window management + app module hooks + data load/save
+  // - Window management + app module hooks + shared Help + data load/save
   // - Initialization
 
   // ======== Utilities ========
@@ -2166,7 +2166,7 @@
       popover.innerHTML = `
         <div class="help-popover-header">
           <span class="help-popover-title">Help</span>
-          <button type="button" class="help-close" aria-label="Close help">×</button>
+          <button type="button" class="help-close" aria-label="Close help" data-help="Close this help card." data-help-detail="Hides the current explanation while leaving Help mode active for another control.">×</button>
         </div>
         <div class="help-popover-short"></div>
         <div class="help-popover-detail"></div>
@@ -2193,6 +2193,8 @@
     popover.style.top = `${y}px`;
   }
 
+  // Bind the shell-level Help interaction for any app window that provides a
+  // `.help-toggle`; app modules only need specific data-help copy on controls.
   function setupHelpMode(win) {
     if (!win || win.dataset.helpReady) return;
     const helpBtn = win.querySelector('.help-toggle');
@@ -3138,7 +3140,7 @@
     audio: { templateId: 'window-audio-template', label: 'Audio Interpolator', icon: 'icon-audio' },
     openrouter: {
       templateId: 'window-openrouter-template',
-      label: 'OpenRouter Completion',
+      label: 'Completion API',
       icon: 'icon-openrouter',
       appKey: 'openrouter-completions'
     },
@@ -3341,6 +3343,9 @@
       setupPromptControls(clone);
     }
     initializeAppWindow(clone, windowType, instanceId, def.appKey);
+    // Run after app initialization so every module gets the same WinHelp overlay
+    // without duplicating shell behavior; prompt setup is safely idempotent here.
+    setupHelpMode(clone);
     syncCollapseButtons(clone);
     focusWindow(instanceId);
   }

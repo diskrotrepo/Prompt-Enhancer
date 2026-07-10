@@ -283,6 +283,7 @@ function runSanityCase(testCase) {
     window.document.querySelector('.prompt-window:not(.window-template) .prompt-menu-item[data-action="load-preset"]')
   );
   const hasOpenRouterMenu = !!window.document.querySelector('.menu-item[data-window="openrouter"]');
+  const openRouterWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
   const openRouterWindowCount = window.document.querySelectorAll('.openrouter-window:not(.window-template)').length;
   const promptWindowCount = window.document.querySelectorAll('.app-window[data-window="prompts"]:not(.window-template)').length;
   const taskbarButtonCount = window.document.querySelectorAll('#taskbar .taskbar-button').length;
@@ -291,6 +292,14 @@ function runSanityCase(testCase) {
     window.document.querySelector('.openrouter-menu-dropdown .prompt-menu-item[data-action="save-settings"]') &&
     window.document.querySelector('.openrouter-menu-dropdown .prompt-menu-item[data-action="load-settings"]') &&
     window.document.querySelector('.openrouter-load-settings-file')
+  );
+  const hasOpenRouterHelpMode = !!(
+    openRouterWindow?.querySelector('.help-toggle') &&
+    openRouterWindow?.querySelector('.help-overlay') &&
+    openRouterWindow?.dataset?.helpReady === 'true'
+  );
+  const hasOpenRouterSharedCopyControl = !!(
+    openRouterWindow?.querySelector('.openrouter-output > .openrouter-output-header .copy-output.openrouter-copy-output')
   );
   const result = {
     id: testCase.id,
@@ -323,6 +332,8 @@ function runSanityCase(testCase) {
     promptWindowCount,
     taskbarButtonCount,
     hasOpenRouterEncryptedSettingsControls,
+    hasOpenRouterHelpMode,
+    hasOpenRouterSharedCopyControl,
     mixCopiedText: actionResults.mixCopiedText,
     chunkCopiedText: actionResults.chunkCopiedText,
     promptCount,

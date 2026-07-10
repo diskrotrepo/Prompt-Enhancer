@@ -66,6 +66,19 @@
             </div>
             <div id="taskbar" class="taskbar"></div>
           </div>
+          <!-- Large, pointer-inert Memphis shapes turn the teal desktop into a
+               restrained 90s confetti field without competing with app windows. -->
+          <div class="desktop-confetti" aria-hidden="true">
+            <span class="confetti-shape confetti-disc"></span>
+            <span class="confetti-shape confetti-ring"></span>
+            <span class="confetti-shape confetti-bar"></span>
+            <span class="confetti-shape confetti-diamond"></span>
+            <span class="confetti-shape confetti-triangle"></span>
+            <span class="confetti-shape confetti-zigzag"></span>
+            <span class="confetti-shape confetti-capsule"></span>
+            <span class="confetti-shape confetti-checker"></span>
+            <span class="confetti-shape confetti-arc"></span>
+          </div>
           <div id="window-area">
             <div id="window-prompts-template" class="window-shell box-shell app-window prompt-window window-template" data-template="prompts">
               <div class="box-header window-header">
@@ -424,10 +437,11 @@
                       <span class="prompt-menu-label">file</span>
                     </button>
                     <div class="prompt-menu-dropdown openrouter-menu-dropdown" role="menu" aria-hidden="true">
+                      <div class="prompt-menu-item" data-action="load-settings" role="menuitem" data-help="Open an encrypted settings file and decrypt it." data-help-detail="Opens a file picker for a saved encrypted settings JSON file, then decrypts it using the password field.">Open Encrypted Settings</div>
                       <div class="prompt-menu-item" data-action="save-settings" role="menuitem" data-help="Encrypt settings and download them as a file." data-help-detail="Encrypts endpoint, model, max tokens, temperature, title, prompt, and API key with your password, then downloads a JSON settings file.">Save Encrypted Settings</div>
-                      <div class="prompt-menu-item" data-action="load-settings" role="menuitem" data-help="Load an encrypted settings file and decrypt it." data-help-detail="Opens a file picker for a saved encrypted settings JSON file, then decrypts it using the password field.">Load Encrypted Settings</div>
                     </div>
                     <div class="prompt-menu-spacer" aria-hidden="true"></div>
+                    <button type="button" class="help-toggle" aria-pressed="false" data-help="Toggle help mode for Completion API controls." data-help-detail="When help mode is on, click a provider, model, sampling control, prompt field, or output control to see its specific explanation. Click Help again or press Escape to exit.">Help</button>
                   </div>
                   <input type="file" class="openrouter-load-settings-file" accept="application/json,.json" style="display:none">
                   <div class="openrouter-content">
@@ -509,19 +523,24 @@
                       <button type="button" class="add-button openrouter-send" data-help="Send a completion request." data-help-detail="Submits endpoint, model, params, and prompt to the selected provider. The button is disabled while the request is in flight.">Send Completion</button>
                     </div>
                     <div class="openrouter-status" role="status" aria-live="polite">Ready.</div>
-                    <div class="openrouter-output" data-help="Completion output returned by the selected provider." data-help-detail="Shows the first completion text returned by the API response.">
-                      <div class="label-row">
-                        <label>Output</label>
+                    <!-- Completion output uses the same colored box-header and
+                         26x24 copy control contract as generated prompt boxes. -->
+                    <div class="openrouter-output box-shell" data-help="Completion output returned by the selected provider." data-help-detail="Shows the first completion text returned by the API response.">
+                      <div class="box-header openrouter-output-header">
+                        <span class="box-title">Output</span>
                         <div class="button-col">
-                          <button type="button" class="copy-button icon-button openrouter-copy-output" title="Copy output" data-help="Copy the output panel text." data-help-detail="Copies the current completion output text to your clipboard.">&#128203;</button>
+                          <button type="button" class="copy-button icon-button copy-output openrouter-copy-output" title="Copy output" data-help="Copy the output panel text." data-help-detail="Copies the exact completion output to your clipboard and briefly confirms success on this button.">&#128203;</button>
                         </div>
                       </div>
-                      <div class="input-row">
-                        <pre class="openrouter-output-text"></pre>
+                      <div class="box-body">
+                        <div class="input-row">
+                          <pre class="openrouter-output-text"></pre>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
+                <div class="help-overlay is-hidden" aria-hidden="true"></div>
               </div>
               <div class="resize-handle" aria-hidden="true"></div>
             </div>
