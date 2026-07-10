@@ -228,6 +228,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 
 #### Window apps
 
+- **Prompt workspace meets its file strip without an inherited flex-gap artifact** — `tests/windowBehavior.test.js`
 - **Completion API appears in the menu and opens its own window** — `openrouter_app_window`
 - **Completion API encrypted settings actions live in the top file menu (password + file save/open)** — `openrouter_app_window`
 - **Completion API reuses the shell Help mode and standard boxed copy control** — `openrouter_app_window`

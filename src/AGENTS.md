@@ -137,9 +137,11 @@ for future changes:
   large, sparse, pointer-inert, and behind `#window-area`; prefer CSS geometry
   over image assets so the desktop stays crisp at every viewport.
 - Help mode uses the WinHelp-style yellow tooltip (`--w31-tooltip`).
-- App file strips share `.prompt-menu`, a right-side Help control, and a sunken
-  workspace ledge immediately below. Generated API output reuses the miniature
-  box header and 26x24 `.copy-output` feedback contract from prompt boxes.
+- App file strips share `.prompt-menu` and a right-side Help control. Workspace
+  canvases meet that strip directly: keep the outer prompt `.box-body` at
+  `gap: 0` so the generic box rhythm cannot create an artifact bar. Generated
+  API output reuses the miniature box header and 26x24 `.copy-output` feedback
+  contract from prompt boxes.
 - Uniform control metrics: icon/header buttons are 26x24 (`min-height: 0`
   beats the global `.toggle-button` minimum), single-line selects and text /
   password / number inputs are exactly 32px tall with no default margins

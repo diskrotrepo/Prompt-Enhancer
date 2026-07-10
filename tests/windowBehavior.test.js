@@ -399,6 +399,11 @@ describe('Window edge layout policy', () => {
     expect(css).not.toMatch(/padding-top:\s*calc\(var\(--taskbar-height\) \+ var\(--taskbar-padding\)\);/);
     expect(css).not.toMatch(/min-height:\s*calc\(100vh - var\(--taskbar-height\) - var\(--taskbar-padding\)\);/);
   });
+
+  test('prompt workspace meets the file menu without an inherited flex gap', () => {
+    const css = fs.readFileSync(CSS_PATH, 'utf8');
+    expect(css).toMatch(/\.prompt-window\s*>\s*\.box-body\s*\{[^}]*gap:\s*0;/);
+  });
 });
 
 registerDomCleanup();

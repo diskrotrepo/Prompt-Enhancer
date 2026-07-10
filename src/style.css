@@ -776,6 +776,8 @@ textarea:focus-visible {
   padding: 0;
   display: flex;
   flex-direction: column;
+  /* Override the generic box-body rhythm: menu and workspace are contiguous. */
+  gap: 0;
   overflow: hidden;
   scrollbar-gutter: auto;
   position: relative;
@@ -948,7 +950,8 @@ textarea:focus-visible {
   box-shadow: var(--bevel-down);
 }
 
-/* Workspace behind the boxes reads as a sunken document area. */
+/* The workspace begins directly below the file strip. Its bevel belongs to
+ * the canvas itself; the outer app body must not insert a spacer between them. */
 .prompt-body {
   display: flex;
   flex-direction: column;
