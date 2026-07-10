@@ -110,7 +110,35 @@ output, not the raw input text.
 Mix and String boxes now support per-box color customization. The header color
 button opens a panel with Auto/Custom modes, preset selection, and a Save Preset
 flow. Custom presets are serialized with mix state so they can be reused across
-boxes and sessions.
+boxes and sessions. Custom colors render flat (solid header fill plus a
+darkened border via `applyCustomBoxStyles`); box bodies always keep the shared
+silver face so custom hues stay coherent with the theme.
+
+### Windows 3.1 Theme
+
+`style.css` implements a coherent retro theme: teal desktop, silver
+(`--w31-face`) window faces, beveled buttons, sunken white input fields, and
+flat colored box headers (warm hues for mixes, pink/purple for strings, teal
+for variables). Key rules for future changes:
+
+- All palette values and bevel recipes live as custom properties in `:root`
+  (`--w31-*`, `--bevel-up`, `--bevel-down`, `--bevel-field`, `--etched`).
+  Reuse them instead of hard-coding colors or shadows.
+- `focusWindow` in `script.js` toggles an `is-focused` class on app windows;
+  CSS uses it to paint the active title bar navy and inactive title bars
+  muted silver. Hide/minimize paths must remove the class.
+- Scrolling policy is enforced by `tests/scrolling.test.js`: exactly three
+  `overflow: auto;` declarations (the window body selectors plus
+  `.prompt-body`). Any new inner scroll region must use `overflow-y: auto;`.
+- Primary actions (`.holo-generate`, `.openrouter-send`) share the beveled
+  slab + pixel font + rainbow strip treatment; keep new CTAs consistent.
+- Help mode uses the WinHelp-style yellow tooltip (`--w31-tooltip`).
+- Uniform control metrics: icon/header buttons are 26x24 (`min-height: 0`
+  beats the global `.toggle-button` minimum), single-line selects and text /
+  password / number inputs are exactly 32px tall with no default margins
+  (rows and grids own spacing via `gap`), and primary CTA slabs are 44px.
+  Emoji glyph buttons render monochrome ('Segoe UI Symbol' + grayscale).
+  Taskbar app buttons share one identical footprint with no per-app accents.
 
 ### File Naming
 

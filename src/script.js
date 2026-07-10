@@ -597,29 +597,23 @@
     }
   }
 
-  // Apply a gradient skin for a custom color so the box still matches the existing UI style.
+  // Apply a flat Windows 3.1 style skin for a custom color: the header carries
+  // the chosen hue as a solid fill, the frame darkens to match, and the body
+  // keeps the shared silver face so custom boxes stay coherent with the theme.
   function applyCustomBoxStyles(box, hex) {
     if (!box) return;
     const header = box.querySelector('.box-header');
     const base = rgbFromHex(hex);
-    const light = shiftRgb(base, 36);
-    const lighter = shiftRgb(base, 60);
-    const mid = shiftRgb(base, 12);
-    const dark = shiftRgb(base, -50);
-    const darker = shiftRgb(base, -90);
+    const dark = shiftRgb(base, -80);
 
-    box.style.borderColor = rgbaString(base, 0.9);
-    box.style.background = `
-      linear-gradient(0deg, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.28)),
-      radial-gradient(circle at 14% 18%, ${rgbaString(lighter, 0.28)} 0 12px, transparent 16px),
-      radial-gradient(circle at 70% 28%, ${rgbaString(light, 0.24)} 0 12px, transparent 16px),
-      radial-gradient(circle at 34% 72%, ${rgbaString(mid, 0.22)} 0 14px, transparent 18px),
-      linear-gradient(135deg, ${rgbaString(dark, 0.98)}, ${rgbaString(darker, 0.98)})
-    `;
+    // Solid darkened frame; body background stays on the stylesheet default.
+    box.style.borderColor = rgbaString(dark, 1);
+    box.style.background = '';
 
     if (header) {
-      header.style.background = `linear-gradient(90deg, ${rgbaString(lighter, 0.95)}, ${rgbaString(base, 0.92)})`;
-      header.style.borderColor = rgbaString(light, 0.75);
+      // Flat solid header fill in the exact user-picked color.
+      header.style.background = rgbaString(base, 1);
+      header.style.borderColor = rgbaString(dark, 1);
     }
   }
 
@@ -3201,6 +3195,12 @@
     zCounter += 1;
     win.style.zIndex = String(zCounter);
     currentFocusInstance = instanceId;
+    // Mirror focus onto an is-focused class so CSS can render the classic
+    // active title bar (highlighted) versus inactive title bars (muted).
+    document.querySelectorAll('.app-window.is-focused').forEach(el => {
+      if (el !== win) el.classList.remove('is-focused');
+    });
+    win.classList.add('is-focused');
     const taskBtn = ensureTaskbarButton(instanceId, win.dataset.windowLabel, win.dataset.windowIcon);
     if (taskBtn) {
       clearTaskbarActive();
@@ -3214,6 +3214,8 @@
     const isHidden = win.classList.contains('is-hidden');
     if (!isHidden && instanceId === currentFocusInstance) {
       win.classList.add('is-hidden');
+      // A hidden window can no longer be the active one, so drop its focus skin.
+      win.classList.remove('is-focused');
       clearTaskbarActive();
       currentFocusInstance = null;
       return;
@@ -3363,6 +3365,8 @@
           if (instanceId) {
             win.classList.add('is-hidden');
             win.classList.remove('is-collapsed');
+            // Minimized windows lose the active title bar highlight.
+            win.classList.remove('is-focused');
             setCollapseButton(btn, false);
             if (currentFocusInstance === instanceId) currentFocusInstance = null;
             clearTaskbarActive();

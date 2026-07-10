@@ -2,7 +2,7 @@
 
 Prompt Enhancer is a modular list-mixing tool. Chunking boxes turn raw text into delimiter-preserving chunks. Mixing boxes interleave those lists to produce an output string by concatenating chunks only — no delimiter injection. Variable nodes can reference any existing mix or string and forward its chunks unchanged. **+ Add Save** buttons append saved prompt enhancer JSON boxes into the clicked root or mix level without replacing the current window. Everything runs in the browser with no build step.
 
-Open `src/index.html` to use the tool. Add lists inside mixing boxes, set per-box limits, and press **Generate Mixes**. You can save your configuration to a file or reload it later. On narrow screens, button rows automatically wrap so text labels stay within their section.
+Open `src/index.html` to use the tool. The UI presents a Windows 3.1 style desktop: apps open from the start menu into draggable silver windows with beveled controls, and the focused window carries the navy title bar. Add lists inside mixing boxes, set per-box limits, and press **Generate Mixes**. You can save your configuration to a file or reload it later. On narrow screens, button rows automatically wrap so text labels stay within their section.
 Prompt menu presets load from `src/presets/index.js` via `window.PromptEnhancerPresetCatalog`. Add or update catalog entries there with inline preset `state` objects.
 Window apps can register from dedicated monolithic files under `src/apps/` through `window.PromptEnhancerAppModules`, which keeps app-specific behavior out of the core shell file.
 
