@@ -345,7 +345,8 @@
       "id": "multi_prompt_windows_open",
       "output": "",
       "promptWindowCount": 2,
-      "taskbarButtonCount": 2
+      "taskbarButtonCount": 2,
+      "focusedWindowInstance": "prompts-1"
     },
     {
       "id": "dropout_mix_reaches_tail_chunks",

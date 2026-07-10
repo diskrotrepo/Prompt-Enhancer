@@ -127,7 +127,9 @@ for future changes:
   Reuse them instead of hard-coding colors or shadows.
 - `focusWindow` in `script.js` toggles an `is-focused` class on app windows;
   CSS uses it to paint the active title bar navy and inactive title bars
-  muted silver. Hide/minimize paths must remove the class.
+  muted silver. A capture-phase pointer listener activates the containing
+  runtime window from any interior surface without cancelling the original
+  control event. Hide/minimize paths must remove the class.
 - Scrolling policy is enforced by `tests/scrolling.test.js`: exactly three
   `overflow: auto;` declarations (the window body selectors plus
   `.prompt-body`). Any new inner scroll region must use `overflow-y: auto;`.
@@ -148,6 +150,8 @@ for future changes:
   (rows and grids own spacing via `gap`), and primary CTA slabs are 44px.
   Emoji glyph buttons render monochrome ('Segoe UI Symbol' + grayscale).
   Taskbar app buttons share one identical footprint with no per-app accents.
+  The start mark corrects slash ink separately from the `yolk` label so both
+  retain balanced visible padding inside their beveled button.
 
 ### File Naming
 

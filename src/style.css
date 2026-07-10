@@ -412,7 +412,6 @@ textarea:focus-visible {
   line-height: 1;
   letter-spacing: 0.04em;
   pointer-events: none;
-  transform: translateY(-1px);
 }
 
 .menu-glyph-slashes {
@@ -423,7 +422,10 @@ textarea:focus-visible {
 .menu-glyph .slash {
   display: inline-block;
   font-weight: 900;
-  transform: scaleY(1.1);
+  /* Slash glyph ink hangs below its line-box center; lift only the slashes so
+   * their visible top/bottom breathing room is balanced inside the button. */
+  transform: translateY(-4px) scaleY(1.1);
+  transform-origin: center;
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
 }
 
@@ -439,7 +441,7 @@ textarea:focus-visible {
   font-size: 0.5rem;
   letter-spacing: 0.04em;
   text-transform: lowercase;
-  transform: translateY(2px);
+  transform: translateY(1px);
 }
 
 .menu-dropdown {

@@ -126,6 +126,14 @@ function runSanityCase(testCase) {
       if (menuItem) menuItem.click();
       return;
     }
+    if (type === 'activateFirstPromptBody') {
+      const body = window.document.querySelector(
+        '.app-window[data-window=\"prompts\"]:not(.window-template) .prompt-body'
+      );
+      if (!body) return;
+      body.dispatchEvent(new window.Event('pointerdown', { bubbles: true, cancelable: true }));
+      return;
+    }
     if (type === 'menuSave' || type === 'menuSaveAs') {
       const actionKey = type === 'menuSaveAs' ? 'save-as' : 'save';
       const win = getActiveWindow();
@@ -287,6 +295,8 @@ function runSanityCase(testCase) {
   const openRouterWindowCount = window.document.querySelectorAll('.openrouter-window:not(.window-template)').length;
   const promptWindowCount = window.document.querySelectorAll('.app-window[data-window="prompts"]:not(.window-template)').length;
   const taskbarButtonCount = window.document.querySelectorAll('#taskbar .taskbar-button').length;
+  const focusedWindowInstance =
+    window.document.querySelector('.app-window.is-focused:not(.window-template)')?.dataset?.instance || '';
   const hasOpenRouterEncryptedSettingsControls = !!(
     window.document.querySelector('.openrouter-menu-start') &&
     window.document.querySelector('.openrouter-menu-dropdown .prompt-menu-item[data-action="save-settings"]') &&
@@ -331,6 +341,7 @@ function runSanityCase(testCase) {
     openRouterWindowCount,
     promptWindowCount,
     taskbarButtonCount,
+    focusedWindowInstance,
     hasOpenRouterEncryptedSettingsControls,
     hasOpenRouterHelpMode,
     hasOpenRouterSharedCopyControl,
@@ -450,6 +461,9 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'taskbarButtonCount')) {
         expect(result.taskbarButtonCount).toBe(expected.taskbarButtonCount);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'focusedWindowInstance')) {
+        expect(result.focusedWindowInstance).toBe(expected.focusedWindowInstance);
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'hasOpenRouterEncryptedSettingsControls')) {
         expect(result.hasOpenRouterEncryptedSettingsControls).toBe(expected.hasOpenRouterEncryptedSettingsControls);

@@ -3405,6 +3405,30 @@
     });
   }
 
+  // Conventional desktop activation: any pointer press inside a runtime
+  // window raises it before the targeted control handles the same interaction.
+  function setupWindowActivation() {
+    const area = document.getElementById('window-area');
+    if (!area || area.dataset.windowActivationReady) return;
+    area.addEventListener(
+      'pointerdown',
+      event => {
+        const eventTarget = toEventElement(event.target);
+        const win = eventTarget?.closest?.('.app-window:not(.window-template)');
+        if (!win || win.classList.contains('is-hidden')) return;
+        const instanceId = win.dataset.instance;
+        if (!instanceId) return;
+        if (instanceId !== currentFocusInstance || !win.classList.contains('is-focused')) {
+          // Do not prevent or stop the event: fields, buttons, drag, and resize
+          // handlers must receive the original pointer press unchanged.
+          focusWindow(instanceId);
+        }
+      },
+      true
+    );
+    area.dataset.windowActivationReady = 'true';
+  }
+
   function setupWindowDrag() {
     const area = document.getElementById('window-area');
     if (!area) return;
@@ -3449,7 +3473,11 @@
         }
       }
       const instanceId = win.dataset.instance;
-      if (instanceId) focusWindow(instanceId);
+      // Whole-window activation normally focused this during capture; keep the
+      // drag path safe when invoked independently without raising it twice.
+      if (instanceId && (instanceId !== currentFocusInstance || !win.classList.contains('is-focused'))) {
+        focusWindow(instanceId);
+      }
       const rect = win.getBoundingClientRect();
       const bounds = area.getBoundingClientRect();
       dragState = {
@@ -3572,6 +3600,7 @@
     setupSizeControls(document);
     setupUIEvents();
     setupWindowControls();
+    setupWindowActivation();
     setupWindowDrag();
     setupWindowResize();
     setupMenu();

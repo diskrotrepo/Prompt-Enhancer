@@ -133,6 +133,31 @@ describe('Window behavior', () => {
     expect(promptWindow.classList.contains('is-maximized')).toBe(true);
   });
 
+  test('pointer presses anywhere inside a window activate it without swallowing controls', () => {
+    const { window } = setupDom();
+    openWindow(window, 'prompts');
+    openWindow(window, 'prompts');
+
+    const promptWindows = Array.from(window.document.querySelectorAll('.app-window[data-window="prompts"]'));
+    const [firstWindow, secondWindow] = promptWindows;
+    const firstBody = firstWindow.querySelector('.prompt-body');
+    const firstAddMix = firstWindow.querySelector('.add-root-mix');
+    const firstTaskButton = window.document.querySelector('.taskbar-button[data-instance="prompts-1"]');
+    const initialMixCount = firstWindow.querySelectorAll('.mix-box').length;
+    expect(secondWindow.classList.contains('is-focused')).toBe(true);
+
+    dispatchPointer(window, firstBody, 'pointerdown', { clientX: 80, clientY: 180 });
+
+    expect(firstWindow.classList.contains('is-focused')).toBe(true);
+    expect(secondWindow.classList.contains('is-focused')).toBe(false);
+    expect(firstTaskButton.classList.contains('active')).toBe(true);
+    expect(Number(firstWindow.style.zIndex)).toBeGreaterThan(Number(secondWindow.style.zIndex));
+
+    dispatchPointer(window, firstAddMix, 'pointerdown', { clientX: 100, clientY: 500 });
+    firstAddMix.click();
+    expect(firstWindow.querySelectorAll('.mix-box')).toHaveLength(initialMixCount + 1);
+  });
+
   test('dragging clamps windows to top-left so headers can align flush to taskbar edge', () => {
     const { window } = setupDom();
     openWindow(window, 'prompts');
@@ -449,6 +474,12 @@ describe('Window edge layout policy', () => {
   test('prompt workspace meets the file menu without an inherited flex gap', () => {
     const css = fs.readFileSync(CSS_PATH, 'utf8');
     expect(css).toMatch(/\.prompt-window\s*>\s*\.box-body\s*\{[^}]*gap:\s*0;/);
+  });
+
+  test('start mark corrects the slash baseline independently from the yolk label', () => {
+    const css = fs.readFileSync(CSS_PATH, 'utf8');
+    expect(css).toMatch(/\.menu-glyph \.slash\s*\{[^}]*translateY\(-4px\) scaleY\(1\.1\)/);
+    expect(css).toMatch(/\.menu-glyph-tag\s*\{[^}]*translateY\(1px\)/);
   });
 });
 

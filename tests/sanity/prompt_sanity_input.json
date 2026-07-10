@@ -2957,11 +2957,12 @@
     },
     {
       "id": "multi_prompt_windows_open",
-      "description": "Opening Prompt Enhancer twice creates two prompt windows and two taskbar buttons.",
+      "description": "Opening Prompt Enhancer twice creates two windows, and pressing the first window body activates it conventionally.",
       "random": 0,
       "actions": [
         "openPromptsWindow",
-        "openPromptsWindow"
+        "openPromptsWindow",
+        "activateFirstPromptBody"
       ]
     },
     {
