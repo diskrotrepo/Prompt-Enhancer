@@ -2872,8 +2872,8 @@
       }
     },
     {
-      "id": "local_storage_load",
-      "description": "Persisted mix data loads on startup before defaults.",
+      "id": "local_storage_ignored_on_startup",
+      "description": "Legacy browser storage is ignored so startup always initializes the fresh default prompt.",
       "random": 0,
       "persistedState": {
         "mixes": [
@@ -2908,8 +2908,8 @@
       }
     },
     {
-      "id": "local_storage_prompt_window_load",
-      "description": "Persisted mix data seeds a newly opened Prompt Enhancer window.",
+      "id": "fresh_prompt_window_ignores_local_storage",
+      "description": "A newly opened Prompt Enhancer window ignores legacy browser storage and starts fresh.",
       "random": 0,
       "persistedState": {
         "mixes": [

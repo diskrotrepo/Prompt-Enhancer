@@ -223,8 +223,9 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Duplicate loaded ids are re-keyed during hydration so cache keys stay isolated across boxes** — `duplicate_loaded_ids_are_rekeyed`
 - **+ Add Save appends a saved prompt file into the clicked mix/root level without replacing existing boxes** — `add_save_appends_saved_mix_into_clicked_mix`
 - **+ Add Save remaps imported variable targets when ids collide with existing boxes** — `tests/stateManager.test.js`
-- **Local storage load** — `local_storage_load`
-- **Local storage state seeds newly opened Prompt Enhancer windows** — `local_storage_prompt_window_load`
+- **Startup ignores legacy local storage and initializes the fresh default prompt** — `local_storage_ignored_on_startup`
+- **Every newly opened Prompt Enhancer window starts fresh, independent of browser storage** — `fresh_prompt_window_ignores_local_storage`
+- **File Open remains the explicit path for replacing a fresh prompt with saved state** — `tests/windowBehavior.test.js`
 
 #### Window apps
 
@@ -251,5 +252,5 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Preset submenu semantics**
   Prompt menu **Load Preset** reads `src/presets/index.js` catalog entries and applies each preset's inline `state` directly. The submenu shows `No presets in catalog` when the catalog is empty.
 
-- **Local persistence**  
-  The app stores state in localStorage on unload and reloads it on startup when available.
+- **Explicit restoration only**
+  Prompt Enhancer does not autosave to or restore from localStorage. Startup and every newly opened Prompt window use the fresh default state; restore a setup deliberately with **File → Open**, **Load Preset**, or **+ Add Save**.

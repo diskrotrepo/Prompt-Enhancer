@@ -218,7 +218,7 @@ describe('Window behavior', () => {
     expect(secondOutput).toBe('beta ');
   });
 
-  test('persisted local storage seeds opened prompt windows', () => {
+  test('persisted local storage is ignored when opening a fresh prompt window', () => {
     const { window } = setupDom({
       persistedState: {
         mixes: [
@@ -238,12 +238,15 @@ describe('Window behavior', () => {
     openWindow(window, 'prompts');
 
     const promptWindow = window.document.querySelector('.app-window[data-window="prompts"]');
+    const root = promptWindow.querySelector('.mix-root');
     promptWindow.querySelector('.generate-button').click();
 
-    expect(promptWindow.querySelector('.mix-output-text')?.textContent || '').toBe('persisted ');
+    expect(root.querySelectorAll('.mix-box')).toHaveLength(1);
+    expect(root.querySelector('.mix-box .box-title')?.value).not.toBe('Persisted Window');
+    expect(promptWindow.querySelector('.mix-output-text')?.textContent || '').toBe('');
   });
 
-  test('beforeunload persists the active prompt window instead of the template', () => {
+  test('beforeunload does not save prompt state to local storage', () => {
     const { window } = setupDom();
     openWindow(window, 'prompts');
 
@@ -265,10 +268,53 @@ describe('Window behavior', () => {
     }, root);
 
     window.dispatchEvent(new window.Event('beforeunload'));
-    const saved = JSON.parse(window.localStorage.getItem('promptEnhancerMixData') || '{}');
+    expect(window.localStorage.getItem('promptEnhancerMixData')).toBeNull();
+  });
 
-    expect(saved.mixes?.[0]?.title).toBe('Runtime Window');
-    expect(saved.mixes?.[0]?.children?.[0]?.text).toBe('runtime ');
+  test('File Open explicitly replaces the fresh prompt state', () => {
+    const { window } = setupDom();
+    openWindow(window, 'prompts');
+
+    const promptWindow = window.document.querySelector('.app-window[data-window="prompts"]');
+    const loadInput = promptWindow.querySelector('.load-mix-file');
+    const openItem = promptWindow.querySelector('.prompt-menu-item[data-action="open"]');
+    const previousFileReader = window.FileReader;
+    window.FileReader = class {
+      readAsText(file) {
+        this.result = file?.content || '';
+        if (typeof this.onload === 'function') this.onload();
+      }
+    };
+    Object.defineProperty(loadInput, 'files', {
+      value: [
+        {
+          name: 'manual-load.json',
+          content: JSON.stringify({
+            mixes: [
+              {
+                type: 'mix',
+                title: 'Manual Load',
+                preserve: true,
+                lengthMode: 'fit-smallest',
+                orderMode: 'canonical',
+                children: [
+                  { type: 'chunk', text: 'manual ', lengthMode: 'exact-once', orderMode: 'canonical' }
+                ]
+              }
+            ]
+          })
+        }
+      ],
+      configurable: true
+    });
+
+    openItem.click();
+    loadInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    promptWindow.querySelector('.generate-button').click();
+
+    expect(promptWindow.querySelector('.window-header .box-title')?.textContent).toBe('manual-load');
+    expect(promptWindow.querySelector('.mix-output-text')?.textContent || '').toBe('manual ');
+    window.FileReader = previousFileReader;
   });
 
   test('root add buttons create new mix and string boxes', () => {

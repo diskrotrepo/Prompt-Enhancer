@@ -323,13 +323,13 @@
       "mixCount": 2
     },
     {
-      "id": "local_storage_load",
-      "output": "p ",
+      "id": "local_storage_ignored_on_startup",
+      "output": "",
       "lengthMode": "fit-smallest"
     },
     {
-      "id": "local_storage_prompt_window_load",
-      "output": "q ",
+      "id": "fresh_prompt_window_ignores_local_storage",
+      "output": "",
       "promptWindowCount": 1
     },
     {

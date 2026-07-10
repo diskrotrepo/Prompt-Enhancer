@@ -158,6 +158,13 @@ omits a trailing `.json` extension for cleaner window labels, and Save As
 auto-appends `.json` to download names when users omit it. Save As prompts for
 the bare title (no `.json` shown in the input).
 
+### Fresh Prompt Startup
+
+Prompt Enhancer startup and every newly opened Prompt window must initialize
+the canonical fresh state with `applyMixState(null, root)`. Do not restore or
+autosave prompt state through `localStorage` or `beforeunload`; **File → Open**,
+**Load Preset**, and **+ Add Save** are the only intentional restoration paths.
+
 ### Add Save Imports
 
 Root and mix action rows include **+ Add Save** buttons. These buttons open a

@@ -7,7 +7,7 @@
   // - Box evaluation
   // - Box creation + state serialization (hydrates custom size/length controls + append-save imports)
   // - UI helpers + event wiring
-  // - Window management + app module hooks + shared Help + data load/save
+  // - Window management + app module hooks + shared Help
   // - Initialization
 
   // ======== Utilities ========
@@ -3225,22 +3225,6 @@
     focusWindow(instanceId);
   }
 
-  function getTopWindowByType(windowType) {
-    const windows = Array.from(document.querySelectorAll(`.app-window[data-window=\"${windowType}\"]`))
-      .filter(win => !win.classList.contains('window-template'));
-    if (!windows.length) return null;
-    let top = windows[0];
-    let topZ = Number(top.style.zIndex || 0);
-    windows.slice(1).forEach(win => {
-      const z = Number(win.style.zIndex || 0);
-      if (z >= topZ) {
-        top = win;
-        topZ = z;
-      }
-    });
-    return top;
-  }
-
   function getTopWindow() {
     const windows = Array.from(document.querySelectorAll('.app-window'))
       .filter(win => !win.classList.contains('window-template') && !win.classList.contains('is-hidden'));
@@ -3324,9 +3308,9 @@
     schedule(() => positionNewWindow(clone));
     if (windowType === 'prompts') {
       const root = clone.querySelector('.mix-root');
-      // Prompt windows inherit the hydrated template state. That keeps localStorage
-      // and preset-loaded templates meaningful instead of resetting every new window.
-      if (root && !root.children.length) applyMixState(null, root);
+      // Every Prompt Enhancer window is a new document. Never inherit template,
+      // browser-storage, preset, or previously opened window state implicitly.
+      if (root) applyMixState(null, root);
       if (root) {
         // Cloned DOM keeps attributes but not listeners, so rebuild all setting-control
         // affordances before the user edits delimiter, size, length, or variable fields.
@@ -3577,131 +3561,13 @@
     });
   }
 
-  // ======== Data Load/Save ========
-
-  const STORAGE_KEY = 'promptEnhancerMixData';
-
-  // Persistence root priority:
-  // 1. Explicit root passed by a caller.
-  // 2. Focused/top real Prompt Enhancer window.
-  // 3. Hydrated hidden template used to seed new prompt windows.
-  // This prevents the shared .mix-root selector from silently saving stale template state.
-  function resolvePromptPersistenceRoot(rootEl = null) {
-    // Event handlers may pass click/beforeunload events; only a real mix root is explicit.
-    if (rootEl?.classList?.contains?.('mix-root')) return rootEl;
-    const focusedWindow = currentFocusInstance ? getWindowByInstance(currentFocusInstance) : null;
-    if (
-      focusedWindow?.dataset?.window === 'prompts' &&
-      !focusedWindow.classList.contains('window-template')
-    ) {
-      const focusedRoot = focusedWindow.querySelector('.mix-root');
-      if (focusedRoot) return focusedRoot;
-    }
-    const topPromptWindow = getTopWindowByType('prompts');
-    const topRoot = topPromptWindow?.querySelector?.('.mix-root');
-    if (topRoot) return topRoot;
-    const firstRuntimeRoot = document.querySelector('.app-window[data-window="prompts"]:not(.window-template) .mix-root');
-    if (firstRuntimeRoot) return firstRuntimeRoot;
-    return (
-      document.querySelector('#window-prompts-template .mix-root') ||
-      document.querySelector('.window-template[data-template="prompts"] .mix-root') ||
-      document.querySelector('.mix-root')
-    );
-  }
-
-  function exportData(rootEl = null) {
-    return JSON.stringify(exportMixState(resolvePromptPersistenceRoot(rootEl)), null, 2);
-  }
-
-  function importData(raw, rootEl = null) {
-    if (!raw) return;
-    let data = raw;
-    if (typeof raw === 'string') {
-      try {
-        data = JSON.parse(raw);
-      } catch (err) {
-        return;
-      }
-    }
-    applyMixState(data, resolvePromptPersistenceRoot(rootEl));
-    persist(rootEl);
-  }
-
-  function persist(rootEl = null) {
-    if (typeof localStorage === 'undefined') return;
-    try {
-      localStorage.setItem(STORAGE_KEY, exportData(rootEl));
-    } catch (err) {
-      /* ignore */
-    }
-  }
-
-  function loadPersisted(rootEl = null) {
-    if (typeof localStorage === 'undefined') return false;
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return false;
-      importData(raw, rootEl);
-      return true;
-    } catch (err) {
-      return false;
-    }
-  }
-
-  function resetData(rootEl = null) {
-    if (typeof localStorage !== 'undefined') {
-      try {
-        localStorage.removeItem(STORAGE_KEY);
-      } catch (err) {
-        /* ignore */
-      }
-    }
-    applyMixState(null, resolvePromptPersistenceRoot(rootEl));
-  }
-
-  function setupDataButtons() {
-    const loadBtn = document.getElementById('load-data');
-    const saveBtn = document.getElementById('save-data');
-    const resetBtn = document.getElementById('reset-data');
-    const fileInput = document.getElementById('data-file');
-
-    if (saveBtn) {
-      saveBtn.addEventListener('click', () => {
-        const data = exportData();
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'prompt-enhancer-mix.json';
-        a.click();
-        URL.revokeObjectURL(url);
-      });
-    }
-
-    if (loadBtn && fileInput) {
-      loadBtn.addEventListener('click', () => fileInput.click());
-      fileInput.addEventListener('change', e => {
-        const f = e.target.files[0];
-        if (!f) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          importData(reader.result);
-        };
-        reader.readAsText(f);
-        fileInput.value = '';
-      });
-    }
-
-    if (resetBtn) {
-      resetBtn.addEventListener('click', () => resetData());
-    }
-  }
-
   // ======== Initialization ========
 
   function initializeUI() {
     setupTabs();
-    if (!loadPersisted()) applyMixState(null, document.querySelector('.mix-root'));
+    // Startup is always a fresh document; restoration is explicit through
+    // File > Open, + Add Save, or the preset submenu inside a Prompt window.
+    applyMixState(null, document.querySelector('.mix-root'));
     setupDelimiterControls(document);
     setupSizeControls(document);
     setupUIEvents();
@@ -3709,7 +3575,6 @@
     setupWindowDrag();
     setupWindowResize();
     setupMenu();
-    setupDataButtons();
     syncCollapseButtons(document);
 
     document.querySelectorAll('.app-window').forEach(win => {
@@ -3731,11 +3596,6 @@
       }
       window.addEventListener('resize', handler);
       window.addEventListener('orientationchange', handler);
-    }
-    if (typeof window !== 'undefined') {
-      // beforeunload passes an Event object; call persist with no argument so
-      // root selection still follows the prompt-window priority order above.
-      window.addEventListener('beforeunload', () => persist());
     }
   }
 
