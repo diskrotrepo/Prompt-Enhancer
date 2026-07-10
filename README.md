@@ -230,6 +230,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 #### Window apps
 
 - **Prompt workspace meets its file strip without an inherited flex-gap artifact** — `tests/windowBehavior.test.js`
+- **On mobile, the /// file launcher reads as physical chrome with a raised face, divided dropdown cue, and depressed open state** — `tests/windowBehavior.test.js`
 - **Pressing any interior window surface activates and raises that window without swallowing its control action** — `multi_prompt_windows_open`
 - **The /// yolk start mark compensates the slash baseline for balanced vertical padding** — `tests/windowBehavior.test.js`
 - **Completion API appears in the menu and opens its own window** — `openrouter_app_window`

@@ -2174,6 +2174,60 @@ button:disabled {
     margin-right: 0;
   }
 
+  /* Mobile file launcher: turn the flat menu word into touchable window chrome. */
+  .prompt-menu-start {
+    position: relative;
+    align-self: center;
+    height: 24px;
+    margin: 0 0 0 4px;
+    padding: 0 0 0 0.55rem;
+    background: var(--w31-face);
+    border: 1px solid var(--w31-black);
+    box-shadow: var(--bevel-up);
+  }
+
+  /* The divided caret bay makes the single hit target read like a real dropdown. */
+  .prompt-menu-start::after {
+    content: "";
+    align-self: stretch;
+    width: 19px;
+    margin-left: 0.15rem;
+    border-left: 1px solid var(--w31-shadow);
+    box-shadow: inset 1px 0 0 var(--w31-light);
+  }
+
+  /* A CSS-drawn arrow stays decorative instead of altering the button's name. */
+  .prompt-menu-start::before {
+    content: "";
+    position: absolute;
+    top: 9px;
+    right: 6px;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid currentColor;
+    pointer-events: none;
+  }
+
+  /* Touch feedback reverses the bevel so open and actively pressed feel depressed. */
+  .prompt-menu-start:hover {
+    background: var(--w31-face);
+    color: var(--w31-ink);
+  }
+
+  .prompt-menu-start:active,
+  .prompt-menu-start[aria-expanded="true"] {
+    background: var(--w31-face-light);
+    box-shadow: var(--bevel-down);
+    color: var(--w31-ink);
+  }
+
+  .prompt-menu-start:focus-visible {
+    outline: 1px dotted var(--w31-black);
+    outline-offset: -4px;
+  }
+
   .label-row label {
     flex-basis: 100%;
     margin: 0 auto;

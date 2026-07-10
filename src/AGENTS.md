@@ -143,7 +143,9 @@ for future changes:
   canvases meet that strip directly: keep the outer prompt `.box-body` at
   `gap: 0` so the generic box rhythm cannot create an artifact bar. Generated
   API output reuses the miniature box header and 26x24 `.copy-output` feedback
-  contract from prompt boxes.
+  contract from prompt boxes. At the mobile breakpoint, `.prompt-menu-start`
+  becomes a compact raised control with a divided caret bay; its expanded state
+  must reverse to `--bevel-down` so touch feedback reads as physical depression.
 - Uniform control metrics: icon/header buttons are 26x24 (`min-height: 0`
   beats the global `.toggle-button` minimum), single-line selects and text /
   password / number inputs are exactly 32px tall with no default margins
