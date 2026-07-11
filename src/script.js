@@ -3692,8 +3692,10 @@
     state.offset = normalized.offset;
   }
 
-  const WALLPAPER_MOMENTUM_FRICTION = 0.94;
-  const WALLPAPER_MOMENTUM_MIN_VELOCITY = 0.025;
+  // A gentle long-tail decay lets a fast flick coast for roughly two mobile
+  // viewports, while the velocity floor still gives every glide a clean stop.
+  const WALLPAPER_MOMENTUM_FRICTION = 0.972;
+  const WALLPAPER_MOMENTUM_MIN_VELOCITY = 0.018;
   const WALLPAPER_MOMENTUM_MAX_VELOCITY = 3.2;
 
   function getWallpaperEventTime(event) {
@@ -3720,8 +3722,9 @@
     state.root.dataset.wallpaperMomentumVelocity = '0';
   }
 
-  // A release glide integrates sampled finger velocity in world space. Friction
-  // is time-based, so 60 Hz and 120 Hz phones travel comparable distances.
+  // A release glide integrates sampled finger velocity in world space. Its
+  // long tail remains time-based, so 60 Hz and 120 Hz phones travel comparable
+  // distances and a decisive flick keeps rolling for several seconds.
   function startWallpaperMomentum(state) {
     const schedule = typeof window.requestAnimationFrame === 'function'
       ? window.requestAnimationFrame.bind(window)

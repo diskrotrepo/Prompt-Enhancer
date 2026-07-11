@@ -371,6 +371,7 @@
       "output": "",
       "wallpaperMoved": true,
       "wallpaperMomentumContinued": true,
+      "wallpaperMomentumLongTail": true,
       "wallpaperMomentumSettled": true,
       "wallpaperPoolStable": true,
       "wallpaperOffsetFinite": true

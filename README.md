@@ -246,7 +246,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 #### Procedural desktop wallpaper
 
 - **Wheel or trackpad movement over bare desktop space advances the procedural wallpaper without creating a fourth native scroll region** — `procedural_wallpaper_background_scroll`, `tests/wallpaper.test.js`
-- **A quick one-finger mobile drag releases into time-based momentum, decays to rest, and stops immediately for a new touch or reduced-motion preference** — `mobile_wallpaper_touch_momentum`, `tests/wallpaper.test.js`
+- **A quick one-finger mobile drag releases into a long-tail, time-based coast that remains active around 1.5 seconds, rolls roughly two viewports after a fast flick, decays to rest, and stops immediately for a new touch or reduced-motion preference** — `mobile_wallpaper_touch_momentum`, `tests/wallpaper.test.js`
 - **Wheel movement inside an app window remains isolated from the wallpaper and available to the window's own scroll body** — `window_wheel_does_not_scroll_wallpaper`, `tests/wallpaper.test.js`
 - **Seeded world bands are deterministic in both directions, preserve the original nine silhouettes, add new shape families, and recycle a bounded visible pool** — `tests/wallpaper.test.js`
 - **Backdrop palettes and texture parameters change continuously with virtual distance while generated fills retain useful contrast** — `tests/wallpaper.test.js`

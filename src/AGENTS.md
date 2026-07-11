@@ -147,9 +147,11 @@ for variables and Completion output). Key rules for future changes:
   direction. Wheel input advances the wallpaper only from bare desktop space;
   app-window scrolling must remain native and isolated. Palette and texture
   samples should vary continuously rather than snapping at band boundaries.
-  One-finger mobile panning samples velocity and continues with time-based
-  release momentum; new input, visibility loss, or reduced motion must cancel
-  that glide, while multi-touch remains available for browser pinch zoom.
+  One-finger mobile panning samples velocity and continues with long-tail,
+  time-based release momentum. A fast flick should remain active around 1.5
+  seconds and coast roughly two mobile viewports before settling; new input,
+  visibility loss, or reduced motion must cancel that glide, while multi-touch
+  remains available for browser pinch zoom.
 - Help mode uses the WinHelp-style yellow tooltip (`--w31-tooltip`).
 - App file strips share `.prompt-menu` and a right-side Help control. Workspace
   canvases meet that strip directly: keep the outer prompt `.box-body` at

@@ -225,7 +225,11 @@ function runSanityCase(testCase) {
       const released = readState();
       flushFrames(1);
       const afterReleaseFrame = readState();
-      flushFrames(180);
+      // Sample the middle of the coast separately from the final rest. This
+      // guards the deliberately leisurely feel as well as eventual cleanup.
+      flushFrames(89);
+      const longTail = readState();
+      flushFrames(240);
       const settled = readState();
       window.requestAnimationFrame = previousRequestFrame;
       window.cancelAnimationFrame = previousCancelFrame;
@@ -233,6 +237,7 @@ function runSanityCase(testCase) {
         settled.band !== before.band || settled.offset !== before.offset;
       actionResults.wallpaperMomentumContinued =
         released.momentum === 'active' && afterReleaseFrame.scene !== afterDrag.scene;
+      actionResults.wallpaperMomentumLongTail = longTail.momentum === 'active';
       actionResults.wallpaperMomentumSettled = settled.momentum === 'idle';
       actionResults.wallpaperPoolStable = settled.poolSize === before.poolSize;
       actionResults.wallpaperOffsetFinite =
@@ -373,6 +378,7 @@ function runSanityCase(testCase) {
     wallpaperPoolStable: false,
     wallpaperOffsetFinite: false,
     wallpaperMomentumContinued: false,
+    wallpaperMomentumLongTail: false,
     wallpaperMomentumSettled: false
   };
   // Run post-generate actions (copy, menu saves) so outputs are available.
@@ -474,6 +480,7 @@ function runSanityCase(testCase) {
     wallpaperPoolStable: actionResults.wallpaperPoolStable,
     wallpaperOffsetFinite: actionResults.wallpaperOffsetFinite,
     wallpaperMomentumContinued: actionResults.wallpaperMomentumContinued,
+    wallpaperMomentumLongTail: actionResults.wallpaperMomentumLongTail,
     wallpaperMomentumSettled: actionResults.wallpaperMomentumSettled,
     mixCopiedText: actionResults.mixCopiedText,
     chunkCopiedText: actionResults.chunkCopiedText,
@@ -615,6 +622,9 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'wallpaperMomentumContinued')) {
         expect(result.wallpaperMomentumContinued).toBe(expected.wallpaperMomentumContinued);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'wallpaperMomentumLongTail')) {
+        expect(result.wallpaperMomentumLongTail).toBe(expected.wallpaperMomentumLongTail);
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'wallpaperMomentumSettled')) {
         expect(result.wallpaperMomentumSettled).toBe(expected.wallpaperMomentumSettled);

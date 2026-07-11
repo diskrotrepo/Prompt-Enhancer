@@ -2994,7 +2994,7 @@
     },
     {
       "id": "mobile_wallpaper_touch_momentum",
-      "description": "A quick single-finger background drag continues after release, decays to rest, and keeps the procedural band pool bounded.",
+      "description": "A quick single-finger background drag keeps rolling through a long release tail, then decays to rest while the procedural band pool stays bounded.",
       "random": 0,
       "actions": [
         {

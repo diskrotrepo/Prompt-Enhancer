@@ -32,7 +32,8 @@ const LEGACY_SHAPE_TYPES = [
 ];
 
 // Runtime harness: most interactions render synchronously; momentum tests use
-// a controllable frame queue so release motion can be observed one step at a time.
+// a controllable frame queue so both the long coast and final rest can be
+// observed at deliberate points in simulated time.
 function setupDom(options = {}) {
   const html = fs.readFileSync(HTML_PATH, 'utf8');
   const dom = createDom(html, { runScripts: 'dangerously', url: 'http://localhost' });
@@ -352,7 +353,7 @@ describe('Procedural wallpaper runtime', () => {
     expect(readWallpaperState(window)).toEqual(initial);
   });
 
-  test('single-finger release carries sampled velocity into a decaying glide', () => {
+  test('single-finger release carries sampled velocity into a long decaying glide', () => {
     const { window, flushAnimationFrames, frameQueue } = setupDom({ queuedFrames: true });
     const area = window.document.getElementById('window-area');
     const touchAt = (y, time) => ({ identifier: 7, clientX: 180, clientY: y, time });
@@ -375,7 +376,14 @@ describe('Procedural wallpaper runtime', () => {
     const afterReleaseFrame = readWallpaperState(window);
     expect(afterReleaseFrame.scene).not.toBe(afterDrag.scene);
 
-    flushAnimationFrames(180);
+    // A fast flick should still be alive after about 1.5 seconds, then reach a
+    // natural stop without leaving an animation frame queued forever.
+    flushAnimationFrames(89);
+    const longTail = readWallpaperState(window);
+    expect(longTail.momentum).toBe('active');
+    expect(Math.abs(longTail.momentumVelocity)).toBeGreaterThan(0.05);
+
+    flushAnimationFrames(240);
     const settled = readWallpaperState(window);
     const bandHeight = settled.layer.__proceduralWallpaperState.bandHeight;
     const afterDragWorld = afterDrag.band * bandHeight + afterDrag.offset;
@@ -385,8 +393,8 @@ describe('Procedural wallpaper runtime', () => {
     expect(settled.momentumVelocity).toBe(0);
     expect(settled.scene).not.toBe(afterDrag.scene);
     expect(settled.poolSize).toBe(afterDrag.poolSize);
-    expect(glideDistance).toBeGreaterThan(300);
-    expect(glideDistance).toBeLessThan(1200);
+    expect(glideDistance).toBeGreaterThan(1400);
+    expect(glideDistance).toBeLessThan(2100);
   });
 
   test('reduced motion keeps touch dragging direct and skips release momentum', () => {
