@@ -424,6 +424,14 @@ function runSanityCase(testCase) {
     const parentBox = box.parentElement?.closest?.('.mix-box, .chunk-box, .variable-box');
     return !parentBox || parentBox.dataset.pattern !== box.dataset.pattern;
   });
+  const boxPatternDensityReady = patternedBoxes.every(box => {
+    const profile = window.PromptMixer.BOX_PATTERN_PROFILES[box.dataset.pattern];
+    const unit = parseInt(box.style.getPropertyValue('--box-pattern-unit'), 10);
+    const span = parseInt(box.style.getPropertyValue('--box-pattern-span'), 10);
+    return profile &&
+      unit >= profile.unit[0] && unit <= profile.unit[1] &&
+      span >= profile.span[0] && span <= profile.span[1];
+  });
   const hasLoadPresetMenu = !!(
     getActiveWindow()?.querySelector('.prompt-menu-item[data-action="load-preset"]') ||
     window.document.querySelector('.prompt-window:not(.window-template) .prompt-menu-item[data-action="load-preset"]')
@@ -477,6 +485,7 @@ function runSanityCase(testCase) {
     boxPatternCount,
     boxPatternPaletteReady,
     boxPatternHierarchyDistinct,
+    boxPatternDensityReady,
     hasLoadPresetMenu,
     hasOpenRouterMenu,
     openRouterWindowCount,
@@ -604,6 +613,9 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'boxPatternHierarchyDistinct')) {
         expect(result.boxPatternHierarchyDistinct).toBe(expected.boxPatternHierarchyDistinct);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'boxPatternDensityReady')) {
+        expect(result.boxPatternDensityReady).toBe(expected.boxPatternDensityReady);
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'hasLoadPresetMenu')) {
         expect(result.hasLoadPresetMenu).toBe(expected.hasLoadPresetMenu);

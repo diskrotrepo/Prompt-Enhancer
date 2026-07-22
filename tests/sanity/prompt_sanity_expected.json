@@ -14,7 +14,8 @@
       "output": "",
       "boxPatternCount": 5,
       "boxPatternPaletteReady": true,
-      "boxPatternHierarchyDistinct": true
+      "boxPatternHierarchyDistinct": true,
+      "boxPatternDensityReady": true
     },
     {
       "id": "color_custom_state",

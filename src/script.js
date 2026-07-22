@@ -2,7 +2,7 @@
   'use strict';
 
   // Table of contents:
-  // - Utilities + shared readers (including color presets + procedural box mats)
+  // - Utilities + shared readers (including cross-era color presets + sampled box-mat profiles)
   // - Procedural wallpaper model (palette chapters + deterministic shape bands)
   // - Chunking + mixing engine (single-pass + dropout seed traversal + first chunk behavior)
   // - Box evaluation
@@ -898,19 +898,28 @@
   }
 
   // Color presets are shared across boxes; custom entries are user-defined and serialized.
+  // The built-ins favor pigment-like midtones that recur in print, interiors,
+  // early software, and contemporary UI instead of one decade's neon extremes.
   const DEFAULT_COLOR_PRESETS = [
-    { id: 'sunset', name: 'Sunset', color: '#f2aa48' },
-    { id: 'citrus', name: 'Citrus', color: '#aae060' },
-    { id: 'coral', name: 'Coral', color: '#f28878' },
-    { id: 'gold', name: 'Gold', color: '#f2d266' },
-    { id: 'sage', name: 'Sage', color: '#bcce60' },
-    { id: 'rose', name: 'Rose', color: '#e67058' },
-    { id: 'orchid', name: 'Orchid', color: '#ec78d6' },
-    { id: 'amethyst', name: 'Amethyst', color: '#c878f6' }
+    { id: 'sunset', name: 'Sunset', color: '#d79a3d' },
+    { id: 'citrus', name: 'Citrus', color: '#7eaa62' },
+    { id: 'coral', name: 'Coral', color: '#d97a68' },
+    { id: 'gold', name: 'Gold', color: '#d2b24f' },
+    { id: 'sage', name: 'Sage', color: '#5f9f92' },
+    { id: 'rose', name: 'Rose', color: '#b87083' },
+    { id: 'orchid', name: 'Orchid', color: '#c76ea4' },
+    { id: 'amethyst', name: 'Amethyst', color: '#9275b5' },
+    { id: 'cobalt', name: 'Cobalt', color: '#667fbb' },
+    { id: 'lake', name: 'Lake', color: '#5f91a6' },
+    { id: 'teal', name: 'Teal', color: '#5b9c94' },
+    { id: 'plum', name: 'Plum', color: '#a36c9e' }
   ];
 
-  const MIX_AUTO_COLORS = ['#f2aa48', '#aae060', '#f28878', '#f2d266', '#bcce60', '#e67058'];
-  const CHUNK_AUTO_COLORS = ['#ec78d6', '#c878f6', '#dc62dc', '#b660d6', '#e468b2', '#ac5ac2'];
+  // Mixes retain a warm/cool pigment rhythm; Strings use berry plus water hues.
+  // That semantic split keeps parent/child headers recognizable without making
+  // every String another near-identical purple card.
+  const MIX_AUTO_COLORS = ['#d79a3d', '#7eaa62', '#d97a68', '#d2b24f', '#5f9f92', '#667fbb'];
+  const CHUNK_AUTO_COLORS = ['#c76ea4', '#9275b5', '#a36c9e', '#5f91a6', '#5b9c94', '#b87083'];
 
   // Eight low-density pattern families translate familiar late-80s/90s surfaces
   // (Jazz swoops, Memphis geometry, terrazzo, and computer tiles) into CSS mats.
@@ -926,6 +935,19 @@
     'orbit',
     'sprinkles'
   ]);
+  // Contact-sheet sampling showed that one global scale made faint motifs
+  // disappear while regular grids grew too busy. Each family therefore owns a
+  // conservative density envelope. Values are inclusive pixel bounds.
+  const BOX_PATTERN_PROFILES = Object.freeze({
+    jazz: Object.freeze({ unit: [17, 21], span: [46, 58] }),
+    memphis: Object.freeze({ unit: [17, 21], span: [44, 56] }),
+    terrazzo: Object.freeze({ unit: [16, 20], span: [38, 48] }),
+    microchip: Object.freeze({ unit: [18, 23], span: [52, 66] }),
+    ribbons: Object.freeze({ unit: [17, 21], span: [48, 62] }),
+    checker: Object.freeze({ unit: [19, 24], span: [52, 66] }),
+    orbit: Object.freeze({ unit: [17, 21], span: [52, 64] }),
+    sprinkles: Object.freeze({ unit: [16, 20], span: [40, 52] })
+  });
   const BOX_PATTERN_FACE = { r: 198, g: 198, b: 198 };
   const BOX_PATTERN_WHITE = { r: 255, g: 255, b: 255 };
   const BOX_PATTERN_DARK = { r: 19, g: 19, b: 19 };
@@ -1081,8 +1103,9 @@
   }
 
   // Palette generation keeps the mat colorful enough to mark ownership while
-  // limiting saturated ink to translucent, small-scale marks. Opaque controls
-  // sit on the normal silver face and never inherit these decorative colors.
+  // limiting saturated ink to translucent, small-scale marks. The slightly
+  // firmer sampled opacities survive narrow nesting gutters; opaque controls
+  // still sit on the normal silver face and never inherit decorative colors.
   function refreshBoxPatternPalette(box) {
     if (!box?.style) return;
     const base = rgbFromHex(getBoxPatternColor(box));
@@ -1091,9 +1114,9 @@
     const accent = mixRgb(base, BOX_PATTERN_WHITE, 0.2);
     const dark = mixRgb(base, BOX_PATTERN_DARK, 0.34);
     box.style.setProperty('--box-pattern-paper', rgbaString(paper, 1));
-    box.style.setProperty('--box-pattern-soft', rgbaString(soft, 0.34));
-    box.style.setProperty('--box-pattern-accent', rgbaString(accent, 0.3));
-    box.style.setProperty('--box-pattern-dark', rgbaString(dark, 0.24));
+    box.style.setProperty('--box-pattern-soft', rgbaString(soft, 0.38));
+    box.style.setProperty('--box-pattern-accent', rgbaString(accent, 0.34));
+    box.style.setProperty('--box-pattern-dark', rgbaString(dark, 0.28));
   }
 
   function pickBoxPatternFamily(boxId, avoid = []) {
@@ -1113,10 +1136,13 @@
       context.previousPattern
     ]);
     const random = createBoxPatternRandom(hashBoxPatternSeed(box.dataset.boxId, 0x4d415453));
+    const profile = BOX_PATTERN_PROFILES[family];
+    const sampleRange = range => range[0] + Math.floor(random() * (range[1] - range[0] + 1));
     box.dataset.pattern = family;
-    // Family CSS reads these bounded parameters to vary scale and tile origin.
-    box.style.setProperty('--box-pattern-unit', `${14 + Math.floor(random() * 7)}px`);
-    box.style.setProperty('--box-pattern-span', `${50 + Math.floor(random() * 21)}px`);
+    // Family-specific bounds keep every motif legible without flattening its
+    // deterministic variation; origin sampling still prevents tiled sameness.
+    box.style.setProperty('--box-pattern-unit', `${sampleRange(profile.unit)}px`);
+    box.style.setProperty('--box-pattern-span', `${sampleRange(profile.span)}px`);
     box.style.setProperty('--box-pattern-x', `${Math.floor(random() * 18)}px`);
     box.style.setProperty('--box-pattern-y', `${Math.floor(random() * 18)}px`);
     refreshBoxPatternPalette(box);
@@ -4657,6 +4683,7 @@
     setupProceduralWallpaper,
     WALLPAPER_SHAPE_TYPES,
     BOX_PATTERN_FAMILIES,
+    BOX_PATTERN_PROFILES,
     generate
   };
 

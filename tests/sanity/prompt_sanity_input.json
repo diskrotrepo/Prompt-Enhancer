@@ -7,7 +7,7 @@
     },
     {
       "id": "procedural_box_pattern_hierarchy",
-      "description": "Every nested prompt box receives a deterministic tinted pattern mat distinct from its parent.",
+      "description": "Every nested prompt box receives a deterministic tinted pattern mat distinct from its parent and stays inside its sampled family-specific density bounds.",
       "random": 0,
       "state": {
         "mixes": [

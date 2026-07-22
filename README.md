@@ -215,7 +215,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 
 #### Procedural box mats
 
-- **Nested boxes receive stable, palette-ready pattern mats distinct from their parents** — `procedural_box_pattern_hierarchy`, `tests/dynamicDom.test.js`
+- **Nested boxes receive stable, palette-ready pattern mats distinct from their parents, with every motif kept inside its visually sampled density envelope** — `procedural_box_pattern_hierarchy`, `tests/dynamicDom.test.js`
 - **Custom colors retint the mat while preserving its generated motif** — `tests/dynamicDom.test.js`
 
 #### File + persistence

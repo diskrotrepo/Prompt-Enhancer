@@ -1345,40 +1345,47 @@ textarea:focus-visible {
   background-repeat: repeat;
 }
 
-/* Jazz: broad brush lanes crossed by a thinner energetic stroke. */
+/* Jazz: offset brush arcs stay readable in a thin gutter and avoid looking
+ * like the straighter printer ribbons or stationery sprinkles. */
 .mix-box[data-pattern="jazz"] > .box-body,
 .chunk-box[data-pattern="jazz"] > .box-body,
 .variable-box[data-pattern="jazz"] > .box-body {
   background-image:
-    radial-gradient(ellipse at 18% 52%, transparent 0 31%, var(--box-pattern-accent) 33% 38%, transparent 40%),
-    linear-gradient(118deg, transparent 0 36%, var(--box-pattern-soft) 37% 45%, transparent 46% 100%);
+    radial-gradient(ellipse at 48% 108%, transparent 0 42%, var(--box-pattern-accent) 43% 49%, transparent 50%),
+    radial-gradient(ellipse at 12% -8%, transparent 0 35%, var(--box-pattern-soft) 36% 43%, transparent 44%),
+    radial-gradient(ellipse at 82% 22%, var(--box-pattern-dark) 0 2px, transparent 2.5px);
   background-size:
-    calc(var(--box-pattern-span, 58px) + 28px) var(--box-pattern-span, 58px),
-    var(--box-pattern-span, 58px) var(--box-pattern-span, 58px);
+    calc(var(--box-pattern-span, 52px) + 26px) var(--box-pattern-span, 52px),
+    var(--box-pattern-span, 52px) calc(var(--box-pattern-span, 52px) + 18px),
+    calc(var(--box-pattern-span, 52px) + 13px) calc(var(--box-pattern-span, 52px) + 9px);
 }
 
-/* Memphis: widely spaced dots and angular cut-paper dashes. */
+/* Memphis: asymmetrical dots, pills, and angular cut-paper bands. */
 .mix-box[data-pattern="memphis"] > .box-body,
 .chunk-box[data-pattern="memphis"] > .box-body,
 .variable-box[data-pattern="memphis"] > .box-body {
   background-image:
     radial-gradient(circle at 7px 7px, var(--box-pattern-dark) 0 2px, transparent 2.5px),
+    radial-gradient(ellipse 7px 3px at 76% 24%, var(--box-pattern-accent) 0 70%, transparent 76%),
     linear-gradient(35deg, transparent 0 44%, var(--box-pattern-soft) 45% 55%, transparent 56% 100%);
   background-size:
-    var(--box-pattern-span, 58px) var(--box-pattern-span, 58px),
-    calc(var(--box-pattern-span, 58px) + 18px) calc(var(--box-pattern-span, 58px) + 12px);
+    var(--box-pattern-span, 50px) var(--box-pattern-span, 50px),
+    calc(var(--box-pattern-span, 50px) + 9px) calc(var(--box-pattern-span, 50px) + 5px),
+    calc(var(--box-pattern-span, 50px) + 18px) calc(var(--box-pattern-span, 50px) + 12px);
 }
 
-/* Terrazzo: a handful of irregular chips, deliberately sparse at UI scale. */
+/* Terrazzo: compact chips sampled densely enough to register around controls. */
 .mix-box[data-pattern="terrazzo"] > .box-body,
 .chunk-box[data-pattern="terrazzo"] > .box-body,
 .variable-box[data-pattern="terrazzo"] > .box-body {
   background-image:
-    radial-gradient(ellipse at 12% 18%, var(--box-pattern-accent) 0 3px, transparent 3.5px),
-    radial-gradient(ellipse at 74% 26%, var(--box-pattern-dark) 0 2px, transparent 2.5px),
-    radial-gradient(ellipse at 38% 76%, var(--box-pattern-soft) 0 4px, transparent 4.5px),
-    radial-gradient(ellipse at 88% 84%, var(--box-pattern-accent) 0 2px, transparent 2.5px);
-  background-size: var(--box-pattern-span, 58px) var(--box-pattern-span, 58px);
+    radial-gradient(ellipse 5px 3px at 10% 16%, var(--box-pattern-accent) 0 72%, transparent 80%),
+    radial-gradient(ellipse 3px 5px at 72% 24%, var(--box-pattern-dark) 0 70%, transparent 78%),
+    radial-gradient(ellipse 6px 3px at 36% 72%, var(--box-pattern-soft) 0 72%, transparent 80%),
+    radial-gradient(ellipse 3px 4px at 88% 82%, var(--box-pattern-accent) 0 70%, transparent 78%),
+    radial-gradient(ellipse 4px 2px at 54% 48%, var(--box-pattern-dark) 0 68%, transparent 78%),
+    radial-gradient(circle at 18% 90%, var(--box-pattern-soft) 0 2px, transparent 2.5px);
+  background-size: var(--box-pattern-span, 43px) var(--box-pattern-span, 43px);
 }
 
 /* Microchip: early-computer graph paper with an occasional registration node. */
@@ -1438,16 +1445,18 @@ textarea:focus-visible {
   background-size: var(--box-pattern-span, 58px) var(--box-pattern-span, 58px);
 }
 
-/* Sprinkles: short offset strokes recall stationery and broadcast bumpers. */
+/* Sprinkles: orderly pills and dots recall stationery and broadcast bumpers;
+ * the contained marks replace stripe-like gradients that duplicated Ribbons. */
 .mix-box[data-pattern="sprinkles"] > .box-body,
 .chunk-box[data-pattern="sprinkles"] > .box-body,
 .variable-box[data-pattern="sprinkles"] > .box-body {
   background-image:
-    linear-gradient(24deg, transparent 0 46%, var(--box-pattern-accent) 47% 53%, transparent 54% 100%),
-    linear-gradient(112deg, transparent 0 47%, var(--box-pattern-dark) 48% 52%, transparent 53% 100%);
-  background-size:
-    calc(var(--box-pattern-unit, 17px) + 17px) calc(var(--box-pattern-unit, 17px) + 11px),
-    calc(var(--box-pattern-span, 58px) + 9px) calc(var(--box-pattern-span, 58px) + 5px);
+    radial-gradient(ellipse 7px 2px at 17% 28%, var(--box-pattern-accent) 0 72%, transparent 80%),
+    radial-gradient(ellipse 2px 7px at 66% 72%, var(--box-pattern-dark) 0 72%, transparent 80%),
+    radial-gradient(ellipse 5px 2px at 84% 18%, var(--box-pattern-soft) 0 72%, transparent 80%),
+    radial-gradient(circle at 34% 82%, var(--box-pattern-accent) 0 2px, transparent 2.5px),
+    radial-gradient(circle at 56% 36%, var(--box-pattern-dark) 0 1.5px, transparent 2px);
+  background-size: var(--box-pattern-span, 46px) var(--box-pattern-span, 46px);
 }
 
 /* Silver islands protect reading and interaction from the decorative mat.
@@ -1512,19 +1521,19 @@ textarea:focus-visible {
 .openrouter-output > .box-header { background: var(--variable-header); }
 
 /* Flat per-box hues replace the old gradient skins. */
-.mix-box[data-color="1"] .box-header { background: #f0a848; }
-.mix-box[data-color="2"] .box-header { background: #99cc5c; }
-.mix-box[data-color="3"] .box-header { background: #ef8a78; }
-.mix-box[data-color="4"] .box-header { background: #ecd069; }
-.mix-box[data-color="5"] .box-header { background: #c2cf5c; }
-.mix-box[data-color="6"] .box-header { background: #e2765e; }
+.mix-box[data-color="1"] .box-header { background: #d79a3d; }
+.mix-box[data-color="2"] .box-header { background: #7eaa62; }
+.mix-box[data-color="3"] .box-header { background: #d97a68; }
+.mix-box[data-color="4"] .box-header { background: #d2b24f; }
+.mix-box[data-color="5"] .box-header { background: #5f9f92; }
+.mix-box[data-color="6"] .box-header { background: #667fbb; }
 
-.chunk-box[data-color="1"] .box-header { background: #ee8ade; }
-.chunk-box[data-color="2"] .box-header { background: #c992ee; }
-.chunk-box[data-color="3"] .box-header { background: #dc76dc; }
-.chunk-box[data-color="4"] .box-header { background: #ba80da; }
-.chunk-box[data-color="5"] .box-header { background: #ea80ba; }
-.chunk-box[data-color="6"] .box-header { background: #b478ce; }
+.chunk-box[data-color="1"] .box-header { background: #c76ea4; }
+.chunk-box[data-color="2"] .box-header { background: #9275b5; }
+.chunk-box[data-color="3"] .box-header { background: #a36c9e; }
+.chunk-box[data-color="4"] .box-header { background: #5f91a6; }
+.chunk-box[data-color="5"] .box-header { background: #5b9c94; }
+.chunk-box[data-color="6"] .box-header { background: #b87083; }
 
 .mix-box .box-header,
 .chunk-box .box-header,

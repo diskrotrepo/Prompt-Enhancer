@@ -122,11 +122,17 @@ consuming `Math.random`, which remains reserved for prompt behavior. The eight
 families (`jazz`, `memphis`, `terrazzo`, `microchip`, `ribbons`, `checker`,
 `orbit`, and `sprinkles`) are CSS gradients parameterized by JS custom
 properties. Parent and previous-sibling families are avoided when possible.
+`BOX_PATTERN_PROFILES` holds the contact-sheet-audited unit/span envelope for
+each family; sample inside that profile rather than returning to one global
+range, because chip patterns need tighter spacing than grids and rings.
 
 Patterns belong only to the mat and nesting gutters. Direct functional groups
 inside Mix, String, and Variable bodies must repaint `--w31-face`; preserve this
 separation when adding controls. Saved ids make patterns deterministic across
 load, while Custom/Presets change the derived palette rather than the motif.
+Automatic headers use a moderate, pigment-like bridge palette: warm/cool Mix
+colors and berry/water String colors. Maintain that cross-era balance and keep
+the chartreuse-heavy and single-hue-purple extremes out of the automatic cycle.
 
 ### Windows 3.1 Theme
 
@@ -157,9 +163,9 @@ for variables and Completion output). Key rules for future changes:
   large, sparse, pointer-inert, and behind `#window-area`; prefer CSS geometry
   over image assets so the desktop stays crisp at every viewport.
 - Prompt-box mats reuse the period vocabulary at a smaller, lower-contrast
-  scale. Keep all eight families procedural, deterministic, and behind opaque
-  silver work groups; their job is to expose nesting boundaries, not decorate
-  fields themselves.
+  scale. Keep all eight families procedural, deterministic, family-profiled,
+  and behind opaque silver work groups; their job is to expose nesting
+  boundaries, not decorate fields themselves.
 - Procedural wallpaper bands are deterministic by world index, recycle a
   bounded visible pool, and preserve spatial continuity when users reverse
   direction. Wheel input advances the wallpaper only from bare desktop space;

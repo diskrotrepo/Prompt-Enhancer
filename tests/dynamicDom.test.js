@@ -81,6 +81,14 @@ describe('Dynamic mix DOM', () => {
     expect(boxes).toHaveLength(5);
     expect(boxes.every(box => main.BOX_PATTERN_FAMILIES.includes(box.dataset.pattern))).toBe(true);
     expect(boxes.every(box => box.style.getPropertyValue('--box-pattern-paper'))).toBe(true);
+    expect(boxes.every(box => {
+      const profile = main.BOX_PATTERN_PROFILES[box.dataset.pattern];
+      const unit = parseInt(box.style.getPropertyValue('--box-pattern-unit'), 10);
+      const span = parseInt(box.style.getPropertyValue('--box-pattern-span'), 10);
+      return profile &&
+        unit >= profile.unit[0] && unit <= profile.unit[1] &&
+        span >= profile.span[0] && span <= profile.span[1];
+    })).toBe(true);
     expect(byId('pattern-parent').dataset.pattern).not.toBe(byId('pattern-string').dataset.pattern);
     expect(byId('pattern-string').dataset.pattern).not.toBe(byId('pattern-child').dataset.pattern);
     expect(byId('pattern-child').dataset.pattern).not.toBe(byId('pattern-grandchild').dataset.pattern);
@@ -102,7 +110,7 @@ describe('Dynamic mix DOM', () => {
     const box = root.querySelector('.mix-box');
     expect(box.dataset.pattern).toBeTruthy();
     expect(box.style.getPropertyValue('--box-pattern-paper')).toBe('rgba(198, 213, 230, 1)');
-    expect(box.style.getPropertyValue('--box-pattern-accent')).toContain('0.3');
+    expect(box.style.getPropertyValue('--box-pattern-accent')).toContain('0.34');
   });
 
   test('preserve chunks disables first-chunk select', () => {
