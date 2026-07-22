@@ -6,6 +6,27 @@
       "random": 0
     },
     {
+      "id": "help_copy_coverage",
+      "description": "Help Mode covers visible Prompt controls and title-bar icons with accurate Proportional Dropout guidance and accessible labels.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Help Audit",
+            "limit": 1000,
+            "lengthMode": "proportional-dropout",
+            "preserve": true,
+            "orderMode": "canonical",
+            "children": []
+          }
+        ]
+      },
+      "actions": [
+        "openPromptsWindow"
+      ]
+    },
+    {
       "id": "procedural_box_pattern_hierarchy",
       "description": "Every nested prompt box receives a deterministic tinted pattern mat distinct from its parent and stays inside its sampled family-specific density bounds.",
       "random": 0,
@@ -3076,6 +3097,96 @@
                 "type": "chunk",
                 "text": "b1 b2 b3 b4 b5 b6 b7 b8 ",
                 "limit": 1000,
+                "lengthMode": "exact-once",
+                "orderMode": "canonical",
+                "firstChunkBehavior": "size",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "proportional_dropout_mix",
+      "description": "Proportional Dropout spreads a short source across a longer source before removing chunks to the limit.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Proportional Dropout",
+            "limit": 21,
+            "lengthMode": "proportional-dropout",
+            "preserve": true,
+            "orderMode": "canonical",
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a1 a2 a3 a4 a5 a6 a7 a8 ",
+                "lengthMode": "exact-once",
+                "orderMode": "canonical",
+                "firstChunkBehavior": "size",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "b1 b2 ",
+                "lengthMode": "exact-once",
+                "orderMode": "canonical",
+                "firstChunkBehavior": "size",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "proportional_dropout_random_interleave",
+      "description": "Randomized proportional interleave lets each short-source chunk drift inside its matching progress window.",
+      "randomSequence": [0, 0, 0, 0, 0, 0, 0, 0, 0.4, 0.4],
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "title": "Random Proportional Dropout",
+            "limit": 1000,
+            "lengthMode": "proportional-dropout",
+            "preserve": true,
+            "orderMode": "randomize-interleave",
+            "delimiter": {
+              "mode": "whitespace",
+              "size": 1
+            },
+            "children": [
+              {
+                "type": "chunk",
+                "text": "a1 a2 a3 a4 a5 a6 a7 a8 ",
+                "lengthMode": "exact-once",
+                "orderMode": "canonical",
+                "firstChunkBehavior": "size",
+                "delimiter": {
+                  "mode": "whitespace",
+                  "size": 1
+                }
+              },
+              {
+                "type": "chunk",
+                "text": "b1 b2 ",
                 "lengthMode": "exact-once",
                 "orderMode": "canonical",
                 "firstChunkBehavior": "size",

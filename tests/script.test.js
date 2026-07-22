@@ -134,6 +134,45 @@ describe('Chunking + mixing engine', () => {
     expect(mixed.join('')).toBe('a1 b1 a2 b2 a3 ');
   });
 
+  test('mixChunkLists proportionally distributes unequal one-pass sources', () => {
+    const mixed = mixChunkLists(
+      [
+        ['a1 ', 'a2 ', 'a3 ', 'a4 ', 'a5 ', 'a6 ', 'a7 ', 'a8 '],
+        ['b1 ', 'b2 ']
+      ],
+      100,
+      false,
+      false,
+      true,
+      'all-once',
+      false,
+      { proportional: true }
+    );
+    expect(mixed.join('')).toBe('a1 a2 a3 a4 b1 a5 a6 a7 a8 b2 ');
+  });
+
+  test('proportional random interleave drifts a short-source chunk within its local window', () => {
+    const originalRandom = Math.random;
+    const sequence = [0, 0, 0, 0, 0, 0, 0, 0, 0.4, 0.4];
+    let randomIndex = 0;
+    Math.random = jest.fn(() => sequence[randomIndex++] ?? 0.4);
+    const mixed = mixChunkLists(
+      [
+        ['a1 ', 'a2 ', 'a3 ', 'a4 ', 'a5 ', 'a6 ', 'a7 ', 'a8 '],
+        ['b1 ', 'b2 ']
+      ],
+      100,
+      false,
+      true,
+      true,
+      'all-once',
+      false,
+      { proportional: true }
+    );
+    Math.random = originalRandom;
+    expect(mixed.join('')).toBe('a1 a2 b1 a3 a4 a5 a6 b2 a7 a8 ');
+  });
+
   test('mixChunkLists fit-largest can reroll a wrapped source list', () => {
     const refreshers = [
       null,

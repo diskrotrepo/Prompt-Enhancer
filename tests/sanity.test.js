@@ -464,6 +464,49 @@ function runSanityCase(testCase) {
     openRouterWindow?.querySelector('.help-overlay') &&
     openRouterWindow?.dataset?.helpReady === 'true'
   );
+  // Help copy is a UI contract: every visible control intercepted by the
+  // overlay needs a short label plus concrete detail, and glyph-only controls
+  // also need an accessible name outside Help Mode.
+  const helpWindow = getActiveWindow();
+  const helpTargets = helpWindow
+    ? Array.from(helpWindow.querySelectorAll(
+        'button, input:not([type="file"]), select, textarea, [role="menuitem"], .resize-handle'
+      ))
+    : [];
+  const hasCompleteHelpCopy = !!(
+    helpTargets.length &&
+    helpTargets.every(target => target.dataset.help?.trim() && target.dataset.helpDetail?.trim())
+  );
+  const helpIconButtons = helpWindow ? Array.from(helpWindow.querySelectorAll('.icon-button')) : [];
+  const hasAccessibleIconHelp = !!(
+    helpIconButtons.length &&
+    helpIconButtons.every(button =>
+      button.getAttribute('aria-label')?.trim() &&
+      button.dataset.help?.trim() &&
+      button.dataset.helpDetail?.trim()
+    )
+  );
+  const proportionalLengthHelp = helpWindow?.querySelector('.mix-box .length-mode');
+  const proportionalOrderHelp = helpWindow?.querySelector('.mix-box .order-mode');
+  const hasProportionalDropoutHelp = !!(
+    proportionalLengthHelp?.value === 'proportional-dropout' &&
+    proportionalLengthHelp.dataset.helpDetail?.includes('Proportional Dropout') &&
+    proportionalLengthHelp.dataset.helpDetail?.includes('without changing child chunks') &&
+    proportionalOrderHelp?.dataset.helpDetail?.includes('local progress window')
+  );
+  const openRouterTitleHelp = openRouterWindow?.querySelector('.openrouter-title');
+  const openRouterLoadHelp = openRouterWindow?.querySelector('[data-action="load-settings"]');
+  const openRouterSaveHelp = openRouterWindow?.querySelector('[data-action="save-settings"]');
+  const openRouterTopKHelp = openRouterWindow?.querySelector('.openrouter-top-k');
+  const openRouterStatusHelp = openRouterWindow?.querySelector('.openrouter-status');
+  const hasAccurateOpenRouterHelp = !!(
+    openRouterTitleHelp?.dataset.helpDetail?.includes('not included') &&
+    openRouterLoadHelp?.dataset.helpDetail?.includes('asks for its password') &&
+    !openRouterLoadHelp?.dataset.helpDetail?.includes('password field') &&
+    openRouterSaveHelp?.dataset.helpDetail?.includes('all sampling controls') &&
+    openRouterTopKHelp?.dataset.helpDetail?.includes('omitted for Hyperbolic') &&
+    openRouterStatusHelp?.dataset.helpDetail?.includes('input/output tokens')
+  );
   const hasOpenRouterSharedCopyControl = !!(
     openRouterWindow?.querySelector('.openrouter-output > .openrouter-output-header .copy-output.openrouter-copy-output')
   );
@@ -505,6 +548,10 @@ function runSanityCase(testCase) {
     focusedWindowInstance,
     hasOpenRouterEncryptedSettingsControls,
     hasOpenRouterHelpMode,
+    hasCompleteHelpCopy,
+    hasAccessibleIconHelp,
+    hasProportionalDropoutHelp,
+    hasAccurateOpenRouterHelp,
     hasOpenRouterSharedCopyControl,
     wallpaperMoved: actionResults.wallpaperMoved,
     wallpaperSceneChanged: actionResults.wallpaperSceneChanged,
@@ -640,6 +687,18 @@ describe('Sanity regression via real UI flow', () => {
       if (Object.prototype.hasOwnProperty.call(expected, 'openRouterWindowCount')) {
         expect(result.openRouterWindowCount).toBe(expected.openRouterWindowCount);
       }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasCompleteHelpCopy')) {
+        expect(result.hasCompleteHelpCopy).toBe(expected.hasCompleteHelpCopy);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasAccessibleIconHelp')) {
+        expect(result.hasAccessibleIconHelp).toBe(expected.hasAccessibleIconHelp);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasProportionalDropoutHelp')) {
+        expect(result.hasProportionalDropoutHelp).toBe(expected.hasProportionalDropoutHelp);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasAccurateOpenRouterHelp')) {
+        expect(result.hasAccurateOpenRouterHelp).toBe(expected.hasAccurateOpenRouterHelp);
+      }
       if (Object.prototype.hasOwnProperty.call(expected, 'promptWindowCount')) {
         expect(result.promptWindowCount).toBe(expected.promptWindowCount);
       }
@@ -651,6 +710,12 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'hasOpenRouterEncryptedSettingsControls')) {
         expect(result.hasOpenRouterEncryptedSettingsControls).toBe(expected.hasOpenRouterEncryptedSettingsControls);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasOpenRouterHelpMode')) {
+        expect(result.hasOpenRouterHelpMode).toBe(expected.hasOpenRouterHelpMode);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasOpenRouterSharedCopyControl')) {
+        expect(result.hasOpenRouterSharedCopyControl).toBe(expected.hasOpenRouterSharedCopyControl);
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'wallpaperMoved')) {
         expect(result.wallpaperMoved).toBe(expected.wallpaperMoved);

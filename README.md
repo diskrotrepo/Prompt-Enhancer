@@ -21,8 +21,10 @@ Length modes then decide how the length limit is enforced:
 - **Delete Final Chunk** stops before the first chunk that would overflow.
 - **Fit to Smallest / Fit to Largest / Exactly Once** run a one-pass traversal of source lists.
 - **Dropout** first builds a full all-once source list, skipping any child list after it is exhausted, then repeatedly removes random chunks and recounts until total length is `<= limit`.
+- **Proportional Dropout** performs the same random-removal pass, but first merges every child list by relative chunk progress. A 20-chunk source and a 5-chunk source therefore contribute roughly four and one chunks per local group while both span the full prompt.
 
 For Dropout in canonical order, surviving chunks keep canonical relative order; randomness controls which chunks remain.
+For Proportional Dropout, canonical order uses deterministic relative-progress positions. Randomize interleave moves each chunk within its local proportional interval, so a short-list chunk can appear anywhere inside the corresponding long-list group without changing either child's chunking or internal order.
 When a mode wraps a shorter list (for example Fit to Largest or non-single-pass repeat), the wrapped source is regenerated from its base state so randomized children reroll instead of replaying one frozen cycle. Dropout does not wrap exhausted children; longer siblings keep contributing their remaining one-pass chunks.
 
 ## Shared terminology
@@ -174,6 +176,8 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Dropout skips exhausted exact-once children instead of wrapping them** — `dropout_mix_skips_exhausted_exact_once_child`
 - **Dropout on strings (full one-pass seed, then random chunk removal)** — `root_string_dropout`
 - **Dropout can keep late canonical chunks because seeding starts from a full one-pass list** — `dropout_mix_reaches_tail_chunks`
+- **Proportional Dropout distributes unequal child lists across the full canonical seed** — `proportional_dropout_mix`
+- **Proportional Dropout randomized interleave drifts chunks within local progress windows** — `proportional_dropout_random_interleave`
 - **Fit to Smallest keeps blank-string children (empty chunk slots)** — `fit_smallest_empty_child`
 - **Fit to Smallest halts when a variable resolves empty** — `fit_smallest_empty_variable`
 - **Exactly Once (chunk single-pass behavior)** — `exact_once_length`
@@ -231,6 +235,12 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Startup ignores legacy local storage and initializes the fresh default prompt** — `local_storage_ignored_on_startup`
 - **Every newly opened Prompt Enhancer window starts fresh, independent of browser storage** — `fresh_prompt_window_ignores_local_storage`
 - **File Open remains the explicit path for replacing a fresh prompt with saved state** — `tests/windowBehavior.test.js`
+
+#### Help Mode
+
+- **Every visible Prompt control, title-bar icon, and resize handle has specific Help copy plus accessible icon labels** — `help_copy_coverage`, `tests/dom.test.js`
+- **Proportional Dropout Help explains relative-progress scheduling, local randomized windows, and unchanged child chunks** — `help_copy_coverage`
+- **Completion Help matches encrypted password prompts, all saved settings, provider-specific Top-k behavior, local-only Title, and token/cost status** — `openrouter_app_window`, `tests/dom.test.js`
 
 #### Window apps
 

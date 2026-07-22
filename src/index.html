@@ -89,22 +89,22 @@
           <div id="window-area">
             <div id="window-prompts-template" class="window-shell box-shell app-window prompt-window window-template" data-template="prompts">
               <div class="box-header window-header">
-                <span class="box-title" aria-label="Prompt Enhancer window title">Prompt Enhancer</span>
+                <span class="box-title" aria-label="Prompt Enhancer window title" data-help="Prompt window title." data-help-detail="Shows Prompt Enhancer for a fresh window, then changes to the active opened, saved, or preset file name without the .json extension.">Prompt Enhancer</span>
                 <div class="button-col">
-                  <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Minimize" data-expanded="-" data-collapsed="+">-</button>
-                  <button type="button" class="toggle-button icon-button maximize-toggle" title="Maximize">□</button>
-                  <button type="button" class="delete-button icon-button remove-box" title="Close">X</button>
+                  <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Minimize window" aria-label="Minimize window" data-expanded="-" data-collapsed="+" data-help="Minimize this window." data-help-detail="Hides this Prompt window while keeping its taskbar button available so you can restore it without losing the current prompt.">-</button>
+                  <button type="button" class="toggle-button icon-button maximize-toggle" title="Maximize or restore window" aria-label="Maximize or restore window" data-help="Maximize or restore this window." data-help-detail="Expands the Prompt window to the desktop workspace or returns it to its previous movable size. Mobile windows remain maximized.">□</button>
+                  <button type="button" class="delete-button icon-button remove-box" title="Close window" aria-label="Close window" data-help="Close this Prompt window." data-help-detail="Removes this window and its taskbar button. Unsaved prompt changes in this window are discarded.">X</button>
                 </div>
               </div>
               <div class="box-body">
                 <div class="prompt-menu">
-                  <button type="button" class="prompt-menu-start" aria-haspopup="true" aria-expanded="false" data-help="Open the file menu." data-help-detail="Use the file menu to open saved prompt enhancer files or save the current state as a JSON download.">
+                  <button type="button" class="prompt-menu-start" aria-haspopup="true" aria-expanded="false" data-help="Open the Prompt file menu." data-help-detail="Open a save, replace the prompt with a built-in preset, or download the current box tree and color presets with Save or Save As.">
                     <span class="prompt-menu-glyph" aria-hidden="true">///</span>
                     <span class="prompt-menu-label">file</span>
                   </button>
                   <div class="prompt-menu-dropdown" role="menu" aria-hidden="true">
-                    <div class="prompt-menu-item" data-action="open" role="menuitem" data-help="Load a saved prompt enhancer JSON file." data-help-detail="Open a saved prompt enhancer file. The prompt window title updates to the file name and any saved presets or settings load with it.">Open</div>
-                    <div class="prompt-menu-item has-submenu" data-action="load-preset" role="menuitem" aria-haspopup="true" data-help="Load a preset from the repo presets catalog." data-help-detail="Opens a submenu populated from src/presets/index.js so you can quickly load curated preset states from the repository.">
+                    <div class="prompt-menu-item" data-action="open" role="menuitem" data-help="Replace this prompt with a saved JSON file." data-help-detail="Opens a Prompt Enhancer save, replacing the active box tree and loading its color presets. The window title changes to the opened file name; use + Add Save instead when existing boxes must remain.">Open</div>
+                    <div class="prompt-menu-item has-submenu" data-action="load-preset" role="menuitem" aria-haspopup="true" data-help="Replace this prompt with a built-in preset." data-help-detail="Opens the preset catalog. Choosing an entry replaces the active box tree, loads the preset’s color presets, and updates the window title.">
                       <span>Load Preset</span>
                       <span class="prompt-menu-caret" aria-hidden="true">▸</span>
                       <div class="prompt-menu-submenu" role="menu" aria-hidden="true"></div>
@@ -113,10 +113,10 @@
                     <div class="prompt-menu-item" data-action="save-as" role="menuitem" data-help="Choose a new file name and save the current prompt enhancer state." data-help-detail="Always prompt for a new file name, download the JSON under that name (auto-adding .json), and update the window title.">Save As</div>
                   </div>
                   <div class="prompt-menu-spacer" aria-hidden="true"></div>
-                  <button type="button" class="help-toggle" aria-pressed="false" data-help="Toggle help mode." data-help-detail="When help mode is on, clicking any control shows what it does instead of activating it. Click Help again or press Escape to exit.">Help</button>
+                  <button type="button" class="help-toggle" aria-pressed="false" data-help="Toggle help mode." data-help-detail="When Help is on, clicking a workspace, menu, output, resize, or title-bar control explains it without performing the action. Click Help again or press Escape to exit.">Help</button>
                 </div>
                 <div class="prompt-body" data-help="Prompt workspace." data-help-detail="This is the main canvas where mixes, strings, and variables live. Use the buttons and boxes here to build and generate your prompt.">
-                  <button type="button" class="holo-generate generate-button" data-help="Generate the current mix output." data-help-detail="Runs the mixing engine for every mix and string, applying randomization, length modes, and first-chunk behavior so all output panels update.">GENERATE MIX</button>
+                  <button type="button" class="holo-generate generate-button" data-help="Generate every current prompt output." data-help-detail="Evaluates root and nested mixes, strings, and variables, applying chunking, order, length, dropout, and first-chunk settings so every reachable output panel updates.">GENERATE MIX</button>
                   <input type="file" class="load-mix-file" accept="application/json" style="display:none">
                   <input type="file" class="append-save-file" accept="application/json,.json" style="display:none">
                   <div class="mix-root"></div>
@@ -124,12 +124,12 @@
                     <div class="empty-state-text">No mixes yet.</div>
                     <button type="button" class="add-button add-empty-mix" data-help="Add a new top-level mix." data-help-detail="Creates a fresh mix at the root so you can start building a new prompt structure.">+ Add Mix</button>
                     <button type="button" class="add-button add-empty-chunk" data-help="Add a new top-level string." data-help-detail="Creates a root-level string box so it can be generated on its own or referenced by variables.">+ Add String</button>
-                    <button type="button" class="add-button add-empty-save" data-help="Add a saved prompt enhancer JSON here." data-help-detail="Opens a file picker and appends the saved top-level mixes and strings at the root without replacing this prompt window.">+ Add Save</button>
+                    <button type="button" class="add-button add-empty-save" data-help="Add a saved Prompt Enhancer JSON here." data-help-detail="Appends the file’s top-level mixes and strings at the root, imports its color presets, preserves existing boxes and the active file name, and remaps imported variable references if IDs collide.">+ Add Save</button>
                   </div>
                   <div class="root-actions">
                     <button type="button" class="add-button add-root-mix" data-help="Add a new top-level mix." data-help-detail="Adds another mix at the root level alongside existing mixes.">+ Add Mix</button>
                     <button type="button" class="add-button add-root-chunk" data-help="Add a new top-level string." data-help-detail="Adds a root-level string box that stays outside mixes but can be generated or referenced.">+ Add String</button>
-                    <button type="button" class="add-button add-root-save" data-help="Append a saved prompt enhancer JSON at the root." data-help-detail="Loads a prompt enhancer save file and adds its saved top-level mixes and strings beside the current root boxes. Existing boxes stay in place.">+ Add Save</button>
+                    <button type="button" class="add-button add-root-save" data-help="Append a saved Prompt Enhancer JSON at the root." data-help-detail="Adds the file’s top-level mixes and strings beside current root boxes, imports its color presets, preserves the active file name, and keeps imported variable references local when IDs collide.">+ Add Save</button>
                   </div>
                 </div>
                 <div class="help-overlay is-hidden" aria-hidden="true"></div>
@@ -148,14 +148,14 @@
                       <div class="box-header">
                         <input type="text" class="box-title" value="Mix" data-help="Rename this mix." data-help-detail="Change the mix name for clarity. Names are used in variable pickers and help identify boxes.">
                         <div class="button-col">
-                          <button type="button" class="copy-button icon-button copy-output" title="Copy output" data-help="Copy the current mix output to the clipboard." data-help-detail="Copies the generated mix output shown below. Use this after Generate to quickly paste the result elsewhere.">&#128203;</button>
-                          <button type="button" class="toggle-button icon-button color-toggle" title="Color" data-help="Open the color panel to tint this mix’s header and pattern mat." data-help-detail="Choose Auto, a preset, or a custom color. The selected hue tints both the title bar and the procedural nesting pattern; saved presets can be reused across boxes.">&#127912;</button>
-                          <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Collapse" data-expanded="-" data-collapsed="+" data-help="Collapse or expand this mix." data-help-detail="Collapsing hides the mix body so you can focus on other sections; expand to edit again.">-</button>
-                          <button type="button" class="delete-button icon-button remove-box" title="Remove" data-help="Remove this mix." data-help-detail="Deletes this mix and all of its children from the prompt structure.">X</button>
+                          <button type="button" class="copy-button icon-button copy-output" title="Copy mix output" aria-label="Copy mix output" data-help="Copy the current mix output." data-help-detail="Copies the exact generated text currently shown in this mix’s Output panel. Generate first when settings or child content have changed.">&#128203;</button>
+                          <button type="button" class="toggle-button icon-button color-toggle" title="Edit mix color" aria-label="Edit mix color" data-help="Open or close this mix’s color panel." data-help-detail="Choose Auto, a named preset, or a custom color. The hue tints the mix header and its procedural nesting mat without changing prompt behavior.">&#127912;</button>
+                          <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Collapse mix" aria-label="Collapse mix" data-expanded="-" data-collapsed="+" data-help="Collapse or expand this mix." data-help-detail="Hides or reveals the mix body without changing generated output. The collapsed state is preserved in saved JSON.">-</button>
+                          <button type="button" class="delete-button icon-button remove-box" title="Remove mix" aria-label="Remove mix" data-help="Remove this mix." data-help-detail="Deletes this mix and all nested children. Variables that pointed to the removed source are cleared when source choices refresh.">X</button>
                         </div>
                       </div>
                       <div class="box-body">
-                        <div class="mix-output" data-help="Output generated for this mix." data-help-detail="Shows the current mixed output after Generate. It reflects randomization, length mode, and rechunking settings for this mix.">
+                        <div class="mix-output" data-help="Output generated for this mix." data-help-detail="Shows the latest result after Generate, including canonical or randomized order, proportional scheduling, length/dropout rules, and this mix’s Preserve or rechunk setting.">
                           <div class="label-row">
                             <label>Output</label>
                           </div>
@@ -173,7 +173,7 @@
                           </div>
                           <div class="input-row color-row">
                             <input type="text" class="color-preset-name" placeholder="Preset name" data-help="Name a custom color preset so it can be reused." data-help-detail="Enter a label for your custom color so it shows up in the preset list.">
-                            <button type="button" class="add-button save-color-preset" data-help="Save the current custom color as a named preset." data-help-detail="Adds this custom color to your saved preset list for reuse across boxes.">Save Preset</button>
+                            <button type="button" class="add-button save-color-preset" data-help="Save the current custom color as a named preset." data-help-detail="Creates or updates a reusable color preset with this name. Color presets apply across boxes and are included in Prompt Enhancer save files.">Save Preset</button>
                           </div>
                         </div>
                         <div class="mix-controls">
@@ -196,7 +196,7 @@
                           </div>
                           <div class="control-block">
                             <label>Chunk Size / Preserve</label>
-                            <select class="delimiter-size" data-help="Set the chunk size or preserve child chunks." data-help-detail="Choose Preserve chunks to pass child chunks through unchanged. Otherwise set a number to group that many delimiters into each output chunk.">
+                            <select class="delimiter-size" data-help="Preserve child chunks or set this mix’s new chunk size." data-help-detail="Preserve chunks forwards child chunks unchanged. A numeric size joins that many delimiter-preserving base chunks into each new output chunk at this mix level.">
                               <option value="preserve" selected>Preserve chunks</option>
                               <option value="1">1</option>
                               <option value="2">2</option>
@@ -211,12 +211,12 @@
                               <option value="custom">Custom...</option>
                             </select>
                             <div class="input-row delimiter-size-custom-row" style="display:none">
-                              <input type="number" class="delimiter-size-custom" min="1" placeholder="Custom size" data-help="Enter a custom chunk size." data-help-detail="Type any positive number to use as the chunk size.">
+                              <input type="number" class="delimiter-size-custom" min="1" placeholder="Custom size" data-help="Enter a custom mix chunk size." data-help-detail="Type a positive number of delimiter-preserving base chunks to group into each output chunk when this mix rechunks.">
                             </div>
                           </div>
                           <div class="control-block">
                             <label>First Chunk Behavior</label>
-                            <select class="first-chunk-select" data-help="Choose how the first chunk is cut." data-help-detail="Size X keeps fixed chunk sizes. Between 1 - X randomizes the first chunk size to offset repeats. Size X, random start location rotates the prompt before grouping.">
+                            <select class="first-chunk-select" data-help="Choose this mix’s rechunking start behavior." data-help-detail="Size X starts with a full fixed group. Between 1 - X randomizes only the first group size. Size X, random start location rotates the combined text before grouping. Preserve chunks disables this control because no mix-level rechunking occurs.">
                               <option value="size" selected>Size X</option>
                               <option value="between">Between 1 - X</option>
                               <option value="random-start">Size X, random start location</option>
@@ -224,21 +224,22 @@
                           </div>
                           <div class="control-block">
                             <label>Length Limit</label>
-                            <input type="number" class="length-input" value="1000" min="1" data-help="Maximum total output length unless a Fit mode is enabled." data-help-detail="Caps how many characters this mix can emit. Fit to Smallest and Fit to Largest ignore the limit and run one constrained pass across child lists.">
+                            <input type="number" class="length-input" value="1000" min="1" data-help="Set this mix’s maximum output length." data-help-detail="Split/Delete modes repeat sources toward this character limit. Both Dropout modes build one non-wrapping seed and remove whole chunks until at or below the limit, so they may finish shorter. Fit modes ignore and disable this field.">
                           </div>
                           <div class="control-block toggle-block">
                             <label>Length Mode</label>
-                            <select class="length-mode" data-help="Choose how length limits are enforced." data-help-detail="Split Final Chunk trims the last chunk to hit the limit. Delete Final Chunk drops the chunk that would overflow. Fit to Smallest stops when any child list runs out. Fit to Largest repeats shorter child lists until the longest list is exhausted. Dropout builds one non-wrapping pass across all children, skips exhausted lists, then randomly removes chunks until the output is under the limit.">
+                            <select class="length-mode" data-help="Choose how this mix builds and limits its output." data-help-detail="Split Final Chunk and Delete Final Chunk repeat sources toward the limit, trimming or rejecting the overflow chunk. Fit to Smallest stops when any source ends; Fit to Largest repeats shorter sources to match the longest. Dropout uses a round-robin one-pass seed, then removes random whole chunks. Proportional Dropout uses the same removal step but places each source by relative chunk progress, keeping short and long sources spread from beginning to end without changing child chunks.">
                               <option value="exact">Split Final Chunk</option>
                               <option value="fit-smallest" selected>Fit to Smallest</option>
                               <option value="fit-largest">Fit to Largest</option>
                               <option value="dropout">Dropout (randomly remove chunks)</option>
+                              <option value="proportional-dropout">Proportional Dropout (spread sources)</option>
                               <option value="allow">Delete Final Chunk</option>
                             </select>
                           </div>
                           <div class="control-block toggle-block">
                             <label>Order</label>
-                            <select class="order-mode" data-help="Choose mix ordering behavior." data-help-detail="Canonical order keeps deterministic interleave order. Randomize interleave shuffles list order each cycle. Full randomize shuffles the final mixed chunk list like string randomization.">
+                            <select class="order-mode" data-help="Choose how this mix orders child chunks." data-help-detail="Canonical takes deterministic turns; Proportional Dropout instead uses deterministic relative-progress positions. Randomize interleave shuffles source order on ordinary cycles, while Proportional Dropout lets each chunk drift only inside its local progress window and keeps source order intact. Full randomize shuffles the final output chunk list after mixing and any rechunking.">
                               <option value="canonical" selected>Canonical order</option>
                               <option value="randomize-interleave">Randomize interleave</option>
                               <option value="full-randomize">Full randomize</option>
@@ -250,7 +251,7 @@
                           <button type="button" class="add-button add-chunk-child" data-help="Add a string to this mix." data-help-detail="Adds a new string box as a child of this mix so its chunks can be included in the output.">+ Add String</button>
                           <button type="button" class="add-button add-mix-child" data-help="Add a nested mix to this mix." data-help-detail="Adds a child mix so you can build multi-level prompt structures and re-chunk submixes.">+ Add Mix</button>
                           <button type="button" class="add-button add-variable-child" data-help="Add a variable reference." data-help-detail="Adds a variable box that points to another mix or string and injects its chunks here.">+ Add Variable</button>
-                          <button type="button" class="add-button add-save-child" data-help="Append a saved prompt enhancer JSON inside this mix." data-help-detail="Opens a file picker and inserts the saved top-level mixes and strings as children of this mix, preserving this mix and its current contents.">+ Add Save</button>
+                          <button type="button" class="add-button add-save-child" data-help="Append a saved Prompt Enhancer JSON inside this mix." data-help-detail="Inserts the file’s top-level mixes and strings as children here, imports its color presets, preserves current content and the active file name, and remaps imported variable references if IDs collide.">+ Add Save</button>
                         </div>
                       </div>
                     </div>
@@ -263,15 +264,15 @@
                       <div class="box-header">
                         <input type="text" class="box-title" value="String" aria-label="String title" data-help="Rename this string." data-help-detail="Change the string name for clarity. Names are used in variable pickers and help identify boxes.">
                         <div class="button-col">
-                          <button type="button" class="copy-button icon-button copy-input" title="Copy string" data-help="Copy this string’s output to the clipboard." data-help-detail="Copies the generated output for this string (including randomization and length mode), not the raw input text.">&#128203;</button>
-                          <button type="button" class="toggle-button icon-button color-toggle" title="Color" data-help="Open the color panel to tint this string’s header and pattern mat." data-help-detail="Choose Auto, a preset, or a custom color. The selected hue tints both the title bar and the procedural nesting pattern; saved presets can be reused across boxes.">&#127912;</button>
-                          <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Collapse" data-expanded="-" data-collapsed="+" data-help="Collapse or expand this string." data-help-detail="Collapsing hides the string body so you can focus on other sections; expand to edit again.">-</button>
-                          <button type="button" class="delete-button icon-button remove-box" title="Remove" data-help="Remove this string." data-help-detail="Deletes this string box and removes its chunks from any mixes that reference it.">X</button>
+                          <button type="button" class="copy-button icon-button copy-input" title="Generate and copy string output" aria-label="Generate and copy string output" data-help="Generate and copy this string’s output." data-help-detail="Re-evaluates this string when clicked, updates its Output panel, and copies that processed result. Random order, first-chunk behavior, or Dropout can therefore produce a fresh result; raw input text is never copied directly.">&#128203;</button>
+                          <button type="button" class="toggle-button icon-button color-toggle" title="Edit string color" aria-label="Edit string color" data-help="Open or close this string’s color panel." data-help-detail="Choose Auto, a named preset, or a custom color. The hue tints the string header and procedural mat without changing its text or chunks.">&#127912;</button>
+                          <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Collapse string" aria-label="Collapse string" data-expanded="-" data-collapsed="+" data-help="Collapse or expand this string." data-help-detail="Hides or reveals the string body without changing its generated chunks. The collapsed state is preserved in saved JSON.">-</button>
+                          <button type="button" class="delete-button icon-button remove-box" title="Remove string" aria-label="Remove string" data-help="Remove this string." data-help-detail="Deletes this string box. Variables that selected it remain in place but have their source choice cleared.">X</button>
                         </div>
                       </div>
                       <div class="box-body">
                         <div class="input-row">
-                          <textarea class="chunk-input" rows="3" placeholder="Enter string" data-help="Enter the source text for this string." data-help-detail="This text is split into chunks using the delimiter and size settings below. The Output section shows the processed result."></textarea>
+                          <textarea class="chunk-input" rows="3" placeholder="Enter string" data-help="Enter the source text for this string." data-help-detail="This text is split into delimiter-preserving chunks using the settings below. A completely blank string emits one intentional empty chunk and temporarily disables its chunking controls."></textarea>
                         </div>
                         <div class="chunk-output" data-help="Output generated for this string." data-help-detail="Shows the processed output after chunking, randomization, and length settings are applied.">
                           <div class="label-row">
@@ -291,7 +292,7 @@
                           </div>
                           <div class="input-row color-row">
                             <input type="text" class="color-preset-name" placeholder="Preset name" data-help="Name a custom color preset so it can be reused." data-help-detail="Enter a label for your custom color so it shows up in the preset list.">
-                            <button type="button" class="add-button save-color-preset" data-help="Save the current custom color as a named preset." data-help-detail="Adds this custom color to your saved preset list for reuse across boxes.">Save Preset</button>
+                            <button type="button" class="add-button save-color-preset" data-help="Save the current custom color as a named preset." data-help-detail="Creates or updates a reusable color preset with this name. Color presets apply across boxes and are included in Prompt Enhancer save files.">Save Preset</button>
                           </div>
                         </div>
                         <div class="chunk-controls">
@@ -314,7 +315,7 @@
                           </div>
                           <div class="control-block">
                             <label>Chunk Size</label>
-                            <select class="delimiter-size" data-help="Set how many delimiter units form each chunk." data-help-detail="A size of 1 keeps every delimiter split as its own chunk; larger sizes group multiple delimiter units together.">
+                            <select class="delimiter-size" data-help="Set how many base chunks are grouped together." data-help-detail="Size 1 keeps each delimiter-preserving text segment as its own chunk. Larger sizes join that many adjacent base chunks; Custom accepts any positive group size.">
                               <option value="1">1</option>
                               <option value="2">2</option>
                               <option value="3">3</option>
@@ -328,12 +329,12 @@
                               <option value="custom">Custom...</option>
                             </select>
                             <div class="input-row delimiter-size-custom-row" style="display:none">
-                              <input type="number" class="delimiter-size-custom" min="1" placeholder="Custom size" data-help="Enter a custom chunk size." data-help-detail="Type any positive number to use as the chunk size.">
+                              <input type="number" class="delimiter-size-custom" min="1" placeholder="Custom size" data-help="Enter a custom string chunk size." data-help-detail="Type a positive number of delimiter-preserving base chunks to join into each string chunk.">
                             </div>
                           </div>
                           <div class="control-block">
                             <label>First Chunk Behavior</label>
-                            <select class="first-chunk-select" data-help="Choose how the first chunk is cut." data-help-detail="Size X keeps fixed chunk sizes. Between 1 - X randomizes the first chunk size to offset repeats. Size X, random start location rotates the prompt before grouping.">
+                            <select class="first-chunk-select" data-help="Choose where string chunk grouping begins." data-help-detail="Size X starts with a full fixed group. Between 1 - X randomizes only the first group size. Size X, random start location rotates the source segments before grouping while preserving their circular order.">
                               <option value="size" selected>Size X</option>
                               <option value="between">Between 1 - X</option>
                               <option value="random-start">Size X, random start location</option>
@@ -341,11 +342,11 @@
                           </div>
                           <div class="control-block">
                             <label>Length Limit</label>
-                            <input type="number" class="length-input" value="1000" min="1" data-help="Maximum total output length unless Exactly Once is enabled." data-help-detail="Caps how many characters this string can emit. In Exactly Once mode, the limit is ignored so each chunk appears once.">
+                            <input type="number" class="length-input" value="1000" min="1" data-help="Set this string’s maximum output length." data-help-detail="Split/Delete modes repeat source passes toward this character limit. Dropout removes whole chunks from one full pass until at or below the limit. Exactly Once ignores and disables this field.">
                           </div>
                           <div class="control-block toggle-block">
                             <label>Length Mode</label>
-                            <select class="length-mode" data-help="Choose how length limits are enforced." data-help-detail="Split Final Chunk trims the last chunk to hit the limit. Delete Final Chunk drops the chunk that would overflow. Exactly Once outputs each chunk one time and disables the length limit. Dropout emits a full one-pass chunk list first, then randomly removes chunks until the output is under the limit.">
+                            <select class="length-mode" data-help="Choose how this string builds and limits output." data-help-detail="Split Final Chunk and Delete Final Chunk repeat shuffled or canonical source passes toward the limit, trimming or rejecting the overflow chunk. Exactly Once emits one complete pass and ignores the limit. Dropout builds one complete pass, then removes random whole chunks until at or below the limit.">
                               <option value="exact">Split Final Chunk</option>
                               <option value="exact-once" selected>Exactly Once</option>
                               <option value="dropout">Dropout (randomly remove chunks)</option>
@@ -354,7 +355,7 @@
                           </div>
                           <div class="control-block toggle-block">
                             <label>Order</label>
-                            <select class="order-mode" data-help="Choose string ordering behavior." data-help-detail="Canonical order keeps original chunk order. Full randomize shuffles chunk order before length rules are applied.">
+                            <select class="order-mode" data-help="Choose string chunk order." data-help-detail="Canonical preserves source chunk order. Full randomize shuffles chunks before length rules; when a repeating length mode needs another source pass, that new pass is shuffled again rather than replaying the prior order.">
                               <option value="canonical" selected>Canonical order</option>
                               <option value="full-randomize">Full randomize</option>
                             </select>
@@ -371,14 +372,14 @@
                       <div class="box-header">
                         <span class="box-title">Variable</span>
                         <div class="button-col">
-                          <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Collapse" data-expanded="-" data-collapsed="+" data-help="Collapse or expand this variable." data-help-detail="Collapsing hides the variable settings so you can focus on other sections; expand to edit again.">-</button>
-                          <button type="button" class="delete-button icon-button remove-box" title="Remove" data-help="Remove this variable." data-help-detail="Deletes this variable reference from the mix.">X</button>
+                          <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Collapse variable" aria-label="Collapse variable" data-expanded="-" data-collapsed="+" data-help="Collapse or expand this variable." data-help-detail="Hides or reveals the source selector without changing which chunk list the variable forwards. The collapsed state is currently a workspace convenience, not saved variable data.">-</button>
+                          <button type="button" class="delete-button icon-button remove-box" title="Remove variable" aria-label="Remove variable" data-help="Remove this variable." data-help-detail="Deletes only this reference from its parent mix; the source mix or string remains unchanged.">X</button>
                         </div>
                       </div>
                       <div class="box-body">
                         <div class="control-block">
                           <label>Source</label>
-                          <select class="variable-select" data-help="Choose which mix or string this variable points to." data-help-detail="Variables re-use another box’s chunks in this mix. Select the source box to pull its output here.">
+                          <select class="variable-select" data-help="Choose which mix or string this variable points to." data-help-detail="Forwards the selected source’s output chunks into this parent mix without rechunking at the variable. Ancestor mixes are excluded to prevent circular references.">
                             <option value="" selected>Select a mix or string...</option>
                           </select>
                         </div>
@@ -387,7 +388,7 @@
                   </div>
                 </template>
               </div>
-              <div class="resize-handle" aria-hidden="true"></div>
+              <div class="resize-handle" aria-hidden="true" data-help="Resize this Prompt window." data-help-detail="Drag this lower-right handle to change the window size. Maximized and mobile windows keep their managed size."></div>
             </div>
 
             <div id="window-about-template" class="window-shell box-shell app-window about-window window-template" data-template="about">
@@ -429,26 +430,26 @@
 
             <div id="window-openrouter-template" class="window-shell box-shell app-window openrouter-window window-template" data-template="openrouter">
               <div class="box-header window-header">
-                <span class="box-title" aria-label="Completion API window title">Completion API</span>
+                <span class="box-title" aria-label="Completion API window title" data-help="Completion API window title." data-help-detail="Identifies the raw text-completion workspace for Fireworks and Hyperbolic providers.">Completion API</span>
                 <div class="button-col">
-                  <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Minimize" data-expanded="-" data-collapsed="+">-</button>
-                  <button type="button" class="toggle-button icon-button maximize-toggle" title="Maximize">□</button>
-                  <button type="button" class="delete-button icon-button remove-box" title="Close">X</button>
+                  <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Minimize window" aria-label="Minimize window" data-expanded="-" data-collapsed="+" data-help="Minimize this window." data-help-detail="Hides the Completion API window while keeping its taskbar button available for restoration.">-</button>
+                  <button type="button" class="toggle-button icon-button maximize-toggle" title="Maximize or restore window" aria-label="Maximize or restore window" data-help="Maximize or restore this window." data-help-detail="Expands the Completion API window to the desktop workspace or returns it to its previous movable size. Mobile windows remain maximized.">□</button>
+                  <button type="button" class="delete-button icon-button remove-box" title="Close window" aria-label="Close window" data-help="Close this Completion API window." data-help-detail="Removes this window and its taskbar button. Unsaved prompt, key, and sampling settings in this window are discarded.">X</button>
                 </div>
               </div>
               <div class="box-body">
-                <div class="openrouter-app" data-help="Completion API workspace." data-help-detail="Configure provider, endpoint, model, and prompt, then send a raw completion request and inspect or copy the returned text.">
+                <div class="openrouter-app" data-help="Completion API workspace." data-help-detail="Configure a provider, raw /completions endpoint, model, sampling controls, stop sequences, API key, and prompt; then send the request and inspect text, token usage, and cost status.">
                   <div class="prompt-menu openrouter-file-menu">
                     <button type="button" class="prompt-menu-start openrouter-menu-start" aria-haspopup="true" aria-expanded="false" data-help="Open encrypted settings file menu." data-help-detail="Use this file menu to save encrypted completion settings to a JSON file or load them back from an encrypted settings file.">
                       <span class="prompt-menu-glyph" aria-hidden="true">///</span>
                       <span class="prompt-menu-label">file</span>
                     </button>
                     <div class="prompt-menu-dropdown openrouter-menu-dropdown" role="menu" aria-hidden="true">
-                      <div class="prompt-menu-item" data-action="load-settings" role="menuitem" data-help="Open an encrypted settings file and decrypt it." data-help-detail="Opens a file picker for a saved encrypted settings JSON file, then decrypts it using the password field.">Open Encrypted Settings</div>
-                      <div class="prompt-menu-item" data-action="save-settings" role="menuitem" data-help="Encrypt settings and download them as a file." data-help-detail="Encrypts endpoint, model, max tokens, temperature, title, prompt, and API key with your password, then downloads a JSON settings file.">Save Encrypted Settings</div>
+                      <div class="prompt-menu-item" data-action="load-settings" role="menuitem" data-help="Open and decrypt a Completion settings file." data-help-detail="Chooses an encrypted JSON file, asks for its password, and restores provider, endpoint, model, sampling values, stops, provider-specific API keys, saved title, and prompt.">Open Encrypted Settings</div>
+                      <div class="prompt-menu-item" data-action="save-settings" role="menuitem" data-help="Encrypt and download all Completion settings." data-help-detail="Asks for a password, then encrypts provider, endpoint, model, max tokens, all sampling controls, stop sequences, both provider API keys, saved title, and prompt into a JSON download.">Save Encrypted Settings</div>
                     </div>
                     <div class="prompt-menu-spacer" aria-hidden="true"></div>
-                    <button type="button" class="help-toggle" aria-pressed="false" data-help="Toggle help mode for Completion API controls." data-help-detail="When help mode is on, click a provider, model, sampling control, prompt field, or output control to see its specific explanation. Click Help again or press Escape to exit.">Help</button>
+                    <button type="button" class="help-toggle" aria-pressed="false" data-help="Toggle help mode for Completion API controls." data-help-detail="When Help is on, clicking any menu, request, output, resize, or title-bar control explains it without performing the action. Click Help again or press Escape to exit.">Help</button>
                   </div>
                   <input type="file" class="openrouter-load-settings-file" accept="application/json,.json" style="display:none">
                   <div class="openrouter-content">
@@ -466,7 +467,7 @@
                       </div>
                     <div class="control-block">
                       <label>Model</label>
-                      <select class="openrouter-model-picker" data-help="Completion-compatible models from the selected provider." data-help-detail="This dropdown is auto-loaded from the selected provider.">
+                      <select class="openrouter-model-picker" data-help="Completion-compatible models from the selected provider." data-help-detail="Loads models that advertise raw prompt-completion support. Catalog loading may use the selected provider API key; Hyperbolic can fall back to its known completion model if catalog loading fails.">
                         <option value="">Loading completion models...</option>
                       </select>
                     </div>
@@ -491,7 +492,7 @@
                       <div class="control-block">
                         <label>Top K</label>
                         <div class="openrouter-slider-row">
-                          <input type="range" class="openrouter-top-k" min="0" max="100" step="1" value="0" data-help="Top-k token cutoff." data-help-detail="Limits sampling to the highest-probability K tokens (0-100). Primarily used by Fireworks models. Set to 0 to disable.">
+                          <input type="range" class="openrouter-top-k" min="0" max="100" step="1" value="0" data-help="Top-k token cutoff." data-help-detail="Limits sampling to the highest-probability K tokens (1-100) for Fireworks requests. This parameter is omitted for Hyperbolic and when set to 0.">
                           <span class="openrouter-slider-value openrouter-top-k-value">0</span>
                         </div>
                       </div>
@@ -515,7 +516,7 @@
                       </div>
                       <div class="control-block">
                         <label>Title (optional)</label>
-                        <input type="text" class="openrouter-title" placeholder="Prompt Enhancer" data-help="Optional request title." data-help-detail="Reserved for provider metadata headers where supported.">
+                        <input type="text" class="openrouter-title" placeholder="Prompt Enhancer" data-help="Optional local settings title." data-help-detail="Stores a label in encrypted settings files for your own reference. This title is not included in Fireworks or Hyperbolic API requests.">
                       </div>
                     </div>
                     <div class="control-block">
@@ -527,16 +528,16 @@
                       <textarea class="openrouter-prompt" rows="8" placeholder="Write the completion prompt here..." data-help="Prompt text sent to the completions API." data-help-detail="Enter the text prefix you want the model to continue. The result appears in the output panel below."></textarea>
                     </div>
                     <div class="openrouter-actions">
-                      <button type="button" class="add-button openrouter-send" data-help="Send a completion request." data-help-detail="Submits endpoint, model, params, and prompt to the selected provider. The button is disabled while the request is in flight.">Send Completion</button>
+                      <button type="button" class="add-button openrouter-send" data-help="Send a raw text-completion request." data-help-detail="Validates the API key, /completions endpoint, model, and prompt, then submits enabled sampling parameters and stop sequences. The button is disabled while the request is in flight.">Send Completion</button>
                     </div>
-                    <div class="openrouter-status" role="status" aria-live="polite">Ready.</div>
+                    <div class="openrouter-status" role="status" aria-live="polite" data-help="Completion request and model status." data-help-detail="Reports model-catalog loading, validation or provider errors, and completed request accounting such as input/output tokens and returned or estimated cost.">Ready.</div>
                     <!-- Completion output uses the same colored box-header and
                          26x24 copy control contract as generated prompt boxes. -->
                     <div class="openrouter-output box-shell" data-help="Completion output returned by the selected provider." data-help-detail="Shows the first completion text returned by the API response.">
                       <div class="box-header openrouter-output-header">
                         <span class="box-title">Output</span>
                         <div class="button-col">
-                          <button type="button" class="copy-button icon-button copy-output openrouter-copy-output" title="Copy output" data-help="Copy the output panel text." data-help-detail="Copies the exact completion output to your clipboard and briefly confirms success on this button.">&#128203;</button>
+                          <button type="button" class="copy-button icon-button copy-output openrouter-copy-output" title="Copy completion output" aria-label="Copy completion output" data-help="Copy the completion output text." data-help-detail="Copies the exact currently displayed completion text without sending another request, then briefly changes this icon to a success checkmark.">&#128203;</button>
                         </div>
                       </div>
                       <div class="box-body">
@@ -549,7 +550,7 @@
                 </div>
                 <div class="help-overlay is-hidden" aria-hidden="true"></div>
               </div>
-              <div class="resize-handle" aria-hidden="true"></div>
+              <div class="resize-handle" aria-hidden="true" data-help="Resize this Completion API window." data-help-detail="Drag this lower-right handle to change the window size. Maximized and mobile windows keep their managed size."></div>
             </div>
 
             <div id="window-diskrot-template" class="window-shell box-shell app-window diskrot-window window-template" data-template="diskrot">

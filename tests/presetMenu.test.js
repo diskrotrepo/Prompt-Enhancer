@@ -62,6 +62,8 @@ describe('Prompt preset menu', () => {
     );
     expect(presetRows.length).toBe(1);
     expect(presetRows[0].textContent.trim()).toBe('Demo Preset');
+    expect(presetRows[0].dataset.help).toBe('Load “Demo Preset”.');
+    expect(presetRows[0].dataset.helpDetail).toContain('Replaces the active prompt tree');
 
     presetRows[0].click();
     await flush();

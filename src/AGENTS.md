@@ -38,7 +38,10 @@ Mix and string boxes use an **Order** dropdown instead of a randomize toggle.
 Mix modes are **Canonical order**, **Randomize interleave**, and **Full
 randomize**. String modes are **Canonical order** and **Full randomize**.
 Canonical keeps deterministic order, Randomize interleave shuffles source-list
-order each cycle, and Full randomize shuffles the final chunk list.
+order each cycle, and Full randomize shuffles the final chunk list. In
+**Proportional Dropout**, canonical order merges chunks by relative source
+progress, while Randomize interleave jitters each chunk only within its local
+progress interval so source order remains intact.
 
 ### Delimiter Controls
 
@@ -73,11 +76,14 @@ Use these words consistently in code and docs:
 ### Length Exactness
 
 Mix length modes include **Split Final Chunk**, **Delete Final Chunk**, **Fit to
-Smallest**, **Fit to Largest**, and **Dropout**. Fit to Smallest stops as soon
+Smallest**, **Fit to Largest**, **Dropout**, and **Proportional Dropout**. Fit to Smallest stops as soon
 as any child list runs out; Fit to Largest repeats shorter child lists until the
 longest child list is exhausted. Dropout builds a full all-once source list
 first, skipping child lists after they are exhausted, then removes random chunks
-(with recounts) until total output is at or below the limit.
+(with recounts) until total output is at or below the limit. Proportional
+Dropout uses that same non-wrapping source data and removal pass, but schedules
+chunks by relative progress so unequal child lists remain distributed from the
+beginning through the end. It never rechunks or mutates a child's chunk list.
 Only the fit modes disable the length limit input for mixes because they run a
 single constrained pass. Chunk boxes support **Exactly Once** and **Dropout**:
 Exactly Once ignores the limit and emits one pass, while Dropout builds one full
@@ -97,7 +103,13 @@ When a mix is set to **Preserve chunks**, the first-chunk select is locked to
 Help Mode uses `data-help` attributes or the `helpMap` in `script.js` to show
 tooltips when users click elements. Lists and input boxes also need coverage;
 avoid vague text. When new buttons or sections are added, provide concise,
-specific descriptions so the help overlay stays informative.
+specific descriptions so the help overlay stays informative. Every visible
+button, input, select, textarea, menu item, output/status surface, title-bar
+icon, and resize handle inside a Help-enabled window must have both a short
+`data-help` label and an accurate `data-help-detail`. The overlay deliberately
+intercepts title-bar icons too, explaining Minimize, Maximize/Restore, and Close
+without performing the window action. When copy or randomization controls
+re-evaluate data, say so explicitly rather than implying they copy stale text.
 
 ### String Output
 

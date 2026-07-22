@@ -91,6 +91,29 @@ describe('Window behavior', () => {
     expect(taskButton.classList.contains('active')).toBe(true);
   });
 
+  test('Help Mode explains a title-bar icon without performing its window action', () => {
+    const { window } = setupDom();
+    openWindow(window, 'prompts');
+
+    const promptWindow = window.document.querySelector('.app-window[data-window="prompts"]');
+    const helpButton = promptWindow.querySelector('.help-toggle');
+    const overlay = promptWindow.querySelector('.help-overlay');
+    const minimizeButton = promptWindow.querySelector('.window-header .collapse-toggle');
+    window.document.elementFromPoint = jest.fn(() => minimizeButton);
+
+    helpButton.click();
+    overlay.dispatchEvent(new window.MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      clientX: 10,
+      clientY: 10
+    }));
+
+    expect(promptWindow.classList.contains('is-hidden')).toBe(false);
+    expect(promptWindow.querySelector('.help-popover').classList.contains('is-hidden')).toBe(false);
+    expect(promptWindow.querySelector('.help-popover-short').textContent).toBe('Minimize this window.');
+  });
+
   test('window close removes the window and taskbar button', () => {
     const { window } = setupDom();
     openWindow(window, 'prompts');

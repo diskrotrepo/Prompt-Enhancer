@@ -10,6 +10,14 @@
       "windowTitle": "Prompt Enhancer"
     },
     {
+      "id": "help_copy_coverage",
+      "output": "",
+      "lengthMode": "proportional-dropout",
+      "hasCompleteHelpCopy": true,
+      "hasAccessibleIconHelp": true,
+      "hasProportionalDropoutHelp": true
+    },
+    {
       "id": "procedural_box_pattern_hierarchy",
       "output": "",
       "boxPatternCount": 5,
@@ -348,6 +356,9 @@
       "openRouterWindowCount": 1,
       "hasOpenRouterEncryptedSettingsControls": true,
       "hasOpenRouterHelpMode": true,
+      "hasCompleteHelpCopy": true,
+      "hasAccessibleIconHelp": true,
+      "hasAccurateOpenRouterHelp": true,
       "hasOpenRouterSharedCopyControl": true
     },
     {
@@ -389,6 +400,20 @@
       "id": "dropout_mix_reaches_tail_chunks",
       "output": "a6 b6 a7 b7 a8 b8 ",
       "lengthMode": "dropout"
+    },
+    {
+      "id": "proportional_dropout_mix",
+      "output": "a4 b1 a5 a6 a7 a8 b2 ",
+      "lengthMode": "proportional-dropout",
+      "mixOrderMode": "canonical",
+      "lengthLimitDisabled": false
+    },
+    {
+      "id": "proportional_dropout_random_interleave",
+      "output": "a1 a2 b1 a3 a4 a5 a6 b2 a7 a8 ",
+      "lengthMode": "proportional-dropout",
+      "mixOrderMode": "randomize-interleave",
+      "lengthLimitDisabled": false
     }
   ]
 }

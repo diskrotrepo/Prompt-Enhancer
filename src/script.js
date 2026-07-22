@@ -4,10 +4,10 @@
   // Table of contents:
   // - Utilities + shared readers (including cross-era color presets + sampled box-mat profiles)
   // - Procedural wallpaper model (palette chapters + deterministic shape bands)
-  // - Chunking + mixing engine (single-pass + dropout seed traversal + first chunk behavior)
+  // - Chunking + mixing engine (single-pass + proportional/dropout seed traversal + first chunk behavior)
   // - Box evaluation
   // - Box creation + state serialization (hydrates custom size/length controls + append-save imports)
-  // - UI helpers + event wiring
+  // - UI helpers + audited Help Mode coverage + event wiring
   // - Procedural wallpaper rendering + background-only input + touch momentum
   // - Window management + app module hooks + shared Help
   // - Initialization
@@ -514,7 +514,8 @@
     EXACT_ONCE: 'exact-once',
     FIT_SMALLEST: 'fit-smallest',
     FIT_LARGEST: 'fit-largest',
-    DROPOUT: 'dropout'
+    DROPOUT: 'dropout',
+    PROPORTIONAL_DROPOUT: 'proportional-dropout'
   };
 
   const ORDER_MODES = {
@@ -822,6 +823,9 @@
     if (config.lengthMode === LENGTH_MODES.FIT_LARGEST) return LENGTH_MODES.FIT_LARGEST;
     if (config.lengthMode === LENGTH_MODES.FIT_SMALLEST) return LENGTH_MODES.FIT_SMALLEST;
     if (config.lengthMode === LENGTH_MODES.DROPOUT) return LENGTH_MODES.DROPOUT;
+    if (config.lengthMode === LENGTH_MODES.PROPORTIONAL_DROPOUT) {
+      return LENGTH_MODES.PROPORTIONAL_DROPOUT;
+    }
     if (config.lengthMode === LENGTH_MODES.EXACT) return LENGTH_MODES.EXACT;
     if (config.lengthMode === LENGTH_MODES.ALLOW) return LENGTH_MODES.ALLOW;
     if (config.singlePass) {
@@ -1293,7 +1297,8 @@
   // ======== Chunking + Mixing Engine ========
   // Single-pass length modes avoid repetition, and first-chunk offsets keep slice points varied.
   // Dropout seeds use All-once traversal: collect each child chunk once, skip exhausted lists,
-  // then remove random chunks to satisfy the length limit.
+  // then remove random chunks to satisfy the length limit. Proportional Dropout changes only
+  // that seed schedule, spreading each source across the shared beginning-to-end timeline.
 
   function buildChunkList(
     raw,
@@ -1375,6 +1380,32 @@
     return out;
   }
 
+  // Build a weighted, one-pass schedule without changing any child chunks.
+  // Canonical slots use each chunk's completion fraction: 4/20 and 1/5 meet
+  // at the same point, so a 20:5 mix naturally contributes four long-list
+  // chunks per short-list chunk. Randomized interleave jitters each chunk only
+  // inside its own relative interval, letting the short chunk drift within that
+  // local group while every source retains its internal order.
+  function buildProportionalSourceSchedule(sources, randomize) {
+    const slots = [];
+    sources.forEach((source, sourceIndex) => {
+      const count = source?.list?.length || 0;
+      for (let chunkIndex = 0; chunkIndex < count; chunkIndex += 1) {
+        const intervalPosition = randomize ? Math.random() : 1;
+        slots.push({
+          sourceIndex,
+          chunkIndex,
+          relativePosition: (chunkIndex + intervalPosition) / count
+        });
+      }
+    });
+    return slots.sort((first, second) =>
+      first.relativePosition - second.relativePosition ||
+      first.sourceIndex - second.sourceIndex ||
+      first.chunkIndex - second.chunkIndex
+    );
+  }
+
   function mixChunkLists(
     lists,
     limit,
@@ -1386,6 +1417,7 @@
     options = {}
   ) {
     const refreshers = Array.isArray(options?.refreshers) ? options.refreshers : [];
+    const proportional = options?.proportional === true;
     const normalized = (Array.isArray(lists) ? lists : []).map((list, index) => ({
       list: Array.isArray(list) ? list.filter(chunk => typeof chunk === 'string') : [],
       refresh: typeof refreshers[index] === 'function' ? refreshers[index] : null,
@@ -1421,6 +1453,28 @@
       source.position = 0;
       return true;
     };
+    if (singlePass && proportional) {
+      // Proportional traversal is still All-once: the schedule changes where
+      // chunks land, never their content, count, source order, or wrap behavior.
+      const schedule = buildProportionalSourceSchedule(sources, randomize);
+      for (const slot of schedule) {
+        const chunk = sources[slot.sourceIndex]?.list?.[slot.chunkIndex];
+        if (chunk == null) continue;
+        const remaining = max - length;
+        if (chunk.length <= remaining) {
+          out.push(chunk);
+          length += chunk.length;
+          continue;
+        }
+        if (exact && remaining > 0) {
+          out.push(chunk.slice(0, remaining));
+        } else if (allowOverflow) {
+          out.push(chunk);
+        }
+        break;
+      }
+      return out;
+    }
     if (singlePass) {
       const orderBase = Array.from({ length: sources.length }, (_, i) => i);
       const cycleCount = (
@@ -1625,7 +1679,8 @@
 
     const limit = readNumber(limitInput, 1000);
     const lengthMode = readMixLengthMode(boxEl);
-    const dropoutMode = lengthMode === LENGTH_MODES.DROPOUT;
+    const proportionalDropoutMode = lengthMode === LENGTH_MODES.PROPORTIONAL_DROPOUT;
+    const dropoutMode = lengthMode === LENGTH_MODES.DROPOUT || proportionalDropoutMode;
     const exact = readExactMode(boxEl);
     const singlePass = readSinglePassMode(boxEl);
     const singlePassFitMode = readSinglePassFitMode(boxEl);
@@ -1700,10 +1755,13 @@
     const mixLimit = dropoutMode ? Number.POSITIVE_INFINITY : limit;
     const mixExact = dropoutMode ? false : exact;
     const mixSinglePass = dropoutMode ? true : singlePass;
-    // Dropout needs a full seed list, but not Fit-to-Largest wrapping. It walks all
-    // child lists once and treats an exhausted "Exactly Once" child as empty.
+    // Both dropout modes need a full seed list, but not Fit-to-Largest wrapping.
+    // Standard Dropout keeps round-robin All-once order; Proportional Dropout
+    // requests a relative-progress schedule from the same one-pass source lists.
     const mixFitMode = dropoutMode ? SINGLE_PASS_FIT_MODES.ALL_ONCE : singlePassFitMode;
     const wrapsCanRepeat = !mixSinglePass || mixFitMode === SINGLE_PASS_FIT_MODES.LARGEST;
+    const mixOptions = wrapsCanRepeat ? { refreshers } : {};
+    if (proportionalDropoutMode) mixOptions.proportional = true;
     const mixedBase = mixChunkLists(
       lists,
       mixLimit,
@@ -1712,7 +1770,7 @@
       mixSinglePass,
       mixFitMode,
       false,
-      wrapsCanRepeat ? { refreshers } : {}
+      mixOptions
     );
     // Preserve mode already has the final chunk list here; rechunked mixes must
     // delay Full randomize until after the second-stage chunk list is rebuilt.
@@ -2794,6 +2852,8 @@
 
   // Bind the shell-level Help interaction for any app window that provides a
   // `.help-toggle`; app modules only need specific data-help copy on controls.
+  // The transparent overlay resolves workspace controls and title-bar icons,
+  // so Help Mode explains window management without activating those buttons.
   function setupHelpMode(win) {
     if (!win || win.dataset.helpReady) return;
     const helpBtn = win.querySelector('.help-toggle');
@@ -2863,7 +2923,7 @@
         event.preventDefault();
         event.stopPropagation();
         const target = pickTarget(event);
-        if (!target || target.closest('.help-toggle, .help-popover, .window-header')) return;
+        if (!target || target.closest('.help-toggle, .help-popover')) return;
         showHelp(target, event);
       });
       overlay.dataset.bound = 'true';
@@ -2988,12 +3048,31 @@
     if (lengthBlock) lengthBlock.classList.toggle('is-disabled', singlePass);
   }
 
+  // Synchronize the +/- glyph with an action-specific accessible label.
+  // Window controls always minimize; prompt-box controls alternate between
+  // Collapse and Expand as their serialized visibility state changes.
   function setCollapseButton(btn, collapsed) {
     if (!btn) return;
     const expandedIcon = btn.dataset.expanded || '-';
     const collapsedIcon = btn.dataset.collapsed || '+';
     btn.textContent = collapsed ? collapsedIcon : expandedIcon;
     btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    const box = btn.closest('.box-shell');
+    if (box?.classList?.contains('app-window')) {
+      btn.title = 'Minimize window';
+      btn.setAttribute('aria-label', 'Minimize window');
+      return;
+    }
+    const boxType = box?.classList?.contains('mix-box')
+      ? 'mix'
+      : box?.classList?.contains('chunk-box')
+        ? 'string'
+        : box?.classList?.contains('variable-box')
+          ? 'variable'
+          : 'section';
+    const action = collapsed ? 'Expand' : 'Collapse';
+    btn.title = `${action} ${boxType}`;
+    btn.setAttribute('aria-label', `${action} ${boxType}`);
   }
 
   function syncCollapseButtons(scope) {
@@ -3570,6 +3649,8 @@
         row.dataset.action = 'load-preset-file';
         row.dataset.presetIndex = String(index);
         row.dataset.presetFile = entry.file;
+        row.dataset.help = `Load “${entry.label}”.`;
+        row.dataset.helpDetail = 'Replaces the active prompt tree with this built-in preset, loads its included color presets, and updates the window title.';
         row.textContent = entry.label;
         presetSubmenu.appendChild(row);
       });

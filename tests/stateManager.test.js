@@ -152,6 +152,31 @@ describe('Mix state roundtrip', () => {
     expect(root.querySelector('.mix-box .length-mode')?.value).toBe('dropout');
   });
 
+  test('proportional dropout length mode roundtrips through export and re-apply', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    main.applyMixState({
+      mixes: [
+        {
+          type: 'mix',
+          title: 'Proportional Dropout',
+          limit: 30,
+          lengthMode: 'proportional-dropout',
+          preserve: true,
+          orderMode: 'canonical',
+          children: [
+            { type: 'chunk', text: 'a1 a2 a3 a4 ', lengthMode: 'exact-once' },
+            { type: 'chunk', text: 'b1 ', lengthMode: 'exact-once' }
+          ]
+        }
+      ]
+    }, root);
+    const exported = main.exportMixState(root);
+    expect(exported.mixes[0].lengthMode).toBe('proportional-dropout');
+    main.applyMixState(exported, root);
+    expect(root.querySelector('.mix-box .length-mode')?.value).toBe('proportional-dropout');
+  });
+
   test('string dropout length mode roundtrips through export and re-apply', () => {
     loadBody();
     const root = document.querySelector('.mix-root');
@@ -230,6 +255,80 @@ describe('Mix state roundtrip', () => {
       [0]
     );
     expect(output).toBe('a b ');
+  });
+
+  test('proportional dropout keeps unequal source conclusions near the end', () => {
+    const output = runGeneratedOutput(
+      {
+        mixes: [
+          {
+            type: 'mix',
+            title: 'Distributed Conclusions',
+            limit: 1000,
+            lengthMode: 'proportional-dropout',
+            preserve: true,
+            orderMode: 'canonical',
+            children: [
+              {
+                type: 'chunk',
+                text: 'a1 a2 a3 a4 a5 a6 a7 a8 ',
+                lengthMode: 'exact-once',
+                orderMode: 'canonical',
+                firstChunkBehavior: 'size',
+                delimiter: { mode: 'whitespace', size: 1 }
+              },
+              {
+                type: 'chunk',
+                text: 'b1 b2 ',
+                lengthMode: 'exact-once',
+                orderMode: 'canonical',
+                firstChunkBehavior: 'size',
+                delimiter: { mode: 'whitespace', size: 1 }
+              }
+            ]
+          }
+        ]
+      },
+      [0]
+    );
+    expect(output).toBe('a1 a2 a3 a4 b1 a5 a6 a7 a8 b2 ');
+  });
+
+  test('proportional dropout honors randomized interleave inside local groups', () => {
+    const output = runGeneratedOutput(
+      {
+        mixes: [
+          {
+            type: 'mix',
+            title: 'Drifting Proportional Interleave',
+            limit: 1000,
+            lengthMode: 'proportional-dropout',
+            preserve: true,
+            orderMode: 'randomize-interleave',
+            children: [
+              {
+                type: 'chunk',
+                text: 'a1 a2 a3 a4 a5 a6 a7 a8 ',
+                lengthMode: 'exact-once',
+                orderMode: 'canonical',
+                firstChunkBehavior: 'size',
+                delimiter: { mode: 'whitespace', size: 1 }
+              },
+              {
+                type: 'chunk',
+                text: 'b1 b2 ',
+                lengthMode: 'exact-once',
+                orderMode: 'canonical',
+                firstChunkBehavior: 'size',
+                delimiter: { mode: 'whitespace', size: 1 }
+              }
+            ]
+          }
+        ]
+      },
+      [0, 0, 0, 0, 0, 0, 0, 0, 0.4, 0.4]
+    );
+    expect(output).toBe('a1 a2 b1 a3 a4 a5 a6 b2 a7 a8 ');
   });
 
   test('visible mix output reflects the rechunked result when preserve is off', () => {
@@ -457,6 +556,8 @@ describe('Mix state roundtrip', () => {
       .find(box => box.querySelector('.box-title')?.value === 'Collapsed String');
     expect(mixBox?.classList.contains('is-collapsed')).toBe(true);
     expect(collapsedString?.classList.contains('is-collapsed')).toBe(true);
+    expect(mixBox?.querySelector('.collapse-toggle')?.getAttribute('aria-label')).toBe('Expand mix');
+    expect(collapsedString?.querySelector('.collapse-toggle')?.getAttribute('aria-label')).toBe('Expand string');
   });
 
   test('legacy randomize booleans map to order modes on load', () => {
