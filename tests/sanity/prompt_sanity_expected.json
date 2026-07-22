@@ -10,6 +10,13 @@
       "windowTitle": "Prompt Enhancer"
     },
     {
+      "id": "procedural_box_pattern_hierarchy",
+      "output": "",
+      "boxPatternCount": 5,
+      "boxPatternPaletteReady": true,
+      "boxPatternHierarchyDistinct": true
+    },
+    {
       "id": "color_custom_state",
       "output": "a a a ",
       "colorMode": "custom",

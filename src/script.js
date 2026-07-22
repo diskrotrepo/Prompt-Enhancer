@@ -2,7 +2,7 @@
   'use strict';
 
   // Table of contents:
-  // - Utilities + shared readers (including color preset helpers)
+  // - Utilities + shared readers (including color presets + procedural box mats)
   // - Procedural wallpaper model (palette chapters + deterministic shape bands)
   // - Chunking + mixing engine (single-pass + dropout seed traversal + first chunk behavior)
   // - Box evaluation
@@ -912,6 +912,25 @@
   const MIX_AUTO_COLORS = ['#f2aa48', '#aae060', '#f28878', '#f2d266', '#bcce60', '#e67058'];
   const CHUNK_AUTO_COLORS = ['#ec78d6', '#c878f6', '#dc62dc', '#b660d6', '#e468b2', '#ac5ac2'];
 
+  // Eight low-density pattern families translate familiar late-80s/90s surfaces
+  // (Jazz swoops, Memphis geometry, terrazzo, and computer tiles) into CSS mats.
+  // A stable box id chooses the family and its scale, so saved prompts repaint
+  // identically while parent/adjacent boxes are nudged away from matching motifs.
+  const BOX_PATTERN_FAMILIES = Object.freeze([
+    'jazz',
+    'memphis',
+    'terrazzo',
+    'microchip',
+    'ribbons',
+    'checker',
+    'orbit',
+    'sprinkles'
+  ]);
+  const BOX_PATTERN_FACE = { r: 198, g: 198, b: 198 };
+  const BOX_PATTERN_WHITE = { r: 255, g: 255, b: 255 };
+  const BOX_PATTERN_DARK = { r: 19, g: 19, b: 19 };
+  const VARIABLE_PATTERN_COLOR = '#7cc2b2';
+
   let customColorPresets = [];
 
   function normalizeHexColor(value) {
@@ -1020,6 +1039,89 @@
     return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
   }
 
+  function mixRgb(left, right, rightWeight) {
+    const weight = Math.max(0, Math.min(1, Number(rightWeight) || 0));
+    return {
+      r: clampByte(left.r * (1 - weight) + right.r * weight),
+      g: clampByte(left.g * (1 - weight) + right.g * weight),
+      b: clampByte(left.b * (1 - weight) + right.b * weight)
+    };
+  }
+
+  // FNV-style string hashing gives box decoration its own deterministic random
+  // stream; visual setup never consumes Math.random used by prompt generation.
+  function hashBoxPatternSeed(value, salt = 0) {
+    const source = String(value || 'box');
+    let hash = (0x811c9dc5 ^ (Number(salt) | 0)) >>> 0;
+    for (let index = 0; index < source.length; index += 1) {
+      hash ^= source.charCodeAt(index);
+      hash = Math.imul(hash, 0x01000193) >>> 0;
+    }
+    hash = Math.imul(hash ^ (hash >>> 16), 0x7feb352d);
+    hash = Math.imul(hash ^ (hash >>> 15), 0x846ca68b);
+    return (hash ^ (hash >>> 16)) >>> 0;
+  }
+
+  function createBoxPatternRandom(seed) {
+    let state = seed >>> 0;
+    return () => {
+      state = (state + 0x6d2b79f5) >>> 0;
+      let value = state;
+      value = Math.imul(value ^ (value >>> 15), value | 1);
+      value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+      return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function getBoxPatternColor(box) {
+    const explicitColor = normalizeHexColor(box?.dataset?.colorValue);
+    if (explicitColor && box?.dataset?.colorMode !== 'auto') return explicitColor;
+    if (box?.classList?.contains('variable-box')) return VARIABLE_PATTERN_COLOR;
+    return getAutoColorHex(box);
+  }
+
+  // Palette generation keeps the mat colorful enough to mark ownership while
+  // limiting saturated ink to translucent, small-scale marks. Opaque controls
+  // sit on the normal silver face and never inherit these decorative colors.
+  function refreshBoxPatternPalette(box) {
+    if (!box?.style) return;
+    const base = rgbFromHex(getBoxPatternColor(box));
+    const paper = mixRgb(base, BOX_PATTERN_WHITE, 0.74);
+    const soft = mixRgb(base, BOX_PATTERN_FACE, 0.48);
+    const accent = mixRgb(base, BOX_PATTERN_WHITE, 0.2);
+    const dark = mixRgb(base, BOX_PATTERN_DARK, 0.34);
+    box.style.setProperty('--box-pattern-paper', rgbaString(paper, 1));
+    box.style.setProperty('--box-pattern-soft', rgbaString(soft, 0.34));
+    box.style.setProperty('--box-pattern-accent', rgbaString(accent, 0.3));
+    box.style.setProperty('--box-pattern-dark', rgbaString(dark, 0.24));
+  }
+
+  function pickBoxPatternFamily(boxId, avoid = []) {
+    const blocked = new Set((Array.isArray(avoid) ? avoid : [avoid]).filter(Boolean));
+    const start = hashBoxPatternSeed(boxId, 0x50415454) % BOX_PATTERN_FAMILIES.length;
+    for (let offset = 0; offset < BOX_PATTERN_FAMILIES.length; offset += 1) {
+      const family = BOX_PATTERN_FAMILIES[(start + offset) % BOX_PATTERN_FAMILIES.length];
+      if (!blocked.has(family)) return family;
+    }
+    return BOX_PATTERN_FAMILIES[start];
+  }
+
+  function applyBoxPattern(box, context = {}) {
+    if (!box) return;
+    const family = pickBoxPatternFamily(box.dataset.boxId, [
+      context.parentPattern,
+      context.previousPattern
+    ]);
+    const random = createBoxPatternRandom(hashBoxPatternSeed(box.dataset.boxId, 0x4d415453));
+    box.dataset.pattern = family;
+    // Family CSS reads these bounded parameters to vary scale and tile origin.
+    box.style.setProperty('--box-pattern-unit', `${14 + Math.floor(random() * 7)}px`);
+    box.style.setProperty('--box-pattern-span', `${50 + Math.floor(random() * 21)}px`);
+    box.style.setProperty('--box-pattern-x', `${Math.floor(random() * 18)}px`);
+    box.style.setProperty('--box-pattern-y', `${Math.floor(random() * 18)}px`);
+    refreshBoxPatternPalette(box);
+  }
+
   function clearCustomBoxStyles(box) {
     if (!box) return;
     const header = box.querySelector('.box-header');
@@ -1029,6 +1131,7 @@
       header.style.background = '';
       header.style.borderColor = '';
     }
+    refreshBoxPatternPalette(box);
   }
 
   // Apply a flat Windows 3.1 style skin for a custom color: the header carries
@@ -1049,6 +1152,7 @@
       header.style.background = rgbaString(base, 1);
       header.style.borderColor = rgbaString(dark, 1);
     }
+    refreshBoxPatternPalette(box);
   }
 
   // Switch between auto, preset, or custom colors while keeping the original auto variant on hand.
@@ -1989,6 +2093,7 @@
     );
     box.dataset.autoColor = box.dataset.color;
     box.dataset.colorMode = 'auto';
+    applyBoxPattern(box, context);
     if (titleInput) titleInput.value = config.title || 'Mix';
     if (limitInput) limitInput.value = config.limit || 1000;
     if (lengthMode) {
@@ -2033,26 +2138,38 @@
     const childContainer = fragment.querySelector('.mix-children');
     if (Array.isArray(config.children)) {
       let prevColor = null;
+      let previousPattern = null;
       config.children.forEach(child => {
         if (child.type === 'mix') {
           const childWrapper = createMixWrapper(child, {
             parentColor: box.dataset.color,
             previousColor: prevColor,
+            parentPattern: box.dataset.pattern,
+            previousPattern,
             idRegistry: context.idRegistry
           });
           childContainer.appendChild(childWrapper);
           prevColor = childWrapper.querySelector('.mix-box')?.dataset.color || prevColor;
+          previousPattern = childWrapper.querySelector('.mix-box')?.dataset.pattern || previousPattern;
         } else if (child.type === 'variable') {
-          const childWrapper = createVariableWrapper(child, { idRegistry: context.idRegistry });
+          const childWrapper = createVariableWrapper(child, {
+            parentPattern: box.dataset.pattern,
+            previousPattern,
+            idRegistry: context.idRegistry
+          });
           childContainer.appendChild(childWrapper);
+          previousPattern = childWrapper.querySelector('.variable-box')?.dataset.pattern || previousPattern;
         } else {
           const childWrapper = createChunkWrapper(child, {
             parentColor: box.dataset.color,
             previousColor: prevColor,
+            parentPattern: box.dataset.pattern,
+            previousPattern,
             idRegistry: context.idRegistry
           });
           childContainer.appendChild(childWrapper);
           prevColor = childWrapper.querySelector('.chunk-box')?.dataset.color || prevColor;
+          previousPattern = childWrapper.querySelector('.chunk-box')?.dataset.pattern || previousPattern;
         }
       });
     }
@@ -2089,6 +2206,7 @@
     );
     box.dataset.autoColor = box.dataset.color;
     box.dataset.colorMode = 'auto';
+    applyBoxPattern(box, context);
     if (titleInput) titleInput.value = config.title || 'String';
     if (input) input.value = config.text || '';
     if (limitInput) limitInput.value = config.limit || 1000;
@@ -2145,6 +2263,7 @@
     const select = fragment.querySelector('.variable-select');
 
     box.dataset.boxId = resolveBoxId(config.id, 'var', context.idRegistry);
+    applyBoxPattern(box, context);
     const originalTargetId = typeof config.targetId === 'string' ? config.targetId.trim() : '';
     const mappedTargetId = originalTargetId && context.idRegistry?.idMap?.get(originalTargetId)
       ? context.idRegistry.idMap.get(originalTargetId)
@@ -2315,16 +2434,27 @@
     const mixes = getSavedMixEntries(state, true);
     let prevMixColor = null;
     let prevChunkColor = null;
+    let previousPattern = null;
     mixes.forEach(cfg => {
       if (cfg?.type === 'chunk') {
-        const wrapper = createChunkWrapper(cfg, { previousColor: prevChunkColor, idRegistry });
+        const wrapper = createChunkWrapper(cfg, {
+          previousColor: prevChunkColor,
+          previousPattern,
+          idRegistry
+        });
         root.appendChild(wrapper);
         prevChunkColor = wrapper.querySelector('.chunk-box')?.dataset.color || prevChunkColor;
+        previousPattern = wrapper.querySelector('.chunk-box')?.dataset.pattern || previousPattern;
         return;
       }
-      const wrapper = createMixWrapper(cfg, { previousColor: prevMixColor, idRegistry });
+      const wrapper = createMixWrapper(cfg, {
+        previousColor: prevMixColor,
+        previousPattern,
+        idRegistry
+      });
       root.appendChild(wrapper);
       prevMixColor = wrapper.querySelector('.mix-box')?.dataset.color || prevMixColor;
+      previousPattern = wrapper.querySelector('.mix-box')?.dataset.pattern || previousPattern;
     });
     remapHydratedVariableTargets(root, idRegistry);
     updateEmptyState(root);
@@ -2361,6 +2491,11 @@
     return previous?.dataset?.color || null;
   }
 
+  function getPreviousChildPattern(container) {
+    const previous = container?.lastElementChild?.querySelector?.('.mix-box, .chunk-box, .variable-box');
+    return previous?.dataset?.pattern || null;
+  }
+
   function appendMixState(state, targetEl = null, rootEl = null) {
     const container = resolveAppendContainer(targetEl);
     if (!container) return 0;
@@ -2373,12 +2508,15 @@
     const idRegistry = createHydrationRegistry(root);
     const parentMix = container.closest?.('.mix-box') || null;
     let previousColor = getPreviousChildColor(container);
+    let previousPattern = getPreviousChildPattern(container);
     let appendedCount = 0;
     const appendedWrappers = [];
     entries.forEach(cfg => {
       const wrapper = createWrapperFromState(cfg, {
         parentColor: parentMix?.dataset?.color,
         previousColor,
+        parentPattern: parentMix?.dataset?.pattern,
+        previousPattern,
         idRegistry
       });
       if (!wrapper) return;
@@ -2386,6 +2524,7 @@
       appendedWrappers.push(wrapper);
       appendedCount += 1;
       previousColor = wrapper.querySelector('.mix-box, .chunk-box')?.dataset.color || previousColor;
+      previousPattern = wrapper.querySelector('.mix-box, .chunk-box, .variable-box')?.dataset.pattern || previousPattern;
     });
     appendedWrappers.forEach(wrapper => remapHydratedVariableTargets(wrapper, idRegistry));
     updateEmptyState(root);
@@ -2868,8 +3007,12 @@
   function appendRootMix(root) {
     if (!root) return;
     const prevColor = findPreviousBoxColor(root, '.mix-box');
+    const previousPattern = getPreviousChildPattern(root);
     root.appendChild(
-      createMixWrapper({ title: generateProceduralTitle('mix', root) }, { previousColor: prevColor })
+      createMixWrapper(
+        { title: generateProceduralTitle('mix', root) },
+        { previousColor: prevColor, previousPattern }
+      )
     );
   }
 
@@ -2877,8 +3020,12 @@
     if (!root) return;
     // Strings use their own palette, so track the most recent chunk color separately.
     const prevColor = findPreviousBoxColor(root, '.chunk-box');
+    const previousPattern = getPreviousChildPattern(root);
     root.appendChild(
-      createChunkWrapper({ title: generateProceduralTitle('chunk', root) }, { previousColor: prevColor })
+      createChunkWrapper(
+        { title: generateProceduralTitle('chunk', root) },
+        { previousColor: prevColor, previousPattern }
+      )
     );
   }
 
@@ -2975,7 +3122,8 @@
       if (!childContainer || typeof createChild !== 'function') return;
       const prevChild = childContainer.lastElementChild;
       const prevColor = prevChild?.querySelector('.mix-box, .chunk-box')?.dataset.color || null;
-      const wrapper = createChild(prevColor);
+      const previousPattern = prevChild?.querySelector('.mix-box, .chunk-box, .variable-box')?.dataset.pattern || null;
+      const wrapper = createChild(prevColor, previousPattern);
       if (wrapper) childContainer.appendChild(wrapper);
     };
 
@@ -2984,10 +3132,15 @@
         className: 'add-chunk-child',
         handle: btn => {
           const mixBox = btn.closest('.mix-box');
-          appendChildWithColor(mixBox, prevColor =>
+          appendChildWithColor(mixBox, (prevColor, previousPattern) =>
             createChunkWrapper(
               { title: generateProceduralTitle('chunk', mixBox || root) },
-              { parentColor: mixBox?.dataset.color, previousColor: prevColor }
+              {
+                parentColor: mixBox?.dataset.color,
+                previousColor: prevColor,
+                parentPattern: mixBox?.dataset.pattern,
+                previousPattern
+              }
             )
           );
           refreshChildControls(mixBox || document);
@@ -2998,10 +3151,15 @@
         className: 'add-mix-child',
         handle: btn => {
           const mixBox = btn.closest('.mix-box');
-          appendChildWithColor(mixBox, prevColor =>
+          appendChildWithColor(mixBox, (prevColor, previousPattern) =>
             createMixWrapper(
               { title: generateProceduralTitle('mix', mixBox || root) },
-              { parentColor: mixBox?.dataset.color, previousColor: prevColor }
+              {
+                parentColor: mixBox?.dataset.color,
+                previousColor: prevColor,
+                parentPattern: mixBox?.dataset.pattern,
+                previousPattern
+              }
             )
           );
           refreshChildControls(mixBox || document);
@@ -3013,7 +3171,12 @@
         handle: btn => {
           const mixBox = btn.closest('.mix-box');
           const childContainer = mixBox?.querySelector('.mix-children');
-          if (childContainer) childContainer.appendChild(createVariableWrapper());
+          if (childContainer) {
+            childContainer.appendChild(createVariableWrapper({}, {
+              parentPattern: mixBox?.dataset.pattern,
+              previousPattern: getPreviousChildPattern(childContainer)
+            }));
+          }
           syncCollapseButtons(mixBox || document);
           refreshColorPresetSelects(mixBox || document);
           refreshVariableOptions(mixBox || document);
@@ -4493,6 +4656,7 @@
     isWallpaperBackgroundTarget,
     setupProceduralWallpaper,
     WALLPAPER_SHAPE_TYPES,
+    BOX_PATTERN_FAMILIES,
     generate
   };
 

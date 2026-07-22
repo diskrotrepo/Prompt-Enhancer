@@ -415,6 +415,15 @@ function runSanityCase(testCase) {
   const variableCount = root.querySelectorAll('.variable-box').length;
   const mixCollapsed = !!mixBox?.classList?.contains('is-collapsed');
   const chunkCollapsed = !!chunkBox?.classList?.contains('is-collapsed');
+  const patternedBoxes = Array.from(root.querySelectorAll('.mix-box, .chunk-box, .variable-box'));
+  const boxPatternCount = patternedBoxes.filter(box => box.dataset.pattern).length;
+  const boxPatternPaletteReady = patternedBoxes.every(box =>
+    Boolean(box.style.getPropertyValue('--box-pattern-paper'))
+  );
+  const boxPatternHierarchyDistinct = patternedBoxes.every(box => {
+    const parentBox = box.parentElement?.closest?.('.mix-box, .chunk-box, .variable-box');
+    return !parentBox || parentBox.dataset.pattern !== box.dataset.pattern;
+  });
   const hasLoadPresetMenu = !!(
     getActiveWindow()?.querySelector('.prompt-menu-item[data-action="load-preset"]') ||
     window.document.querySelector('.prompt-window:not(.window-template) .prompt-menu-item[data-action="load-preset"]')
@@ -465,6 +474,9 @@ function runSanityCase(testCase) {
     variableCount,
     mixCollapsed,
     chunkCollapsed,
+    boxPatternCount,
+    boxPatternPaletteReady,
+    boxPatternHierarchyDistinct,
     hasLoadPresetMenu,
     hasOpenRouterMenu,
     openRouterWindowCount,
@@ -583,6 +595,15 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'chunkCollapsed')) {
         expect(result.chunkCollapsed).toBe(expected.chunkCollapsed);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'boxPatternCount')) {
+        expect(result.boxPatternCount).toBe(expected.boxPatternCount);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'boxPatternPaletteReady')) {
+        expect(result.boxPatternPaletteReady).toBe(expected.boxPatternPaletteReady);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'boxPatternHierarchyDistinct')) {
+        expect(result.boxPatternHierarchyDistinct).toBe(expected.boxPatternHierarchyDistinct);
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'hasLoadPresetMenu')) {
         expect(result.hasLoadPresetMenu).toBe(expected.hasLoadPresetMenu);

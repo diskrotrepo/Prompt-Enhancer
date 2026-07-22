@@ -213,6 +213,11 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Preset shared across boxes** — `color_preset_shared`
 - **Missing preset fallback** — `color_preset_missing`
 
+#### Procedural box mats
+
+- **Nested boxes receive stable, palette-ready pattern mats distinct from their parents** — `procedural_box_pattern_hierarchy`, `tests/dynamicDom.test.js`
+- **Custom colors retint the mat while preserving its generated motif** — `tests/dynamicDom.test.js`
+
 #### File + persistence
 
 - **Collapsed mix/string UI state roundtrips through save/load** — `collapsed_state_persisted`
@@ -253,6 +258,12 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 
 - **Color presets**  
   Custom color presets are global across boxes, persist in saved state, and missing preset ids fall back to Auto on load.
+
+- **Pattern-mat hierarchy**
+  Mix, String, and Variable boxes derive one of eight low-density 90s-inspired
+  CSS patterns from their stable box id. Parent and adjacent motifs are kept
+  different when possible; opaque silver islands protect every functional
+  control, and a box's existing Auto/Custom color tints only its visual identity.
 
 - **File save/load semantics**
   Save reuses the current file name (prompting if unset). Save As always prompts, appends `.json` when missing, and updates the window title (title omits the `.json` suffix).

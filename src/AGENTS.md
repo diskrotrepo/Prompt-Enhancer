@@ -111,8 +111,22 @@ Mix and String boxes now support per-box color customization. The header color
 button opens a panel with Auto/Custom modes, preset selection, and a Save Preset
 flow. Custom presets are serialized with mix state so they can be reused across
 boxes and sessions. Custom colors render flat (solid header fill plus a
-darkened border via `applyCustomBoxStyles`); box bodies always keep the shared
-silver face so custom hues stay coherent with the theme.
+darkened border via `applyCustomBoxStyles`) and retint the box's procedural mat.
+Keep controls on the shared opaque silver islands so a vivid user color cannot
+reduce field, label, or output contrast.
+
+### Procedural Box Mats
+
+`applyBoxPattern` derives a stable visual identity from `data-box-id` without
+consuming `Math.random`, which remains reserved for prompt behavior. The eight
+families (`jazz`, `memphis`, `terrazzo`, `microchip`, `ribbons`, `checker`,
+`orbit`, and `sprinkles`) are CSS gradients parameterized by JS custom
+properties. Parent and previous-sibling families are avoided when possible.
+
+Patterns belong only to the mat and nesting gutters. Direct functional groups
+inside Mix, String, and Variable bodies must repaint `--w31-face`; preserve this
+separation when adding controls. Saved ids make patterns deterministic across
+load, while Custom/Presets change the derived palette rather than the motif.
 
 ### Windows 3.1 Theme
 
@@ -142,6 +156,10 @@ for variables and Completion output). Key rules for future changes:
   the yolk mark and CTA strips do not drift with the wallpaper. Keep shapes
   large, sparse, pointer-inert, and behind `#window-area`; prefer CSS geometry
   over image assets so the desktop stays crisp at every viewport.
+- Prompt-box mats reuse the period vocabulary at a smaller, lower-contrast
+  scale. Keep all eight families procedural, deterministic, and behind opaque
+  silver work groups; their job is to expose nesting boundaries, not decorate
+  fields themselves.
 - Procedural wallpaper bands are deterministic by world index, recycle a
   bounded visible pool, and preserve spatial continuity when users reverse
   direction. Wheel input advances the wallpaper only from bare desktop space;

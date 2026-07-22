@@ -44,6 +44,67 @@ describe('Dynamic mix DOM', () => {
     expect(root.querySelectorAll('.mix-box').length).toBe(2);
   });
 
+  test('procedural box mats stay stable and separate nested or adjacent families', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    const state = {
+      mixes: [
+        {
+          type: 'mix',
+          id: 'pattern-parent',
+          color: '1',
+          children: [
+            { type: 'chunk', id: 'pattern-string', color: '2', text: 'one ' },
+            {
+              type: 'mix',
+              id: 'pattern-child',
+              color: '3',
+              children: [
+                { type: 'chunk', id: 'pattern-grandchild', color: '4', text: 'two ' }
+              ]
+            },
+            { type: 'variable', id: 'pattern-variable', targetId: 'pattern-string' }
+          ]
+        }
+      ]
+    };
+
+    const readSignature = () => Array.from(
+      root.querySelectorAll('.mix-box, .chunk-box, .variable-box')
+    ).map(box => `${box.dataset.boxId}:${box.dataset.pattern}`);
+
+    main.applyMixState(state, root);
+    const boxes = Array.from(root.querySelectorAll('.mix-box, .chunk-box, .variable-box'));
+    const byId = id => root.querySelector(`[data-box-id="${id}"]`);
+    const firstSignature = readSignature();
+
+    expect(boxes).toHaveLength(5);
+    expect(boxes.every(box => main.BOX_PATTERN_FAMILIES.includes(box.dataset.pattern))).toBe(true);
+    expect(boxes.every(box => box.style.getPropertyValue('--box-pattern-paper'))).toBe(true);
+    expect(byId('pattern-parent').dataset.pattern).not.toBe(byId('pattern-string').dataset.pattern);
+    expect(byId('pattern-string').dataset.pattern).not.toBe(byId('pattern-child').dataset.pattern);
+    expect(byId('pattern-child').dataset.pattern).not.toBe(byId('pattern-grandchild').dataset.pattern);
+    expect(byId('pattern-child').dataset.pattern).not.toBe(byId('pattern-variable').dataset.pattern);
+
+    // Stable ids repaint the same pattern signature after a complete reload.
+    main.applyMixState(state, root);
+    expect(readSignature()).toEqual(firstSignature);
+  });
+
+  test('custom box colors retint the procedural mat palette', () => {
+    loadBody();
+    const root = document.querySelector('.mix-root');
+    main.applyMixState({
+      mixes: [
+        { type: 'mix', id: 'custom-pattern', colorMode: 'custom', colorValue: '#245f9e' }
+      ]
+    }, root);
+    const box = root.querySelector('.mix-box');
+    expect(box.dataset.pattern).toBeTruthy();
+    expect(box.style.getPropertyValue('--box-pattern-paper')).toBe('rgba(198, 213, 230, 1)');
+    expect(box.style.getPropertyValue('--box-pattern-accent')).toContain('0.3');
+  });
+
   test('preserve chunks disables first-chunk select', () => {
     loadBody();
     const root = document.querySelector('.mix-root');

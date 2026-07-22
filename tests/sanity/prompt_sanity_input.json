@@ -6,6 +6,46 @@
       "random": 0
     },
     {
+      "id": "procedural_box_pattern_hierarchy",
+      "description": "Every nested prompt box receives a deterministic tinted pattern mat distinct from its parent.",
+      "random": 0,
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "id": "pattern-parent",
+            "title": "Pattern Parent",
+            "preserve": true,
+            "children": [
+              {
+                "type": "chunk",
+                "id": "pattern-string",
+                "text": ""
+              },
+              {
+                "type": "mix",
+                "id": "pattern-child",
+                "title": "Pattern Child",
+                "preserve": true,
+                "children": [
+                  {
+                    "type": "chunk",
+                    "id": "pattern-grandchild",
+                    "text": ""
+                  }
+                ]
+              },
+              {
+                "type": "variable",
+                "id": "pattern-variable",
+                "targetId": "pattern-string"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "color_custom_state",
       "description": "Custom colors persist on mix boxes.",
       "random": 0,
