@@ -297,7 +297,8 @@
     {
       "id": "prompt_menu_load_preset_item",
       "output": "",
-      "hasLoadPresetMenu": true
+      "hasLoadPresetMenu": true,
+      "hasSharedFileLauncherMarkup": true
     },
     {
       "id": "prompt_menu_save_flow",

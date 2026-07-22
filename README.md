@@ -235,9 +235,9 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 #### Window apps
 
 - **Prompt workspace meets its file strip without an inherited flex-gap artifact** — `tests/windowBehavior.test.js`
-- **On mobile, the /// file launcher reads as physical chrome with a raised face, divided dropdown cue, and depressed open state** — `tests/windowBehavior.test.js`
+- **File keeps the same flat /// text-menu chrome on desktop and mobile, without a mobile-only arrow or divided dropdown bay** — `tests/windowBehavior.test.js`, `prompt_menu_load_preset_item`
 - **Pressing any interior window surface activates and raises that window without swallowing its control action** — `multi_prompt_windows_open`
-- **The /// yolk start mark compensates the slash baseline for balanced vertical padding** — `tests/windowBehavior.test.js`
+- **The /// yolk start mark compensates slash rasterization per breakpoint, and mobile tabs stay centered on the same taskbar axis as Start** — `tests/windowBehavior.test.js`
 - **Completion API appears in the menu and opens its own window** — `openrouter_app_window`
 - **Completion API encrypted settings actions live in the top file menu (password + file save/open)** — `openrouter_app_window`
 - **Completion API reuses the shell Help mode and standard boxed copy control** — `openrouter_app_window`

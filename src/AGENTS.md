@@ -181,17 +181,20 @@ for variables and Completion output). Key rules for future changes:
   canvases meet that strip directly: keep the outer prompt `.box-body` at
   `gap: 0` so the generic box rhythm cannot create an artifact bar. Generated
   API output reuses the miniature box header and 26x24 `.copy-output` feedback
-  contract from prompt boxes. At the mobile breakpoint, `.prompt-menu-start`
-  becomes a compact raised control with a divided caret bay; its expanded state
-  must reverse to `--bevel-down` so touch feedback reads as physical depression.
+  contract from prompt boxes. `.prompt-menu-start` keeps the same flat text-menu
+  treatment on desktop and mobile; do not add a mobile-only arrow, divided bay,
+  bevel, size, or offset that makes File diverge from the neighboring Help item.
 - Uniform control metrics: icon/header buttons are 26x24 (`min-height: 0`
   beats the global `.toggle-button` minimum), single-line selects and text /
   password / number inputs are exactly 32px tall with no default margins
   (rows and grids own spacing via `gap`), and primary CTA slabs are 44px.
   Emoji glyph buttons render monochrome ('Segoe UI Symbol' + grayscale).
   Taskbar app buttons share one identical footprint with no per-app accents.
-  The start mark corrects slash ink separately from the `yolk` label so both
-  retain balanced visible padding inside their beveled button.
+  Responsive rules must not add blanket button margins because they displace
+  taskbar tabs from the Start button. The start mark corrects slash ink
+  separately from the `yolk` label so both retain balanced visible padding;
+  mobile uses its own small rasterization correction while preserving the
+  desktop mark.
 
 ### File Naming
 

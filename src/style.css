@@ -1032,7 +1032,9 @@ textarea:focus-visible {
   position: relative;
 }
 
-/* File menu strip: flat silver bar with classic navy hover items. */
+/* File menu strip: flat silver bar with classic navy hover items.
+ * The launcher deliberately keeps this same text-menu treatment at every
+ * viewport width; responsive rules must not turn it into a split control. */
 .prompt-menu {
   position: relative;
   display: flex;
@@ -2562,7 +2564,9 @@ button:disabled {
   }
 }
 
-/* Mobile: compact paddings, centered text buttons, icons pinned right. */
+/* Mobile: compact paddings, centered text buttons, icons pinned right.
+ * Shared button defaults stay margin-free here so taskbar and menu chrome keep
+ * the same cross-axis centers as their desktop counterparts. */
 @media (max-width: 480px) {
   /* Preserve the ancestry rail on narrow screens without charging every depth
    * the full desktop inset; the patterned body padding still exposes each mat. */
@@ -2575,64 +2579,15 @@ button:disabled {
     margin-bottom: 0.75rem;
   }
 
-  button {
-    width: auto;
-    margin-bottom: 0.25rem;
-    margin-right: 0;
+  /* Small-screen rasterization makes the slash ink sit lower than its desktop
+   * counterpart. Lift it by only two pixels here, then leave the yolk label on
+   * the flex centerline: slash group -> label -> button remain concentric. */
+  .menu-glyph .slash {
+    transform: translateY(-2px) scaleY(1.1);
   }
 
-  /* Mobile file launcher: turn the flat menu word into touchable window chrome. */
-  .prompt-menu-start {
-    position: relative;
-    align-self: center;
-    height: 24px;
-    margin: 0 0 0 4px;
-    padding: 0 0 0 0.55rem;
-    background: var(--w31-face);
-    border: 1px solid var(--w31-black);
-    box-shadow: var(--bevel-up);
-  }
-
-  /* The divided caret bay makes the single hit target read like a real dropdown. */
-  .prompt-menu-start::after {
-    content: "";
-    align-self: stretch;
-    width: 19px;
-    margin-left: 0.15rem;
-    border-left: 1px solid var(--w31-shadow);
-    box-shadow: inset 1px 0 0 var(--w31-light);
-  }
-
-  /* A CSS-drawn arrow stays decorative instead of altering the button's name. */
-  .prompt-menu-start::before {
-    content: "";
-    position: absolute;
-    top: 9px;
-    right: 6px;
-    width: 0;
-    height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-top: 5px solid currentColor;
-    pointer-events: none;
-  }
-
-  /* Touch feedback reverses the bevel so open and actively pressed feel depressed. */
-  .prompt-menu-start:hover {
-    background: var(--w31-face);
-    color: var(--w31-ink);
-  }
-
-  .prompt-menu-start:active,
-  .prompt-menu-start[aria-expanded="true"] {
-    background: var(--w31-face-light);
-    box-shadow: var(--bevel-down);
-    color: var(--w31-ink);
-  }
-
-  .prompt-menu-start:focus-visible {
-    outline: 1px dotted var(--w31-black);
-    outline-offset: -4px;
+  .menu-glyph-tag {
+    transform: translateY(0);
   }
 
   .label-row label {

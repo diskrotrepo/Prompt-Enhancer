@@ -480,14 +480,16 @@ describe('Window edge layout policy', () => {
     const css = fs.readFileSync(CSS_PATH, 'utf8');
     expect(css).toMatch(/\.menu-glyph \.slash\s*\{[^}]*translateY\(-4px\) scaleY\(1\.1\)/);
     expect(css).toMatch(/\.menu-glyph-tag\s*\{[^}]*translateY\(1px\)/);
+    expect(css).toMatch(/@media \(max-width: 480px\)[\s\S]*?\.menu-glyph \.slash\s*\{[^}]*translateY\(-2px\) scaleY\(1\.1\)/);
+    expect(css).toMatch(/@media \(max-width: 480px\)[\s\S]*?\.menu-glyph-tag\s*\{[^}]*translateY\(0\)/);
   });
 
-  test('mobile file launcher has raised, divided, and pressed physical states', () => {
+  test('mobile keeps desktop file chrome and margin-free taskbar alignment', () => {
     const css = fs.readFileSync(CSS_PATH, 'utf8');
-    expect(css).toMatch(/@media \(max-width: 480px\)[\s\S]*?\.prompt-menu-start\s*\{[^}]*box-shadow:\s*var\(--bevel-up\);/);
-    expect(css).toMatch(/\.prompt-menu-start::after\s*\{[^}]*content:\s*"";[^}]*border-left:\s*1px solid var\(--w31-shadow\);/);
-    expect(css).toMatch(/\.prompt-menu-start::before\s*\{[^}]*border-top:\s*5px solid currentColor;/);
-    expect(css).toMatch(/\.prompt-menu-start:active,[\s\S]*?\.prompt-menu-start\[aria-expanded="true"\]\s*\{[^}]*box-shadow:\s*var\(--bevel-down\);/);
+    const mobileCss = css.match(/@media \(max-width: 480px\)\s*\{[\s\S]*$/)?.[0] || '';
+    expect(mobileCss).not.toMatch(/(^|\n)\s*button\s*\{[^}]*margin-bottom:/);
+    expect(mobileCss).not.toMatch(/\.prompt-menu-start(?::|\s|\{)/);
+    expect(css).toMatch(/\.prompt-menu-start\s*\{[^}]*height:\s*100%;[^}]*background:\s*transparent;[^}]*border:\s*none;/);
   });
 });
 

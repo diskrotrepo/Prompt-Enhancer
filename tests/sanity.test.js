@@ -436,6 +436,16 @@ function runSanityCase(testCase) {
     getActiveWindow()?.querySelector('.prompt-menu-item[data-action="load-preset"]') ||
     window.document.querySelector('.prompt-window:not(.window-template) .prompt-menu-item[data-action="load-preset"]')
   );
+  // File parity is partly structural: both breakpoints consume this one glyph +
+  // label launcher. CSS regression checks separately ensure mobile adds no
+  // pseudo-arrow or divergent chrome on top of the shared markup.
+  const fileLauncher = getActiveWindow()?.querySelector('.prompt-menu-start');
+  const hasSharedFileLauncherMarkup = !!(
+    fileLauncher &&
+    fileLauncher.children.length === 2 &&
+    fileLauncher.querySelector(':scope > .prompt-menu-glyph')?.textContent === '///' &&
+    fileLauncher.querySelector(':scope > .prompt-menu-label')?.textContent === 'file'
+  );
   const hasOpenRouterMenu = !!window.document.querySelector('.menu-item[data-window="openrouter"]');
   const openRouterWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
   const openRouterWindowCount = window.document.querySelectorAll('.openrouter-window:not(.window-template)').length;
@@ -487,6 +497,7 @@ function runSanityCase(testCase) {
     boxPatternHierarchyDistinct,
     boxPatternDensityReady,
     hasLoadPresetMenu,
+    hasSharedFileLauncherMarkup,
     hasOpenRouterMenu,
     openRouterWindowCount,
     promptWindowCount,
@@ -619,6 +630,9 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'hasLoadPresetMenu')) {
         expect(result.hasLoadPresetMenu).toBe(expected.hasLoadPresetMenu);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasSharedFileLauncherMarkup')) {
+        expect(result.hasSharedFileLauncherMarkup).toBe(expected.hasSharedFileLauncherMarkup);
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'hasOpenRouterMenu')) {
         expect(result.hasOpenRouterMenu).toBe(expected.hasOpenRouterMenu);
