@@ -89,10 +89,10 @@
           <div id="window-area">
             <div id="window-prompts-template" class="window-shell box-shell app-window prompt-window window-template" data-template="prompts">
               <div class="box-header window-header">
-                <span class="box-title" aria-label="Prompt Enhancer window title" data-help="Prompt window title." data-help-detail="Shows Prompt Enhancer for a fresh window, then changes to the active opened, saved, or preset file name without the .json extension.">Prompt Enhancer</span>
+                <span class="box-title" aria-label="Prompt Enhancer window title" data-help="Prompt window title and drag surface." data-help-detail="Shows the active prompt name. Drag it to move the window; release at a side for a half, at a corner for a quarter, or at the top to maximize. Double-click to maximize or restore.">Prompt Enhancer</span>
                 <div class="button-col">
                   <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Minimize window" aria-label="Minimize window" data-expanded="-" data-collapsed="+" data-help="Minimize this window." data-help-detail="Hides this Prompt window while keeping its taskbar button available so you can restore it without losing the current prompt.">-</button>
-                  <button type="button" class="toggle-button icon-button maximize-toggle" title="Maximize or restore window" aria-label="Maximize or restore window" data-help="Maximize or restore this window." data-help-detail="Expands the Prompt window to the desktop workspace or returns it to its previous movable size. Mobile windows remain maximized.">□</button>
+                  <button type="button" class="toggle-button icon-button maximize-toggle" title="Maximize or restore window" aria-label="Maximize or restore window" data-help="Maximize or restore this window." data-help-detail="Expands the Prompt window to the usable desktop or returns it to its prior reachable size and position. Mobile windows remain maximized.">□</button>
                   <button type="button" class="delete-button icon-button remove-box" title="Close window" aria-label="Close window" data-help="Close this Prompt window." data-help-detail="Removes this window and its taskbar button. Unsaved prompt changes in this window are discarded.">X</button>
                 </div>
               </div>
@@ -388,7 +388,7 @@
                   </div>
                 </template>
               </div>
-              <div class="resize-handle" aria-hidden="true" data-help="Resize this Prompt window." data-help-detail="Drag this lower-right handle to change the window size. Maximized and mobile windows keep their managed size."></div>
+              <div class="resize-handle resize-se" data-resize-edge="se" aria-hidden="true" data-help="Resize from the bottom-right corner." data-help-detail="Drag this window's bottom-right corner to resize it while the opposite edges stay fixed. Snapped, maximized, and mobile windows use managed sizing."></div>
             </div>
 
             <div id="window-about-template" class="window-shell box-shell app-window about-window window-template" data-template="about">
@@ -410,7 +410,7 @@
                   <p class="about-text">Diskrot: <a class="about-link" href="https://diskrot.com/@yolkhead" target="_blank" rel="noopener noreferrer">diskrot.com/@yolkhead</a></p>
                 </div>
               </div>
-              <div class="resize-handle" aria-hidden="true"></div>
+              <div class="resize-handle resize-se" data-resize-edge="se" aria-hidden="true"></div>
             </div>
 
             <div id="window-audio-template" class="window-shell box-shell app-window audio-window window-template" data-template="audio">
@@ -425,15 +425,15 @@
               <div class="box-body">
                 <iframe class="audio-frame" title="Audio Interpolator" src="https://diskrot.com/audio-interpolator/index.html"></iframe>
               </div>
-              <div class="resize-handle" aria-hidden="true"></div>
+              <div class="resize-handle resize-se" data-resize-edge="se" aria-hidden="true"></div>
             </div>
 
             <div id="window-openrouter-template" class="window-shell box-shell app-window openrouter-window window-template" data-template="openrouter">
               <div class="box-header window-header">
-                <span class="box-title" aria-label="Completion API window title" data-help="Completion API window title." data-help-detail="Identifies the raw text-completion workspace for Fireworks and Hyperbolic providers.">Completion API</span>
+                <span class="box-title" aria-label="Completion API window title" data-help="Completion window title and drag surface." data-help-detail="Identifies this completion workspace. Drag it to a desktop side or corner to snap, drag to the top to maximize, or double-click to maximize and restore.">Completion API</span>
                 <div class="button-col">
                   <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Minimize window" aria-label="Minimize window" data-expanded="-" data-collapsed="+" data-help="Minimize this window." data-help-detail="Hides the Completion API window while keeping its taskbar button available for restoration.">-</button>
-                  <button type="button" class="toggle-button icon-button maximize-toggle" title="Maximize or restore window" aria-label="Maximize or restore window" data-help="Maximize or restore this window." data-help-detail="Expands the Completion API window to the desktop workspace or returns it to its previous movable size. Mobile windows remain maximized.">□</button>
+                  <button type="button" class="toggle-button icon-button maximize-toggle" title="Maximize or restore window" aria-label="Maximize or restore window" data-help="Maximize or restore this window." data-help-detail="Expands the Completion API window to the usable desktop or returns it to its prior reachable size and position. Mobile windows remain maximized.">□</button>
                   <button type="button" class="delete-button icon-button remove-box" title="Close window" aria-label="Close window" data-help="Close this Completion API window." data-help-detail="Removes this window and its taskbar button. Unsaved prompt, key, and sampling settings in this window are discarded.">X</button>
                 </div>
               </div>
@@ -550,7 +550,7 @@
                 </div>
                 <div class="help-overlay is-hidden" aria-hidden="true"></div>
               </div>
-              <div class="resize-handle" aria-hidden="true" data-help="Resize this Completion API window." data-help-detail="Drag this lower-right handle to change the window size. Maximized and mobile windows keep their managed size."></div>
+              <div class="resize-handle resize-se" data-resize-edge="se" aria-hidden="true" data-help="Resize from the bottom-right corner." data-help-detail="Drag this window's bottom-right corner to resize it while the opposite edges stay fixed. Snapped, maximized, and mobile windows use managed sizing."></div>
             </div>
 
             <div id="window-diskrot-template" class="window-shell box-shell app-window diskrot-window window-template" data-template="diskrot">
@@ -565,7 +565,7 @@
               <div class="box-body">
                 <iframe class="diskrot-frame" title="Diskrot" src="https://www.diskrot.com"></iframe>
               </div>
-              <div class="resize-handle" aria-hidden="true"></div>
+              <div class="resize-handle resize-se" data-resize-edge="se" aria-hidden="true"></div>
             </div>
           </div>
         </div>

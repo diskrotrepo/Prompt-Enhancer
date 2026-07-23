@@ -8,6 +8,12 @@ This directory contains Jest test suites verifying functionality of the Prompt E
 - **Toggle Map**: For complex option interactions, maintain a table mapping toggle combinations to their expected output. Drive parameterized tests from this table so each scenario is explicitly verified.
 - **Sanity Fixtures**: Keep the real-UI sanity regression in sync (`tests/sanity/`). Any behavior change must update both the input/expected JSON fixtures and the README Heuristic rule index.
 - **Procedural Wallpaper**: Keep deterministic world-model checks, bare-desktop wheel isolation, and mobile release-momentum coverage in `wallpaper.test.js`. Assert stable signatures, bounded pool size, continuous palette parameters, long-tail touch glide distance/decay/cancellation, and window-scroll isolation; leave subjective composition and texture balance to browser visual QA rather than brittle pixel snapshots.
+- **Desktop Window Geometry**: Reproduce drag/resize regressions with explicit
+  desktop and window DOMRects. Assert pointer-to-frame offset during off-canvas
+  drag, all eight floating resize directions, half/quarter snap targets,
+  first-snap Assist, existing-layout Assist suppression, shared vertical and
+  horizontal divider resizing, viewport re-fit, and the CSS flex-body contract;
+  leave texture and translucent-preview appearance to browser visual QA.
 
 Remember the **50% Rule**: incremental test improvements build long-term reliability.
 

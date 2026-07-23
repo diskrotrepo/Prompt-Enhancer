@@ -252,6 +252,91 @@ function runSanityCase(testCase) {
       body.dispatchEvent(new window.Event('pointerdown', { bubbles: true, cancelable: true }));
       return;
     }
+    if (type === 'snapFirstPromptWindow') {
+      if (!actionResults) return;
+      const area = window.document.getElementById('window-area');
+      const win = window.document.querySelector(
+        '.app-window[data-window="prompts"]:not(.window-template)'
+      );
+      const header = win?.querySelector('.window-header');
+      if (!area || !win || !header) return;
+      area.getBoundingClientRect = () => ({
+        left: 0,
+        top: 42,
+        width: 1200,
+        height: 900,
+        right: 1200,
+        bottom: 942
+      });
+      win.getBoundingClientRect = () => ({
+        left: 220,
+        top: 200,
+        width: 640,
+        height: 420,
+        right: 860,
+        bottom: 620
+      });
+      const dispatchPointer = (target, eventType, clientX, clientY) => {
+        const pointerEvent = new window.Event(eventType, { bubbles: true, cancelable: true });
+        Object.defineProperties(pointerEvent, {
+          clientX: { value: clientX },
+          clientY: { value: clientY },
+          pointerId: { value: 77 }
+        });
+        target.dispatchEvent(pointerEvent);
+      };
+      dispatchPointer(header, 'pointerdown', 260, 230);
+      dispatchPointer(window.document, 'pointermove', 1199, 400);
+      dispatchPointer(window.document, 'pointerup', 1199, 400);
+      const left = parseFloat(win.style.left) || 0;
+      const top = parseFloat(win.style.top) || 0;
+      const width = parseFloat(win.style.width) || 0;
+      const height = parseFloat(win.style.height) || 0;
+      actionResults.windowSnapTarget = win.dataset.snapTarget || '';
+      actionResults.snapAssistSlotCount = area.querySelectorAll('.window-snap-assist-slot').length;
+      actionResults.snappedFrameFlush =
+        left + width === 1200 && top === 0 && height === 900;
+      return;
+    }
+    if (type === 'snapSecondPromptWindowIntoExistingLayout') {
+      if (!actionResults) return;
+      const area = window.document.getElementById('window-area');
+      const windows = Array.from(window.document.querySelectorAll(
+        '.app-window[data-window="prompts"]:not(.window-template)'
+      ));
+      const [rightWindow, leftWindow] = windows;
+      const header = leftWindow?.querySelector('.window-header');
+      if (!area || !rightWindow || !leftWindow || !header) return;
+      leftWindow.getBoundingClientRect = () => ({
+        left: 260,
+        top: 230,
+        width: 640,
+        height: 420,
+        right: 900,
+        bottom: 650
+      });
+      const dispatchPointer = (target, eventType, clientX, clientY) => {
+        const pointerEvent = new window.Event(eventType, { bubbles: true, cancelable: true });
+        Object.defineProperties(pointerEvent, {
+          clientX: { value: clientX },
+          clientY: { value: clientY },
+          pointerId: { value: 78 }
+        });
+        target.dispatchEvent(pointerEvent);
+      };
+      dispatchPointer(header, 'pointerdown', 300, 250);
+      dispatchPointer(window.document, 'pointermove', 0, 400);
+      dispatchPointer(window.document, 'pointerup', 0, 400);
+      const sharedBoundary = parseFloat(leftWindow.style.left) + parseFloat(leftWindow.style.width);
+      actionResults.existingLayoutAssistSuppressed = !area.querySelector('.window-snap-assist');
+      actionResults.snapDividerCount = area.querySelectorAll('.window-snap-divider').length;
+      actionResults.sharedSnapBoundaryFlush =
+        leftWindow.dataset.snapTarget === 'left' &&
+        rightWindow.dataset.snapTarget === 'right' &&
+        sharedBoundary === parseFloat(rightWindow.style.left) &&
+        sharedBoundary + parseFloat(rightWindow.style.width) === 1200;
+      return;
+    }
     if (type === 'menuSave' || type === 'menuSaveAs') {
       const actionKey = type === 'menuSaveAs' ? 'save-as' : 'save';
       const win = getActiveWindow();
@@ -379,7 +464,13 @@ function runSanityCase(testCase) {
     wallpaperOffsetFinite: false,
     wallpaperMomentumContinued: false,
     wallpaperMomentumLongTail: false,
-    wallpaperMomentumSettled: false
+    wallpaperMomentumSettled: false,
+    windowSnapTarget: '',
+    snapAssistSlotCount: 0,
+    snappedFrameFlush: false,
+    existingLayoutAssistSuppressed: false,
+    snapDividerCount: 0,
+    sharedSnapBoundaryFlush: false
   };
   // Run post-generate actions (copy, menu saves) so outputs are available.
   postActions.forEach(action => runAction(action, root, actionResults));
@@ -561,6 +652,12 @@ function runSanityCase(testCase) {
     wallpaperMomentumContinued: actionResults.wallpaperMomentumContinued,
     wallpaperMomentumLongTail: actionResults.wallpaperMomentumLongTail,
     wallpaperMomentumSettled: actionResults.wallpaperMomentumSettled,
+    windowSnapTarget: actionResults.windowSnapTarget,
+    snapAssistSlotCount: actionResults.snapAssistSlotCount,
+    snappedFrameFlush: actionResults.snappedFrameFlush,
+    existingLayoutAssistSuppressed: actionResults.existingLayoutAssistSuppressed,
+    snapDividerCount: actionResults.snapDividerCount,
+    sharedSnapBoundaryFlush: actionResults.sharedSnapBoundaryFlush,
     mixCopiedText: actionResults.mixCopiedText,
     chunkCopiedText: actionResults.chunkCopiedText,
     promptCount,
@@ -740,6 +837,24 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'wallpaperMomentumSettled')) {
         expect(result.wallpaperMomentumSettled).toBe(expected.wallpaperMomentumSettled);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'windowSnapTarget')) {
+        expect(result.windowSnapTarget).toBe(expected.windowSnapTarget);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'snapAssistSlotCount')) {
+        expect(result.snapAssistSlotCount).toBe(expected.snapAssistSlotCount);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'snappedFrameFlush')) {
+        expect(result.snappedFrameFlush).toBe(expected.snappedFrameFlush);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'existingLayoutAssistSuppressed')) {
+        expect(result.existingLayoutAssistSuppressed).toBe(expected.existingLayoutAssistSuppressed);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'snapDividerCount')) {
+        expect(result.snapDividerCount).toBe(expected.snapDividerCount);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'sharedSnapBoundaryFlush')) {
+        expect(result.sharedSnapBoundaryFlush).toBe(expected.sharedSnapBoundaryFlush);
       }
     });
   });

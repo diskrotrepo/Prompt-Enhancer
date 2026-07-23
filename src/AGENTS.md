@@ -162,6 +162,30 @@ for variables and Completion output). Key rules for future changes:
   muted silver. A capture-phase pointer listener activates the containing
   runtime window from any interior surface without cancelling the original
   control event. Hide/minimize paths must remove the class.
+- Window geometry has one shared contract: `getWindowAreaMetrics`,
+  `clampWindowGeometry`, `resizeWindowGeometry`, `getWindowSnapTarget`, and
+  `getWindowSnapBounds` feed drag, eight-direction resize, viewport
+  reconciliation, maximize/restore, the edge preview, and Snap Assist. During
+  a title-bar drag the window may cross the desktop boundary and must preserve
+  the original pointer offset; proximity only selects the preview, while
+  release commits the snap. Browser resizing may still re-fit floating frames
+  so a viewport change cannot strand them. Side drops tile halves, corner drops
+  tile quarters, top-center maximizes, and bottom-center remains unsnapped.
+- The mutable snap-layout ratios are the only authority for every tiled frame.
+  Once a visible snapped neighbor exists, a later edge drop joins it directly
+  without reopening Snap Assist. Visible neighbors expose keyboard-accessible
+  shared separators with `ew-resize`/`ns-resize` cursors; dragging one must
+  resize both sides from the same ratio so no gap or overlap can accumulate.
+  Snap Assist remains the first-snap chooser. Mobile maximization is temporary
+  and must restore or re-tile when a wider viewport returns.
+- Floating app windows receive transparent resize hit zones on all four edges
+  and all four corners. Keep these zones specific in Help Mode, hide them for
+  snapped/maximized/mobile-managed windows, and avoid restoring the obsolete
+  visible lower-right grip.
+- The outer `.app-window` owns manual height. Its direct `.box-body` flex child
+  must fill the remainder without a viewport-based cap; app-specific inner
+  workspaces remain responsible for their own native scroll behavior. This
+  prevents the silver dead band formerly exposed by tall window resizes.
 - Scrolling policy is enforced by `tests/scrolling.test.js`: exactly three
   `overflow: auto;` declarations (the window body selectors plus
   `.prompt-body`). Any new inner scroll region must use `overflow-y: auto;`.

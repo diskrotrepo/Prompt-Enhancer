@@ -9,7 +9,8 @@
   // - Box creation + state serialization (hydrates custom size/length controls + append-save imports)
   // - UI helpers + audited Help Mode coverage + event wiring
   // - Procedural wallpaper rendering + background-only input + touch momentum
-  // - Window management + app module hooks + shared Help
+  // - Window management + pointer-anchored drag + frame resize + shared Snap layout
+  // - App module hooks + shared Help
   // - Initialization
 
   // ======== Utilities ========
@@ -20,6 +21,174 @@
 
   function toTrimmedString(value) {
     return typeof value === 'string' ? value.trim() : '';
+  }
+
+  // Window geometry is kept in pure helpers so drag, resize, snapping, and
+  // viewport reconciliation all agree on the exact same desktop boundaries.
+  const WINDOW_MIN_WIDTH = 320;
+  const WINDOW_MIN_HEIGHT = 200;
+  const WINDOW_SNAP_THRESHOLD = 24;
+  const DEFAULT_WINDOW_SNAP_LAYOUT = Object.freeze({
+    verticalRatio: 0.5,
+    leftHorizontalRatio: 0.5,
+    rightHorizontalRatio: 0.5
+  });
+  const WINDOW_SNAP_LABELS = Object.freeze({
+    left: 'left half',
+    right: 'right half',
+    'top-left': 'top left',
+    'top-right': 'top right',
+    'bottom-left': 'bottom left',
+    'bottom-right': 'bottom right',
+    maximize: 'full desktop'
+  });
+
+  // Inputs: a number and inclusive limits. Output: the number kept inside them.
+  function clampNumber(value, minimum, maximum) {
+    return Math.max(minimum, Math.min(maximum, value));
+  }
+
+  // Inputs: pointer viewport coordinates plus a desktop DOMRect-like object.
+  // Output: the Windows-style snap target touched by the pointer, or ''.
+  function getWindowSnapTarget(clientX, clientY, bounds, threshold = WINDOW_SNAP_THRESHOLD) {
+    if (!bounds) return '';
+    const leftEdge = Number(bounds.left) || 0;
+    const topEdge = Number(bounds.top) || 0;
+    const rightEdge = Number.isFinite(Number(bounds.right))
+      ? Number(bounds.right)
+      : leftEdge + (Number(bounds.width) || 0);
+    const bottomEdge = Number.isFinite(Number(bounds.bottom))
+      ? Number(bounds.bottom)
+      : topEdge + (Number(bounds.height) || 0);
+    const x = Number(clientX) || 0;
+    const y = Number(clientY) || 0;
+    const edgeSize = Math.max(0, Number(threshold) || 0);
+    const atLeft = x <= leftEdge + edgeSize;
+    const atRight = x >= rightEdge - edgeSize;
+    const atTop = y <= topEdge + edgeSize;
+    const atBottom = y >= bottomEdge - edgeSize;
+
+    if (atLeft && atTop) return 'top-left';
+    if (atRight && atTop) return 'top-right';
+    if (atLeft && atBottom) return 'bottom-left';
+    if (atRight && atBottom) return 'bottom-right';
+    if (atTop) return 'maximize';
+    if (atLeft) return 'left';
+    if (atRight) return 'right';
+    return '';
+  }
+
+  // Inputs: a snap target and usable desktop dimensions. Output: a border-box
+  // rectangle whose outside edges meet the desktop exactly, without dead gaps.
+  function getWindowSnapBounds(target, areaWidth, areaHeight, layout = DEFAULT_WINDOW_SNAP_LAYOUT) {
+    const width = Math.max(0, Number(areaWidth) || 0);
+    const height = Math.max(0, Number(areaHeight) || 0);
+    const verticalRatio = clampNumber(
+      Number(layout?.verticalRatio) || DEFAULT_WINDOW_SNAP_LAYOUT.verticalRatio,
+      0,
+      1
+    );
+    const leftHorizontalRatio = clampNumber(
+      Number(layout?.leftHorizontalRatio) || DEFAULT_WINDOW_SNAP_LAYOUT.leftHorizontalRatio,
+      0,
+      1
+    );
+    const rightHorizontalRatio = clampNumber(
+      Number(layout?.rightHorizontalRatio) || DEFAULT_WINDOW_SNAP_LAYOUT.rightHorizontalRatio,
+      0,
+      1
+    );
+    const leftWidth = width * verticalRatio;
+    const rightWidth = width - leftWidth;
+    const leftTopHeight = height * leftHorizontalRatio;
+    const leftBottomHeight = height - leftTopHeight;
+    const rightTopHeight = height * rightHorizontalRatio;
+    const rightBottomHeight = height - rightTopHeight;
+    const layouts = {
+      left: { left: 0, top: 0, width: leftWidth, height },
+      right: { left: leftWidth, top: 0, width: rightWidth, height },
+      'top-left': { left: 0, top: 0, width: leftWidth, height: leftTopHeight },
+      'top-right': { left: leftWidth, top: 0, width: rightWidth, height: rightTopHeight },
+      'bottom-left': {
+        left: 0,
+        top: leftTopHeight,
+        width: leftWidth,
+        height: leftBottomHeight
+      },
+      'bottom-right': {
+        left: leftWidth,
+        top: rightTopHeight,
+        width: rightWidth,
+        height: rightBottomHeight
+      },
+      maximize: { left: 0, top: 0, width, height }
+    };
+    return layouts[target] ? { ...layouts[target] } : null;
+  }
+
+  // Inputs: the starting border box, one compass edge/corner, pointer deltas,
+  // and desktop size. Output: a minimum-sized box whose dragged edges stop at
+  // the usable desktop; opposite edges remain fixed like a native window frame.
+  function resizeWindowGeometry(geometry, edge, deltaX, deltaY, areaWidth, areaHeight) {
+    const availableWidth = Math.max(0, Number(areaWidth) || 0);
+    const availableHeight = Math.max(0, Number(areaHeight) || 0);
+    const startLeft = Number(geometry?.left) || 0;
+    const startTop = Number(geometry?.top) || 0;
+    const startWidth = Math.max(0, Number(geometry?.width) || 0);
+    const startHeight = Math.max(0, Number(geometry?.height) || 0);
+    const minimumWidth = Math.min(WINDOW_MIN_WIDTH, availableWidth);
+    const minimumHeight = Math.min(WINDOW_MIN_HEIGHT, availableHeight);
+    let left = startLeft;
+    let top = startTop;
+    let right = startLeft + startWidth;
+    let bottom = startTop + startHeight;
+    const horizontalDelta = Number(deltaX) || 0;
+    const verticalDelta = Number(deltaY) || 0;
+    const direction = String(edge || 'se').toLowerCase();
+
+    if (direction.includes('w')) {
+      left = clampNumber(startLeft + horizontalDelta, 0, Math.max(0, right - minimumWidth));
+    } else if (direction.includes('e')) {
+      right = clampNumber(
+        right + horizontalDelta,
+        Math.min(availableWidth, left + minimumWidth),
+        availableWidth
+      );
+    }
+    if (direction.includes('n')) {
+      top = clampNumber(startTop + verticalDelta, 0, Math.max(0, bottom - minimumHeight));
+    } else if (direction.includes('s')) {
+      bottom = clampNumber(
+        bottom + verticalDelta,
+        Math.min(availableHeight, top + minimumHeight),
+        availableHeight
+      );
+    }
+    return {
+      left,
+      top,
+      width: Math.max(0, right - left),
+      height: Math.max(0, bottom - top)
+    };
+  }
+
+  // Inputs: proposed floating-window geometry plus desktop size. Output: a
+  // reachable rectangle; the whole header and resize corner remain on-screen.
+  function clampWindowGeometry(geometry, areaWidth, areaHeight) {
+    const availableWidth = Math.max(0, Number(areaWidth) || 0);
+    const availableHeight = Math.max(0, Number(areaHeight) || 0);
+    const requestedWidth = Math.max(WINDOW_MIN_WIDTH, Number(geometry?.width) || WINDOW_MIN_WIDTH);
+    const requestedHeight = Math.max(WINDOW_MIN_HEIGHT, Number(geometry?.height) || WINDOW_MIN_HEIGHT);
+    const width = Math.min(availableWidth, requestedWidth);
+    const height = Math.min(availableHeight, requestedHeight);
+    const maxLeft = Math.max(0, availableWidth - width);
+    const maxTop = Math.max(0, availableHeight - height);
+    return {
+      left: clampNumber(Number(geometry?.left) || 0, 0, maxLeft),
+      top: clampNumber(Number(geometry?.top) || 0, 0, maxTop),
+      width,
+      height
+    };
   }
 
   // ======== Procedural wallpaper model ========
@@ -1283,15 +1452,11 @@
     return !!(mobileQuery && mobileQuery.matches);
   }
 
+  // Mobile and desktop now share the same reconciliation path. This wrapper
+  // keeps older call sites readable while allowing the desktop path to restore
+  // mobile-managed windows and re-fit snapped/floating geometry after a resize.
   function applyMobileWindowState(target) {
-    if (!isMobileLayout()) return;
-    const windows = target
-      ? [target]
-      : Array.from(document.querySelectorAll('.app-window:not(.window-template)'));
-    windows.forEach(win => {
-      if (!win || win.classList.contains('is-hidden')) return;
-      win.classList.add('is-maximized');
-    });
+    reconcileWindowLayouts(target);
   }
 
   // ======== Chunking + Mixing Engine ========
@@ -4274,6 +4439,597 @@
   let currentFocusInstance = null;
   let taskbarAccentCounter = 0;
   const TASKBAR_ACCENTS = 10;
+  const windowSnapLayout = { ...DEFAULT_WINDOW_SNAP_LAYOUT };
+
+  // Read the usable desktop once through this adapter. Browser geometry is the
+  // authority; fallbacks keep JSDOM fixtures and first-layout frames stable.
+  function getWindowAreaMetrics(area = document.getElementById('window-area')) {
+    if (!area) return null;
+    const rect = area.getBoundingClientRect();
+    const width = rect.width || area.clientWidth || window.innerWidth || 0;
+    const taskbarHeight = parseFloat(
+      window.getComputedStyle(document.documentElement).getPropertyValue('--taskbar-height')
+    ) || 42;
+    const height = rect.height || area.clientHeight || Math.max(0, (window.innerHeight || 0) - taskbarHeight);
+    const left = Number(rect.left) || 0;
+    const top = Number(rect.top) || taskbarHeight;
+    return {
+      left,
+      top,
+      width,
+      height,
+      right: Number(rect.right) || left + width,
+      bottom: Number(rect.bottom) || top + height
+    };
+  }
+
+  // Convert a rendered window back to desktop-local border-box coordinates.
+  function readWindowGeometry(win, area = document.getElementById('window-area')) {
+    if (!win || !area) return null;
+    const bounds = getWindowAreaMetrics(area);
+    if (!bounds) return null;
+    const rect = win.getBoundingClientRect();
+    const computed = window.getComputedStyle(win);
+    return {
+      left: (Number(rect.left) || bounds.left) - bounds.left,
+      top: (Number(rect.top) || bounds.top) - bounds.top,
+      width: rect.width || parseFloat(win.style.width) || parseFloat(computed.width) || WINDOW_MIN_WIDTH,
+      height: rect.height || parseFloat(win.style.height) || parseFloat(computed.height) || WINDOW_MIN_HEIGHT
+    };
+  }
+
+  // Apply one border-box rectangle. Clearing opposite anchors prevents stale
+  // maximized or legacy positioning rules from competing with local geometry.
+  function writeWindowGeometry(win, geometry) {
+    if (!win || !geometry) return;
+    win.style.left = `${geometry.left}px`;
+    win.style.top = `${geometry.top}px`;
+    win.style.width = `${geometry.width}px`;
+    win.style.height = `${geometry.height}px`;
+    win.style.right = 'auto';
+    win.style.bottom = 'auto';
+    win.style.transform = 'none';
+  }
+
+  // Preserve one floating rectangle across snap, maximize, and temporary
+  // mobile maximization. Re-snapping never overwrites the original restore size.
+  function rememberWindowRestoreGeometry(win, area, force = false) {
+    if (!win || (!force && win.dataset.restoreGeometry)) return;
+    const geometry = readWindowGeometry(win, area);
+    if (geometry) win.dataset.restoreGeometry = JSON.stringify(geometry);
+  }
+
+  function readWindowRestoreGeometry(win) {
+    if (!win?.dataset?.restoreGeometry) return null;
+    try {
+      const parsed = JSON.parse(win.dataset.restoreGeometry);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  // Return a managed window to its remembered movable rectangle, clamped to
+  // the current viewport in case the browser became smaller while it was tiled.
+  // The subsequent drag is free to carry that rectangle partially off-canvas.
+  function restoreWindowGeometry(win, area = document.getElementById('window-area')) {
+    if (!win || !area) return;
+    const bounds = getWindowAreaMetrics(area);
+    const restored = readWindowRestoreGeometry(win) || readWindowGeometry(win, area);
+    win.classList.remove('is-maximized', 'is-snapped');
+    delete win.dataset.snapTarget;
+    delete win.dataset.restoreGeometry;
+    if (!bounds || !restored) return;
+    writeWindowGeometry(win, clampWindowGeometry(restored, bounds.width, bounds.height));
+    syncWindowSnapDividers(area);
+  }
+
+  function constrainFloatingWindow(win, area = document.getElementById('window-area')) {
+    if (!win || !area || win.classList.contains('is-maximized') || win.dataset.snapTarget) return;
+    const bounds = getWindowAreaMetrics(area);
+    const geometry = readWindowGeometry(win, area);
+    if (!bounds || !geometry || bounds.width <= 0 || bounds.height <= 0) return;
+    writeWindowGeometry(win, clampWindowGeometry(geometry, bounds.width, bounds.height));
+  }
+
+  function hideWindowSnapPreview() {
+    document.querySelector('.window-snap-preview')?.remove();
+  }
+
+  // Preview the exact final rectangle while the pointer touches a snap edge.
+  // This is intentionally pointer-inert so it never interrupts pointer capture.
+  function showWindowSnapPreview(target, area = document.getElementById('window-area')) {
+    if (!area || !target) {
+      hideWindowSnapPreview();
+      return;
+    }
+    const bounds = getWindowAreaMetrics(area);
+    const geometry = getWindowSnapBounds(target, bounds?.width, bounds?.height, windowSnapLayout);
+    if (!geometry) {
+      hideWindowSnapPreview();
+      return;
+    }
+    let preview = area.querySelector('.window-snap-preview');
+    if (!preview) {
+      preview = document.createElement('div');
+      preview.className = 'window-snap-preview';
+      preview.setAttribute('aria-hidden', 'true');
+      area.appendChild(preview);
+    }
+    preview.dataset.snapTarget = target;
+    preview.textContent = `Snap ${WINDOW_SNAP_LABELS[target] || target}`;
+    writeWindowGeometry(preview, geometry);
+  }
+
+  function closeWindowSnapAssist() {
+    document.querySelector('.window-snap-assist')?.remove();
+  }
+
+  function complementarySnapTargets(target) {
+    if (target === 'left') return ['right'];
+    if (target === 'right') return ['left'];
+    const quarters = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+    return quarters.includes(target) ? quarters.filter(item => item !== target) : [];
+  }
+
+  function snapTargetCoversSlot(windowTarget, slotTarget) {
+    if (!windowTarget || !slotTarget) return false;
+    if (windowTarget === slotTarget) return true;
+    if (windowTarget === 'left') return slotTarget === 'top-left' || slotTarget === 'bottom-left';
+    if (windowTarget === 'right') return slotTarget === 'top-right' || slotTarget === 'bottom-right';
+    return false;
+  }
+
+  function getVisibleSnappedWindows(excludedWindow = null) {
+    return Array.from(document.querySelectorAll('.app-window:not(.window-template)'))
+      .filter(win => (
+        win !== excludedWindow &&
+        !win.classList.contains('is-hidden') &&
+        !win.classList.contains('is-maximized') &&
+        !!win.dataset.snapTarget
+      ));
+  }
+
+  function resetWindowSnapLayout() {
+    Object.assign(windowSnapLayout, DEFAULT_WINDOW_SNAP_LAYOUT);
+  }
+
+  // One ratio model drives preview, final tiling, viewport reconciliation, and
+  // divider dragging. Reapplying every snapped rectangle from that model keeps
+  // neighboring edges mathematically identical rather than nudging two boxes.
+  function applyAllSnappedWindowGeometries(area = document.getElementById('window-area')) {
+    const bounds = getWindowAreaMetrics(area);
+    if (!area || !bounds) return;
+    document.querySelectorAll('.app-window:not(.window-template)[data-snap-target]').forEach(win => {
+      if (win.classList.contains('is-maximized')) return;
+      const geometry = getWindowSnapBounds(
+        win.dataset.snapTarget,
+        bounds.width,
+        bounds.height,
+        windowSnapLayout
+      );
+      if (geometry) writeWindowGeometry(win, geometry);
+    });
+  }
+
+  function mergeDividerIntervals(intervals) {
+    const sorted = intervals
+      .filter(interval => interval.end - interval.start > 0)
+      .sort((first, second) => first.start - second.start);
+    return sorted.reduce((merged, interval) => {
+      const previous = merged[merged.length - 1];
+      if (!previous || interval.start > previous.end) {
+        merged.push({ ...interval });
+      } else {
+        previous.end = Math.max(previous.end, interval.end);
+      }
+      return merged;
+    }, []);
+  }
+
+  // Build only separators backed by visible neighbors. Vertical segments join
+  // any overlapping left/right tiles; horizontal bars require matching corner
+  // pairs in one column, mirroring the layouts the user can actually balance.
+  function getWindowSnapDividerDescriptors(area = document.getElementById('window-area')) {
+    const bounds = getWindowAreaMetrics(area);
+    if (!area || !bounds || isMobileLayout()) return [];
+    const snapped = getVisibleSnappedWindows();
+    const layouts = snapped.map(win => ({
+      target: win.dataset.snapTarget,
+      geometry: getWindowSnapBounds(
+        win.dataset.snapTarget,
+        bounds.width,
+        bounds.height,
+        windowSnapLayout
+      )
+    })).filter(item => item.geometry);
+    const leftLayouts = layouts.filter(item => item.target === 'left' || item.target.endsWith('-left'));
+    const rightLayouts = layouts.filter(item => item.target === 'right' || item.target.endsWith('-right'));
+    const verticalIntervals = [];
+    leftLayouts.forEach(leftLayout => {
+      rightLayouts.forEach(rightLayout => {
+        const start = Math.max(leftLayout.geometry.top, rightLayout.geometry.top);
+        const end = Math.min(
+          leftLayout.geometry.top + leftLayout.geometry.height,
+          rightLayout.geometry.top + rightLayout.geometry.height
+        );
+        if (end > start) verticalIntervals.push({ start, end });
+      });
+    });
+    const descriptors = mergeDividerIntervals(verticalIntervals).map((interval, index) => ({
+      key: `vertical-${index}`,
+      type: 'vertical',
+      orientation: 'vertical',
+      left: bounds.width * windowSnapLayout.verticalRatio - 5,
+      top: interval.start,
+      width: 10,
+      height: interval.end - interval.start,
+      value: Math.round(windowSnapLayout.verticalRatio * 100)
+    }));
+    const columns = [
+      {
+        side: 'left',
+        ratioKey: 'leftHorizontalRatio',
+        topTarget: 'top-left',
+        bottomTarget: 'bottom-left',
+        left: 0,
+        width: bounds.width * windowSnapLayout.verticalRatio
+      },
+      {
+        side: 'right',
+        ratioKey: 'rightHorizontalRatio',
+        topTarget: 'top-right',
+        bottomTarget: 'bottom-right',
+        left: bounds.width * windowSnapLayout.verticalRatio,
+        width: bounds.width * (1 - windowSnapLayout.verticalRatio)
+      }
+    ];
+    columns.forEach(column => {
+      const hasTop = layouts.some(item => item.target === column.topTarget);
+      const hasBottom = layouts.some(item => item.target === column.bottomTarget);
+      if (!hasTop || !hasBottom) return;
+      const ratio = windowSnapLayout[column.ratioKey];
+      descriptors.push({
+        key: `horizontal-${column.side}`,
+        type: `horizontal-${column.side}`,
+        orientation: 'horizontal',
+        left: column.left,
+        top: bounds.height * ratio - 5,
+        width: column.width,
+        height: 10,
+        value: Math.round(ratio * 100)
+      });
+    });
+    return descriptors;
+  }
+
+  function syncWindowSnapDividers(area = document.getElementById('window-area')) {
+    if (!area) return;
+    const descriptors = getWindowSnapDividerDescriptors(area);
+    let root = area.querySelector('.window-snap-dividers');
+    if (!descriptors.length) {
+      root?.remove();
+      return;
+    }
+    if (!root) {
+      root = document.createElement('div');
+      root.className = 'window-snap-dividers';
+      root.setAttribute('aria-label', 'Snapped window dividers');
+      area.appendChild(root);
+    }
+    const activeKeys = new Set(descriptors.map(descriptor => descriptor.key));
+    root.querySelectorAll('.window-snap-divider').forEach(divider => {
+      if (!activeKeys.has(divider.dataset.dividerKey)) divider.remove();
+    });
+    descriptors.forEach(descriptor => {
+      let divider = root.querySelector(`[data-divider-key="${descriptor.key}"]`);
+      if (!divider) {
+        divider = document.createElement('div');
+        divider.className = 'window-snap-divider';
+        divider.dataset.dividerKey = descriptor.key;
+        divider.setAttribute('role', 'separator');
+        divider.tabIndex = 0;
+        root.appendChild(divider);
+      }
+      divider.dataset.divider = descriptor.type;
+      divider.dataset.help = 'Resize the snapped windows on both sides.';
+      divider.dataset.helpDetail = 'Drag this shared separator; adjacent snapped windows resize together and keep a flush common edge.';
+      divider.setAttribute('aria-label', 'Resize adjacent snapped windows');
+      divider.setAttribute('aria-orientation', descriptor.orientation);
+      divider.setAttribute('aria-valuemin', '0');
+      divider.setAttribute('aria-valuemax', '100');
+      divider.setAttribute('aria-valuenow', String(descriptor.value));
+      divider.style.left = `${descriptor.left}px`;
+      divider.style.top = `${descriptor.top}px`;
+      divider.style.width = `${descriptor.width}px`;
+      divider.style.height = `${descriptor.height}px`;
+    });
+  }
+
+  function updateWindowSnapDivider(type, clientX, clientY, area) {
+    const bounds = getWindowAreaMetrics(area);
+    if (!bounds) return;
+    if (type === 'vertical') {
+      const minimumRatio = Math.min(0.45, WINDOW_MIN_WIDTH / Math.max(1, bounds.width));
+      windowSnapLayout.verticalRatio = clampNumber(
+        (clientX - bounds.left) / Math.max(1, bounds.width),
+        minimumRatio,
+        1 - minimumRatio
+      );
+    } else {
+      const ratioKey = type === 'horizontal-left'
+        ? 'leftHorizontalRatio'
+        : 'rightHorizontalRatio';
+      const minimumRatio = Math.min(0.45, WINDOW_MIN_HEIGHT / Math.max(1, bounds.height));
+      windowSnapLayout[ratioKey] = clampNumber(
+        (clientY - bounds.top) / Math.max(1, bounds.height),
+        minimumRatio,
+        1 - minimumRatio
+      );
+    }
+    applyAllSnappedWindowGeometries(area);
+    syncWindowSnapDividers(area);
+  }
+
+  function setupWindowSnapDividerResize() {
+    const area = document.getElementById('window-area');
+    if (!area || area.dataset.snapDividerReady) return;
+    let dividerState = null;
+    const onMove = event => {
+      if (!dividerState) return;
+      updateWindowSnapDivider(dividerState.type, event.clientX, event.clientY, area);
+    };
+    const endResize = () => {
+      if (!dividerState) return;
+      if (dividerState.pointerId != null && dividerState.captureEl?.releasePointerCapture) {
+        try {
+          dividerState.captureEl.releasePointerCapture(dividerState.pointerId);
+        } catch (err) {
+          /* ignore */
+        }
+      }
+      dividerState = null;
+      document.body?.classList.remove('is-resizing-snap');
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', endResize);
+      document.removeEventListener('pointercancel', endResize);
+      syncWindowSnapDividers(area);
+    };
+    area.addEventListener('pointerdown', event => {
+      const divider = toEventElement(event.target)?.closest?.('.window-snap-divider');
+      if (!divider || isMobileLayout()) return;
+      event.preventDefault();
+      closeWindowSnapAssist();
+      if (divider.setPointerCapture) {
+        try {
+          divider.setPointerCapture(event.pointerId);
+        } catch (err) {
+          /* ignore */
+        }
+      }
+      dividerState = {
+        type: divider.dataset.divider,
+        pointerId: event.pointerId,
+        captureEl: divider
+      };
+      document.body?.classList.add('is-resizing-snap');
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', endResize);
+      document.addEventListener('pointercancel', endResize);
+    });
+    area.addEventListener('keydown', event => {
+      const divider = toEventElement(event.target)?.closest?.('.window-snap-divider');
+      if (!divider) return;
+      const vertical = divider.dataset.divider === 'vertical';
+      const direction = vertical
+        ? ({ ArrowLeft: -1, ArrowRight: 1 })[event.key]
+        : ({ ArrowUp: -1, ArrowDown: 1 })[event.key];
+      if (!direction) return;
+      event.preventDefault();
+      const bounds = getWindowAreaMetrics(area);
+      if (!bounds) return;
+      const ratioKey = vertical
+        ? 'verticalRatio'
+        : divider.dataset.divider === 'horizontal-left'
+          ? 'leftHorizontalRatio'
+          : 'rightHorizontalRatio';
+      const nextRatio = windowSnapLayout[ratioKey] + direction * 0.02;
+      const clientX = bounds.left + bounds.width * (vertical ? nextRatio : windowSnapLayout.verticalRatio);
+      const clientY = bounds.top + bounds.height * (vertical ? 0.5 : nextRatio);
+      updateWindowSnapDivider(divider.dataset.divider, clientX, clientY, area);
+      area.querySelector(`[data-divider-key="${divider.dataset.dividerKey}"]`)?.focus();
+    });
+    area.dataset.snapDividerReady = 'true';
+  }
+
+  // Snap Assist paints each remaining half/quarter as a chooser. Selecting a
+  // thumbnail fills that exact slot, removes the chosen window from the other
+  // choosers, and leaves further empty quarters available when candidates remain.
+  function showWindowSnapAssist(sourceWin, sourceTarget, area = document.getElementById('window-area')) {
+    closeWindowSnapAssist();
+    if (!sourceWin || !area) return;
+    const otherWindows = Array.from(document.querySelectorAll('.app-window:not(.window-template)'))
+      .filter(win => win !== sourceWin);
+    // Snap Assist is for starting a layout. Once any visible neighbor is
+    // already tiled, a new edge release joins that arrangement immediately.
+    if (otherWindows.some(win => !win.classList.contains('is-hidden') && win.dataset.snapTarget)) return;
+    // A half-window already fills its two corresponding quarter slots. Do not
+    // cover those occupied regions with a chooser when another window re-tiles.
+    const targets = complementarySnapTargets(sourceTarget).filter(target =>
+      !otherWindows.some(win =>
+        !win.classList.contains('is-hidden') && snapTargetCoversSlot(win.dataset.snapTarget, target)
+      )
+    );
+    const candidates = otherWindows;
+    if (!targets.length || !candidates.length) return;
+    const bounds = getWindowAreaMetrics(area);
+    if (!bounds) return;
+
+    const assist = document.createElement('div');
+    assist.className = 'window-snap-assist';
+    assist.setAttribute('aria-label', 'Snap Assist');
+    targets.forEach(target => {
+      const geometry = getWindowSnapBounds(target, bounds.width, bounds.height, windowSnapLayout);
+      if (!geometry) return;
+      const slot = document.createElement('section');
+      slot.className = 'window-snap-assist-slot';
+      slot.dataset.snapTarget = target;
+      slot.setAttribute('aria-label', `Choose a window for ${WINDOW_SNAP_LABELS[target]}`);
+      writeWindowGeometry(slot, geometry);
+
+      const header = document.createElement('div');
+      header.className = 'window-snap-assist-header';
+      const title = document.createElement('span');
+      title.textContent = `Snap Assist · ${WINDOW_SNAP_LABELS[target]}`;
+      const close = document.createElement('button');
+      close.type = 'button';
+      close.className = 'window-snap-assist-close';
+      close.textContent = 'X';
+      close.setAttribute('aria-label', 'Close Snap Assist');
+      close.dataset.help = 'Close Snap Assist.';
+      close.dataset.helpDetail = 'Leaves the remaining desktop slots empty without moving any more windows.';
+      header.append(title, close);
+      slot.appendChild(header);
+
+      const options = document.createElement('div');
+      options.className = 'window-snap-assist-options';
+      candidates.forEach(candidate => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'window-snap-assist-window';
+        button.dataset.instance = candidate.dataset.instance || '';
+        button.dataset.help = `Snap ${candidate.dataset.windowLabel || 'this window'} here.`;
+        button.dataset.helpDetail = `Moves the selected window into the ${WINDOW_SNAP_LABELS[target]} desktop slot.`;
+        const icon = document.createElement('span');
+        icon.className = `task-icon ${candidate.dataset.windowIcon || ''}`;
+        icon.setAttribute('aria-hidden', 'true');
+        const label = document.createElement('span');
+        label.textContent = candidate.dataset.windowLabel || 'Window';
+        button.append(icon, label);
+        options.appendChild(button);
+      });
+      slot.appendChild(options);
+      assist.appendChild(slot);
+    });
+
+    assist.addEventListener('click', event => {
+      const eventTarget = toEventElement(event.target);
+      if (!eventTarget) return;
+      if (eventTarget.closest('.window-snap-assist-close')) {
+        closeWindowSnapAssist();
+        return;
+      }
+      const button = eventTarget.closest('.window-snap-assist-window');
+      const slot = button?.closest('.window-snap-assist-slot');
+      const instanceId = button?.dataset.instance;
+      const target = slot?.dataset.snapTarget;
+      const selected = instanceId ? getWindowByInstance(instanceId) : null;
+      if (!selected || !target) return;
+      selected.classList.remove('is-hidden');
+      applyWindowSnap(selected, target, { showAssist: false });
+      focusWindow(instanceId);
+      assist.querySelectorAll('.window-snap-assist-window').forEach(option => {
+        if (option.dataset.instance === instanceId) option.remove();
+      });
+      slot.remove();
+      assist.querySelectorAll('.window-snap-assist-slot').forEach(remainingSlot => {
+        if (!remainingSlot.querySelector('.window-snap-assist-window')) remainingSlot.remove();
+      });
+      if (!assist.querySelector('.window-snap-assist-slot')) closeWindowSnapAssist();
+    });
+    area.appendChild(assist);
+  }
+
+  // Tile one window, then offer every other open/minimized runtime window for
+  // the complementary slots. The stored floating rectangle remains recoverable.
+  function applyWindowSnap(win, target, options = {}) {
+    const area = document.getElementById('window-area');
+    const bounds = getWindowAreaMetrics(area);
+    if (!win || !area || !bounds) return;
+    if (target === 'maximize') {
+      setWindowMaximized(win, true);
+      return;
+    }
+    const joinsExistingLayout = getVisibleSnappedWindows(win).length > 0;
+    if (!joinsExistingLayout && !win.dataset.snapTarget) resetWindowSnapLayout();
+    const geometry = getWindowSnapBounds(target, bounds.width, bounds.height, windowSnapLayout);
+    if (!geometry) return;
+    if (options.remember !== false && !win.dataset.snapTarget && !win.classList.contains('is-maximized')) {
+      rememberWindowRestoreGeometry(win, area);
+    }
+    win.classList.remove('is-maximized');
+    win.classList.add('is-snapped');
+    win.dataset.snapTarget = target;
+    writeWindowGeometry(win, geometry);
+    hideWindowSnapPreview();
+    syncWindowSnapDividers(area);
+    if (options.showAssist !== false) showWindowSnapAssist(win, target, area);
+  }
+
+  function setWindowMaximized(win, shouldMaximize) {
+    if (!win) return;
+    const area = document.getElementById('window-area');
+    if (shouldMaximize) {
+      if (!win.classList.contains('is-maximized') && !win.dataset.snapTarget) {
+        rememberWindowRestoreGeometry(win, area);
+      }
+      win.classList.remove('is-snapped');
+      delete win.dataset.snapTarget;
+      win.classList.add('is-maximized');
+      hideWindowSnapPreview();
+      closeWindowSnapAssist();
+      syncWindowSnapDividers(area);
+      return;
+    }
+    if (isMobileLayout()) {
+      win.classList.add('is-maximized');
+      return;
+    }
+    restoreWindowGeometry(win, area);
+    syncWindowSnapDividers(area);
+  }
+
+  // Reconcile every managed layout after a browser resize. Floating windows are
+  // shrunk/repositioned into reach, snapped windows re-tile, and mobile-only
+  // maximization cleanly returns to the prior desktop rectangle.
+  function reconcileWindowLayouts(target) {
+    const area = document.getElementById('window-area');
+    if (!area) return;
+    const windows = target
+      ? [target]
+      : Array.from(document.querySelectorAll('.app-window:not(.window-template)'));
+    if (isMobileLayout()) {
+      hideWindowSnapPreview();
+      closeWindowSnapAssist();
+      windows.forEach(win => {
+        if (!win || win.classList.contains('is-hidden') || win.classList.contains('is-maximized')) return;
+        if (!win.dataset.snapTarget) rememberWindowRestoreGeometry(win, area);
+        win.dataset.mobileManaged = 'true';
+        win.classList.add('is-maximized');
+      });
+      syncWindowSnapDividers(area);
+      return;
+    }
+    windows.forEach(win => {
+      if (!win || win.classList.contains('is-hidden')) return;
+      if (win.dataset.mobileManaged === 'true') {
+        win.classList.remove('is-maximized');
+        delete win.dataset.mobileManaged;
+        if (win.dataset.snapTarget) {
+          applyWindowSnap(win, win.dataset.snapTarget, { remember: false, showAssist: false });
+        } else {
+          restoreWindowGeometry(win, area);
+        }
+        return;
+      }
+      if (win.dataset.snapTarget && !win.classList.contains('is-maximized')) {
+        applyWindowSnap(win, win.dataset.snapTarget, { remember: false, showAssist: false });
+      } else {
+        constrainFloatingWindow(win, area);
+      }
+    });
+    syncWindowSnapDividers(area);
+  }
 
   function ensureTaskbarButton(instanceId, label, icon) {
     const bar = document.getElementById('taskbar');
@@ -4307,7 +5063,7 @@
     if (!win) return;
     win.classList.remove('is-hidden');
     win.classList.remove('is-collapsed');
-    applyMobileWindowState(win);
+    if (isMobileLayout() || win.dataset.mobileManaged === 'true') applyMobileWindowState(win);
     zCounter += 1;
     win.style.zIndex = String(zCounter);
     currentFocusInstance = instanceId;
@@ -4322,6 +5078,7 @@
       clearTaskbarActive();
       taskBtn.classList.add('active');
     }
+    syncWindowSnapDividers();
   }
 
   function toggleWindow(instanceId) {
@@ -4329,11 +5086,13 @@
     if (!win) return;
     const isHidden = win.classList.contains('is-hidden');
     if (!isHidden && instanceId === currentFocusInstance) {
+      closeWindowSnapAssist();
       win.classList.add('is-hidden');
       // A hidden window can no longer be the active one, so drop its focus skin.
       win.classList.remove('is-focused');
       clearTaskbarActive();
       currentFocusInstance = null;
+      syncWindowSnapDividers();
       return;
     }
     focusWindow(instanceId);
@@ -4383,6 +5142,7 @@
   function openWindow(windowType) {
     const def = WINDOW_DEFS[windowType];
     if (!def) return;
+    closeWindowSnapAssist();
     const template = document.getElementById(def.templateId);
     if (!template) return;
     windowCounts[windowType] = (windowCounts[windowType] || 0) + 1;
@@ -4397,7 +5157,6 @@
     clone.dataset.windowIcon = def.icon;
     clone.style.display = '';
     clone.classList.remove('is-hidden');
-    applyMobileWindowState(clone);
     clone.querySelectorAll('[data-bound]').forEach(el => el.removeAttribute('data-bound'));
     clone.querySelectorAll('[data-events-ready]').forEach(el => el.removeAttribute('data-events-ready'));
     clone.querySelectorAll('[data-delimiter-init]').forEach(el => el.removeAttribute('data-delimiter-init'));
@@ -4441,6 +5200,7 @@
       setupPromptControls(clone);
     }
     initializeAppWindow(clone, windowType, instanceId, def.appKey);
+    ensureWindowResizeHandles(clone);
     // Run after app initialization so every module gets the same WinHelp overlay
     // without duplicating shell behavior; prompt setup is safely idempotent here.
     setupHelpMode(clone);
@@ -4451,11 +5211,13 @@
   function closeWindow(instanceId) {
     const win = getWindowByInstance(instanceId);
     if (!win) return;
+    closeWindowSnapAssist();
     win.remove();
     const bar = document.getElementById('taskbar');
     const taskBtn = bar?.querySelector(`.taskbar-button[data-instance=\"${instanceId}\"]`);
     if (taskBtn) taskBtn.remove();
     if (currentFocusInstance === instanceId) currentFocusInstance = null;
+    syncWindowSnapDividers();
   }
 
   function setupWindowControls() {
@@ -4466,6 +5228,7 @@
         className: 'collapse-toggle',
         handle: ({ win, btn, instanceId }) => {
           if (instanceId) {
+            closeWindowSnapAssist();
             win.classList.add('is-hidden');
             win.classList.remove('is-collapsed');
             // Minimized windows lose the active title bar highlight.
@@ -4473,6 +5236,7 @@
             setCollapseButton(btn, false);
             if (currentFocusInstance === instanceId) currentFocusInstance = null;
             clearTaskbarActive();
+            syncWindowSnapDividers(area);
             return;
           }
           const collapsed = win.classList.toggle('is-collapsed');
@@ -4482,11 +5246,7 @@
       {
         className: 'maximize-toggle',
         handle: ({ win }) => {
-          if (isMobileLayout()) {
-            win.classList.add('is-maximized');
-            return;
-          }
-          win.classList.toggle('is-maximized');
+          setWindowMaximized(win, !win.classList.contains('is-maximized'));
         }
       },
       {
@@ -4517,6 +5277,13 @@
       const instanceId = win.dataset.instance;
       dispatchWindowControl(btn, { win, btn, instanceId });
     });
+    area.addEventListener('dblclick', event => {
+      const eventTarget = toEventElement(event.target);
+      const header = eventTarget?.closest?.('.app-window:not(.window-template) .window-header');
+      if (!header || eventTarget.closest('button, input, select, textarea') || isMobileLayout()) return;
+      const win = header.closest('.app-window');
+      setWindowMaximized(win, !win.classList.contains('is-maximized'));
+    });
   }
 
   // Conventional desktop activation: any pointer press inside a runtime
@@ -4530,6 +5297,7 @@
         const eventTarget = toEventElement(event.target);
         const win = eventTarget?.closest?.('.app-window:not(.window-template)');
         if (!win || win.classList.contains('is-hidden')) return;
+        closeWindowSnapAssist();
         const instanceId = win.dataset.instance;
         if (!instanceId) return;
         if (instanceId !== currentFocusInstance || !win.classList.contains('is-focused')) {
@@ -4550,15 +5318,58 @@
 
     const onMove = event => {
       if (!dragState) return;
-      const { win, offsetX, offsetY } = dragState;
-      const bounds = area.getBoundingClientRect();
-      const x = event.clientX - bounds.left - offsetX;
-      const y = event.clientY - bounds.top - offsetY;
-      win.style.left = `${Math.max(0, x)}px`;
-      win.style.top = `${Math.max(0, y)}px`;
+      const bounds = getWindowAreaMetrics(area);
+      if (!bounds) return;
+      if (dragState.pendingRestore) {
+        const travel = Math.hypot(
+          event.clientX - dragState.startClientX,
+          event.clientY - dragState.startClientY
+        );
+        if (travel < 3) return;
+        // A click keeps managed layout intact; only a real title-bar pull
+        // restores the floating rectangle beneath the pointer.
+        restoreWindowGeometry(dragState.win, area);
+        const restored = readWindowGeometry(dragState.win, area);
+        if (restored) {
+          const positioned = {
+            ...restored,
+            left: event.clientX - bounds.left - restored.width * dragState.pointerRatio,
+            top: event.clientY - bounds.top - 18
+          };
+          writeWindowGeometry(dragState.win, positioned);
+        }
+        const restoredRect = dragState.win.getBoundingClientRect();
+        dragState.width = restoredRect.width || parseFloat(dragState.win.style.width) || WINDOW_MIN_WIDTH;
+        dragState.height = restoredRect.height || parseFloat(dragState.win.style.height) || WINDOW_MIN_HEIGHT;
+        dragState.offsetX = event.clientX - restoredRect.left;
+        dragState.offsetY = event.clientY - restoredRect.top;
+        dragState.pendingRestore = false;
+      }
+      const { win, offsetX, offsetY, width, height } = dragState;
+      const proposed = {
+        left: event.clientX - bounds.left - offsetX,
+        top: event.clientY - bounds.top - offsetY,
+        width,
+        height
+      };
+      // Keep the exact press offset beneath the pointer, even when the frame
+      // crosses the desktop boundary. Edge proximity changes only the preview;
+      // releasing there commits the snap, which avoids the detached-cursor feel.
+      writeWindowGeometry(win, proposed);
+      dragState.snapTarget = getWindowSnapTarget(event.clientX, event.clientY, bounds);
+      if (dragState.snapTarget) {
+        showWindowSnapPreview(dragState.snapTarget, area);
+      } else {
+        hideWindowSnapPreview();
+      }
     };
 
-    const endDrag = () => {
+    const endDrag = event => {
+      if (!dragState) return;
+      const completedState = dragState;
+      const releaseTarget = event?.type === 'pointercancel'
+        ? ''
+        : completedState.snapTarget;
       if (dragState?.pointerId != null && dragState?.captureEl?.releasePointerCapture) {
         try {
           dragState.captureEl.releasePointerCapture(dragState.pointerId);
@@ -4570,15 +5381,24 @@
       document.body?.classList.remove('is-dragging');
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', endDrag);
+      document.removeEventListener('pointercancel', endDrag);
+      hideWindowSnapPreview();
+      if (releaseTarget) {
+        applyWindowSnap(completedState.win, releaseTarget);
+      } else {
+        syncWindowSnapDividers(area);
+      }
     };
 
     area.addEventListener('pointerdown', event => {
-      const header = event.target.closest('.app-window .window-header');
+      const eventTarget = toEventElement(event.target);
+      const header = eventTarget?.closest?.('.app-window .window-header');
       if (!header) return;
-      if (event.target.closest('button, input, select, textarea')) return;
+      if (eventTarget.closest('button, input, select, textarea')) return;
       const win = header.closest('.app-window');
-      if (!win || win.classList.contains('is-hidden') || win.classList.contains('is-maximized')) return;
+      if (!win || win.classList.contains('is-hidden') || isMobileLayout()) return;
       event.preventDefault();
+      closeWindowSnapAssist();
       if (header.setPointerCapture) {
         try {
           header.setPointerCapture(event.pointerId);
@@ -4592,23 +5412,81 @@
       if (instanceId && (instanceId !== currentFocusInstance || !win.classList.contains('is-focused'))) {
         focusWindow(instanceId);
       }
+      const managedRect = win.getBoundingClientRect();
+      const bounds = getWindowAreaMetrics(area);
+      if (!bounds) return;
+      const pointerRatio = managedRect.width
+        ? clampNumber((event.clientX - managedRect.left) / managedRect.width, 0, 1)
+        : 0.5;
       const rect = win.getBoundingClientRect();
-      const bounds = area.getBoundingClientRect();
+      const pendingRestore = win.classList.contains('is-maximized') || !!win.dataset.snapTarget;
       dragState = {
         win,
         offsetX: event.clientX - rect.left,
         offsetY: event.clientY - rect.top,
+        width: rect.width || parseFloat(win.style.width) || WINDOW_MIN_WIDTH,
+        height: rect.height || parseFloat(win.style.height) || WINDOW_MIN_HEIGHT,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        pointerRatio,
+        pendingRestore,
+        snapTarget: '',
         pointerId: event.pointerId,
         captureEl: header
       };
       document.body?.classList.add('is-dragging');
-      win.style.right = 'auto';
-      win.style.transform = 'none';
-      win.style.left = `${rect.left - bounds.left}px`;
-      win.style.top = `${rect.top - bounds.top}px`;
+      if (!pendingRestore) {
+        writeWindowGeometry(win, {
+          left: rect.left - bounds.left,
+          top: rect.top - bounds.top,
+          width: dragState.width,
+          height: dragState.height
+        });
+      }
       document.addEventListener('pointermove', onMove);
       document.addEventListener('pointerup', endDrag);
+      document.addEventListener('pointercancel', endDrag);
     });
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        hideWindowSnapPreview();
+        closeWindowSnapAssist();
+      }
+    });
+  }
+
+  // Every floating frame receives the eight conventional hit zones. They are
+  // invisible extensions of the silver border, so resizing no longer depends
+  // on discovering a decorative lower-right grip.
+  function ensureWindowResizeHandles(win) {
+    if (!win || win.dataset.resizeHandlesReady) return;
+    const handleSpecs = [
+      ['n', 'top edge'],
+      ['ne', 'top-right corner'],
+      ['e', 'right edge'],
+      ['se', 'bottom-right corner'],
+      ['s', 'bottom edge'],
+      ['sw', 'bottom-left corner'],
+      ['w', 'left edge'],
+      ['nw', 'top-left corner']
+    ];
+    const legacyHandle = win.querySelector('.resize-handle:not([data-resize-edge])');
+    if (legacyHandle) legacyHandle.dataset.resizeEdge = 'se';
+    handleSpecs.forEach(([edge, label]) => {
+      let handle = win.querySelector(`.resize-handle[data-resize-edge="${edge}"]`);
+      if (!handle) {
+        handle = document.createElement('div');
+        handle.className = 'resize-handle';
+        handle.dataset.resizeEdge = edge;
+        handle.setAttribute('aria-hidden', 'true');
+        win.appendChild(handle);
+      }
+      handle.classList.add(`resize-${edge}`);
+      handle.dataset.help = `Resize from the ${label}.`;
+      handle.dataset.helpDetail = `Drag this window's ${label} to resize it while the opposite edge stays fixed. Snapped, maximized, and mobile windows use managed sizing.`;
+    });
+    win.dataset.resizeHandlesReady = 'true';
   }
 
   function setupWindowResize() {
@@ -4618,39 +5496,81 @@
 
     const onMove = event => {
       if (!resizeState) return;
-      const { win, startX, startY, startWidth, startHeight } = resizeState;
-      const nextWidth = Math.max(320, startWidth + (event.clientX - startX));
-      const nextHeight = Math.max(200, startHeight + (event.clientY - startY));
-      win.style.width = `${nextWidth}px`;
-      win.style.height = `${nextHeight}px`;
+      const { win, startX, startY, geometry, edge } = resizeState;
+      const bounds = getWindowAreaMetrics(area);
+      if (!bounds) return;
+      const resized = resizeWindowGeometry(
+        geometry,
+        edge,
+        event.clientX - startX,
+        event.clientY - startY,
+        bounds.width,
+        bounds.height
+      );
+      writeWindowGeometry(win, resized);
     };
 
     const endResize = () => {
+      if (!resizeState) return;
+      const completedState = resizeState;
+      if (completedState.pointerId != null && completedState.captureEl?.releasePointerCapture) {
+        try {
+          completedState.captureEl.releasePointerCapture(completedState.pointerId);
+        } catch (err) {
+          /* ignore */
+        }
+      }
       resizeState = null;
       document.body?.classList.remove('is-dragging');
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', endResize);
+      document.removeEventListener('pointercancel', endResize);
     };
 
     area.addEventListener('pointerdown', event => {
-      const handle = event.target.closest('.resize-handle');
+      const eventTarget = toEventElement(event.target);
+      const handle = eventTarget?.closest?.('.resize-handle');
       if (!handle) return;
       const win = handle.closest('.app-window');
-      if (!win || win.classList.contains('is-hidden') || win.classList.contains('is-maximized')) return;
+      if (
+        !win ||
+        win.classList.contains('is-hidden') ||
+        win.classList.contains('is-maximized') ||
+        win.dataset.snapTarget ||
+        isMobileLayout()
+      ) return;
       event.preventDefault();
+      closeWindowSnapAssist();
+      if (handle.setPointerCapture) {
+        try {
+          handle.setPointerCapture(event.pointerId);
+        } catch (err) {
+          /* ignore */
+        }
+      }
       const rect = win.getBoundingClientRect();
+      const bounds = getWindowAreaMetrics(area);
+      if (!bounds) return;
       resizeState = {
         win,
+        edge: handle.dataset.resizeEdge || 'se',
         startX: event.clientX,
         startY: event.clientY,
-        startWidth: rect.width,
-        startHeight: rect.height
+        geometry: {
+          left: rect.left - bounds.left,
+          top: rect.top - bounds.top,
+          width: rect.width,
+          height: rect.height
+        },
+        pointerId: event.pointerId,
+        captureEl: handle
       };
       win.style.right = 'auto';
       win.style.bottom = 'auto';
       document.body?.classList.add('is-dragging');
       document.addEventListener('pointermove', onMove);
       document.addEventListener('pointerup', endResize);
+      document.addEventListener('pointercancel', endResize);
     });
   }
 
@@ -4718,6 +5638,7 @@
     setupWindowActivation();
     setupWindowDrag();
     setupWindowResize();
+    setupWindowSnapDividerResize();
     setupMenu();
     syncCollapseButtons(document);
 
@@ -4728,19 +5649,20 @@
         // Existing windows get a fixed width once to prevent first-run expansion.
         win.style.width = computedWidth;
       }
+      ensureWindowResizeHandles(win);
       setupPromptControls(win);
     });
-    applyMobileWindowState();
+    reconcileWindowLayouts();
+    const handler = () => reconcileWindowLayouts();
     if (mobileQuery) {
-      const handler = () => applyMobileWindowState();
       if (typeof mobileQuery.addEventListener === 'function') {
         mobileQuery.addEventListener('change', handler);
       } else if (typeof mobileQuery.addListener === 'function') {
         mobileQuery.addListener(handler);
       }
-      window.addEventListener('resize', handler);
-      window.addEventListener('orientationchange', handler);
     }
+    window.addEventListener('resize', handler);
+    window.addEventListener('orientationchange', handler);
   }
 
   const api = {
@@ -4759,6 +5681,10 @@
     normalizeWallpaperPosition,
     normalizeWallpaperWheelDelta,
     getWallpaperTextureDrift,
+    getWindowSnapTarget,
+    getWindowSnapBounds,
+    resizeWindowGeometry,
+    clampWindowGeometry,
     contrastRatio,
     isWallpaperBackgroundTarget,
     setupProceduralWallpaper,

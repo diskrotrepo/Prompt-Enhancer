@@ -3027,6 +3027,17 @@
       ]
     },
     {
+      "id": "desktop_window_snap_assist",
+      "description": "The first edge snap offers the other open window, then a direct second edge snap joins the existing layout without another chooser and exposes a shared divider.",
+      "random": 0,
+      "actions": [
+        "openPromptsWindow",
+        "openPromptsWindow",
+        "snapFirstPromptWindow",
+        "snapSecondPromptWindowIntoExistingLayout"
+      ]
+    },
+    {
       "id": "procedural_wallpaper_background_scroll",
       "description": "Repeated wheel movement over bare desktop space advances the procedural scene and theme without growing its rendering pool.",
       "random": 0,

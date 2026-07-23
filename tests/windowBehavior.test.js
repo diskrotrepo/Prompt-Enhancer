@@ -181,7 +181,7 @@ describe('Window behavior', () => {
     expect(firstWindow.querySelectorAll('.mix-box')).toHaveLength(initialMixCount + 1);
   });
 
-  test('dragging clamps windows to top-left so headers can align flush to taskbar edge', () => {
+  test('dragging stays pointer-anchored beyond an edge before release commits the snap', () => {
     const { window } = setupDom();
     openWindow(window, 'prompts');
 
@@ -210,11 +210,467 @@ describe('Window behavior', () => {
     });
 
     dispatchPointer(window, header, 'pointerdown', { clientX: 260, clientY: 230, pointerId: 7 });
-    dispatchPointer(window, window.document, 'pointermove', { clientX: 10, clientY: 10, pointerId: 7 });
-    dispatchPointer(window, window.document, 'pointerup', { clientX: 10, clientY: 10, pointerId: 7 });
+    dispatchPointer(window, window.document, 'pointermove', { clientX: 10, clientY: 52, pointerId: 7 });
 
+    expect(promptWindow.style.left).toBe('-30px');
+    expect(promptWindow.style.top).toBe('-20px');
+    expect(10 - parseFloat(promptWindow.style.left)).toBe(40);
+    expect(52 - (42 + parseFloat(promptWindow.style.top))).toBe(30);
+    expect(area.querySelector('.window-snap-preview')?.dataset.snapTarget).toBe('top-left');
+
+    dispatchPointer(window, window.document, 'pointerup', { clientX: 10, clientY: 52, pointerId: 7 });
+    expect(promptWindow.dataset.snapTarget).toBe('top-left');
     expect(promptWindow.style.left).toBe('0px');
     expect(promptWindow.style.top).toBe('0px');
+  });
+
+  test('floating drag can end partially outside the desktop away from a snap threshold', () => {
+    const { window } = setupDom();
+    openWindow(window, 'prompts');
+
+    const area = window.document.getElementById('window-area');
+    const promptWindow = window.document.querySelector('.app-window[data-window="prompts"]');
+    const header = promptWindow.querySelector('.window-header');
+    area.getBoundingClientRect = () => ({
+      left: 0,
+      top: 42,
+      width: 1200,
+      height: 900,
+      right: 1200,
+      bottom: 942
+    });
+    promptWindow.getBoundingClientRect = () => ({
+      left: 220,
+      top: 200,
+      width: 640,
+      height: 420,
+      right: 860,
+      bottom: 620
+    });
+
+    dispatchPointer(window, header, 'pointerdown', { clientX: 800, clientY: 230, pointerId: 8 });
+    dispatchPointer(window, window.document, 'pointermove', { clientX: 100, clientY: 100, pointerId: 8 });
+    dispatchPointer(window, window.document, 'pointerup', { clientX: 100, clientY: 100, pointerId: 8 });
+
+    expect(promptWindow.style.left).toBe('-480px');
+    expect(promptWindow.style.top).toBe('28px');
+    expect(promptWindow.dataset.snapTarget).toBeUndefined();
+  });
+
+  test('resize reaches the desktop right and bottom edges without overshooting', () => {
+    const { window } = setupDom();
+    openWindow(window, 'prompts');
+
+    const area = window.document.getElementById('window-area');
+    const promptWindow = window.document.querySelector('.app-window[data-window="prompts"]');
+    const handle = promptWindow.querySelector('.resize-handle[data-resize-edge="se"]');
+    area.getBoundingClientRect = () => ({
+      left: 0,
+      top: 42,
+      width: 1200,
+      height: 900,
+      right: 1200,
+      bottom: 942
+    });
+    promptWindow.style.left = '220px';
+    promptWindow.style.top = '158px';
+    promptWindow.style.width = '640px';
+    promptWindow.style.height = '420px';
+    promptWindow.getBoundingClientRect = () => {
+      const left = 220;
+      const top = 200;
+      const width = parseFloat(promptWindow.style.width) || 640;
+      const height = parseFloat(promptWindow.style.height) || 420;
+      return { left, top, width, height, right: left + width, bottom: top + height };
+    };
+
+    dispatchPointer(window, handle, 'pointerdown', { clientX: 860, clientY: 620, pointerId: 9 });
+    dispatchPointer(window, window.document, 'pointermove', { clientX: 1600, clientY: 1300, pointerId: 9 });
+    dispatchPointer(window, window.document, 'pointerup', { clientX: 1600, clientY: 1300, pointerId: 9 });
+
+    expect(promptWindow.style.width).toBe('980px');
+    expect(promptWindow.style.height).toBe('742px');
+  });
+
+  test('floating windows expose every edge and corner and northwest resize keeps opposites fixed', () => {
+    const { window } = setupDom();
+    openWindow(window, 'prompts');
+
+    const area = window.document.getElementById('window-area');
+    const promptWindow = window.document.querySelector('.app-window[data-window="prompts"]');
+    const handles = promptWindow.querySelectorAll('.resize-handle[data-resize-edge]');
+    expect(handles).toHaveLength(8);
+    expect(Array.from(handles).map(handle => handle.dataset.resizeEdge).sort()).toEqual(
+      ['e', 'n', 'ne', 'nw', 's', 'se', 'sw', 'w']
+    );
+
+    area.getBoundingClientRect = () => ({
+      left: 0,
+      top: 42,
+      width: 1200,
+      height: 900,
+      right: 1200,
+      bottom: 942
+    });
+    promptWindow.style.left = '220px';
+    promptWindow.style.top = '158px';
+    promptWindow.style.width = '640px';
+    promptWindow.style.height = '420px';
+    promptWindow.getBoundingClientRect = () => {
+      const left = parseFloat(promptWindow.style.left);
+      const top = 42 + parseFloat(promptWindow.style.top);
+      const width = parseFloat(promptWindow.style.width);
+      const height = parseFloat(promptWindow.style.height);
+      return { left, top, width, height, right: left + width, bottom: top + height };
+    };
+
+    const northwest = promptWindow.querySelector('[data-resize-edge="nw"]');
+    dispatchPointer(window, northwest, 'pointerdown', { clientX: 220, clientY: 200, pointerId: 19 });
+    dispatchPointer(window, window.document, 'pointermove', { clientX: 100, clientY: 120, pointerId: 19 });
+    dispatchPointer(window, window.document, 'pointerup', { clientX: 100, clientY: 120, pointerId: 19 });
+
+    expect(promptWindow.style.left).toBe('100px');
+    expect(promptWindow.style.top).toBe('78px');
+    expect(promptWindow.style.width).toBe('760px');
+    expect(promptWindow.style.height).toBe('500px');
+  });
+
+  test('side-edge release snaps to a flush half and opens the complementary chooser', () => {
+    const { window } = setupDom();
+    openWindow(window, 'prompts');
+    openWindow(window, 'prompts');
+
+    const area = window.document.getElementById('window-area');
+    const [firstWindow] = Array.from(window.document.querySelectorAll('.app-window[data-window="prompts"]'));
+    const header = firstWindow.querySelector('.window-header');
+    area.getBoundingClientRect = () => ({
+      left: 0,
+      top: 42,
+      width: 1200,
+      height: 900,
+      right: 1200,
+      bottom: 942
+    });
+    firstWindow.getBoundingClientRect = () => ({
+      left: 220,
+      top: 200,
+      width: 640,
+      height: 420,
+      right: 860,
+      bottom: 620
+    });
+
+    dispatchPointer(window, header, 'pointerdown', { clientX: 260, clientY: 230, pointerId: 10 });
+    dispatchPointer(window, window.document, 'pointermove', { clientX: 1199, clientY: 400, pointerId: 10 });
+    expect(area.querySelector('.window-snap-preview')?.dataset.snapTarget).toBe('right');
+    dispatchPointer(window, window.document, 'pointerup', { clientX: 1199, clientY: 400, pointerId: 10 });
+
+    expect(firstWindow.dataset.snapTarget).toBe('right');
+    expect(firstWindow.style.left).toBe('600px');
+    expect(firstWindow.style.top).toBe('0px');
+    expect(firstWindow.style.width).toBe('600px');
+    expect(firstWindow.style.height).toBe('900px');
+    const assist = area.querySelector('.window-snap-assist');
+    expect(assist).not.toBeNull();
+    expect(assist.querySelector('.window-snap-assist-slot')?.dataset.snapTarget).toBe('left');
+    expect(assist.querySelectorAll('.window-snap-assist-window')).toHaveLength(1);
+  });
+
+  test('dragging the divider between snapped halves resizes both windows together', () => {
+    const { window } = setupDom();
+    openWindow(window, 'prompts');
+    openWindow(window, 'prompts');
+
+    const area = window.document.getElementById('window-area');
+    const [rightWindow, leftWindow] = Array.from(
+      window.document.querySelectorAll('.app-window[data-window="prompts"]')
+    );
+    area.getBoundingClientRect = () => ({
+      left: 0,
+      top: 42,
+      width: 1200,
+      height: 900,
+      right: 1200,
+      bottom: 942
+    });
+    rightWindow.getBoundingClientRect = () => ({
+      left: 220,
+      top: 200,
+      width: 640,
+      height: 420,
+      right: 860,
+      bottom: 620
+    });
+
+    dispatchPointer(window, rightWindow.querySelector('.window-header'), 'pointerdown', {
+      clientX: 260,
+      clientY: 230,
+      pointerId: 20
+    });
+    dispatchPointer(window, window.document, 'pointermove', { clientX: 1200, clientY: 400, pointerId: 20 });
+    dispatchPointer(window, window.document, 'pointerup', { clientX: 1200, clientY: 400, pointerId: 20 });
+    area.querySelector('.window-snap-assist-window')?.click();
+
+    const divider = area.querySelector('.window-snap-divider[data-divider="vertical"]');
+    expect(leftWindow.dataset.snapTarget).toBe('left');
+    expect(divider).not.toBeNull();
+    expect(divider.getAttribute('aria-orientation')).toBe('vertical');
+    dispatchPointer(window, divider, 'pointerdown', { clientX: 600, clientY: 400, pointerId: 21 });
+    dispatchPointer(window, window.document, 'pointermove', { clientX: 720, clientY: 400, pointerId: 21 });
+    dispatchPointer(window, window.document, 'pointerup', { clientX: 720, clientY: 400, pointerId: 21 });
+
+    expect(leftWindow.style.left).toBe('0px');
+    expect(leftWindow.style.width).toBe('720px');
+    expect(rightWindow.style.left).toBe('720px');
+    expect(rightWindow.style.width).toBe('480px');
+    expect(parseFloat(leftWindow.style.width) + parseFloat(rightWindow.style.width)).toBe(1200);
+  });
+
+  test('four-corner layouts expose independent horizontal dividers for each column', () => {
+    const { window } = setupDom();
+    for (let index = 0; index < 4; index += 1) openWindow(window, 'prompts');
+
+    const area = window.document.getElementById('window-area');
+    const promptWindows = Array.from(
+      window.document.querySelectorAll('.app-window[data-window="prompts"]')
+    );
+    area.getBoundingClientRect = () => ({
+      left: 0,
+      top: 42,
+      width: 1200,
+      height: 900,
+      right: 1200,
+      bottom: 942
+    });
+    const floatingRect = {
+      left: 220,
+      top: 200,
+      width: 640,
+      height: 420,
+      right: 860,
+      bottom: 620
+    };
+    promptWindows.forEach(win => {
+      win.getBoundingClientRect = () => floatingRect;
+    });
+    const releases = [
+      { x: 0, y: 42, target: 'top-left' },
+      { x: 0, y: 942, target: 'bottom-left' },
+      { x: 1200, y: 42, target: 'top-right' },
+      { x: 1200, y: 942, target: 'bottom-right' }
+    ];
+    promptWindows.forEach((win, index) => {
+      const pointerId = 30 + index;
+      dispatchPointer(window, win.querySelector('.window-header'), 'pointerdown', {
+        clientX: 260,
+        clientY: 230,
+        pointerId
+      });
+      dispatchPointer(window, window.document, 'pointermove', {
+        clientX: releases[index].x,
+        clientY: releases[index].y,
+        pointerId
+      });
+      dispatchPointer(window, window.document, 'pointerup', {
+        clientX: releases[index].x,
+        clientY: releases[index].y,
+        pointerId
+      });
+      expect(win.dataset.snapTarget).toBe(releases[index].target);
+    });
+
+    const leftDivider = area.querySelector(
+      '.window-snap-divider[data-divider="horizontal-left"]'
+    );
+    const rightDivider = area.querySelector(
+      '.window-snap-divider[data-divider="horizontal-right"]'
+    );
+    expect(leftDivider).not.toBeNull();
+    expect(rightDivider).not.toBeNull();
+    dispatchPointer(window, leftDivider, 'pointerdown', { clientX: 300, clientY: 492, pointerId: 35 });
+    dispatchPointer(window, window.document, 'pointermove', { clientX: 300, clientY: 582, pointerId: 35 });
+    dispatchPointer(window, window.document, 'pointerup', { clientX: 300, clientY: 582, pointerId: 35 });
+
+    expect(promptWindows[0].style.height).toBe('540px');
+    expect(promptWindows[1].style.top).toBe('540px');
+    expect(promptWindows[1].style.height).toBe('360px');
+    expect(promptWindows[2].style.height).toBe('450px');
+    expect(promptWindows[3].style.top).toBe('450px');
+  });
+
+  test('top-edge release maximizes and the title-bar control restores the floating rectangle', () => {
+    const { window } = setupDom();
+    openWindow(window, 'prompts');
+
+    const area = window.document.getElementById('window-area');
+    const promptWindow = window.document.querySelector('.app-window[data-window="prompts"]');
+    const header = promptWindow.querySelector('.window-header');
+    area.getBoundingClientRect = () => ({
+      left: 0,
+      top: 42,
+      width: 1200,
+      height: 900,
+      right: 1200,
+      bottom: 942
+    });
+    promptWindow.getBoundingClientRect = () => ({
+      left: 220,
+      top: 200,
+      width: 640,
+      height: 420,
+      right: 860,
+      bottom: 620
+    });
+
+    dispatchPointer(window, header, 'pointerdown', { clientX: 260, clientY: 230, pointerId: 14 });
+    dispatchPointer(window, window.document, 'pointermove', { clientX: 600, clientY: 42, pointerId: 14 });
+    dispatchPointer(window, window.document, 'pointerup', { clientX: 600, clientY: 42, pointerId: 14 });
+    expect(promptWindow.classList.contains('is-maximized')).toBe(true);
+
+    // A normal title-bar click is focus, not a drag-to-restore gesture.
+    dispatchPointer(window, header, 'pointerdown', { clientX: 600, clientY: 60, pointerId: 15 });
+    dispatchPointer(window, window.document, 'pointerup', { clientX: 600, clientY: 60, pointerId: 15 });
+    expect(promptWindow.classList.contains('is-maximized')).toBe(true);
+
+    promptWindow.querySelector('.maximize-toggle').click();
+    expect(promptWindow.classList.contains('is-maximized')).toBe(false);
+    expect(promptWindow.style.left).toBe('220px');
+    expect(promptWindow.style.top).toBe('158px');
+    expect(promptWindow.style.width).toBe('640px');
+    expect(promptWindow.style.height).toBe('420px');
+  });
+
+  test('corner Snap Assist can place another window into a chosen quarter', () => {
+    const { window } = setupDom();
+    openWindow(window, 'prompts');
+    openWindow(window, 'prompts');
+
+    const area = window.document.getElementById('window-area');
+    const promptWindows = Array.from(window.document.querySelectorAll('.app-window[data-window="prompts"]'));
+    const [firstWindow, secondWindow] = promptWindows;
+    const header = secondWindow.querySelector('.window-header');
+    area.getBoundingClientRect = () => ({
+      left: 0,
+      top: 42,
+      width: 1200,
+      height: 900,
+      right: 1200,
+      bottom: 942
+    });
+    secondWindow.getBoundingClientRect = () => ({
+      left: 260,
+      top: 230,
+      width: 640,
+      height: 420,
+      right: 900,
+      bottom: 650
+    });
+
+    dispatchPointer(window, header, 'pointerdown', { clientX: 300, clientY: 250, pointerId: 11 });
+    dispatchPointer(window, window.document, 'pointermove', { clientX: 0, clientY: 42, pointerId: 11 });
+    dispatchPointer(window, window.document, 'pointerup', { clientX: 0, clientY: 42, pointerId: 11 });
+
+    expect(secondWindow.dataset.snapTarget).toBe('top-left');
+    const targetSlot = area.querySelector('.window-snap-assist-slot[data-snap-target="top-right"]');
+    const candidate = targetSlot?.querySelector('.window-snap-assist-window');
+    expect(area.querySelectorAll('.window-snap-assist-slot')).toHaveLength(3);
+    expect(candidate?.dataset.instance).toBe(firstWindow.dataset.instance);
+    candidate.click();
+
+    expect(firstWindow.dataset.snapTarget).toBe('top-right');
+    expect(firstWindow.style.left).toBe('600px');
+    expect(firstWindow.style.top).toBe('0px');
+    expect(firstWindow.style.width).toBe('600px');
+    expect(firstWindow.style.height).toBe('450px');
+    expect(area.querySelector('.window-snap-assist')).toBeNull();
+  });
+
+  test('joining an existing snapped layout suppresses the redundant Snap Assist chooser', () => {
+    const { window } = setupDom();
+    openWindow(window, 'prompts');
+    openWindow(window, 'prompts');
+
+    const area = window.document.getElementById('window-area');
+    const [firstWindow, secondWindow] = Array.from(
+      window.document.querySelectorAll('.app-window[data-window="prompts"]')
+    );
+    area.getBoundingClientRect = () => ({
+      left: 0,
+      top: 42,
+      width: 1200,
+      height: 900,
+      right: 1200,
+      bottom: 942
+    });
+    const floatingRect = {
+      left: 220,
+      top: 200,
+      width: 640,
+      height: 420,
+      right: 860,
+      bottom: 620
+    };
+    firstWindow.getBoundingClientRect = () => floatingRect;
+    secondWindow.getBoundingClientRect = () => floatingRect;
+
+    dispatchPointer(window, firstWindow.querySelector('.window-header'), 'pointerdown', {
+      clientX: 260,
+      clientY: 230,
+      pointerId: 12
+    });
+    dispatchPointer(window, window.document, 'pointermove', { clientX: 0, clientY: 400, pointerId: 12 });
+    dispatchPointer(window, window.document, 'pointerup', { clientX: 0, clientY: 400, pointerId: 12 });
+    expect(firstWindow.dataset.snapTarget).toBe('left');
+
+    dispatchPointer(window, secondWindow.querySelector('.window-header'), 'pointerdown', {
+      clientX: 260,
+      clientY: 230,
+      pointerId: 13
+    });
+    dispatchPointer(window, window.document, 'pointermove', { clientX: 1200, clientY: 42, pointerId: 13 });
+    dispatchPointer(window, window.document, 'pointerup', { clientX: 1200, clientY: 42, pointerId: 13 });
+
+    expect(secondWindow.dataset.snapTarget).toBe('top-right');
+    expect(area.querySelector('.window-snap-assist')).toBeNull();
+    expect(area.querySelector('.window-snap-divider[data-divider="vertical"]')).not.toBeNull();
+  });
+
+  test('browser resize re-fits floating windows so their full frame stays reachable', () => {
+    const { window } = setupDom();
+    openWindow(window, 'prompts');
+
+    const area = window.document.getElementById('window-area');
+    const promptWindow = window.document.querySelector('.app-window[data-window="prompts"]');
+    let areaWidth = 1200;
+    let areaHeight = 900;
+    area.getBoundingClientRect = () => ({
+      left: 0,
+      top: 42,
+      width: areaWidth,
+      height: areaHeight,
+      right: areaWidth,
+      bottom: 42 + areaHeight
+    });
+    promptWindow.style.left = '500px';
+    promptWindow.style.top = '400px';
+    promptWindow.style.width = '640px';
+    promptWindow.style.height = '420px';
+    promptWindow.getBoundingClientRect = () => {
+      const left = parseFloat(promptWindow.style.left) || 0;
+      const top = 42 + (parseFloat(promptWindow.style.top) || 0);
+      const width = parseFloat(promptWindow.style.width) || 640;
+      const height = parseFloat(promptWindow.style.height) || 420;
+      return { left, top, width, height, right: left + width, bottom: top + height };
+    };
+    areaWidth = 800;
+    areaHeight = 600;
+
+    window.dispatchEvent(new window.Event('resize'));
+
+    expect(promptWindow.style.left).toBe('160px');
+    expect(promptWindow.style.top).toBe('180px');
+    expect(promptWindow.style.width).toBe('640px');
+    expect(promptWindow.style.height).toBe('420px');
   });
 
   test('multiple prompt windows generate independently from each window root', () => {
@@ -486,6 +942,49 @@ describe('Window behavior', () => {
 });
 
 describe('Window edge layout policy', () => {
+  test('pure geometry helpers distinguish halves, corners, top maximize, and no-op bottom center', () => {
+    const { window } = setupDom();
+    const bounds = { left: 0, top: 42, right: 1200, bottom: 942, width: 1200, height: 900 };
+    const targetCases = [
+      [0, 42, 'top-left'],
+      [1200, 42, 'top-right'],
+      [0, 942, 'bottom-left'],
+      [1200, 942, 'bottom-right'],
+      [0, 400, 'left'],
+      [1200, 400, 'right'],
+      [600, 42, 'maximize'],
+      [600, 942, '']
+    ];
+    targetCases.forEach(([x, y, expected]) => {
+      expect(window.PromptMixer.getWindowSnapTarget(x, y, bounds)).toBe(expected);
+    });
+
+    expect(window.PromptMixer.getWindowSnapBounds('bottom-right', 1200, 900)).toEqual({
+      left: 600,
+      top: 450,
+      width: 600,
+      height: 450
+    });
+    expect(window.PromptMixer.getWindowSnapBounds('bottom-right', 1200, 900, {
+      verticalRatio: 0.6,
+      leftHorizontalRatio: 0.5,
+      rightHorizontalRatio: 0.4
+    })).toEqual({ left: 720, top: 360, width: 480, height: 540 });
+    expect(window.PromptMixer.resizeWindowGeometry(
+      { left: 220, top: 158, width: 640, height: 420 },
+      'nw',
+      -120,
+      -80,
+      1200,
+      900
+    )).toEqual({ left: 100, top: 78, width: 760, height: 500 });
+    expect(window.PromptMixer.clampWindowGeometry(
+      { left: 900, top: 800, width: 640, height: 420 },
+      1200,
+      900
+    )).toEqual({ left: 560, top: 480, width: 640, height: 420 });
+  });
+
   test('window area starts directly under taskbar with no extra top gap', () => {
     const css = fs.readFileSync(CSS_PATH, 'utf8');
     expect(css).toMatch(/#desktop[\s\S]*?padding-top:\s*var\(--taskbar-height\);/);
@@ -497,6 +996,33 @@ describe('Window edge layout policy', () => {
   test('prompt workspace meets the file menu without an inherited flex gap', () => {
     const css = fs.readFileSync(CSS_PATH, 'utf8');
     expect(css).toMatch(/\.prompt-window\s*>\s*\.box-body\s*\{[^}]*gap:\s*0;/);
+  });
+
+  test('floating windows can fill the desktop and their flex body fills tall resizes', () => {
+    const css = fs.readFileSync(CSS_PATH, 'utf8');
+    expect(css).toMatch(/#window-area\s*\{[^}]*height:\s*calc\(100dvh - var\(--taskbar-height\)\);[^}]*overflow:\s*hidden;/);
+    expect(css).toMatch(/\.app-window\s*\{[^}]*max-width:\s*none;[^}]*max-height:\s*none;/);
+    expect(css).toMatch(/\.app-window\s*>\s*\.box-body\s*\{[^}]*max-height:\s*none;[^}]*overflow:\s*auto;/);
+    expect(css).not.toMatch(/\.app-window\s*\{[^}]*max-width:\s*95vw;/);
+    expect(css).not.toMatch(/(^|\n)body\s*\{[^}]*scrollbar-gutter:\s*stable;/);
+  });
+
+  test('snap preview and assist remain desktop overlays instead of new page scroll regions', () => {
+    const css = fs.readFileSync(CSS_PATH, 'utf8');
+    expect(css).toMatch(/\.window-snap-preview\s*\{[^}]*position:\s*absolute;[^}]*pointer-events:\s*none;/);
+    expect(css).toMatch(/\.window-snap-assist\s*\{[^}]*position:\s*absolute;[^}]*pointer-events:\s*none;/);
+    expect(css).toMatch(/\.window-snap-assist-options\s*\{[^}]*overflow-y:\s*auto;/);
+    expect(css).toMatch(/\.window-snap-dividers\s*\{[^}]*position:\s*absolute;[^}]*pointer-events:\s*none;/);
+    expect(css).toMatch(/\.window-snap-divider\[data-divider="vertical"\]\s*\{[^}]*cursor:\s*ew-resize;/);
+    expect(css).toMatch(/\.window-snap-divider\[data-divider\^="horizontal-"\]\s*\{[^}]*cursor:\s*ns-resize;/);
+  });
+
+  test('floating resize hit zones cover all four borders and corners', () => {
+    const css = fs.readFileSync(CSS_PATH, 'utf8');
+    expect(css).toMatch(/\.resize-n,\s*\n\.resize-s\s*\{[^}]*cursor:\s*ns-resize;/);
+    expect(css).toMatch(/\.resize-e,\s*\n\.resize-w\s*\{[^}]*cursor:\s*ew-resize;/);
+    expect(css).toMatch(/\.resize-nw\s*\{[^}]*cursor:\s*nwse-resize;/);
+    expect(css).toMatch(/\.resize-sw\s*\{[^}]*cursor:\s*nesw-resize;/);
   });
 
   test('start mark corrects the slash baseline independently from the yolk label', () => {

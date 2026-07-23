@@ -118,7 +118,6 @@ body {
   background-size: 8px 8px, 8px 8px;
   background-position: 0 0, 4px 4px;
   overflow: hidden;
-  scrollbar-gutter: stable;
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -819,14 +818,19 @@ textarea:focus-visible {
 #window-area {
   position: relative;
   z-index: 1;
+  width: 100%;
+  height: calc(100vh - var(--taskbar-height));
+  height: calc(100dvh - var(--taskbar-height));
   min-height: calc(100vh - var(--taskbar-height));
   padding: 0;
+  overflow: hidden;
 }
 
 .app-window {
   position: absolute;
   min-width: 320px;
-  max-width: 95vw;
+  max-width: none;
+  max-height: none;
   display: flex;
   flex-direction: column;
 }
@@ -885,8 +889,20 @@ textarea:focus-visible {
   display: none;
 }
 
+.app-window.is-snapped {
+  min-height: 0;
+  box-shadow: var(--bevel-up-strong);
+}
+
+.app-window.is-snapped .resize-handle {
+  display: none;
+}
+
 .app-window > .box-body {
-  max-height: calc(100vh - var(--taskbar-height) - 120px);
+  /* The outer window owns the height. Let the flex body consume every remaining
+   * pixel so a tall manual resize cannot expose an expanding silver dead bar. */
+  min-height: 0;
+  max-height: none;
   overflow: auto;
   flex: 1 1 auto;
   scrollbar-gutter: stable;
@@ -925,6 +941,7 @@ textarea:focus-visible {
 
 .window-header {
   cursor: default;
+  touch-action: none;
 }
 
 /* Title bar controls: little beveled silver squares with black glyphs. */
@@ -985,21 +1002,255 @@ textarea:focus-visible {
   font-size: 0.68rem;
 }
 
-/* Diagonal grip lines for the resize corner. */
+/* Eight transparent border hit zones provide native-style edge and corner
+ * resizing without a decorative lower-right grip competing with the frame. */
 .resize-handle {
   position: absolute;
-  right: 3px;
-  bottom: 3px;
-  width: 16px;
-  height: 16px;
-  cursor: se-resize;
+  z-index: 4;
+  touch-action: none;
+  background: transparent;
+}
+
+.resize-n,
+.resize-s {
+  left: 10px;
+  right: 10px;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.resize-n {
+  top: -4px;
+}
+
+.resize-s {
+  bottom: -4px;
+}
+
+.resize-e,
+.resize-w {
+  top: 10px;
+  bottom: 10px;
+  width: 8px;
+  cursor: ew-resize;
+}
+
+.resize-e {
+  right: -4px;
+}
+
+.resize-w {
+  left: -4px;
+}
+
+.resize-ne,
+.resize-nw,
+.resize-se,
+.resize-sw {
+  width: 12px;
+  height: 12px;
+}
+
+.resize-ne {
+  top: -4px;
+  right: -4px;
+  cursor: nesw-resize;
+}
+
+.resize-nw {
+  top: -4px;
+  left: -4px;
+  cursor: nwse-resize;
+}
+
+.resize-se {
+  right: -4px;
+  bottom: -4px;
+  cursor: nwse-resize;
+}
+
+.resize-sw {
+  bottom: -4px;
+  left: -4px;
+  cursor: nesw-resize;
+}
+
+/* Shared snap separators sit over a mathematically flush boundary. The wider
+ * invisible hitbox is forgiving; its narrow bar and double-arrow cursor appear
+ * only on hover/focus/drag, matching the familiar Windows resize affordance. */
+.window-snap-dividers {
+  position: absolute;
+  inset: 0;
+  z-index: 2147482900;
+  pointer-events: none;
+}
+
+.window-snap-divider {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+  outline: none;
+}
+
+.window-snap-divider::before {
+  content: '';
+  position: absolute;
+  background: var(--w31-navy);
+  border: 1px solid var(--w31-light);
+  box-shadow: 1px 1px 0 var(--w31-black);
+  opacity: 0;
+}
+
+.window-snap-divider[data-divider="vertical"] {
+  cursor: ew-resize;
+}
+
+.window-snap-divider[data-divider="vertical"]::before {
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 2px;
+}
+
+.window-snap-divider[data-divider^="horizontal-"] {
+  cursor: ns-resize;
+}
+
+.window-snap-divider[data-divider^="horizontal-"]::before {
+  top: 3px;
+  right: 0;
+  bottom: auto;
+  left: 0;
+  height: 2px;
+}
+
+.window-snap-divider:hover::before,
+.window-snap-divider:focus-visible::before,
+.is-resizing-snap .window-snap-divider::before {
+  opacity: 1;
+}
+
+/* Edge preview: a lightweight ghost of the exact half/quarter/full rectangle
+ * that will be committed on pointer release. It never captures the drag. */
+.window-snap-preview {
+  position: absolute;
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  pointer-events: none;
+  border: 3px dotted var(--w31-light);
+  outline: 2px solid var(--w31-navy);
+  outline-offset: -4px;
   background:
-    linear-gradient(135deg,
-      transparent 0 6px,
-      var(--w31-shadow) 6px 8px, var(--w31-light) 8px 9px,
-      transparent 9px 11px,
-      var(--w31-shadow) 11px 13px, var(--w31-light) 13px 14px,
-      transparent 14px 16px);
+    repeating-linear-gradient(135deg, rgba(0, 0, 130, 0.3) 0 4px, rgba(255, 255, 255, 0.18) 4px 8px),
+    rgba(198, 198, 198, 0.58);
+  color: #fff;
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  font-weight: 700;
+  text-shadow: 1px 1px 0 var(--w31-black);
+}
+
+/* Snap Assist occupies only unfilled slots. Each region is an explicit chooser
+ * so half-screen and three-quarter follow-up placement remain understandable. */
+.window-snap-assist {
+  position: absolute;
+  inset: 0;
+  z-index: 2147483100;
+  pointer-events: none;
+}
+
+.window-snap-assist-slot {
+  position: absolute;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  background: var(--w31-face);
+  border: 2px solid var(--w31-black);
+  box-shadow: var(--bevel-up-strong);
+}
+
+.window-snap-assist-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 32px;
+  padding: 3px 4px 3px 0.6rem;
+  background: linear-gradient(180deg, var(--w31-navy-soft), var(--w31-navy));
+  color: #fff;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.window-snap-assist-header > span {
+  flex: 1 1 auto;
+}
+
+.window-snap-assist-close {
+  width: 26px;
+  height: 24px;
+  min-width: 26px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--w31-black);
+  border-radius: 0;
+  box-shadow: var(--bevel-up);
+  background: var(--w31-face);
+  color: var(--w31-ink);
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.window-snap-assist-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  align-content: start;
+  gap: 0.55rem;
+  min-height: 0;
+  padding: 0.65rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.window-snap-assist-window {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.55rem;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--w31-black);
+  border-radius: 0;
+  box-shadow: var(--bevel-up);
+  background: var(--w31-face);
+  color: var(--w31-ink);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  text-align: left;
+}
+
+.window-snap-assist-window:hover,
+.window-snap-assist-window:focus-visible {
+  background: var(--w31-navy);
+  color: #fff;
+}
+
+.window-snap-assist-window:active,
+.window-snap-assist-close:active {
+  box-shadow: var(--bevel-down);
+}
+
+.window-snap-assist-window .task-icon {
+  flex: 0 0 auto;
 }
 
 .box-shell.is-collapsed .box-body {

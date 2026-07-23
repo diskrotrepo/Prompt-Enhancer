@@ -369,6 +369,16 @@
       "focusedWindowInstance": "prompts-1"
     },
     {
+      "id": "desktop_window_snap_assist",
+      "output": "",
+      "windowSnapTarget": "right",
+      "snapAssistSlotCount": 1,
+      "snappedFrameFlush": true,
+      "existingLayoutAssistSuppressed": true,
+      "snapDividerCount": 1,
+      "sharedSnapBoundaryFlush": true
+    },
+    {
       "id": "procedural_wallpaper_background_scroll",
       "output": "",
       "wallpaperMoved": true,
