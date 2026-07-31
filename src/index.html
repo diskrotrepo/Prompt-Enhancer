@@ -54,6 +54,11 @@
                 <span class="menu-label">Completion API</span>
               </div>
               <div class="menu-separator" role="separator"></div>
+              <div class="menu-item" data-window="terminal" role="menuitem">
+                <span class="menu-icon icon-terminal" aria-hidden="true"></span>
+                <span class="menu-label">Terminal</span>
+              </div>
+              <div class="menu-separator" role="separator"></div>
               <div class="menu-item" data-window="diskrot" role="menuitem">
                 <span class="menu-icon icon-diskrot" aria-hidden="true"></span>
                 <span class="menu-label">diskrot</span>
@@ -438,15 +443,15 @@
                 </div>
               </div>
               <div class="box-body">
-                <div class="openrouter-app" data-help="Completion API workspace." data-help-detail="Configure a provider, raw /completions endpoint, model, sampling controls, stop sequences, API key, and prompt; then send the request and inspect text, token usage, and cost status.">
+                <div class="openrouter-app" data-help="Completion API workspace." data-help-detail="Configure a provider, prompt-only endpoint, completion model, sampling controls, optional FIM suffix, stop sequences, API key, and prompt; then inspect returned text, token usage, and cost status.">
                   <div class="prompt-menu openrouter-file-menu">
                     <button type="button" class="prompt-menu-start openrouter-menu-start" aria-haspopup="true" aria-expanded="false" data-help="Open encrypted settings file menu." data-help-detail="Use this file menu to save encrypted completion settings to a JSON file or load them back from an encrypted settings file.">
                       <span class="prompt-menu-glyph" aria-hidden="true">///</span>
                       <span class="prompt-menu-label">file</span>
                     </button>
                     <div class="prompt-menu-dropdown openrouter-menu-dropdown" role="menu" aria-hidden="true">
-                      <div class="prompt-menu-item" data-action="load-settings" role="menuitem" data-help="Open and decrypt a Completion settings file." data-help-detail="Chooses an encrypted JSON file, asks for its password, and restores provider, endpoint, model, sampling values, stops, provider-specific API keys, saved title, and prompt.">Open Encrypted Settings</div>
-                      <div class="prompt-menu-item" data-action="save-settings" role="menuitem" data-help="Encrypt and download all Completion settings." data-help-detail="Asks for a password, then encrypts provider, endpoint, model, max tokens, all sampling controls, stop sequences, both provider API keys, saved title, and prompt into a JSON download.">Save Encrypted Settings</div>
+                      <div class="prompt-menu-item" data-action="load-settings" role="menuitem" data-help="Open and decrypt a Completion settings file." data-help-detail="Chooses an encrypted JSON file, asks for its password, and restores provider, endpoint, model, sampling values, stop and suffix text, provider-specific API keys, saved title, and prompt.">Open Encrypted Settings</div>
+                      <div class="prompt-menu-item" data-action="save-settings" role="menuitem" data-help="Encrypt and download all Completion settings." data-help-detail="Asks for a password, then encrypts provider, endpoint, model, max tokens, all sampling controls, stop and suffix text, every provider-specific API key, saved title, and prompt into a JSON download.">Save Encrypted Settings</div>
                     </div>
                     <div class="prompt-menu-spacer" aria-hidden="true"></div>
                     <button type="button" class="help-toggle" aria-pressed="false" data-help="Toggle help mode for Completion API controls." data-help-detail="When Help is on, clicking any menu, request, output, resize, or title-bar control explains it without performing the action. Click Help again or press Escape to exit.">Help</button>
@@ -456,18 +461,24 @@
                     <div class="openrouter-grid">
                       <div class="control-block">
                         <label>Provider</label>
-                        <select class="openrouter-provider" data-help="Completion provider." data-help-detail="Choose Fireworks or Hyperbolic. API key, endpoint defaults, and model loading are scoped to the selected provider.">
+                        <select class="openrouter-provider" data-help="Completion provider." data-help-detail="Choose a documented prompt-only or FIM provider. API key, endpoint, model catalog, supported sampling fields, and continuation caveats are scoped to this selection.">
+                          <option value="openrouter">OpenRouter</option>
+                          <option value="deepseek">DeepSeek FIM</option>
                           <option value="fireworks" selected>Fireworks</option>
+                          <option value="together">Together AI</option>
+                          <option value="mistral">Mistral FIM</option>
+                          <option value="openai">OpenAI API (Legacy)</option>
                           <option value="hyperbolic">Hyperbolic</option>
                         </select>
                       </div>
                       <div class="control-block">
                         <label>Endpoint</label>
-                        <input type="text" class="openrouter-endpoint" value="https://api.fireworks.ai/inference/v1/completions" data-help="Completions endpoint for the selected provider." data-help-detail="Defaults to the selected provider's /completions endpoint. Requests are sent as raw prompt completion calls.">
+                        <input type="text" class="openrouter-endpoint" value="https://api.fireworks.ai/inference/v1/completions" data-help="Completions endpoint for the selected provider." data-help-detail="Defaults to the provider's documented /completions or /fim/completions route. This app rejects /chat/completions and always sends prompt without messages.">
                       </div>
+                      <div class="openrouter-provider-note" role="status" data-help="Provider continuation guarantee and caveats." data-help-detail="Explains whether the active provider promises raw generation, exposes FIM, wraps output in a chat-shaped response object, or may adapt a routed chat-trained model behind a prompt-only endpoint."></div>
                     <div class="control-block">
                       <label>Model</label>
-                      <select class="openrouter-model-picker" data-help="Completion-compatible models from the selected provider." data-help-detail="Loads models that advertise raw prompt-completion support. Catalog loading may use the selected provider API key; Hyperbolic can fall back to its known completion model if catalog loading fails.">
+                      <select class="openrouter-model-picker" data-help="Completion-compatible models from the selected provider." data-help-detail="Loads text models from the provider, narrows families where official raw/FIM support is model-specific, and uses documentation-backed fallback entries when a catalog cannot express that capability.">
                         <option value="">Loading completion models...</option>
                       </select>
                     </div>
@@ -492,7 +503,7 @@
                       <div class="control-block">
                         <label>Top K</label>
                         <div class="openrouter-slider-row">
-                          <input type="range" class="openrouter-top-k" min="0" max="100" step="1" value="0" data-help="Top-k token cutoff." data-help-detail="Limits sampling to the highest-probability K tokens (1-100) for Fireworks requests. This parameter is omitted for Hyperbolic and when set to 0.">
+                          <input type="range" class="openrouter-top-k" min="0" max="100" step="1" value="0" data-help="Top-k token cutoff." data-help-detail="Limits sampling to the highest-probability K tokens (1-100) for OpenRouter, Fireworks, and Together. It is omitted at 0 and disabled for providers that do not document it.">
                           <span class="openrouter-slider-value openrouter-top-k-value">0</span>
                         </div>
                       </div>
@@ -516,19 +527,23 @@
                       </div>
                       <div class="control-block">
                         <label>Title (optional)</label>
-                        <input type="text" class="openrouter-title" placeholder="Prompt Enhancer" data-help="Optional local settings title." data-help-detail="Stores a label in encrypted settings files for your own reference. This title is not included in Fireworks or Hyperbolic API requests.">
+                        <input type="text" class="openrouter-title" placeholder="Prompt Enhancer" data-help="Optional local settings title." data-help-detail="Stores a label in encrypted settings files for your own reference. This title is not included in any provider API request.">
                       </div>
                     </div>
                     <div class="control-block">
                       <label>Stop Sequences (optional, one per line)</label>
                       <textarea class="openrouter-stop" rows="2" placeholder="Example:\n###\nEND" data-help="Optional stop sequences." data-help-detail="Provide one stop sequence per line. Generation ends when any sequence is matched."></textarea>
                     </div>
+                    <div class="control-block openrouter-suffix-block is-hidden">
+                      <label>Suffix (FIM, optional)</label>
+                      <textarea class="openrouter-suffix" rows="3" placeholder="Optional text after the missing span..." data-help="Optional fill-in-the-middle suffix." data-help-detail="DeepSeek and Mistral place generated text between the Prompt prefix and this Suffix. Leave it blank to continue directly after the prompt."></textarea>
+                    </div>
                     <div class="control-block">
                       <label>Prompt</label>
                       <textarea class="openrouter-prompt" rows="8" placeholder="Write the completion prompt here..." data-help="Prompt text sent to the completions API." data-help-detail="Enter the text prefix you want the model to continue. The result appears in the output panel below."></textarea>
                     </div>
                     <div class="openrouter-actions">
-                      <button type="button" class="add-button openrouter-send" data-help="Send a raw text-completion request." data-help-detail="Validates the API key, /completions endpoint, model, and prompt, then submits enabled sampling parameters and stop sequences. The button is disabled while the request is in flight.">Send Completion</button>
+                      <button type="button" class="add-button openrouter-send" data-help="Send a prompt-only completion request." data-help-detail="Validates the API key, non-chat endpoint, model, and prompt, then sends prompt, optional FIM suffix, documented sampling fields, and stop sequences without a messages array.">Send Completion</button>
                     </div>
                     <div class="openrouter-status" role="status" aria-live="polite" data-help="Completion request and model status." data-help-detail="Reports model-catalog loading, validation or provider errors, and completed request accounting such as input/output tokens and returned or estimated cost.">Ready.</div>
                     <!-- Completion output uses the same colored box-header and
@@ -551,6 +566,55 @@
                 <div class="help-overlay is-hidden" aria-hidden="true"></div>
               </div>
               <div class="resize-handle resize-se" data-resize-edge="se" aria-hidden="true" data-help="Resize from the bottom-right corner." data-help-detail="Drag this window's bottom-right corner to resize it while the opposite edges stay fixed. Snapped, maximized, and mobile windows use managed sizing."></div>
+            </div>
+
+            <!-- Terminal keeps its structured tool transport separate from the
+                 raw Completion API. The visible side stays deliberately quiet:
+                 one face, one transcript, and one Enter-driven prompt. -->
+            <div id="window-terminal-template" class="window-shell box-shell app-window terminal-window window-template" data-template="terminal">
+              <div class="box-header window-header">
+                <span class="box-title" aria-label="Terminal window title" data-help="Terminal window title and drag surface." data-help-detail="Identifies this Yolk conversation. Drag it to a desktop side or corner to snap, drag to the top to maximize, or double-click to maximize and restore.">Terminal</span>
+                <div class="button-col">
+                  <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Minimize window" aria-label="Minimize window" data-expanded="-" data-collapsed="+" data-help="Minimize this Terminal window." data-help-detail="Hides Terminal while preserving the current conversation and connection for restoration from its taskbar button.">-</button>
+                  <button type="button" class="toggle-button icon-button maximize-toggle" title="Maximize or restore window" aria-label="Maximize or restore window" data-help="Maximize or restore this Terminal window." data-help-detail="Expands Terminal to the usable desktop or returns it to its prior reachable size and position. Mobile windows remain maximized.">□</button>
+                  <button type="button" class="delete-button icon-button remove-box" title="Close window" aria-label="Close window" data-help="Close this Terminal window." data-help-detail="Closes this Terminal session and clears its conversation and connection.">X</button>
+                </div>
+              </div>
+              <div class="box-body">
+                <div class="terminal-app" data-help="Yolk Terminal workspace." data-help-detail="Type an ordinary-language request or answer a short connection question in the same continuous console. Yolk handles supported application actions behind the conversation.">
+                  <div class="prompt-menu terminal-file-menu">
+                    <button type="button" class="prompt-menu-start terminal-menu-start" aria-haspopup="true" aria-expanded="false" data-help="Open the Terminal file menu." data-help-detail="Load an encrypted Terminal settings file or save every provider's endpoint, chosen model, and API key in the shared password-encrypted format.">
+                      <span class="prompt-menu-glyph" aria-hidden="true">///</span>
+                      <span class="prompt-menu-label">file</span>
+                    </button>
+                    <div class="prompt-menu-dropdown terminal-menu-dropdown" role="menu" aria-hidden="true">
+                      <div class="prompt-menu-item" data-action="load-settings" role="menuitem" data-help="Open and decrypt Terminal settings." data-help-detail="Chooses an encrypted Terminal JSON file, asks for its password, and restores provider-scoped endpoints, models, and API keys before resuming the conversational setup step.">Open Encrypted Settings</div>
+                      <div class="prompt-menu-item" data-action="save-settings" role="menuitem" data-help="Encrypt and download Terminal settings." data-help-detail="Asks for a password, then saves the active provider plus every provider's endpoint, chosen model, and API key in an encrypted JSON file.">Save Encrypted Settings</div>
+                    </div>
+                  </div>
+                  <input type="file" class="terminal-load-settings-file" accept="application/json,.json" style="display:none">
+                  <div class="terminal-surface" data-help="Continuous Terminal surface." data-help-detail="The face, conversation, and active prompt share one console field. Connection questions appear in the transcript only when they are needed.">
+                    <div class="terminal-masthead">
+                      <section class="terminal-face-panel" data-help="Animated Yolk face." data-help-detail="Stays centered and changes expression while Yolk works. Fixed eye and mouth anchors keep every expression aligned while new Yolk lines animate broad mouth shapes with a quiet synthesized murmur; type /sound off or /sound on to control it.">
+                        <div class="terminal-face" data-emote="idle" role="img" aria-label="Yolk face: idle">
+                          <span class="terminal-face-art" data-ascii="[ ._. ]" aria-hidden="true"><span class="terminal-face-ascii">[ ._. ]</span><svg class="terminal-face-vector" viewBox="0 0 84 20" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false"><path class="terminal-face-frame" d="M 8 2 H 4 V 18 H 8 M 76 2 H 80 V 18 H 76"></path><path class="terminal-face-eye terminal-face-eye-left" data-glyph="." d="M 29.98 7 L 30.02 7"></path><path class="terminal-face-mouth" data-glyph="_" d="M 38.5 12 H 45.5"></path><path class="terminal-face-eye terminal-face-eye-right" data-glyph="." d="M 53.98 7 L 54.02 7"></path></svg></span>
+                        </div>
+                      </section>
+                    </div>
+
+                    <div class="terminal-transcript" role="log" aria-live="polite" tabindex="0" data-help="Terminal conversation." data-help-detail="Shows connection questions and the conversation. Type /copy to copy the latest Yolk answer or select text normally."></div>
+
+                    <div class="terminal-command-line" data-help="Inline Terminal prompt." data-help-detail="Click anywhere on this prompt, type, and press Enter to run it. Shift+Enter adds a line break. The prompt also accepts provider answers and optional slash commands without opening another panel.">
+                      <span class="terminal-input-prefix" aria-hidden="true">provider&gt;</span>
+                      <textarea class="terminal-message" rows="1" aria-label="Terminal command or message" placeholder="number or provider name" spellcheck="true" data-help="Current Terminal input." data-help-detail="Type a provider answer or describe what you want Yolk to do. Enter runs the entry; Shift+Enter inserts a line break."></textarea>
+                      <input type="password" class="terminal-secret-input" aria-label="Provider API key" placeholder="paste API key" autocomplete="off" hidden data-help="Masked provider API key entry." data-help-detail="Paste the complete API key requested in the conversation and press Enter. Short menu choices are rejected. Its characters remain masked and do not appear in the transcript; an accepted key is then used to check the provider's available models.">
+                    </div>
+                    <div class="terminal-status" role="status" aria-live="polite">Ready.</div>
+                  </div>
+                </div>
+                <div class="help-overlay is-hidden" aria-hidden="true"></div>
+              </div>
+              <div class="resize-handle resize-se" data-resize-edge="se" aria-hidden="true" data-help="Resize from the bottom-right corner." data-help-detail="Drag this Terminal window's bottom-right corner to resize it while the opposite edges stay fixed. Snapped, maximized, and mobile windows use managed sizing."></div>
             </div>
 
             <div id="window-diskrot-template" class="window-shell box-shell app-window diskrot-window window-template" data-template="diskrot">
@@ -579,7 +643,9 @@
   <!-- Load preset catalog (inline preset states) -->
   <script src="presets/index.js"></script>
   <!-- Load app modules (kept outside the core monolith) -->
+  <script src="apps/shared/encrypted-settings.js"></script>
   <script src="apps/openrouter-completions/app.js"></script>
+  <script src="apps/terminal/app.js"></script>
   <!-- Then load main application logic -->
   <script src="script.js"></script>
 </body>

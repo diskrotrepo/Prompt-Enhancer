@@ -362,6 +362,28 @@
       "hasOpenRouterSharedCopyControl": true
     },
     {
+      "id": "terminal_app_window",
+      "output": "",
+      "hasTerminalMenu": true,
+      "terminalWindowCount": 1,
+      "hasTerminalHelpMode": false,
+      "hasTerminalEncryptedSettingsControls": true,
+      "hasCompleteHelpCopy": true,
+      "hasAccessibleIconHelp": true,
+      "hasTerminalToolHarness": true,
+      "terminalToolCount": 9,
+      "terminalKnowledgeDocumentCount": 0,
+      "terminalFaceEmote": "idle",
+      "hasTerminalPureCommandSurface": true,
+      "hasAccurateTerminalHelp": true,
+      "hasTerminalLeakFreePresentation": true,
+      "hasTerminalSpeakerFace": true,
+      "hasTerminalGuardedDecisionTree": true,
+      "hasTerminalLiveModelCatalogFlow": true,
+      "hasTerminalStableFaceCells": true,
+      "hasTerminalBaselineIndependentFace": true
+    },
+    {
       "id": "multi_prompt_windows_open",
       "output": "",
       "promptWindowCount": 2,

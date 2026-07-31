@@ -3017,6 +3017,17 @@
       ]
     },
     {
+      "id": "terminal_app_window",
+      "description": "Terminal opens as one uncluttered console with a gray File bar for password-encrypted settings, an inline Enter-driven prompt, provider then guarded key entry followed by live model discovery with curated fallback choices, no Send box or session dashboard, leak-free conversational copy, registered tools hidden behind outcomes, an empty future knowledge seam, and a centered seven-character ASCII face whose visible eyes and mouth animate on fixed vector anchors independent of font baselines, with optional nonverbal sound.",
+      "random": 0,
+      "actions": [
+        {
+          "type": "openWindow",
+          "windowType": "terminal"
+        }
+      ]
+    },
+    {
       "id": "multi_prompt_windows_open",
       "description": "Opening Prompt Enhancer twice creates two windows, and pressing the first window body activates it conventionally.",
       "random": 0,

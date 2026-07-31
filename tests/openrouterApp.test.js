@@ -8,6 +8,7 @@ const { createDom, registerDomCleanup } = require('./helpers/dom');
 const ROOT = path.join(__dirname, '..');
 const HTML_PATH = path.join(ROOT, 'src', 'index.html');
 const SCRIPT_PATH = path.join(ROOT, 'src', 'script.js');
+const ENCRYPTED_SETTINGS_PATH = path.join(ROOT, 'src', 'apps', 'shared', 'encrypted-settings.js');
 const OPENROUTER_APP_PATH = path.join(ROOT, 'src', 'apps', 'openrouter-completions', 'app.js');
 
 function flush() {
@@ -97,6 +98,43 @@ function setupDom() {
   };
   window.fetch = jest.fn((url, init) => {
     const target = String(url || '');
+    if (target.includes('openrouter.ai/api/v1/models')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          data: [{
+            id: 'example/base-model',
+            name: 'Example Base Model',
+            context_length: 32768,
+            architecture: { input_modalities: ['text'], output_modalities: ['text'] }
+          }]
+        })
+      });
+    }
+    if (target.includes('api.together.ai/v1/models')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          data: [{
+            id: 'example/together-base',
+            name: 'Together Base',
+            context_length: 32768
+          }]
+        })
+      });
+    }
+    if (target.includes('api.mistral.ai/v1/models')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          data: [{
+            id: 'codestral-latest',
+            name: 'Codestral Latest',
+            context_length: 32768
+          }]
+        })
+      });
+    }
     if (target.includes('fireworks.ai/v1/models') || target.includes('fireworks.ai/inference/v1/models')) {
       return Promise.resolve({
         ok: true,
@@ -164,12 +202,63 @@ function setupDom() {
         })
       });
     }
+    if (target.includes('openrouter.ai/api/v1/completions')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          id: 'or-gen-test-1',
+          choices: [{ text: 'openrouter raw result' }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 }
+        })
+      });
+    }
+    if (target.includes('api.deepseek.com/beta/completions')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          id: 'deepseek-fim-test-1',
+          choices: [{ text: 'deepseek middle' }],
+          usage: { prompt_tokens: 12, completion_tokens: 4, total_tokens: 16 }
+        })
+      });
+    }
+    if (target.includes('api.together.ai/v1/completions')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          id: 'together-gen-test-1',
+          choices: [{ text: 'together raw result' }],
+          usage: { prompt_tokens: 9, completion_tokens: 3, total_tokens: 12 }
+        })
+      });
+    }
+    if (target.includes('api.mistral.ai/v1/fim/completions')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          id: 'mistral-fim-test-1',
+          choices: [{ message: { role: 'assistant', content: 'mistral middle' } }],
+          usage: { prompt_tokens: 14, completion_tokens: 6, total_tokens: 20 }
+        })
+      });
+    }
+    if (target.includes('api.openai.com/v1/completions')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          id: 'openai-legacy-test-1',
+          choices: [{ text: 'openai legacy result' }],
+          usage: { prompt_tokens: 8, completion_tokens: 4, total_tokens: 12 }
+        })
+      });
+    }
     return Promise.resolve({
       ok: false,
       status: 404,
       json: async () => ({ message: 'Not Found' })
     });
   });
+  window.eval(fs.readFileSync(ENCRYPTED_SETTINGS_PATH, 'utf8'));
   window.eval(fs.readFileSync(OPENROUTER_APP_PATH, 'utf8'));
   window.eval(fs.readFileSync(SCRIPT_PATH, 'utf8'));
   if (window.document.readyState === 'loading') {
@@ -261,6 +350,134 @@ describe('OpenRouter app module', () => {
     expect(copyButton.classList.contains('copied')).toBe(true);
     expect(copyButton.textContent).toBe('✓');
     expect(status.textContent).toBe(completedStatus);
+  });
+
+  test.each([
+    {
+      provider: 'openrouter',
+      endpoint: 'https://openrouter.ai/api/v1/completions',
+      model: 'example/base-model',
+      output: 'openrouter raw result',
+      supportsTopK: true
+    },
+    {
+      provider: 'together',
+      endpoint: 'https://api.together.ai/v1/completions',
+      model: 'example/together-base',
+      output: 'together raw result',
+      supportsTopK: true
+    },
+    {
+      provider: 'openai',
+      endpoint: 'https://api.openai.com/v1/completions',
+      model: 'gpt-3.5-turbo-instruct',
+      output: 'openai legacy result',
+      supportsTopK: false
+    }
+  ])('sends $provider as prompt-only completion data', async providerCase => {
+    const { window } = setupDom();
+    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
+    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    const providerSelect = appWindow.querySelector('.openrouter-provider');
+    const endpointInput = appWindow.querySelector('.openrouter-endpoint');
+    const keyInput = appWindow.querySelector('.openrouter-api-key');
+    const modelPicker = appWindow.querySelector('.openrouter-model-picker');
+    const topKInput = appWindow.querySelector('.openrouter-top-k');
+    const promptInput = appWindow.querySelector('.openrouter-prompt');
+    const status = appWindow.querySelector('.openrouter-status');
+
+    providerSelect.value = providerCase.provider;
+    providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    expect(endpointInput.value).toBe(providerCase.endpoint);
+    keyInput.value = `${providerCase.provider}-test-key`;
+    keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() => status.textContent.includes('Loaded'));
+    expect(modelPicker.value).toBe(providerCase.model);
+    expect(topKInput.disabled).toBe(!providerCase.supportsTopK);
+    topKInput.value = '17';
+    promptInput.value = 'continue directly from this prefix';
+    appWindow.querySelector('.openrouter-send').click();
+
+    await waitFor(() => appWindow.querySelector('.openrouter-output-text').textContent === providerCase.output);
+    const completionCall = window.fetch.mock.calls.find(call =>
+      String(call[0] || '') === providerCase.endpoint && call[1]?.method === 'POST'
+    );
+    expect(completionCall).toBeDefined();
+    const payload = JSON.parse(completionCall[1].body);
+    expect(payload.model).toBe(providerCase.model);
+    expect(payload.prompt).toBe('continue directly from this prefix');
+    expect(payload.messages).toBeUndefined();
+    expect(payload.suffix).toBeUndefined();
+    if (providerCase.supportsTopK) {
+      expect(payload.top_k).toBe(17);
+    } else {
+      expect(payload.top_k).toBeUndefined();
+    }
+  });
+
+  test.each([
+    {
+      provider: 'deepseek',
+      endpoint: 'https://api.deepseek.com/beta/completions',
+      model: 'deepseek-v4-pro',
+      output: 'deepseek middle',
+      maxTokens: 4096
+    },
+    {
+      provider: 'mistral',
+      endpoint: 'https://api.mistral.ai/v1/fim/completions',
+      model: 'codestral-latest',
+      output: 'mistral middle',
+      maxTokens: 9000
+    }
+  ])('sends $provider FIM prefix and suffix without chat request fields', async providerCase => {
+    const { window } = setupDom();
+    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
+    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    const providerSelect = appWindow.querySelector('.openrouter-provider');
+    const keyInput = appWindow.querySelector('.openrouter-api-key');
+    const modelPicker = appWindow.querySelector('.openrouter-model-picker');
+    const suffixBlock = appWindow.querySelector('.openrouter-suffix-block');
+    const suffixInput = appWindow.querySelector('.openrouter-suffix');
+    const maxTokensInput = appWindow.querySelector('.openrouter-max-tokens');
+    const topKInput = appWindow.querySelector('.openrouter-top-k');
+    const presenceInput = appWindow.querySelector('.openrouter-presence-penalty');
+    const frequencyInput = appWindow.querySelector('.openrouter-frequency-penalty');
+    const status = appWindow.querySelector('.openrouter-status');
+
+    providerSelect.value = providerCase.provider;
+    providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    keyInput.value = `${providerCase.provider}-test-key`;
+    keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() => status.textContent.includes('Loaded'));
+    expect(modelPicker.value).toBe(providerCase.model);
+    expect(suffixBlock.classList.contains('is-hidden')).toBe(false);
+    expect(topKInput.disabled).toBe(true);
+    expect(presenceInput.disabled).toBe(true);
+    expect(frequencyInput.disabled).toBe(true);
+
+    maxTokensInput.value = '9000';
+    topKInput.value = '31';
+    presenceInput.value = '1';
+    frequencyInput.value = '1';
+    appWindow.querySelector('.openrouter-prompt').value = 'function greet() {';
+    suffixInput.value = '\n}';
+    appWindow.querySelector('.openrouter-send').click();
+
+    await waitFor(() => appWindow.querySelector('.openrouter-output-text').textContent === providerCase.output);
+    const completionCall = window.fetch.mock.calls.find(call =>
+      String(call[0] || '') === providerCase.endpoint && call[1]?.method === 'POST'
+    );
+    expect(completionCall).toBeDefined();
+    const payload = JSON.parse(completionCall[1].body);
+    expect(payload.model).toBe(providerCase.model);
+    expect(payload.prompt).toBe('function greet() {');
+    expect(payload.suffix).toBe('\n}');
+    expect(payload.messages).toBeUndefined();
+    expect(payload.max_tokens).toBe(providerCase.maxTokens);
+    expect(payload.top_k).toBeUndefined();
+    expect(payload.presence_penalty).toBeUndefined();
+    expect(payload.frequency_penalty).toBeUndefined();
   });
 
   test('switches to hyperbolic and sends a hyperbolic completions request', async () => {

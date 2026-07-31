@@ -3,38 +3,123 @@
 
   // Table of contents:
   // - Registry + safe readers
-  // - Request/response helpers (completions + model catalog)
+  // - Provider capability matrix (raw prompt, FIM, and legacy routes)
+  // - Request/response helpers (completions + provider model catalogs)
+  // - Shared encrypted-settings adapter + app-specific settings mapping
   // - Window binding + shared copy feedback
   // - App registration
 
   const APP_KEY = 'openrouter-completions';
   const PROVIDER_KEYS = Object.freeze({
+    OPENROUTER: 'openrouter',
+    DEEPSEEK: 'deepseek',
     FIREWORKS: 'fireworks',
+    TOGETHER: 'together',
+    MISTRAL: 'mistral',
+    OPENAI: 'openai',
     HYPERBOLIC: 'hyperbolic'
   });
   const PROVIDER_OPTIONS = Object.freeze({
+    [PROVIDER_KEYS.OPENROUTER]: {
+      label: 'OpenRouter',
+      defaultEndpoint: 'https://openrouter.ai/api/v1/completions',
+      modelsEndpoint: 'https://openrouter.ai/api/v1/models',
+      catalogKind: 'openrouter',
+      supportsTopK: true,
+      supportsPenalties: true,
+      supportsSuffix: false,
+      responseMode: 'text',
+      capabilityNote: 'Prompt-only legacy route. OpenRouter accepts prompt instead of messages, but a routed chat-trained model may still receive provider-side adaptation; choose a base or FIM-oriented model when exact continuation perspective matters.'
+    },
+    [PROVIDER_KEYS.DEEPSEEK]: {
+      label: 'DeepSeek FIM',
+      defaultEndpoint: 'https://api.deepseek.com/beta/completions',
+      catalogKind: 'deepseek',
+      supportsTopK: false,
+      supportsPenalties: false,
+      supportsSuffix: true,
+      responseMode: 'text',
+      maxTokens: 4096,
+      capabilityNote: 'Native beta FIM route. Sends prompt plus an optional suffix with no messages array; DeepSeek currently documents deepseek-v4-pro for this endpoint and caps output at 4K tokens.'
+    },
     [PROVIDER_KEYS.FIREWORKS]: {
       label: 'Fireworks',
-      defaultEndpoint: 'https://api.fireworks.ai/inference/v1/completions'
+      defaultEndpoint: 'https://api.fireworks.ai/inference/v1/completions',
+      catalogKind: 'fireworks',
+      supportsTopK: true,
+      supportsPenalties: true,
+      supportsSuffix: false,
+      responseMode: 'text',
+      capabilityNote: 'Native raw text generation. Fireworks documents this route as prompt generation without automatic message formatting, including base-model and custom-template use.'
+    },
+    [PROVIDER_KEYS.TOGETHER]: {
+      label: 'Together AI',
+      defaultEndpoint: 'https://api.together.ai/v1/completions',
+      modelsEndpoint: 'https://api.together.ai/v1/models',
+      catalogKind: 'together',
+      supportsTopK: true,
+      supportsPenalties: true,
+      supportsSuffix: false,
+      responseMode: 'text',
+      capabilityNote: 'Legacy text-completion route. Together accepts one prompt string and returns choices[].text; prompt templates remain under your control.'
+    },
+    [PROVIDER_KEYS.MISTRAL]: {
+      label: 'Mistral FIM',
+      defaultEndpoint: 'https://api.mistral.ai/v1/fim/completions',
+      modelsEndpoint: 'https://api.mistral.ai/v1/models',
+      catalogKind: 'mistral',
+      supportsTopK: false,
+      supportsPenalties: false,
+      supportsSuffix: true,
+      responseMode: 'message-content',
+      capabilityNote: 'Native prompt/suffix FIM generation. The request is not chat-formatted, although Mistral wraps returned text inside choices[].message.content.'
+    },
+    [PROVIDER_KEYS.OPENAI]: {
+      label: 'OpenAI API (Legacy)',
+      defaultEndpoint: 'https://api.openai.com/v1/completions',
+      catalogKind: 'openai',
+      supportsTopK: false,
+      supportsPenalties: true,
+      supportsSuffix: false,
+      responseMode: 'text',
+      capabilityNote: 'Legacy non-chat API using deprecated completion-only models such as gpt-3.5-turbo-instruct. OpenAI Platform API billing is separate from ChatGPT and Codex credits.'
     },
     [PROVIDER_KEYS.HYPERBOLIC]: {
       label: 'Hyperbolic',
-      defaultEndpoint: 'https://api.hyperbolic.xyz/v1/completions'
+      defaultEndpoint: 'https://api.hyperbolic.xyz/v1/completions',
+      modelsEndpoint: 'https://api.hyperbolic.xyz/v1/models',
+      catalogKind: 'hyperbolic',
+      supportsTopK: false,
+      supportsPenalties: true,
+      supportsSuffix: false,
+      responseMode: 'text',
+      capabilityNote: 'Native base-model text completion without chat formatting. Hyperbolic has announced that its Llama 3.1 405B base model is being sunset, so availability may end before the route itself does.'
     }
   });
+  const PROVIDER_KEY_LIST = Object.freeze(Object.keys(PROVIDER_OPTIONS));
   const DEFAULT_PROVIDER_KEY = PROVIDER_KEYS.FIREWORKS;
   const FIREWORKS_MODELS_ENDPOINT = 'https://api.fireworks.ai/v1/models';
   const FIREWORKS_MODELS_FALLBACK_ENDPOINT = 'https://api.fireworks.ai/inference/v1/models';
-  const HYPERBOLIC_MODELS_ENDPOINT = 'https://api.hyperbolic.xyz/v1/models';
   const HYPERBOLIC_COMPLETION_MODEL_IDS = new Set([
     'meta-llama/meta-llama-3.1-405b'
   ]);
   const HYPERBOLIC_FALLBACK_MODELS = Object.freeze([
     { id: 'meta-llama/Meta-Llama-3.1-405B', name: 'Llama 3.1 405B', contextLength: null }
   ]);
+  const DEEPSEEK_FALLBACK_MODELS = Object.freeze([
+    { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro (FIM beta)', contextLength: 1000000 }
+  ]);
+  const MISTRAL_FALLBACK_MODELS = Object.freeze([
+    { id: 'codestral-latest', name: 'Codestral Latest (FIM)', contextLength: null }
+  ]);
+  const OPENAI_COMPLETION_MODEL_IDS = new Set([
+    'gpt-3.5-turbo-instruct'
+  ]);
+  const OPENAI_FALLBACK_MODELS = Object.freeze([
+    { id: 'gpt-3.5-turbo-instruct', name: 'GPT-3.5 Turbo Instruct (deprecated)', contextLength: 4096 }
+  ]);
   const TOP_K_MAX = 100;
   const DEFAULT_SETTINGS_FILE_NAME = 'completion-providers-encrypted-settings.json';
-  const PBKDF2_ITERATIONS = 250000;
 
   function ensureAppRegistry() {
     if (typeof window === 'undefined') return null;
@@ -87,15 +172,21 @@
   }
 
   function promptForSettingsPassword(action) {
-    if (typeof window === 'undefined' || typeof window.prompt !== 'function') return null;
-    const message = action === 'save'
-      ? 'Enter a password to encrypt settings:'
-      : 'Enter the password to decrypt settings:';
-    return window.prompt(message, '');
+    return window.YolkEncryptedSettings?.promptForPassword?.(action) ?? null;
   }
 
   function getProviderOption(providerKey) {
     return PROVIDER_OPTIONS[providerKey] || PROVIDER_OPTIONS[DEFAULT_PROVIDER_KEY];
+  }
+
+  // Build provider-scoped state from one authoritative key list. New adapters
+  // therefore inherit isolated credentials, exclusion sets, and pricing maps
+  // without another hand-maintained branch elsewhere in the window binder.
+  function createProviderMap(factory) {
+    return PROVIDER_KEY_LIST.reduce((result, providerKey) => {
+      result[providerKey] = typeof factory === 'function' ? factory(providerKey) : factory;
+      return result;
+    }, {});
   }
 
   function normalizeProviderKey(value) {
@@ -105,6 +196,10 @@
 
   function defaultEndpointForProvider(providerKey) {
     return getProviderOption(providerKey).defaultEndpoint;
+  }
+
+  function providerSupports(providerKey, feature) {
+    return getProviderOption(providerKey)?.[feature] === true;
   }
 
   function normalizeEndpoint(value, providerKey = DEFAULT_PROVIDER_KEY) {
@@ -412,13 +507,19 @@
     return choice && typeof choice === 'object' ? choice : null;
   }
 
-  function hasCompletionText(payload) {
+  function hasCompletionText(payload, responseMode = 'text') {
     const choice = readCompletionChoice(payload);
+    if (responseMode === 'message-content') {
+      return typeof choice?.message?.content === 'string';
+    }
     return typeof choice?.text === 'string';
   }
 
-  function readCompletionText(payload) {
+  function readCompletionText(payload, responseMode = 'text') {
     const choice = readCompletionChoice(payload);
+    if (responseMode === 'message-content') {
+      return typeof choice?.message?.content === 'string' ? choice.message.content : '';
+    }
     return typeof choice?.text === 'string' ? choice.text : '';
   }
 
@@ -436,154 +537,27 @@
     return headers;
   }
 
-  function getWebCrypto() {
-    if (typeof globalThis === 'undefined') return null;
-    return globalThis.crypto || null;
-  }
-
   function hasCryptoSupport() {
-    const cryptoApi = getWebCrypto();
-    return !!(cryptoApi && cryptoApi.subtle && typeof cryptoApi.getRandomValues === 'function');
-  }
-
-  function bytesToBase64(bytes) {
-    const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-    let binary = '';
-    for (let i = 0; i < view.length; i += 1) {
-      binary += String.fromCharCode(view[i]);
-    }
-    return btoa(binary);
-  }
-
-  function base64ToBytes(value) {
-    const binary = atob(String(value || ''));
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i += 1) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
-  }
-
-  function utf8ToBytes(text) {
-    const encoded = unescape(encodeURIComponent(String(text)));
-    const bytes = new Uint8Array(encoded.length);
-    for (let i = 0; i < encoded.length; i += 1) {
-      bytes[i] = encoded.charCodeAt(i);
-    }
-    return bytes;
-  }
-
-  function bytesToUtf8(bytes) {
-    let binary = '';
-    for (let i = 0; i < bytes.length; i += 1) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    return decodeURIComponent(escape(binary));
-  }
-
-  async function deriveAesKey(password, saltBytes, usages) {
-    const cryptoApi = getWebCrypto();
-    const keyMaterial = await cryptoApi.subtle.importKey(
-      'raw',
-      utf8ToBytes(password),
-      { name: 'PBKDF2' },
-      false,
-      ['deriveKey']
-    );
-    return cryptoApi.subtle.deriveKey(
-      {
-        name: 'PBKDF2',
-        salt: saltBytes,
-        iterations: PBKDF2_ITERATIONS,
-        hash: 'SHA-256'
-      },
-      keyMaterial,
-      { name: 'AES-GCM', length: 256 },
-      false,
-      usages
-    );
+    return window.YolkEncryptedSettings?.isSupported?.() === true;
   }
 
   async function encryptSettings(password, settings) {
-    const cryptoApi = getWebCrypto();
-    const salt = cryptoApi.getRandomValues(new Uint8Array(16));
-    const iv = cryptoApi.getRandomValues(new Uint8Array(12));
-    const key = await deriveAesKey(password, salt, ['encrypt']);
-    const plaintext = utf8ToBytes(JSON.stringify(settings));
-    const encrypted = await cryptoApi.subtle.encrypt(
-      { name: 'AES-GCM', iv },
-      key,
-      plaintext
-    );
-    return {
-      version: 1,
-      kdf: {
-        name: 'PBKDF2',
-        hash: 'SHA-256',
-        iterations: PBKDF2_ITERATIONS,
-        salt: bytesToBase64(salt)
-      },
-      cipher: {
-        name: 'AES-GCM',
-        iv: bytesToBase64(iv),
-        data: bytesToBase64(encrypted)
-      }
-    };
+    if (!window.YolkEncryptedSettings) throw new Error('Encrypted settings helper is unavailable.');
+    return window.YolkEncryptedSettings.encrypt(password, settings);
   }
 
   async function decryptSettings(password, payload) {
-    const salt = base64ToBytes(payload?.kdf?.salt);
-    const iv = base64ToBytes(payload?.cipher?.iv);
-    const encrypted = base64ToBytes(payload?.cipher?.data);
-    const key = await deriveAesKey(password, salt, ['decrypt']);
-    const cryptoApi = getWebCrypto();
-    try {
-      const decrypted = await cryptoApi.subtle.decrypt(
-        { name: 'AES-GCM', iv },
-        key,
-        encrypted
-      );
-      return JSON.parse(bytesToUtf8(new Uint8Array(decrypted)));
-    } catch (err) {
-      throw new Error('Invalid password or corrupted encrypted settings.');
-    }
+    if (!window.YolkEncryptedSettings) throw new Error('Encrypted settings helper is unavailable.');
+    return window.YolkEncryptedSettings.decrypt(password, payload);
   }
 
   function downloadEncryptedSettings(payload, fileName = DEFAULT_SETTINGS_FILE_NAME) {
-    if (typeof document === 'undefined' || typeof URL === 'undefined') return false;
-    try {
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = toTrimmedString(fileName) || DEFAULT_SETTINGS_FILE_NAME;
-      anchor.click();
-      URL.revokeObjectURL(url);
-      return true;
-    } catch (err) {
-      return false;
-    }
+    return window.YolkEncryptedSettings?.download?.(payload, fileName) === true;
   }
 
   async function readEncryptedSettingsFile(file) {
-    if (!file) throw new Error('No file selected.');
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const parsed = JSON.parse(String(reader.result || ''));
-          if (!parsed || typeof parsed !== 'object') {
-            reject(new Error('Selected file does not contain valid encrypted settings JSON.'));
-            return;
-          }
-          resolve(parsed);
-        } catch (err) {
-          reject(new Error('Selected file does not contain valid JSON.'));
-        }
-      };
-      reader.onerror = () => reject(new Error('Failed to read selected settings file.'));
-      reader.readAsText(file);
-    });
+    if (!window.YolkEncryptedSettings) throw new Error('Encrypted settings helper is unavailable.');
+    return window.YolkEncryptedSettings.readFile(file);
   }
 
   async function readErrorMessage(response) {
@@ -610,6 +584,7 @@
       apiKey,
       model,
       prompt,
+      suffix,
       maxTokens,
       temperature,
       topP,
@@ -618,36 +593,32 @@
       frequencyPenalty,
       stop
     } = config;
+    const provider = getProviderOption(providerKey);
     const includeTopP = Number.isFinite(topP) && topP > 0;
-    const includeTopK = Number.isFinite(topK) && topK > 0;
+    const includeTopK = provider.supportsTopK && Number.isFinite(topK) && topK > 0;
     const includeMaxTokens = Number.isFinite(maxTokens) && maxTokens > 0;
-    const includePresencePenalty = Number.isFinite(presencePenalty) && presencePenalty !== 0;
-    const includeFrequencyPenalty = Number.isFinite(frequencyPenalty) && frequencyPenalty !== 0;
-    const requestBody =
-      providerKey === PROVIDER_KEYS.HYPERBOLIC
-        ? {
-            model,
-            prompt,
-            ...(includeMaxTokens ? { max_tokens: maxTokens } : {}),
-            ...(includeTopP ? { top_p: topP } : {}),
-            ...(includePresencePenalty ? { presence_penalty: presencePenalty } : {}),
-            ...(includeFrequencyPenalty ? { frequency_penalty: frequencyPenalty } : {}),
-            temperature,
-            ...(stop ? { stop } : {}),
-            stream: false
-          }
-        : {
-            model,
-            prompt,
-            ...(includeMaxTokens ? { max_tokens: maxTokens } : {}),
-            ...(includeTopP ? { top_p: topP } : {}),
-            ...(includeTopK ? { top_k: topK } : {}),
-            ...(includePresencePenalty ? { presence_penalty: presencePenalty } : {}),
-            ...(includeFrequencyPenalty ? { frequency_penalty: frequencyPenalty } : {}),
-            temperature,
-            ...(stop ? { stop } : {}),
-            stream: false
-          };
+    const includePresencePenalty =
+      provider.supportsPenalties && Number.isFinite(presencePenalty) && presencePenalty !== 0;
+    const includeFrequencyPenalty =
+      provider.supportsPenalties && Number.isFinite(frequencyPenalty) && frequencyPenalty !== 0;
+    // Every adapter starts with the same continuation contract: one prompt
+    // string and no role-bearing messages. Capability flags only add fields
+    // documented by that provider, preventing silent chat conversion in-client.
+    const requestBody = {
+      model,
+      prompt,
+      ...(provider.supportsSuffix && typeof suffix === 'string' && suffix.length
+        ? { suffix }
+        : {}),
+      ...(includeMaxTokens ? { max_tokens: maxTokens } : {}),
+      ...(includeTopP ? { top_p: topP } : {}),
+      ...(includeTopK ? { top_k: topK } : {}),
+      ...(includePresencePenalty ? { presence_penalty: presencePenalty } : {}),
+      ...(includeFrequencyPenalty ? { frequency_penalty: frequencyPenalty } : {}),
+      temperature,
+      ...(stop ? { stop } : {}),
+      stream: false
+    };
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: buildHeaders(apiKey),
@@ -658,9 +629,9 @@
       throw new Error(message);
     }
     const payload = await response.json();
-    const hasText = hasCompletionText(payload);
-    const completion = hasText ? readCompletionText(payload) : '';
-    if (!hasText && payload?.object !== 'text_completion') {
+    const hasText = hasCompletionText(payload, provider.responseMode);
+    const completion = hasText ? readCompletionText(payload, provider.responseMode) : '';
+    if (!hasText) {
       throw new Error(
         'Model returned a chat-style response. Use a completion-capable model for pure continuation.'
       );
@@ -700,6 +671,7 @@
           : Array.isArray(entry?.output_modalities)
             ? entry.output_modalities
             : null,
+        instructType: toTrimmedString(entry?.architecture?.instruct_type || entry?.instruct_type || ''),
         task: toTrimmedString(entry?.task || entry?.type || entry?.modality || '')
       });
     });
@@ -715,6 +687,15 @@
   function isHyperbolicCompletionModel(entry) {
     const id = toTrimmedString(entry?.id).toLowerCase();
     return HYPERBOLIC_COMPLETION_MODEL_IDS.has(id);
+  }
+
+  function isMistralFimModel(entry) {
+    const identity = `${entry?.id || ''} ${entry?.name || ''}`.toLowerCase();
+    return identity.includes('codestral');
+  }
+
+  function isOpenAICompletionModel(entry) {
+    return OPENAI_COMPLETION_MODEL_IDS.has(toTrimmedString(entry?.id).toLowerCase());
   }
 
   function isLikelyTextCompletionModel(entry) {
@@ -816,8 +797,10 @@
     throw lastError || new Error('Model list load failed');
   }
 
-  async function requestHyperbolicModelCatalog(apiKey) {
-    const response = await fetch(HYPERBOLIC_MODELS_ENDPOINT, {
+  async function requestProviderModelCatalog(providerKey, apiKey) {
+    const provider = getProviderOption(providerKey);
+    if (!provider.modelsEndpoint) return [];
+    const response = await fetch(provider.modelsEndpoint, {
       headers: buildOptionalAuthHeaders(apiKey)
     });
     if (!response.ok) {
@@ -828,6 +811,31 @@
     }
     const payload = await response.json();
     return normalizeSimpleModelEntries(payload);
+  }
+
+  function getCuratedModels(providerKey) {
+    if (providerKey === PROVIDER_KEYS.DEEPSEEK) return DEEPSEEK_FALLBACK_MODELS.slice();
+    if (providerKey === PROVIDER_KEYS.MISTRAL) return MISTRAL_FALLBACK_MODELS.slice();
+    if (providerKey === PROVIDER_KEYS.OPENAI) return OPENAI_FALLBACK_MODELS.slice();
+    if (providerKey === PROVIDER_KEYS.HYPERBOLIC) return HYPERBOLIC_FALLBACK_MODELS.slice();
+    return [];
+  }
+
+  // Catalogs describe products differently, so filtering is deliberately
+  // provider-aware. The fallback rows are documentation-backed escape hatches,
+  // not guesses that every chat model can honor raw continuation semantics.
+  function filterModelsForProvider(providerKey, entries) {
+    let filtered = entries.filter(isLikelyTextCompletionModel);
+    if (providerKey === PROVIDER_KEYS.FIREWORKS) {
+      filtered = filtered.filter(entry => supportsCompletionsByMetadata(entry) !== false);
+    } else if (providerKey === PROVIDER_KEYS.HYPERBOLIC) {
+      filtered = filtered.filter(isHyperbolicCompletionModel);
+    } else if (providerKey === PROVIDER_KEYS.MISTRAL) {
+      filtered = filtered.filter(isMistralFimModel);
+    } else if (providerKey === PROVIDER_KEYS.OPENAI) {
+      filtered = filtered.filter(isOpenAICompletionModel);
+    }
+    return filtered;
   }
 
   // Pull live models from the active provider and render completion-capable options.
@@ -850,13 +858,22 @@
       return;
     }
     const provider = normalizeProviderKey(providerKey);
-    const providerLabel = getProviderOption(provider).label;
+    const providerOption = getProviderOption(provider);
+    const providerLabel = providerOption.label;
+    const curatedEntries = getCuratedModels(provider);
     const key = toTrimmedString(apiKey);
     if (!key) {
       if (stale()) return;
       if (modelPricingById) modelPricingById.clear();
-      renderModelPicker(modelPicker, [], modelPicker.value);
-      writeStatus(statusEl, `Enter a ${providerLabel} API key to load models.`, true);
+      renderModelPicker(modelPicker, curatedEntries, modelPicker.value);
+      if (curatedEntries.length) {
+        writeStatus(
+          statusEl,
+          `Loaded ${curatedEntries.length} documented ${providerLabel} completion model${curatedEntries.length === 1 ? '' : 's'}. Enter an API key before sending.`
+        );
+      } else {
+        writeStatus(statusEl, `Enter a ${providerLabel} API key to load models.`, true);
+      }
       return;
     }
     if (stale()) return;
@@ -865,19 +882,20 @@
     let source = '';
     let keyCatalogError = '';
     try {
-      if (provider === PROVIDER_KEYS.HYPERBOLIC) {
-        entries = await requestHyperbolicModelCatalog(key);
-        source = '/v1/models';
-        entries = entries.filter(isHyperbolicCompletionModel);
-        if (!entries.length) {
-          entries = HYPERBOLIC_FALLBACK_MODELS.slice();
-          source = 'curated catalog';
-        }
-      } else {
+      if (provider === PROVIDER_KEYS.FIREWORKS) {
         entries = await requestFireworksModelCatalog(key);
         source = '/v1/models';
-        entries = entries.filter(isLikelyTextCompletionModel);
-        entries = entries.filter(entry => supportsCompletionsByMetadata(entry) !== false);
+      } else if (providerOption.modelsEndpoint) {
+        entries = await requestProviderModelCatalog(provider, key);
+        source = '/v1/models';
+      } else {
+        entries = curatedEntries;
+        source = 'documented catalog';
+      }
+      entries = filterModelsForProvider(provider, entries);
+      if (!entries.length && curatedEntries.length) {
+        entries = curatedEntries;
+        source = 'documented catalog';
       }
 
       if (excludedModelIds && excludedModelIds.size) {
@@ -894,11 +912,11 @@
       writeStatus(statusEl, `Loaded ${entries.length} completion models from ${providerLabel} ${source}.`);
     } catch (err) {
       if (stale()) return;
-      if (provider === PROVIDER_KEYS.HYPERBOLIC && key && ![401, 403].includes(err?.status)) {
-        const fallbackEntries = HYPERBOLIC_FALLBACK_MODELS.filter(entry => !excludedModelIds?.has(entry.id));
+      if (curatedEntries.length && key && ![401, 403].includes(err?.status)) {
+        const fallbackEntries = curatedEntries.filter(entry => !excludedModelIds?.has(entry.id));
         if (modelPricingById) modelPricingById.clear();
         renderModelPicker(modelPicker, fallbackEntries, modelPicker.value);
-        writeStatus(statusEl, `Loaded ${fallbackEntries.length} fallback Hyperbolic models.`);
+        writeStatus(statusEl, `Loaded ${fallbackEntries.length} documented fallback ${providerLabel} models.`);
         return;
       }
       keyCatalogError = err && err.message ? err.message : 'request failed';
@@ -920,15 +938,15 @@
       presencePenaltyInput,
       frequencyPenaltyInput,
       stopInput,
+      suffixInput,
       apiKeyInput,
       titleInput,
       promptInput
     } = inputs;
     const provider = normalizeProviderKey(providerSelect?.value);
-    const apiKeys = {
-      [PROVIDER_KEYS.FIREWORKS]: toTrimmedString(providerApiKeys?.[PROVIDER_KEYS.FIREWORKS]),
-      [PROVIDER_KEYS.HYPERBOLIC]: toTrimmedString(providerApiKeys?.[PROVIDER_KEYS.HYPERBOLIC])
-    };
+    const apiKeys = createProviderMap(providerKey =>
+      toTrimmedString(providerApiKeys?.[providerKey])
+    );
     apiKeys[provider] = toTrimmedString(apiKeyInput?.value);
     return {
       provider,
@@ -941,6 +959,7 @@
       presencePenalty: readNumberInput(presencePenaltyInput, 0, -2, 2),
       frequencyPenalty: readNumberInput(frequencyPenaltyInput, 0, -2, 2),
       stopText: String(stopInput?.value || ''),
+      suffix: String(suffixInput?.value || ''),
       apiKeys,
       apiKey: apiKeys[provider],
       title: toTrimmedString(titleInput?.value),
@@ -960,6 +979,7 @@
       presencePenaltyInput,
       frequencyPenaltyInput,
       stopInput,
+      suffixInput,
       apiKeyInput,
       titleInput,
       promptInput
@@ -968,21 +988,20 @@
       ? normalizeProviderKey(settings?.provider)
       : DEFAULT_PROVIDER_KEY;
     if (providerSelect) providerSelect.value = nextProvider;
-    const loadedApiKeys = {
-      [PROVIDER_KEYS.FIREWORKS]: '',
-      [PROVIDER_KEYS.HYPERBOLIC]: ''
-    };
+    const loadedApiKeys = createProviderMap('');
     if (settings?.apiKeys && typeof settings.apiKeys === 'object') {
-      loadedApiKeys[PROVIDER_KEYS.FIREWORKS] = toTrimmedString(settings.apiKeys[PROVIDER_KEYS.FIREWORKS]);
-      loadedApiKeys[PROVIDER_KEYS.HYPERBOLIC] = toTrimmedString(settings.apiKeys[PROVIDER_KEYS.HYPERBOLIC]);
+      PROVIDER_KEY_LIST.forEach(providerKey => {
+        loadedApiKeys[providerKey] = toTrimmedString(settings.apiKeys[providerKey]);
+      });
     }
     const legacyApiKey = toTrimmedString(settings?.apiKey);
     if (legacyApiKey && !loadedApiKeys[nextProvider]) {
       loadedApiKeys[nextProvider] = legacyApiKey;
     }
     if (providerApiKeys) {
-      providerApiKeys[PROVIDER_KEYS.FIREWORKS] = loadedApiKeys[PROVIDER_KEYS.FIREWORKS];
-      providerApiKeys[PROVIDER_KEYS.HYPERBOLIC] = loadedApiKeys[PROVIDER_KEYS.HYPERBOLIC];
+      PROVIDER_KEY_LIST.forEach(providerKey => {
+        providerApiKeys[providerKey] = loadedApiKeys[providerKey];
+      });
     }
     if (endpointInput) endpointInput.value = normalizeEndpoint(settings?.endpoint, nextProvider);
     if (modelPicker) {
@@ -997,6 +1016,7 @@
     if (presencePenaltyInput) presencePenaltyInput.value = String(readNumberInput({ value: settings?.presencePenalty }, 0, -2, 2));
     if (frequencyPenaltyInput) frequencyPenaltyInput.value = String(readNumberInput({ value: settings?.frequencyPenalty }, 0, -2, 2));
     if (stopInput) stopInput.value = String(settings?.stopText || '');
+    if (suffixInput) suffixInput.value = String(settings?.suffix || '');
     if (apiKeyInput) apiKeyInput.value = loadedApiKeys[nextProvider];
     if (titleInput) titleInput.value = toTrimmedString(settings?.title);
     if (promptInput) promptInput.value = String(settings?.prompt || '');
@@ -1058,6 +1078,7 @@
 
     const providerSelect = root.querySelector('.openrouter-provider');
     const endpointInput = root.querySelector('.openrouter-endpoint');
+    const providerNote = root.querySelector('.openrouter-provider-note');
     const modelPicker = root.querySelector('.openrouter-model-picker');
     const maxTokensInput = root.querySelector('.openrouter-max-tokens');
     const temperatureInput = root.querySelector('.openrouter-temperature');
@@ -1071,6 +1092,8 @@
     const frequencyPenaltyInput = root.querySelector('.openrouter-frequency-penalty');
     const frequencyPenaltyValue = root.querySelector('.openrouter-frequency-penalty-value');
     const stopInput = root.querySelector('.openrouter-stop');
+    const suffixBlock = root.querySelector('.openrouter-suffix-block');
+    const suffixInput = root.querySelector('.openrouter-suffix');
     const apiKeyInput = root.querySelector('.openrouter-api-key');
     const titleInput = root.querySelector('.openrouter-title');
     const promptInput = root.querySelector('.openrouter-prompt');
@@ -1081,18 +1104,9 @@
     const loadSettingsFileInput = root.querySelector('.openrouter-load-settings-file');
     const outputEl = root.querySelector('.openrouter-output-text');
     const statusEl = root.querySelector('.openrouter-status');
-    const providerApiKeys = {
-      [PROVIDER_KEYS.FIREWORKS]: '',
-      [PROVIDER_KEYS.HYPERBOLIC]: ''
-    };
-    const excludedModelIdsByProvider = {
-      [PROVIDER_KEYS.FIREWORKS]: new Set(),
-      [PROVIDER_KEYS.HYPERBOLIC]: new Set()
-    };
-    const modelPricingByProvider = {
-      [PROVIDER_KEYS.FIREWORKS]: new Map(),
-      [PROVIDER_KEYS.HYPERBOLIC]: new Map()
-    };
+    const providerApiKeys = createProviderMap('');
+    const excludedModelIdsByProvider = createProviderMap(() => new Set());
+    const modelPricingByProvider = createProviderMap(() => new Map());
     let activeProvider = normalizeProviderKey(providerSelect?.value);
     let modelLoadRequestToken = 0;
 
@@ -1117,6 +1131,22 @@
         endpointInput.value = defaultEndpointForProvider(activeProvider);
       }
     };
+    const syncProviderCapabilities = () => {
+      const provider = getProviderOption(activeProvider);
+      if (providerNote) providerNote.textContent = provider.capabilityNote || '';
+      if (suffixBlock) suffixBlock.classList.toggle('is-hidden', !provider.supportsSuffix);
+      if (suffixInput) suffixInput.disabled = !provider.supportsSuffix;
+      if (topKInput) topKInput.disabled = !provider.supportsTopK;
+      if (presencePenaltyInput) presencePenaltyInput.disabled = !provider.supportsPenalties;
+      if (frequencyPenaltyInput) frequencyPenaltyInput.disabled = !provider.supportsPenalties;
+      if (maxTokensInput) {
+        maxTokensInput.max = String(provider.maxTokens || 200000);
+        const currentMax = Math.max(0, Number(maxTokensInput.value) || 0);
+        if (provider.maxTokens && currentMax > provider.maxTokens) {
+          maxTokensInput.value = String(provider.maxTokens);
+        }
+      }
+    };
     const loadModelsForProvider = (providerKey, apiKey) => {
       const requestedProvider = normalizeProviderKey(providerKey);
       const requestToken = ++modelLoadRequestToken;
@@ -1136,6 +1166,7 @@
     };
 
     const syncSliderValues = () => {
+      const provider = getProviderOption(activeProvider);
       const topP = Number(topPInput?.value);
       const topK = Number(topKInput?.value);
       const presencePenalty = Number(presencePenaltyInput?.value);
@@ -1152,21 +1183,21 @@
         topKValue.textContent = formatDisableableSliderValue(
           topKInput?.value,
           0,
-          Number.isFinite(topK) && topK <= 0
+          !provider.supportsTopK || (Number.isFinite(topK) && topK <= 0)
         );
       }
       if (presencePenaltyValue) {
         presencePenaltyValue.textContent = formatDisableableSliderValue(
           presencePenaltyInput?.value,
           1,
-          Number.isFinite(presencePenalty) && presencePenalty === 0
+          !provider.supportsPenalties || (Number.isFinite(presencePenalty) && presencePenalty === 0)
         );
       }
       if (frequencyPenaltyValue) {
         frequencyPenaltyValue.textContent = formatDisableableSliderValue(
           frequencyPenaltyInput?.value,
           1,
-          Number.isFinite(frequencyPenalty) && frequencyPenalty === 0
+          !provider.supportsPenalties || (Number.isFinite(frequencyPenalty) && frequencyPenalty === 0)
         );
       }
     };
@@ -1180,6 +1211,7 @@
     bindSliderValue(topKInput);
     bindSliderValue(presencePenaltyInput);
     bindSliderValue(frequencyPenaltyInput);
+    syncProviderCapabilities();
     syncSliderValues();
 
     if (titleInput && !toTrimmedString(titleInput.value)) {
@@ -1197,6 +1229,8 @@
         activeProvider = normalizeProviderKey(providerSelect.value);
         syncApiKeyInputFromProvider();
         syncEndpointForProvider(previousProvider);
+        syncProviderCapabilities();
+        syncSliderValues();
         renderModelPicker(modelPicker, [], '');
         loadModelsForProvider(activeProvider, providerApiKeys[activeProvider]);
       });
@@ -1222,6 +1256,7 @@
       presencePenaltyInput,
       frequencyPenaltyInput,
       stopInput,
+      suffixInput,
       apiKeyInput,
       titleInput,
       promptInput
@@ -1291,8 +1326,9 @@
           const payload = await readEncryptedSettingsFile(file);
           const settings = await decryptSettings(password, payload);
           const loadedProvider = applyOpenRouterSettings(settingsInputs, settings, providerApiKeys);
-          syncSliderValues();
           activeProvider = normalizeProviderKey(loadedProvider);
+          syncProviderCapabilities();
+          syncSliderValues();
           await loadModelsForProvider(activeProvider, providerApiKeys[activeProvider]);
           if (modelPicker) {
             const requestedModel = toTrimmedString(settings?.model);
@@ -1361,8 +1397,12 @@
         providerApiKeys[providerKey] = apiKey;
         const model = toTrimmedString(modelPicker?.value);
         const prompt = promptInput?.value || '';
+        const suffix = providerSupports(providerKey, 'supportsSuffix')
+          ? String(suffixInput?.value || '')
+          : '';
         const endpoint = normalizeEndpoint(endpointInput?.value, providerKey);
-        const maxTokens = Math.round(readNumberInput(maxTokensInput, 0, 0, 200000));
+        const providerMaxTokens = getProviderOption(providerKey).maxTokens || 200000;
+        const maxTokens = Math.round(readNumberInput(maxTokensInput, 0, 0, providerMaxTokens));
         const temperature = readNumberInput(temperatureInput, 1, 0, 2);
         const topP = readNumberInput(topPInput, 0, 0, 1);
         const topK = Math.round(readNumberInput(topKInput, 0, 0, TOP_K_MAX));
@@ -1401,6 +1441,7 @@
             apiKey,
             model,
             prompt,
+            suffix,
             maxTokens,
             temperature,
             topP,

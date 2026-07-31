@@ -10,6 +10,7 @@
   // - UI helpers + audited Help Mode coverage + event wiring
   // - Procedural wallpaper rendering + background-only input + touch momentum
   // - Window management + pointer-anchored drag + frame resize + shared Snap layout
+  // - Public desktop manifest + app-operation bridge for tool harnesses
   // - App module hooks + shared Help
   // - Initialization
 
@@ -4414,23 +4415,55 @@
     return state;
   }
 
+  // This manifest is both the shell's launch table and Terminal's source of
+  // truth. Descriptions spell out each automation boundary so a tool-using
+  // model can distinguish full adapters from iframe-only open/focus access.
   const WINDOW_DEFS = {
-    prompts: { templateId: 'window-prompts-template', label: 'Prompt Enhancer', icon: 'icon-prompts' },
-    audio: { templateId: 'window-audio-template', label: 'Audio Interpolator', icon: 'icon-audio' },
+    prompts: {
+      templateId: 'window-prompts-template',
+      label: 'Prompt Enhancer',
+      icon: 'icon-prompts',
+      description: 'Build, inspect, replace, and generate nested prompt mixes through native Terminal tools.'
+    },
+    audio: {
+      templateId: 'window-audio-template',
+      label: 'Audio Interpolator',
+      icon: 'icon-audio',
+      description: 'Open or focus the embedded Audio Interpolator; its cross-origin controls do not yet expose a tool adapter.'
+    },
     openrouter: {
       templateId: 'window-openrouter-template',
       label: 'Completion API',
       icon: 'icon-openrouter',
-      appKey: 'openrouter-completions'
+      appKey: 'openrouter-completions',
+      description: 'Send prompt-only raw text or FIM requests without a messages array.'
     },
-    diskrot: { templateId: 'window-diskrot-template', label: '///diskrot', icon: 'icon-diskrot' },
-    about: { templateId: 'window-about-template', label: 'About', icon: 'icon-about' }
+    terminal: {
+      templateId: 'window-terminal-template',
+      label: 'Terminal',
+      icon: 'icon-terminal',
+      appKey: 'terminal',
+      description: 'Chat with a tool-using desktop operator backed by a user-supplied provider API key.'
+    },
+    diskrot: {
+      templateId: 'window-diskrot-template',
+      label: '///diskrot',
+      icon: 'icon-diskrot',
+      description: 'Open or focus the embedded diskrot site; cross-origin page controls are not exposed as tools.'
+    },
+    about: {
+      templateId: 'window-about-template',
+      label: 'About',
+      icon: 'icon-about',
+      description: 'Show project information.'
+    }
   };
 
   const windowCounts = {
     prompts: 0,
     audio: 0,
     openrouter: 0,
+    terminal: 0,
     diskrot: 0,
     about: 0
   };
@@ -5060,7 +5093,7 @@
 
   function focusWindow(instanceId) {
     const win = getWindowByInstance(instanceId);
-    if (!win) return;
+    if (!win) return false;
     win.classList.remove('is-hidden');
     win.classList.remove('is-collapsed');
     if (isMobileLayout() || win.dataset.mobileManaged === 'true') applyMobileWindowState(win);
@@ -5079,6 +5112,7 @@
       taskBtn.classList.add('active');
     }
     syncWindowSnapDividers();
+    return true;
   }
 
   function toggleWindow(instanceId) {
@@ -5141,10 +5175,10 @@
 
   function openWindow(windowType) {
     const def = WINDOW_DEFS[windowType];
-    if (!def) return;
+    if (!def) return '';
     closeWindowSnapAssist();
     const template = document.getElementById(def.templateId);
-    if (!template) return;
+    if (!template) return '';
     windowCounts[windowType] = (windowCounts[windowType] || 0) + 1;
     const instanceId = `${windowType}-${windowCounts[windowType]}`;
     const clone = template.cloneNode(true);
@@ -5162,7 +5196,7 @@
     clone.querySelectorAll('[data-delimiter-init]').forEach(el => el.removeAttribute('data-delimiter-init'));
     clone.querySelectorAll('[data-size-init]').forEach(el => el.removeAttribute('data-size-init'));
     const area = document.getElementById('window-area');
-    if (!area) return;
+    if (!area) return '';
     area.appendChild(clone);
     const computedHeight = window.getComputedStyle(clone).height;
     if (computedHeight && !clone.style.height) {
@@ -5206,11 +5240,12 @@
     setupHelpMode(clone);
     syncCollapseButtons(clone);
     focusWindow(instanceId);
+    return instanceId;
   }
 
   function closeWindow(instanceId) {
     const win = getWindowByInstance(instanceId);
-    if (!win) return;
+    if (!win) return false;
     closeWindowSnapAssist();
     win.remove();
     const bar = document.getElementById('taskbar');
@@ -5218,6 +5253,7 @@
     if (taskBtn) taskBtn.remove();
     if (currentFocusInstance === instanceId) currentFocusInstance = null;
     syncWindowSnapDividers();
+    return true;
   }
 
   function setupWindowControls() {
@@ -5665,6 +5701,46 @@
     window.addEventListener('orientationchange', handler);
   }
 
+  // ======== Public desktop bridge ========
+
+  // Tool harnesses receive a data-only manifest rather than the mutable shell
+  // table. Each call returns new records, so an app cannot rewrite another
+  // app's template id, icon, label, or launch behavior by holding a reference.
+  function listDesktopApplications() {
+    return Object.entries(WINDOW_DEFS).map(([key, definition]) => ({
+      key,
+      label: definition.label,
+      icon: definition.icon,
+      description: definition.description || ''
+    }));
+  }
+
+  // Runtime records are deliberately small: Terminal needs exact instance ids
+  // for focus/open coordination, while window DOM nodes stay owned by the shell.
+  function listDesktopWindows() {
+    if (typeof document === 'undefined') return [];
+    return Array.from(document.querySelectorAll('.app-window:not(.window-template)')).map(win => ({
+      instanceId: win.dataset.instance || '',
+      application: win.dataset.window || '',
+      label: win.dataset.windowLabel || '',
+      hidden: win.classList.contains('is-hidden'),
+      focused: win.classList.contains('is-focused')
+    }));
+  }
+
+  // This narrow command surface is the app-operation contract. It reuses the
+  // same launch/focus/close functions as mouse UI, preserving taskbar, Help,
+  // z-index, app initialization, and window cleanup invariants for tool calls.
+  const desktopApi = Object.freeze({
+    listApplications: listDesktopApplications,
+    listWindows: listDesktopWindows,
+    openApplication: application => openWindow(toTrimmedString(application)),
+    focusApplication: instanceId => focusWindow(toTrimmedString(instanceId)),
+    closeApplication: instanceId => closeWindow(toTrimmedString(instanceId))
+  });
+
+  if (typeof window !== 'undefined') window.YolkDesktop = desktopApi;
+
   const api = {
     buildDelimiterRegex,
     parseInput,
@@ -5688,6 +5764,11 @@
     contrastRatio,
     isWallpaperBackgroundTarget,
     setupProceduralWallpaper,
+    listDesktopApplications,
+    listDesktopWindows,
+    openWindow,
+    focusWindow,
+    closeWindow,
     WALLPAPER_SHAPE_TYPES,
     BOX_PATTERN_FAMILIES,
     BOX_PATTERN_PROFILES,

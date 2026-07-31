@@ -11,6 +11,18 @@ Favor side-effect free helpers grouped together and keep UI logic separate. Docu
 This monolithic style is intentional to simplify searching for issues when working alongside an LLM. Comments should be thorough so each file acts as an outline of program flow.
 Add a short table of contents at the top of `script.js` and each app module file, and keep them updated. Follow the **50% Rule**—small, clear comments and improvements accumulate into dependable code.
 
+### Completion and Terminal application contracts
+
+`apps/openrouter-completions/app.js` now owns the multi-provider Completion API window despite its legacy folder name. Treat its body shape as a hard invariant: `prompt` is required, `messages` is forbidden, and `suffix` is provider-gated to documented FIM routes. Provider option records are the single capability matrix for endpoints, catalogs, response shapes, sampling controls, and token caps. A non-chat endpoint does not by itself prove that a router preserves raw model input, so keep provider/model caveats visible. Completion and Terminal both delegate password-file cryptography to `apps/shared/encrypted-settings.js`; keep its versioned PBKDF2/AES-GCM envelope product-neutral and put each app's schema/kind validation inside that app.
+
+`apps/terminal/app.js` owns Chat Completions, OpenAI Responses, and native Anthropic Messages transport loops, `window.YolkToolRegistry`, built-in desktop/Prompt Enhancer adapters, `window.YolkTerminalKnowledge`, transcript rendering, model matching, encrypted settings application, and ASCII emotes. `script.js` exposes the data-only `window.YolkDesktop` manifest plus open/focus/close bridge; app tools must reuse that bridge instead of simulating menu clicks. Keep cross-origin iframe applications open/focus-only until they install an explicit adapter, cap tool loops, and serialize/truncate tool output. Provider keys stay in the cloned Terminal window's memory unless the user explicitly exports the password-encrypted File-menu artifact.
+
+Terminal connection setup is part of the conversation, not a form beside it. Keep one terminal surface, one persistent single-line face, one transparent inline textarea, and one stage-swapped masked password input. Enter submits; there is no Send button or boxed composer. Required-key first runs follow provider → key → live model discovery → model; custom-compatible first runs follow provider → endpoint → model. The live query must use the just-entered provider key, list only models with tool support that can be established from provider metadata or conservative curated IDs, and prioritize economical choices (currently DeepSeek V4 Flash and GPT-5.6 Luna) over flagship models. Treat 401/403 as a rejected credential and return to the masked key stage; for network, CORS, malformed, or undocumented-catalog failures, keep the key and present the curated fallback. Provider choices accept numbers or forgiving names; the full active catalog remains searchable even when only eight choices are printed. Model resolution accepts numbers, exact ids/names/aliases, a unique typo confirmation, or a ranked shortlist with an explicit use-as-typed entry for models newer than the catalog. `/models` refreshes discovery and `/model [search]` re-enters the resolver. A task entered before setup remains queued and resumes after model selection. The key stage uses a conservative completeness guard: reject short values, whitespace, and menu-like numbers without echoing or storing them. `/providers` must switch `setupStage` back to `provider`, out-of-range provider numbers must stay in that stage, and a complete local configuration is **ready** rather than proven connected. Never offer consumer-session-token reuse. Add infrequent actions as slash commands (for example `/copy`, `/model`, or `/disconnect`) instead of permanent buttons. The only permanent Terminal app control is the standard gray File launcher for encrypted settings; do not restore the redundant Help button or app-brand strip. Visible copy must ask only necessary questions and report human-readable outcomes: do not print security rationale, prompt intent, registry/document counts, transport mechanics, provider notes, raw function names, or serialized tool results. Keep those contracts in code and documentation, and place detailed connection state behind `/status`.
+
+The face is also Terminal's restrained speaking indicator. Preserve the readable seven-character ASCII state, but render visible brackets, eyes, and mouth as separate baseline-independent paths in the immutable `0 0 84 20` SVG viewBox. Both eye paths share the upper feature line and every mouth path stays on its lower anchor, so punctuation depth, cap height, fallback fonts, and bearings cannot reorder the face. Speech may replace only the mouth path; CSS animation remains paint-only (glow, opacity, or color) and must never transform the viewBox. Sample assistant copy into at most eighteen broad vowel poses, favor one held pose per word with only occasional second poses and phrase rests, while a low-volume filtered oscillator pair supplies a nonverbal murmur. Prime Web Audio only from Enter, treat failures as ornamental no-ops, never call speech synthesis or encode/read the answer as speech, and preserve `/sound on|off` plus reduced-motion behavior. A later answer or explicit `/face` command cancels the prior face/audio sequence so effects cannot accumulate.
+
+These two modes must remain separate. Completion is for perspective-controlled continuation; Terminal is for role-structured conversation and function calls. When adding a provider, document which contract it supports and add a body-shape regression before exposing it in the UI.
+
 ## Applying the 50% Rule to LLM Collaboration
 
 The 50% Rule in this context means diversifying token combinations to reinforce semantic meaning. When making changes, use multiple "attack angles" to document them:
@@ -191,8 +203,10 @@ for variables and Completion output). Key rules for future changes:
   `.prompt-body`). Any new inner scroll region must use `overflow-y: auto;`.
   The wallpaper simulates endless travel with a virtual world offset; it must
   not make the page or decorative layer into another native scroll region.
-- Primary actions (`.holo-generate`, `.openrouter-send`) share the beveled
-  slab + pixel font + rainbow strip treatment; keep new CTAs consistent.
+- Primary button actions (`.holo-generate`, `.openrouter-send`) share the beveled
+  slab + pixel font + rainbow strip treatment; keep new CTAs consistent. Terminal
+  is intentionally the exception: its inline prompt runs on Enter and carries a
+  short rainbow cursor-mark instead of a button.
 - Wallpaper accents start from the shared `--w31-confetti-*` palette, while
   procedural backdrop and shape colors stay scoped to `.desktop-confetti` so
   the yolk mark and CTA strips do not drift with the wallpaper. Keep shapes
@@ -213,7 +227,7 @@ for variables and Completion output). Key rules for future changes:
   visibility loss, or reduced motion must cancel that glide, while multi-touch
   remains available for browser pinch zoom.
 - Help mode uses the WinHelp-style yellow tooltip (`--w31-tooltip`).
-- App file strips share `.prompt-menu` and a right-side Help control. Workspace
+- App file strips share `.prompt-menu`; Prompt and Completion retain a right-side Help control, while Terminal intentionally keeps only its File launcher. Workspace
   canvases meet that strip directly: keep the outer prompt `.box-body` at
   `gap: 0` so the generic box rhythm cannot create an artifact bar. Generated
   API output reuses the miniature box header and 26x24 `.copy-output` feedback

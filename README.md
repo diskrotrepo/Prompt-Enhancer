@@ -8,6 +8,69 @@ Window apps can register from dedicated monolithic files under `src/apps/` throu
 
 The code is intentionally kept in a single `script.js` file so an LLM can search through the entire logic easily. Comments and a small table of contents guide navigation. Following the **50% Rule**, even small clarifications or tests compound into a much more reliable project.
 
+## Completion API: prompt-only providers
+
+The **Completion API** start-menu app is for continuation-oriented requests. Every provider adapter sends a top-level `prompt` and never sends a `messages` array. FIM adapters may additionally send `suffix`. The app rejects `/chat/completions` endpoints so a copied chat URL cannot silently change the request contract.
+
+Provider support was checked against official documentation on **2026-07-31**:
+
+| Provider | Default route | Continuation contract | Important caveat |
+| --- | --- | --- | --- |
+| [OpenRouter](https://openrouter.ai/docs/faq) | `/api/v1/completions` | OpenAI-compatible legacy text completion with `prompt` | The route itself is non-chat, but OpenRouter can route any catalog model. A chat-trained model may still be adapted upstream, so use a base/FIM-oriented model when exact continuation perspective matters. OpenRouter also labels this route [legacy text completions](https://openrouter.ai/docs/guides/features/router-metadata). |
+| [DeepSeek](https://api-docs.deepseek.com/guides/fim_completion/) | `/beta/completions` | Native FIM `prompt` plus optional `suffix` | Currently documented with `deepseek-v4-pro`; FIM output is capped at 4K tokens. |
+| [Fireworks](https://docs.fireworks.ai/guides/completions-api) | `/inference/v1/completions` | Raw text generation without automatic message formatting | Model/template behavior still matters; base models provide the cleanest continuation semantics. |
+| [Together AI](https://docs.together.ai/reference/completions) | `/v1/completions` | One `prompt`; returned text is `choices[].text` | Select an appropriate base model or supply the complete prompt template yourself. |
+| [Mistral](https://docs.mistral.ai/fr/api/endpoint/fim) | `/v1/fim/completions` | Native FIM `prompt` plus optional `suffix` | The request is non-chat, although the current API wraps text in `choices[].message.content`. |
+| [OpenAI API](https://developers.openai.com/api/docs/models/gpt-3.5-turbo-instruct) | `/v1/completions` | Legacy prompt completion | Current flagship models use Responses; the remaining completion-only `gpt-3.5-turbo-instruct` model is deprecated. |
+| [Hyperbolic](https://www.hyperbolic.ai/docs/inference/text-apis) | `/v1/completions` | Raw base-model text completion without chat formatting | The documented Llama 3.1 405B base model carries a sunset notice, so this adapter may lose its only curated model before the endpoint disappears. |
+
+This distinction is deliberately precise: a JSON request with `prompt` instead of `messages` proves that the client is not forcing chat structure, but only a provider/model that preserves the raw prompt can guarantee tokenizer-level continuation behavior. The Jest provider matrix asserts each emitted body and the Mistral response adapter; live requests still require the user's own provider key and available model.
+
+### ChatGPT, Codex, and API credits
+
+OpenAI's [ChatGPT and API billing are separate](https://help.openai.com/en/articles/9039756-billing-settings-in-chatgpt-vs-platform). A ChatGPT subscription does not fund general Platform API calls, and current ChatGPT flexible credits are limited to [supported features such as Codex and ChatGPT for Excel](https://help.openai.com/en/articles/12642688-using-credits-for-flexible-usage-in-chatgpt-free-go-plus-pro). Use an OpenAI Platform API key with Platform billing for this app. Likewise, OpenRouter, DeepSeek, Fireworks, Together, Mistral, and Hyperbolic each require their own provider key and provider-side balance. Provider credentials are kept in memory unless the user explicitly downloads an encrypted Completion settings file.
+
+## Terminal: tool-using chat harness
+
+**Terminal** is the low-clutter, ordinary-language way to use Yolk. A conventional gray **File** strip sits above one black console field containing a centered animated face, the transcript, and a transparent inline prompt; the redundant app-brand and Help buttons are absent. There is no session dashboard, bordered composer, or Send button: click the prompt, type, and press Enter. A short rainbow cursor-mark carries the desktop's color language without breaking the terminal illusion.
+
+Connection setup follows one visible decision tree. For hosted providers, choose the provider and paste its masked API key; Terminal then asks that provider for the models currently available to the account and presents the model choice. A custom-compatible server instead asks for its endpoint and model directly. The printed list is capped at eight clean choices, while name/id search covers the full fetched catalog. A known id, display name, or alias selects directly; a close typo such as `sonet` prompts one “Did you mean?” confirmation; a broad search such as `gpt` returns several ranked matches. The last choice always allows the entered model id exactly, so a newly released model is usable even when metadata is incomplete. `/models` refreshes the live catalog and `/model [search]` runs the same resolver. A rejected catalog credential returns to the masked key line; a network or browser-CORS failure keeps the key and offers the verified fallback list. `/providers` deliberately returns to provider choice, while the key step rejects incomplete or menu-like values without echoing them. Finishing setup reports **Ready**. If a user types the actual task before setup, Terminal holds it and runs it automatically after model selection. `/copy` copies the last Yolk answer; `/help` prints the optional command guide inside the transcript without adding permanent chrome.
+
+Live discovery uses the providers' documented model-list routes for [OpenRouter](https://openrouter.ai/docs/api/api-reference/models/get-models), [DeepSeek](https://api-docs.deepseek.com/api/list-models), [OpenAI](https://developers.openai.com/api/docs/models), [Anthropic](https://platform.claude.com/docs/en/api/models/list), [Fireworks](https://docs.fireworks.ai/tools-sdks/python-client/api-reference), [Together](https://docs.together.ai/docs/inference/openai-compatibility), and [Mistral](https://docs.mistral.ai/api/endpoint/models). OpenRouter requests tool-capable models in low-price order; provider capability metadata is honored where available, and capability-opaque Fireworks/Together lists are intersected with known function-calling choices. Hyperbolic retains a documented curated fallback because its public inference guide does not establish a generic list route. Fallback recommendations were checked on **2026-07-31** and intentionally favor sufficient, economical tool use over benchmark flagships: [DeepSeek V4 Flash](https://api-docs.deepseek.com/news/news260424/) comes first for DeepSeek and OpenRouter, and [GPT-5.6 Luna](https://developers.openai.com/api/docs/models/gpt-5.6-luna) comes first for OpenAI and OpenRouter. Luna's listed $1/$6 per-million input/output prices are 80% below [GPT-5.6 Sol's](https://developers.openai.com/api/docs/models/gpt-5.6-sol) $5/$30, while both support function calling.
+
+Visible Terminal copy stays user-facing. It does not print prompt rationale, security architecture, transport mechanics, registry/document counts, provider implementation notes, raw function names, or serialized tool results. Those details remain in code and documentation; `/status` exposes connection details on demand. The face retains one seven-character ASCII value for semantics, while the visible brackets, eyes, and mouth are crisp path glyphs inside a single fixed viewBox that scales with the Terminal container instead of wrapping when the window narrows.
+
+Assistant lines give that face a brief speaking life. The two eye paths stay on one upper feature line and every mouth shape—open `O`, small `o`, wave, dash, smile, or rest—stays on a separate lower anchor. Animation swaps only path data, so font cap height, punctuation baselines, and glyph bearings cannot make a mouth jump above the eyes. Paint-only glow/opacity leaves the coordinate system physically still. Most words receive one held pose; only longer words may add a distinct second pose, with short phrase rests and an eighteen-frame cap for a calmer cadence. A filtered triangle/square oscillator pair makes the accompanying quiet, muffled computer murmur. This is intentionally nonverbal—there is no TTS, recorded voice, response-text playback, or external audio service. Browsers unlock the sound on the first Enter gesture; `/sound off` and `/sound on` control it without adding another button. A new answer or explicit `/face` command cancels the previous sequence, and reduced-motion mode leaves the face static.
+
+Terminal is intentionally separate from Completion API. Tool calling needs structured assistant calls and tool-result records, so it uses OpenAI Responses for OpenAI, native Claude Messages blocks for Anthropic, and OpenAI-compatible Chat Completions for OpenRouter, DeepSeek, Fireworks, Together, Mistral, Hyperbolic, or a custom endpoint. The Anthropic adapter returns every `tool_use` as the matching next-message `tool_result`; all transports share the same eight-round local registry cap.
+
+There is no supported general-purpose “use my consumer subscription” login to embed here. OpenAI keeps [ChatGPT and API billing separate](https://help.openai.com/en/articles/9039756), and ChatGPT flexible credits currently apply only to [supported ChatGPT features](https://help.openai.com/en/articles/12642688). Anthropic likewise says third-party products should use [Claude Console API-key authentication](https://support.claude.com/en/articles/13189465-log-in-to-your-claude-account), while Claude subscription OAuth is for native Anthropic surfaces such as Claude Code. `/login openai` and `/login anthropic` explain this boundary and continue into the correct key wizard; Yolk never asks for an account password or reuses a consumer session token.
+
+Keys remain only in that Terminal window's memory unless the user explicitly chooses **File → Save Encrypted Settings**. That action saves the active provider plus every provider-scoped endpoint, selected model, and API key in a password-encrypted JSON file; **File → Open Encrypted Settings** restores it and resumes at the first incomplete setup step. A complete restored provider/key/model becomes ready immediately rather than making a redundant catalog call, while `/models` remains the explicit refresh path. Terminal and Completion API use the same versioned PBKDF2-SHA-256/AES-GCM envelope in `src/apps/shared/encrypted-settings.js`; Terminal also validates its own decrypted kind and schema before applying provider state. The plaintext settings are not written to browser storage. Requests still go directly from the browser to the selected endpoint. This direct-browser BYOK build is appropriate for private/local use, but provider keys should live behind a server-side secret store before a public deployment. OpenAI's own [API authentication guidance](https://platform.openai.com/docs/api-reference/authentication) warns against exposing keys in client code; Anthropic supports direct `x-api-key` requests but likewise recommends secure secret storage in its [authentication guide](https://platform.claude.com/docs/en/manage-claude/authentication).
+
+The first harness exposes nine tools:
+
+- list desktop applications and runtime windows;
+- open an application or focus an exact window instance;
+- read, replace, generate, and inspect Prompt Enhancer state/output;
+- search the future Terminal knowledge corpus; and
+- set the animated ASCII face to idle, smile, happy, thinking, surprised, sad, cry, or playful sinister.
+
+`window.YolkDesktop` is the shell-owned manifest and open/focus/close bridge. `window.YolkToolRegistry.register(definition, handler)` is the extension seam for future native apps. Audio Interpolator and diskrot are cross-origin iframes today, so Terminal can open or focus them but does not pretend it can operate their internal controls until those apps install explicit adapters.
+
+The future reference corpus has a ready insertion contract without fabricated starter content:
+
+```js
+window.YolkTerminalKnowledge.registerDocument({
+  id: 'stable-source-id',
+  title: 'Tool guide',
+  text: 'Full normalized transcription or guide text...',
+  tags: ['prompting', 'audio']
+});
+```
+
+`knowledge_search` ranks those registered documents and tells the model the installed document count. Until Patreon material or other sources are supplied, that count stays zero and the system prompt explicitly forbids inventing missing material.
+
 ## Length handling model
 
 Mix and string generation follow this pipeline:
@@ -241,6 +304,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Every visible Prompt control, title-bar icon, and resize handle has specific Help copy plus accessible icon labels** — `help_copy_coverage`, `tests/dom.test.js`
 - **Proportional Dropout Help explains relative-progress scheduling, local randomized windows, and unchanged child chunks** — `help_copy_coverage`
 - **Completion Help matches encrypted password prompts, all saved settings, provider-specific Top-k behavior, local-only Title, and token/cost status** — `openrouter_app_window`, `tests/dom.test.js`
+- **Terminal removes its redundant Help button while retaining precise accessibility guidance on the inline prompt, masked key step, centered speaking face, `/sound` control, File actions, and title-bar controls** — `terminal_app_window`, `tests/dom.test.js`
 
 #### Window apps
 
@@ -257,10 +321,23 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Completion API encrypted settings actions live in the top file menu (password + file save/open)** — `openrouter_app_window`
 - **Completion API reuses the shell Help mode and standard boxed copy control** — `openrouter_app_window`
 - **Completion copy feedback preserves the token and cost status readout** — `tests/openrouterApp.test.js`
-- **Completion API model picker is dropdown-only and filtered to completion-oriented models (chat/instruct models excluded)** — `openrouter_app_window`
+- **Completion API model picker is dropdown-only, provider-scoped, and uses documented fallback models where live catalogs cannot express raw/FIM compatibility** — `openrouter_app_window`, `tests/openrouterApp.test.js`
 - **Completion API status breaks out billed input/output/total tokens and request cost when usage data is available** — `openrouter_app_window`
 - **Completion API treats empty completion text as a successful blank response when stop sequences halt immediately** — `tests/openrouterApp.test.js`
 - **Completion API copies intentionally blank output without treating it as failure** — `tests/openrouterApp.test.js`
+- **OpenRouter, Fireworks, Together, OpenAI legacy, and Hyperbolic adapters emit `prompt` with no `messages`; DeepSeek and Mistral add only optional FIM `suffix`** — `tests/openrouterApp.test.js`
+- **Provider capability controls omit unsupported Top-k/penalty fields, cap DeepSeek FIM output at 4K, and adapt Mistral's message-wrapped FIM response without changing its request shape** — `tests/openrouterApp.test.js`
+- **Terminal appears in the start menu as one phosphor console with only a standard gray File launcher as permanent app chrome, a centered container-scaled one-line ASCII face, transparent normal and masked Enter-driven prompts, nine hidden tools, and an empty knowledge seam** — `terminal_app_window`, `tests/terminalApp.test.js`, `tests/dom.test.js`
+- **Assistant lines drive at most eighteen calmly paced mouth poses inside one fixed 84x20 viewBox; eyes retain upper anchors, every mouth path retains its lower anchor independent of font metrics, and `/face` cancels leftover speech before applying a canonical emote** — `terminal_app_window`, `tests/terminalApp.test.js`, `tests/dom.test.js`
+- **The quiet Enter-unlocked procedural murmur follows the same bounded phrase plan; `/sound on|off` controls it without TTS, recordings, external audio, or new permanent controls** — `terminal_app_window`, `tests/terminalApp.test.js`, `tests/dom.test.js`
+- **Terminal presentation never prints security/prompt rationale, harness counts, provider notes, raw function names, or tool-result records; connection detail is available only on request through `/status`** — `terminal_app_window`, `tests/terminalApp.test.js`
+- **Terminal provider → key → live model setup is a transcript-driven decision tree; authenticated catalogs prioritize DeepSeek V4 Flash and GPT-5.6 Luna, keep the full returned set searchable, and fall back to conservative tool-capable choices when discovery is unavailable** — `terminal_app_window`, `tests/terminalApp.test.js`
+- **DeepSeek and every required-key path reject incomplete or menu-like credentials, catalog 401/403 responses return to the masked field, `/providers` changes the active stage, and provider range errors remain selectable** — `terminal_app_window`, `tests/terminalApp.test.js`
+- **Terminal File → Save/Open roundtrips every provider-scoped model, endpoint, and API key through the shared password-encrypted envelope without exposing plaintext or redundantly refreshing a complete restored catalog** — `terminal_app_window`, `tests/terminalApp.test.js`
+- **Masked secrets never echo, provider endpoints remain scoped, and a task typed before provider setup resumes automatically when the fields are ready** — `terminal_app_window`, `tests/terminalApp.test.js`
+- **Terminal loops OpenAI-compatible chat calls, OpenAI Responses function calls, and native Anthropic Messages `tool_use`/`tool_result` blocks through the same local registry until final text or the eight-round safety cap** — `tests/terminalApp.test.js`
+- **Terminal `/copy` provides copy convenience without adding another permanent button to the command surface** — `tests/terminalApp.test.js`
+- **Terminal Prompt Enhancer tools can open a fresh prompt window, replace its state, generate, and return exact visible outputs** — `tests/terminalApp.test.js`
 - **Multiple Prompt Enhancer windows can be opened in one session and each gets its own taskbar button** — `multi_prompt_windows_open`
 
 #### Procedural desktop wallpaper

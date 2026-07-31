@@ -16,9 +16,10 @@
  *  6. Mix / String / Variable boxes (procedural mats, headers, controls, outputs)
  *  7. Color panel, help mode (WinHelp-style tooltip)
  *  8. Completion API window
- *  9. About / Audio / Diskrot windows
- * 10. Generic form elements + shared utility rows
- * 11. Responsive rules
+ *  9. Terminal tool-chat window
+ * 10. About / Audio / Diskrot windows
+ * 11. Generic form elements + shared utility rows
+ * 12. Responsive rules
  *
  * Scrolling policy (mirrored by tests/scrolling.test.js):
  *  - Only window bodies use two-axis auto overflow (exactly three declarations).
@@ -45,6 +46,17 @@
   --w31-tooltip: #ffffe1;      /* WinHelp tooltip yellow */
   --w31-error-bg: #ffe6e6;
   --w31-error-ink: #7c1414;
+
+  /* Terminal phosphors stay centralized just like the desktop pigments. */
+  --terminal-field: #07110b;
+  --terminal-input: #020804;
+  --terminal-edge: #255c37;
+  --terminal-glow: #12301d;
+  --terminal-scanline: rgba(125, 245, 162, 0.035);
+  --terminal-green: #7df5a2;
+  --terminal-green-soft: #45bd70;
+  --terminal-amber: #ffd36a;
+  --terminal-cyan: #76e8ec;
 
   /* Shared Memphis accents connect wallpaper shapes, logo slashes, and CTAs. */
   --w31-confetti-coral: #ef513f;
@@ -765,6 +777,7 @@ textarea:focus-visible {
 .icon-about { background-image: url("assets/icons/about.svg"); }
 .icon-audio { background-image: url("assets/icons/audio.svg"); }
 .icon-openrouter { background-image: url("assets/icons/openrouter.svg"); }
+.icon-terminal { background-image: url("assets/icons/terminal.svg"); }
 .icon-diskrot { background-image: url("assets/icons/diskrot.svg"); }
 
 .taskbar {
@@ -2188,6 +2201,17 @@ textarea:focus-visible {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
+.openrouter-provider-note {
+  grid-column: 1 / -1;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--w31-shadow);
+  background: var(--w31-face);
+  box-shadow: var(--etched);
+  color: var(--w31-ink-soft);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .openrouter-app .control-block textarea,
 .openrouter-app .control-block input[type=text],
 .openrouter-app .control-block input[type=password],
@@ -2225,6 +2249,11 @@ textarea:focus-visible {
   resize: vertical;
 }
 
+.openrouter-suffix {
+  min-height: 76px;
+  resize: vertical;
+}
+
 .openrouter-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2235,8 +2264,8 @@ textarea:focus-visible {
   margin-top: 0;
 }
 
-/* Send button mirrors the GENERATE slab exactly (height, type, rainbow strip)
- * so the primary action reads the same in every app window. */
+/* Completion's explicit network action mirrors the GENERATE slab exactly.
+ * Terminal instead behaves like a real console and submits on Enter. */
 .openrouter-actions .openrouter-send {
   position: relative;
   height: 44px;
@@ -2335,7 +2364,392 @@ textarea:focus-visible {
   max-height: 340px;
 }
 
-/* ===== 9. ABOUT / AUDIO / DISKROT WINDOWS ===== */
+/* ===== 9. TERMINAL TOOL-CHAT WINDOW ===== */
+/* Terminal is a conversational harness, not a raw-completion surface. The
+ * visible contract is intentionally smaller than the machinery behind it:
+ * face -> transcript -> Enter-driven prompt, all on one phosphor field. */
+.terminal-window {
+  color: var(--w31-ink);
+  height: min(88vh, 820px);
+  min-height: 400px;
+  width: min(900px, 94vw);
+}
+
+.terminal-window > .box-body {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  scrollbar-gutter: auto;
+}
+
+.terminal-window .box-title {
+  color: inherit;
+}
+
+.terminal-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  background: var(--terminal-field);
+}
+
+.terminal-file-menu {
+  margin-bottom: 0;
+}
+
+.terminal-surface {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  container-type: inline-size;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--w31-black);
+  background:
+    repeating-linear-gradient(
+      180deg,
+      transparent 0,
+      transparent 3px,
+      var(--terminal-scanline) 3px,
+      var(--terminal-scanline) 4px
+    ),
+    var(--terminal-field);
+  box-shadow: var(--bevel-field);
+}
+
+.terminal-masthead {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: center;
+  min-height: 58px;
+  padding: 0.7rem 0.9rem 0.15rem;
+}
+
+.terminal-face-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.terminal-face {
+  display: block;
+  max-width: 100%;
+  color: var(--terminal-green);
+  font-family: var(--font-mono);
+  text-shadow: 0 0 5px var(--terminal-green-soft);
+}
+
+.terminal-face-art {
+  position: relative;
+  display: block;
+  inline-size: 7.5ch;
+  block-size: 1.15em;
+  max-width: 100%;
+  font-size: clamp(1rem, 4.35cqi, 2.1rem);
+  font-weight: 700;
+  font-variant-ligatures: none;
+  line-height: 1;
+  overflow-wrap: normal;
+  text-align: center;
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
+/* Keep the canonical ASCII string available to code and assistive semantics,
+ * but do not let font-specific baselines position visible facial features. */
+.terminal-face-ascii {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* The seven conceptual character cells live in one immutable 84x20 viewBox.
+ * Eyes and mouth swap only their path data, so cap height, punctuation depth,
+ * fallback fonts, and glyph bearings cannot change their screen coordinates. */
+.terminal-face-vector {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 2px currentColor);
+}
+
+/* All face motion is paint-only: opacity, glow, and color may breathe, while
+ * the vector viewBox and its three feature anchors stay completely fixed. */
+.terminal-face[data-emote="idle"] .terminal-face-art,
+.terminal-face[data-emote="smile"] .terminal-face-art {
+  animation: terminal-breathe 4.8s ease-in-out infinite;
+}
+
+.terminal-face[data-emote="happy"] .terminal-face-art {
+  animation: terminal-spark 1.15s steps(2, end) infinite;
+}
+
+.terminal-face[data-emote="thinking"] .terminal-face-art {
+  animation: terminal-consider 1.6s steps(2, end) infinite;
+}
+
+.terminal-face[data-emote="cry"] .terminal-face-art,
+.terminal-face[data-emote="sad"] .terminal-face-art {
+  color: var(--terminal-cyan);
+  animation: terminal-rain-glow 2.1s ease-in-out infinite;
+}
+
+.terminal-face[data-emote="sinister"] .terminal-face-art {
+  color: var(--terminal-amber);
+  animation: terminal-glint 1.25s steps(2, end) infinite;
+}
+
+/* JavaScript supplies the only speech motion by swapping the path inside one
+ * fixed mouth anchor. A slow phosphor pulse acknowledges each phrase without
+ * nudging or squashing the mascot's viewBox. */
+.terminal-face[data-speaking="true"] .terminal-face-art {
+  animation: terminal-voice-glow 0.34s steps(2, end) infinite;
+}
+
+@keyframes terminal-breathe {
+  0%, 100% {
+    opacity: 0.94;
+    text-shadow: 0 0 4px var(--terminal-green-soft);
+  }
+  50% {
+    opacity: 1;
+    text-shadow: 0 0 7px var(--terminal-green-soft);
+  }
+}
+
+@keyframes terminal-spark {
+  0%, 100% {
+    filter: brightness(1);
+    text-shadow: 0 0 5px var(--terminal-green-soft);
+  }
+  50% {
+    filter: brightness(1.16);
+    text-shadow: 0 0 8px var(--terminal-green-soft);
+  }
+}
+
+@keyframes terminal-consider {
+  0%, 100% {
+    opacity: 0.78;
+    text-shadow: 0 0 3px var(--terminal-green-soft);
+  }
+  50% {
+    opacity: 1;
+    text-shadow: 0 0 7px var(--terminal-green-soft);
+  }
+}
+
+@keyframes terminal-rain-glow {
+  0%, 100% {
+    opacity: 0.82;
+    text-shadow: 0 0 3px color-mix(in srgb, var(--terminal-cyan) 50%, transparent);
+  }
+  50% {
+    opacity: 1;
+    text-shadow: 0 0 7px color-mix(in srgb, var(--terminal-cyan) 72%, transparent);
+  }
+}
+
+@keyframes terminal-glint {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.45); }
+}
+
+@keyframes terminal-voice-glow {
+  0%, 100% {
+    filter: brightness(1);
+    text-shadow: 0 0 5px currentColor;
+  }
+  50% {
+    filter: brightness(1.12);
+    text-shadow: 0 0 7px currentColor;
+  }
+}
+
+.reduce-motion .terminal-face-art {
+  animation: none !important;
+}
+
+.terminal-transcript {
+  flex: 1 1 240px;
+  min-height: 210px;
+  padding: 0.55rem 0.9rem 0.2rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  color: var(--terminal-green);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  scrollbar-gutter: stable;
+}
+
+.terminal-line {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.45rem;
+  margin-bottom: 0.42rem;
+}
+
+.terminal-line-prefix {
+  color: var(--terminal-green-soft);
+  font-weight: 700;
+}
+
+.terminal-line-body {
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.terminal-line-user .terminal-line-prefix,
+.terminal-line-user .terminal-line-body {
+  color: var(--terminal-cyan);
+}
+
+.terminal-line-tool .terminal-line-prefix,
+.terminal-line-tool-result .terminal-line-prefix {
+  color: var(--terminal-amber);
+}
+
+.terminal-line-system .terminal-line-body {
+  color: var(--terminal-amber);
+}
+
+.terminal-command-line {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.45rem;
+  min-height: 42px;
+  padding: 0.25rem 0.9rem 0.75rem;
+  cursor: text;
+}
+
+/* A short spectrum cursor-mark keeps Yolk's joyful color language without
+ * reintroducing a button, field border, toolbar, or separate composer bay. */
+.terminal-command-line::after {
+  content: "";
+  position: absolute;
+  left: 0.9rem;
+  bottom: 0.4rem;
+  width: 2.8rem;
+  height: 2px;
+  background: linear-gradient(90deg,
+    var(--w31-confetti-coral) 0 20%, var(--w31-confetti-yellow) 20% 40%,
+    var(--w31-confetti-green) 40% 60%, var(--w31-confetti-blue) 60% 80%,
+    var(--w31-confetti-violet) 80% 100%);
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.terminal-input-prefix {
+  align-self: start;
+  padding-top: 1px;
+  color: var(--terminal-cyan);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.55;
+  white-space: nowrap;
+}
+
+@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  .terminal-input-prefix {
+    background: linear-gradient(90deg,
+      var(--w31-confetti-coral), var(--w31-confetti-yellow),
+      var(--terminal-green), var(--terminal-cyan), var(--w31-confetti-violet));
+    background-clip: text;
+    color: transparent;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+.terminal-message,
+.terminal-app input.terminal-secret-input {
+  display: block;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--terminal-green);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  caret-color: var(--terminal-green);
+}
+
+.terminal-message[hidden],
+.terminal-app input.terminal-secret-input[hidden] {
+  display: none;
+}
+
+.terminal-message {
+  height: 22px;
+  min-height: 22px;
+  max-height: 120px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  resize: none;
+}
+
+.terminal-app input.terminal-secret-input {
+  height: 22px;
+  min-height: 0;
+}
+
+.terminal-message:focus,
+.terminal-app input.terminal-secret-input:focus {
+  outline: 0;
+}
+
+.terminal-message::placeholder,
+.terminal-app input.terminal-secret-input::placeholder {
+  color: var(--terminal-green-soft);
+}
+
+.terminal-command-line:focus-within .terminal-input-prefix {
+  filter: brightness(1.3);
+  text-shadow: 0 0 5px var(--terminal-green-soft);
+}
+
+.terminal-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.terminal-status.is-error {
+  color: inherit;
+}
+
+/* ===== 10. ABOUT / AUDIO / DISKROT WINDOWS ===== */
 .about-window {
   color: var(--w31-ink);
   width: min(520px, 90vw);
@@ -2425,7 +2839,7 @@ textarea:focus-visible {
   background: #fff;
 }
 
-/* ===== 10. GENERIC FORM ELEMENTS + UTILITY ROWS ===== */
+/* ===== 11. GENERIC FORM ELEMENTS + UTILITY ROWS ===== */
 /* Sunken white fields with dark text, shared by every input type. */
 textarea {
   width: 100%;
@@ -2753,7 +3167,7 @@ button:disabled {
   color: var(--w31-ink);
 }
 
-/* ===== 11. RESPONSIVE RULES ===== */
+/* ===== 12. RESPONSIVE RULES ===== */
 @media (max-width: 768px) {
   /* The exact origin/fallback composition scales down here; generated bands
    * receive their mobile density and dimensions from buildWallpaperBand. */
@@ -2814,6 +3228,7 @@ button:disabled {
     padding: 0;
     max-width: 100%;
   }
+
 }
 
 /* Mobile: compact paddings, centered text buttons, icons pinned right.

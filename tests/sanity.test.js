@@ -7,6 +7,9 @@ const { createDom, closeDom, registerDomCleanup } = require('./helpers/dom');
 const ROOT = path.join(__dirname, '..');
 const HTML_PATH = path.join(ROOT, 'src', 'index.html');
 const SCRIPT_PATH = path.join(ROOT, 'src', 'script.js');
+const ENCRYPTED_SETTINGS_PATH = path.join(ROOT, 'src', 'apps', 'shared', 'encrypted-settings.js');
+const OPENROUTER_APP_PATH = path.join(ROOT, 'src', 'apps', 'openrouter-completions', 'app.js');
+const TERMINAL_APP_PATH = path.join(ROOT, 'src', 'apps', 'terminal', 'app.js');
 const INPUT_PATH = path.join(__dirname, 'sanity', 'prompt_sanity_input.json');
 const EXPECTED_PATH = path.join(__dirname, 'sanity', 'prompt_sanity_expected.json');
 
@@ -77,6 +80,11 @@ function runSanityCase(testCase) {
     });
   }
 
+  // Match index.html's module order so sanity cases exercise registered app
+  // behavior as well as the shell templates that host each application.
+  window.eval(fs.readFileSync(ENCRYPTED_SETTINGS_PATH, 'utf8'));
+  window.eval(fs.readFileSync(OPENROUTER_APP_PATH, 'utf8'));
+  window.eval(fs.readFileSync(TERMINAL_APP_PATH, 'utf8'));
   window.eval(fs.readFileSync(SCRIPT_PATH, 'utf8'));
   if (testCase.persistedState && window.localStorage) {
     const raw =
@@ -538,8 +546,11 @@ function runSanityCase(testCase) {
     fileLauncher.querySelector(':scope > .prompt-menu-label')?.textContent === 'file'
   );
   const hasOpenRouterMenu = !!window.document.querySelector('.menu-item[data-window="openrouter"]');
+  const hasTerminalMenu = !!window.document.querySelector('.menu-item[data-window="terminal"]');
   const openRouterWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
   const openRouterWindowCount = window.document.querySelectorAll('.openrouter-window:not(.window-template)').length;
+  const terminalWindow = window.document.querySelector('.terminal-window:not(.window-template)');
+  const terminalWindowCount = window.document.querySelectorAll('.terminal-window:not(.window-template)').length;
   const promptWindowCount = window.document.querySelectorAll('.app-window[data-window="prompts"]:not(.window-template)').length;
   const taskbarButtonCount = window.document.querySelectorAll('#taskbar .taskbar-button').length;
   const focusedWindowInstance =
@@ -554,6 +565,19 @@ function runSanityCase(testCase) {
     openRouterWindow?.querySelector('.help-toggle') &&
     openRouterWindow?.querySelector('.help-overlay') &&
     openRouterWindow?.dataset?.helpReady === 'true'
+  );
+  const hasTerminalHelpMode = !!(
+    terminalWindow?.querySelector('.help-toggle') &&
+    terminalWindow?.querySelector('.help-overlay') &&
+    terminalWindow?.dataset?.helpReady === 'true'
+  );
+  const hasTerminalEncryptedSettingsControls = !!(
+    terminalWindow?.querySelector('.prompt-menu.terminal-file-menu') &&
+    terminalWindow?.querySelector('.terminal-menu-start .prompt-menu-label')?.textContent === 'file' &&
+    terminalWindow?.querySelector('.terminal-menu-dropdown .prompt-menu-item[data-action="save-settings"]') &&
+    terminalWindow?.querySelector('.terminal-menu-dropdown .prompt-menu-item[data-action="load-settings"]') &&
+    terminalWindow?.querySelector('.terminal-load-settings-file') &&
+    !terminalWindow?.querySelector('.terminal-app .help-toggle')
   );
   // Help copy is a UI contract: every visible control intercepted by the
   // overlay needs a short label plus concrete detail, and glyph-only controls
@@ -595,11 +619,98 @@ function runSanityCase(testCase) {
     openRouterLoadHelp?.dataset.helpDetail?.includes('asks for its password') &&
     !openRouterLoadHelp?.dataset.helpDetail?.includes('password field') &&
     openRouterSaveHelp?.dataset.helpDetail?.includes('all sampling controls') &&
-    openRouterTopKHelp?.dataset.helpDetail?.includes('omitted for Hyperbolic') &&
+    openRouterTopKHelp?.dataset.helpDetail?.includes('disabled for providers') &&
     openRouterStatusHelp?.dataset.helpDetail?.includes('input/output tokens')
   );
   const hasOpenRouterSharedCopyControl = !!(
     openRouterWindow?.querySelector('.openrouter-output > .openrouter-output-header .copy-output.openrouter-copy-output')
+  );
+  const terminalTools = window.YolkToolRegistry?.list?.() || [];
+  const hasTerminalToolHarness = !!(
+    terminalWindow?.querySelector('.terminal-transcript') &&
+    terminalTools.some(tool => tool.name === 'desktop_open_application') &&
+    terminalTools.some(tool => tool.name === 'prompt_generate') &&
+    terminalTools.some(tool => tool.name === 'knowledge_search') &&
+    terminalTools.some(tool => tool.name === 'terminal_set_face')
+  );
+  const terminalKnowledgeDocumentCount = Number(
+    window.YolkTerminalKnowledge?.status?.().documentCount
+  );
+  const hasTerminalPureCommandSurface = !!(
+    terminalWindow?.querySelector('.terminal-surface') &&
+    terminalWindow?.querySelector('.terminal-command-line') &&
+    terminalWindow?.querySelector('.terminal-secret-input') &&
+    !terminalWindow?.querySelector('.terminal-connection-panel') &&
+    !terminalWindow?.querySelector('.terminal-session-readout') &&
+    !terminalWindow?.querySelector('.terminal-send') &&
+    !terminalWindow?.querySelector('select') &&
+    terminalWindow?.querySelectorAll('.terminal-app button').length === 1 &&
+    terminalWindow?.querySelector('.terminal-app button')?.classList.contains('terminal-menu-start') &&
+    terminalWindow?.querySelector('.terminal-message')?.rows === 1 &&
+    terminalWindow?.querySelector('.terminal-app')?.dataset.setupStage === 'provider' &&
+    terminalWindow?.querySelector('.terminal-transcript')?.textContent.includes('Choose a provider:')
+  );
+  const hasAccurateTerminalHelp = !!(
+    terminalWindow?.querySelector('.terminal-secret-input')?.dataset.helpDetail?.includes(
+      'characters remain masked'
+    ) &&
+    terminalWindow?.querySelector('.terminal-secret-input')?.dataset.helpDetail?.includes(
+      'do not appear in the transcript'
+    ) &&
+    terminalWindow?.querySelector('.terminal-transcript')?.dataset.helpDetail?.includes(
+      'Shows connection questions and the conversation'
+    ) &&
+    terminalWindow?.querySelector('.terminal-command-line')?.dataset.helpDetail?.includes(
+      'press Enter to run it'
+    )
+  );
+  const terminalPresentationText = terminalWindow?.querySelector('.terminal-transcript')?.textContent || '';
+  const hasTerminalLeakFreePresentation = !!(
+    terminalWindow &&
+    !/SECURITY>|browser-only|local tool harness|tools ·|docs ·|desktop_open_application|CALL>|TOOL>/i.test(
+      terminalPresentationText
+    ) &&
+    !/[\r\n]/.test(terminalWindow.querySelector('.terminal-face-art')?.textContent || '')
+  );
+  const hasTerminalSpeakerFace = !!(
+    terminalWindow?.querySelector('.terminal-masthead .terminal-face-panel') &&
+    terminalWindow?.querySelector('.terminal-face')?.dataset.speaking === 'true' &&
+    terminalWindow?.querySelector('.terminal-app')?.dataset.soundEnabled === 'true' &&
+    terminalWindow?.querySelector('.terminal-face-panel')?.dataset.helpDetail?.includes(
+      'synthesized murmur'
+    ) &&
+    terminalWindow?.querySelector('.terminal-face-panel')?.dataset.helpDetail?.includes(
+      '/sound off'
+    )
+  );
+  const terminalRoot = terminalWindow?.querySelector('.terminal-app');
+  const terminalFaceArt = terminalWindow?.querySelector('.terminal-face-art')?.textContent || '';
+  const hasTerminalGuardedDecisionTree = !!(
+    terminalRoot?.dataset.keyValidation === 'required' &&
+    terminalRoot?.dataset.modelSelection === 'required' &&
+    terminalRoot?.dataset.settingsFormat === 'encrypted-file' &&
+    terminalRoot?.dataset.setupStage === 'provider' &&
+    terminalRoot?.dataset.connectionReady === 'false' &&
+    terminalWindow?.querySelector('.terminal-secret-input')?.dataset.helpDetail?.includes(
+      'Short menu choices are rejected'
+    )
+  );
+  const hasTerminalLiveModelCatalogFlow = !!(
+    terminalRoot?.dataset.modelCatalogFlow === 'key-first-live' &&
+    terminalRoot?.dataset.modelCatalog === 'fallback' &&
+    terminalRoot?.dataset.setupStage === 'provider'
+  );
+  // The seven-character representation remains stable, while the visible
+  // features use separate paths in one immutable coordinate system. Deeper
+  // tests exercise every emote and verify the anchored path swaps.
+  const hasTerminalStableFaceCells = terminalFaceArt.length === 7 && !/[\r\n]/.test(terminalFaceArt);
+  const terminalFaceVector = terminalWindow?.querySelector('.terminal-face-vector');
+  const hasTerminalBaselineIndependentFace = !!(
+    terminalFaceVector?.getAttribute('viewBox') === '0 0 84 20' &&
+    terminalFaceVector.querySelectorAll('.terminal-face-eye').length === 2 &&
+    terminalFaceVector.querySelectorAll('.terminal-face-mouth').length === 1 &&
+    terminalWindow?.querySelector('.terminal-face-frame')?.getAttribute('d') ===
+      'M 8 2 H 4 V 18 H 8 M 76 2 H 80 V 18 H 76'
   );
   const result = {
     id: testCase.id,
@@ -633,17 +744,33 @@ function runSanityCase(testCase) {
     hasLoadPresetMenu,
     hasSharedFileLauncherMarkup,
     hasOpenRouterMenu,
+    hasTerminalMenu,
     openRouterWindowCount,
+    terminalWindowCount,
     promptWindowCount,
     taskbarButtonCount,
     focusedWindowInstance,
     hasOpenRouterEncryptedSettingsControls,
     hasOpenRouterHelpMode,
+    hasTerminalHelpMode,
+    hasTerminalEncryptedSettingsControls,
     hasCompleteHelpCopy,
     hasAccessibleIconHelp,
     hasProportionalDropoutHelp,
     hasAccurateOpenRouterHelp,
     hasOpenRouterSharedCopyControl,
+    hasTerminalToolHarness,
+    terminalToolCount: terminalTools.length,
+    terminalKnowledgeDocumentCount,
+    terminalFaceEmote: terminalWindow?.querySelector('.terminal-face')?.dataset.emote || '',
+    hasTerminalPureCommandSurface,
+    hasAccurateTerminalHelp,
+    hasTerminalLeakFreePresentation,
+    hasTerminalSpeakerFace,
+    hasTerminalGuardedDecisionTree,
+    hasTerminalLiveModelCatalogFlow,
+    hasTerminalStableFaceCells,
+    hasTerminalBaselineIndependentFace,
     wallpaperMoved: actionResults.wallpaperMoved,
     wallpaperSceneChanged: actionResults.wallpaperSceneChanged,
     wallpaperThemeChanged: actionResults.wallpaperThemeChanged,
@@ -781,8 +908,14 @@ describe('Sanity regression via real UI flow', () => {
       if (Object.prototype.hasOwnProperty.call(expected, 'hasOpenRouterMenu')) {
         expect(result.hasOpenRouterMenu).toBe(expected.hasOpenRouterMenu);
       }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasTerminalMenu')) {
+        expect(result.hasTerminalMenu).toBe(expected.hasTerminalMenu);
+      }
       if (Object.prototype.hasOwnProperty.call(expected, 'openRouterWindowCount')) {
         expect(result.openRouterWindowCount).toBe(expected.openRouterWindowCount);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'terminalWindowCount')) {
+        expect(result.terminalWindowCount).toBe(expected.terminalWindowCount);
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'hasCompleteHelpCopy')) {
         expect(result.hasCompleteHelpCopy).toBe(expected.hasCompleteHelpCopy);
@@ -811,8 +944,50 @@ describe('Sanity regression via real UI flow', () => {
       if (Object.prototype.hasOwnProperty.call(expected, 'hasOpenRouterHelpMode')) {
         expect(result.hasOpenRouterHelpMode).toBe(expected.hasOpenRouterHelpMode);
       }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasTerminalHelpMode')) {
+        expect(result.hasTerminalHelpMode).toBe(expected.hasTerminalHelpMode);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasTerminalEncryptedSettingsControls')) {
+        expect(result.hasTerminalEncryptedSettingsControls).toBe(expected.hasTerminalEncryptedSettingsControls);
+      }
       if (Object.prototype.hasOwnProperty.call(expected, 'hasOpenRouterSharedCopyControl')) {
         expect(result.hasOpenRouterSharedCopyControl).toBe(expected.hasOpenRouterSharedCopyControl);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasTerminalToolHarness')) {
+        expect(result.hasTerminalToolHarness).toBe(expected.hasTerminalToolHarness);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'terminalToolCount')) {
+        expect(result.terminalToolCount).toBe(expected.terminalToolCount);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'terminalKnowledgeDocumentCount')) {
+        expect(result.terminalKnowledgeDocumentCount).toBe(expected.terminalKnowledgeDocumentCount);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'terminalFaceEmote')) {
+        expect(result.terminalFaceEmote).toBe(expected.terminalFaceEmote);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasTerminalPureCommandSurface')) {
+        expect(result.hasTerminalPureCommandSurface).toBe(expected.hasTerminalPureCommandSurface);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasAccurateTerminalHelp')) {
+        expect(result.hasAccurateTerminalHelp).toBe(expected.hasAccurateTerminalHelp);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasTerminalLeakFreePresentation')) {
+        expect(result.hasTerminalLeakFreePresentation).toBe(expected.hasTerminalLeakFreePresentation);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasTerminalSpeakerFace')) {
+        expect(result.hasTerminalSpeakerFace).toBe(expected.hasTerminalSpeakerFace);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasTerminalGuardedDecisionTree')) {
+        expect(result.hasTerminalGuardedDecisionTree).toBe(expected.hasTerminalGuardedDecisionTree);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasTerminalLiveModelCatalogFlow')) {
+        expect(result.hasTerminalLiveModelCatalogFlow).toBe(expected.hasTerminalLiveModelCatalogFlow);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasTerminalStableFaceCells')) {
+        expect(result.hasTerminalStableFaceCells).toBe(expected.hasTerminalStableFaceCells);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasTerminalBaselineIndependentFace')) {
+        expect(result.hasTerminalBaselineIndependentFace).toBe(expected.hasTerminalBaselineIndependentFace);
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'wallpaperMoved')) {
         expect(result.wallpaperMoved).toBe(expected.wallpaperMoved);
