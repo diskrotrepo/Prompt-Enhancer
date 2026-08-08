@@ -73,9 +73,10 @@ describe('New mixing layout', () => {
     const encryptedOpenHelp = document.querySelector('[data-action="load-settings"]');
     const encryptedSaveHelp = document.querySelector('[data-action="save-settings"]');
     expect(titleHelp.dataset.helpDetail).toContain('not included');
-    expect(encryptedOpenHelp.dataset.helpDetail).toContain('asks for its password');
-    expect(encryptedOpenHelp.dataset.helpDetail).not.toContain('password field');
-    expect(encryptedSaveHelp.dataset.helpDetail).toContain('all sampling controls');
+    expect(encryptedOpenHelp.dataset.helpDetail).toContain('Completion product kind and version');
+    expect(encryptedOpenHelp.dataset.helpDetail).toContain('ready without another catalog request');
+    expect(encryptedSaveHelp.dataset.helpDetail).toContain("every provider's endpoint, model, and API key");
+    expect(encryptedSaveHelp.dataset.helpDetail).toContain('versioned Completion-only');
 
     const terminalTemplate = document.getElementById('window-terminal-template');
     const terminalKeyHelp = document.querySelector('.terminal-secret-input');

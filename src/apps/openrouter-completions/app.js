@@ -25,19 +25,41 @@
       defaultEndpoint: 'https://openrouter.ai/api/v1/completions',
       modelsEndpoint: 'https://openrouter.ai/api/v1/models',
       catalogKind: 'openrouter',
-      supportsTopK: true,
-      supportsPenalties: true,
-      supportsSuffix: false,
+      catalogLabel: '/api/v1/models',
+      catalogRequiresKey: false,
+      modelParameterGating: true,
+      pricingScale: 1,
+      temperatureMax: 2,
+      maxStopSequences: 4,
+      requestParameters: Object.freeze([
+        'max_tokens',
+        'temperature',
+        'top_p',
+        'top_k',
+        'presence_penalty',
+        'frequency_penalty',
+        'stop'
+      ]),
       responseMode: 'text',
-      capabilityNote: 'Prompt-only legacy route. OpenRouter accepts prompt instead of messages, but a routed chat-trained model may still receive provider-side adaptation; choose a base or FIM-oriented model when exact continuation perspective matters.'
+      capabilityNote: 'Prompt-only legacy route. OpenRouter accepts prompt instead of messages, but its router may adapt a chat-trained model upstream. The client omits parameters that the selected model does not advertise; choose a base model when tokenizer-level raw continuation matters.'
     },
     [PROVIDER_KEYS.DEEPSEEK]: {
       label: 'DeepSeek FIM',
       defaultEndpoint: 'https://api.deepseek.com/beta/completions',
+      modelsEndpoint: 'https://api.deepseek.com/models',
       catalogKind: 'deepseek',
-      supportsTopK: false,
-      supportsPenalties: false,
-      supportsSuffix: true,
+      catalogLabel: '/models',
+      catalogRequiresKey: true,
+      pricingScale: 1,
+      temperatureMax: 2,
+      maxStopSequences: 16,
+      requestParameters: Object.freeze([
+        'max_tokens',
+        'temperature',
+        'top_p',
+        'stop',
+        'suffix'
+      ]),
       responseMode: 'text',
       maxTokens: 4096,
       capabilityNote: 'Native beta FIM route. Sends prompt plus an optional suffix with no messages array; DeepSeek currently documents deepseek-v4-pro for this endpoint and caps output at 4K tokens.'
@@ -45,67 +67,120 @@
     [PROVIDER_KEYS.FIREWORKS]: {
       label: 'Fireworks',
       defaultEndpoint: 'https://api.fireworks.ai/inference/v1/completions',
+      modelsEndpoint: 'https://api.fireworks.ai/v1/accounts/fireworks/models?filter=supports_serverless%3Dtrue&pageSize=200',
       catalogKind: 'fireworks',
-      supportsTopK: true,
-      supportsPenalties: true,
-      supportsSuffix: false,
+      catalogLabel: '/v1/accounts/fireworks/models',
+      catalogRequiresKey: true,
+      // Fireworks caps each list response at 200 and returns nextPageToken.
+      // Keep pagination data beside the catalog URL so the request helper
+      // remains provider-driven instead of recognizing URL substrings.
+      catalogPagination: Object.freeze({
+        itemsField: 'models',
+        nextTokenField: 'nextPageToken',
+        queryParameter: 'pageToken',
+        maxPages: 50
+      }),
+      pricingScale: 1,
+      temperatureMax: 2,
+      maxStopSequences: 4,
+      requestParameters: Object.freeze([
+        'max_tokens',
+        'temperature',
+        'top_p',
+        'top_k',
+        'presence_penalty',
+        'frequency_penalty',
+        'stop'
+      ]),
       responseMode: 'text',
-      capabilityNote: 'Native raw text generation. Fireworks documents this route as prompt generation without automatic message formatting, including base-model and custom-template use.'
+      capabilityNote: 'Native raw text generation. Fireworks documents this route as leaving the provided prompt unchanged, including for base-model, custom-template, and deployment use.'
     },
     [PROVIDER_KEYS.TOGETHER]: {
       label: 'Together AI',
       defaultEndpoint: 'https://api.together.ai/v1/completions',
       modelsEndpoint: 'https://api.together.ai/v1/models',
       catalogKind: 'together',
-      supportsTopK: true,
-      supportsPenalties: true,
-      supportsSuffix: false,
+      catalogLabel: '/v1/models',
+      catalogRequiresKey: true,
+      pricingScale: 0.000001,
+      temperatureMax: 1,
+      requestParameters: Object.freeze([
+        'max_tokens',
+        'temperature',
+        'top_p',
+        'top_k',
+        'presence_penalty',
+        'frequency_penalty',
+        'stop'
+      ]),
       responseMode: 'text',
-      capabilityNote: 'Legacy text-completion route. Together accepts one prompt string and returns choices[].text; prompt templates remain under your control.'
+      capabilityNote: 'Text-completion route. Together accepts one prompt string and returns choices[].text; the picker excludes catalog entries typed as chat and keeps language/code models only.'
     },
     [PROVIDER_KEYS.MISTRAL]: {
       label: 'Mistral FIM',
       defaultEndpoint: 'https://api.mistral.ai/v1/fim/completions',
       modelsEndpoint: 'https://api.mistral.ai/v1/models',
       catalogKind: 'mistral',
-      supportsTopK: false,
-      supportsPenalties: false,
-      supportsSuffix: true,
+      catalogLabel: '/v1/models',
+      catalogRequiresKey: true,
+      pricingScale: 1,
+      temperatureMax: 1.5,
+      requestParameters: Object.freeze([
+        'max_tokens',
+        'temperature',
+        'top_p',
+        'stop',
+        'suffix'
+      ]),
       responseMode: 'message-content',
-      capabilityNote: 'Native prompt/suffix FIM generation. The request is not chat-formatted, although Mistral wraps returned text inside choices[].message.content.'
+      capabilityNote: 'Native prompt/suffix FIM generation. The picker requires capabilities.completion_fim from the live catalog. The request is not chat-formatted, although Mistral wraps returned text inside choices[].message.content.'
     },
     [PROVIDER_KEYS.OPENAI]: {
       label: 'OpenAI API (Legacy)',
       defaultEndpoint: 'https://api.openai.com/v1/completions',
+      modelsEndpoint: 'https://api.openai.com/v1/models',
       catalogKind: 'openai',
-      supportsTopK: false,
-      supportsPenalties: true,
-      supportsSuffix: false,
+      catalogLabel: '/v1/models',
+      catalogRequiresKey: true,
+      pricingScale: 1,
+      temperatureMax: 2,
+      maxStopSequences: 4,
+      parameterModelIds: Object.freeze({
+        suffix: Object.freeze(['gpt-3.5-turbo-instruct'])
+      }),
+      modelMaxTokens: Object.freeze({
+        'gpt-3.5-turbo-instruct': 4096,
+        'davinci-002': 16384,
+        'babbage-002': 16384
+      }),
+      requestParameters: Object.freeze([
+        'max_tokens',
+        'temperature',
+        'top_p',
+        'presence_penalty',
+        'frequency_penalty',
+        'stop',
+        'suffix'
+      ]),
       responseMode: 'text',
-      capabilityNote: 'Legacy non-chat API using deprecated completion-only models such as gpt-3.5-turbo-instruct. OpenAI Platform API billing is separate from ChatGPT and Codex credits.'
+      capabilityNote: 'Legacy non-chat API using deprecated completion-only models. Only gpt-3.5-turbo-instruct supports suffix; davinci-002 and babbage-002 are forward-only base models. OpenAI Platform billing is separate from ChatGPT.'
     },
     [PROVIDER_KEYS.HYPERBOLIC]: {
-      label: 'Hyperbolic',
+      label: 'Hyperbolic (Sunset)',
       defaultEndpoint: 'https://api.hyperbolic.xyz/v1/completions',
-      modelsEndpoint: 'https://api.hyperbolic.xyz/v1/models',
       catalogKind: 'hyperbolic',
-      supportsTopK: false,
-      supportsPenalties: true,
-      supportsSuffix: false,
+      pricingScale: 1,
+      temperatureMax: 2,
+      requestParameters: Object.freeze([
+        'max_tokens',
+        'temperature'
+      ]),
       responseMode: 'text',
-      capabilityNote: 'Native base-model text completion without chat formatting. Hyperbolic has announced that its Llama 3.1 405B base model is being sunset, so availability may end before the route itself does.'
+      capabilityNote: 'Documented raw base-model completion route with prompt and choices[].text. Hyperbolic marks its only documented base model, Llama 3.1 405B BASE, for removal; no instruct/chat model is substituted here.'
     }
   });
   const PROVIDER_KEY_LIST = Object.freeze(Object.keys(PROVIDER_OPTIONS));
   const DEFAULT_PROVIDER_KEY = PROVIDER_KEYS.FIREWORKS;
-  const FIREWORKS_MODELS_ENDPOINT = 'https://api.fireworks.ai/v1/models';
-  const FIREWORKS_MODELS_FALLBACK_ENDPOINT = 'https://api.fireworks.ai/inference/v1/models';
-  const HYPERBOLIC_COMPLETION_MODEL_IDS = new Set([
-    'meta-llama/meta-llama-3.1-405b'
-  ]);
-  const HYPERBOLIC_FALLBACK_MODELS = Object.freeze([
-    { id: 'meta-llama/Meta-Llama-3.1-405B', name: 'Llama 3.1 405B', contextLength: null }
-  ]);
   const DEEPSEEK_FALLBACK_MODELS = Object.freeze([
     { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro (FIM beta)', contextLength: 1000000 }
   ]);
@@ -113,12 +188,25 @@
     { id: 'codestral-latest', name: 'Codestral Latest (FIM)', contextLength: null }
   ]);
   const OPENAI_COMPLETION_MODEL_IDS = new Set([
-    'gpt-3.5-turbo-instruct'
+    'gpt-3.5-turbo-instruct',
+    'davinci-002',
+    'babbage-002'
   ]);
   const OPENAI_FALLBACK_MODELS = Object.freeze([
-    { id: 'gpt-3.5-turbo-instruct', name: 'GPT-3.5 Turbo Instruct (deprecated)', contextLength: 4096 }
+    { id: 'gpt-3.5-turbo-instruct', name: 'GPT-3.5 Turbo Instruct (deprecated)', contextLength: 4096 },
+    { id: 'davinci-002', name: 'Davinci 002 base (deprecated)', contextLength: 16384 },
+    { id: 'babbage-002', name: 'Babbage 002 base (deprecated)', contextLength: 16384 }
+  ]);
+  const HYPERBOLIC_FALLBACK_MODELS = Object.freeze([
+    {
+      id: 'meta-llama/Meta-Llama-3.1-405B',
+      name: 'Llama 3.1 405B BASE (sunset)',
+      contextLength: null
+    }
   ]);
   const TOP_K_MAX = 100;
+  const COMPLETION_SETTINGS_KIND = 'yolk-completion-api-settings';
+  const COMPLETION_SETTINGS_VERSION = 1;
   const DEFAULT_SETTINGS_FILE_NAME = 'completion-providers-encrypted-settings.json';
 
   function ensureAppRegistry() {
@@ -198,8 +286,43 @@
     return getProviderOption(providerKey).defaultEndpoint;
   }
 
-  function providerSupports(providerKey, feature) {
-    return getProviderOption(providerKey)?.[feature] === true;
+  // Provider records are the protocol allowlist. OpenRouter additionally
+  // publishes parameter support per model, while OpenAI restricts suffix to
+  // one completion model; both narrower declarations override provider scope.
+  function providerSupportsRequestParameter(providerKey, parameter, modelEntry = null) {
+    const provider = getProviderOption(providerKey);
+    if (!provider.requestParameters?.includes(parameter)) return false;
+    const modelAllowlist = provider.parameterModelIds?.[parameter];
+    if (Array.isArray(modelAllowlist)) {
+      const modelId = toTrimmedString(modelEntry?.id).toLowerCase();
+      if (!modelId || !modelAllowlist.some(id => id.toLowerCase() === modelId)) return false;
+    }
+    const advertised = toLowerArray(modelEntry?.supportedParameters);
+    if (provider.modelParameterGating) {
+      // Missing router metadata is not permission. A restored or newly listed
+      // model with no supported_parameters record still receives the required
+      // prompt, while every optional sampling field stays omitted.
+      return Array.isArray(modelEntry?.supportedParameters) &&
+        advertised.includes(parameter.toLowerCase());
+    }
+    return true;
+  }
+
+  function getProviderTemperatureMax(providerKey) {
+    return getProviderOption(providerKey).temperatureMax || 2;
+  }
+
+  function getModelMaxTokens(providerKey, modelEntry = null) {
+    const provider = getProviderOption(providerKey);
+    const modelId = toTrimmedString(modelEntry?.id);
+    const modelSpecific = Number(provider.modelMaxTokens?.[modelId]);
+    if (Number.isFinite(modelSpecific) && modelSpecific > 0) return modelSpecific;
+    const advertised = Number(modelEntry?.maxCompletionTokens);
+    if (Number.isFinite(advertised) && advertised > 0) return advertised;
+    if (Number.isFinite(provider.maxTokens) && provider.maxTokens > 0) return provider.maxTokens;
+    const contextLength = Number(modelEntry?.contextLength);
+    if (Number.isFinite(contextLength) && contextLength > 0) return contextLength;
+    return 200000;
   }
 
   function normalizeEndpoint(value, providerKey = DEFAULT_PROVIDER_KEY) {
@@ -210,6 +333,20 @@
   function isChatCompletionsEndpoint(endpoint) {
     const value = String(endpoint || '').toLowerCase();
     return /\/chat\/completions(?:$|[/?#])/.test(value);
+  }
+
+  // A custom proxy remains possible, but it must expose an absolute HTTP(S)
+  // completions path. This rejects Responses, Messages, and accidental chat
+  // URLs before any credential or prompt leaves the browser.
+  function isHttpCompletionEndpoint(endpoint) {
+    try {
+      const parsed = new URL(String(endpoint || ''));
+      if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+      if (isChatCompletionsEndpoint(parsed.href)) return false;
+      return /\/completions\/?$/i.test(parsed.pathname);
+    } catch (err) {
+      return false;
+    }
   }
 
   function writeStatus(statusEl, message, isError = false) {
@@ -262,11 +399,22 @@
     return fixed.replace(/0+$/, '').replace(/\.$/, '');
   }
 
-  function readModelPricing(modelEntry) {
+  function readModelPricing(modelEntry, pricingScale = 1) {
     if (!modelEntry || typeof modelEntry !== 'object') return null;
-    const inputUsdPerToken = readFirstPathNumber(modelEntry, [
+    const scale = Number.isFinite(Number(pricingScale)) ? Number(pricingScale) : 1;
+    const ambiguousInputPrice = readFirstPathNumber(modelEntry, [
       'pricing.input',
-      'pricing.prompt',
+      'pricing.prompt'
+    ]);
+    const ambiguousOutputPrice = readFirstPathNumber(modelEntry, [
+      'pricing.output',
+      'pricing.completion'
+    ]);
+    const ambiguousCachedPrice = readFirstPathNumber(modelEntry, [
+      'pricing.cached_input',
+      'pricing.cache_read'
+    ]);
+    const inputUsdPerToken = readFirstPathNumber(modelEntry, [
       'pricing.input_token',
       'pricing.prompt_token',
       'input_cost_per_token',
@@ -277,8 +425,6 @@
       'prompt_token_price'
     ]);
     const outputUsdPerToken = readFirstPathNumber(modelEntry, [
-      'pricing.output',
-      'pricing.completion',
       'pricing.output_token',
       'pricing.completion_token',
       'output_cost_per_token',
@@ -289,8 +435,6 @@
       'completion_token_price'
     ]);
     const cachedInputUsdPerToken = readFirstPathNumber(modelEntry, [
-      'pricing.cached_input',
-      'pricing.cache_read',
       'cached_input_cost_per_token',
       'cache_read_cost_per_token',
       'cached_input_price_per_token',
@@ -321,8 +465,10 @@
       'cached_input_price_per_million',
       'cache_read_price_per_million'
     ]);
+    const ambiguousFlatPrice = readFirstPathNumber(modelEntry, [
+      'pricing.token'
+    ]);
     const flatUsdPerToken = readFirstPathNumber(modelEntry, [
-      'pricing.token',
       'price_per_token',
       'token_price',
       'serverless_price_per_token'
@@ -337,24 +483,32 @@
 
     const flatRate = flatUsdPerToken != null
       ? flatUsdPerToken
-      : flatUsdPerMillion != null
-        ? flatUsdPerMillion / 1000000
-        : null;
+      : ambiguousFlatPrice != null
+        ? ambiguousFlatPrice * scale
+        : flatUsdPerMillion != null
+          ? flatUsdPerMillion / 1000000
+          : null;
     const inputRate = inputUsdPerToken != null
       ? inputUsdPerToken
-      : inputUsdPerMillion != null
-        ? inputUsdPerMillion / 1000000
-        : flatRate;
+      : ambiguousInputPrice != null
+        ? ambiguousInputPrice * scale
+        : inputUsdPerMillion != null
+          ? inputUsdPerMillion / 1000000
+          : flatRate;
     const outputRate = outputUsdPerToken != null
       ? outputUsdPerToken
-      : outputUsdPerMillion != null
-        ? outputUsdPerMillion / 1000000
-        : flatRate;
+      : ambiguousOutputPrice != null
+        ? ambiguousOutputPrice * scale
+        : outputUsdPerMillion != null
+          ? outputUsdPerMillion / 1000000
+          : flatRate;
     const cachedRate = cachedInputUsdPerToken != null
       ? cachedInputUsdPerToken
-      : cachedInputUsdPerMillion != null
-        ? cachedInputUsdPerMillion / 1000000
-        : inputRate;
+      : ambiguousCachedPrice != null
+        ? ambiguousCachedPrice * scale
+        : cachedInputUsdPerMillion != null
+          ? cachedInputUsdPerMillion / 1000000
+          : inputRate;
 
     if (inputRate == null && outputRate == null) return null;
     return {
@@ -561,18 +715,28 @@
   }
 
   async function readErrorMessage(response) {
+    if (typeof response?.text === 'function') {
+      try {
+        const raw = await response.text();
+        if (raw && raw.trim()) {
+          try {
+            const payload = JSON.parse(raw);
+            const errorText = payload?.error?.message || payload?.message || payload?.detail;
+            if (typeof errorText === 'string' && errorText.trim()) return errorText.trim();
+          } catch (parseErr) {
+            return raw.trim();
+          }
+        }
+      } catch (readErr) {
+        /* fall through to mock/legacy response readers */
+      }
+    }
     try {
       const payload = await response.json();
-      const errorText = payload?.error?.message || payload?.message;
+      const errorText = payload?.error?.message || payload?.message || payload?.detail;
       if (typeof errorText === 'string' && errorText.trim()) return errorText.trim();
       return `HTTP ${response.status}`;
     } catch (err) {
-      try {
-        const text = await response.text();
-        if (text && text.trim()) return text.trim();
-      } catch (readErr) {
-        /* ignore */
-      }
       return `HTTP ${response.status}`;
     }
   }
@@ -583,6 +747,7 @@
       endpoint,
       apiKey,
       model,
+      modelEntry,
       prompt,
       suffix,
       maxTokens,
@@ -594,29 +759,42 @@
       stop
     } = config;
     const provider = getProviderOption(providerKey);
-    const includeTopP = Number.isFinite(topP) && topP > 0;
-    const includeTopK = provider.supportsTopK && Number.isFinite(topK) && topK > 0;
-    const includeMaxTokens = Number.isFinite(maxTokens) && maxTokens > 0;
+    if (!isHttpCompletionEndpoint(endpoint)) {
+      throw new Error('Completion endpoint must be an absolute HTTP(S) URL ending in /completions.');
+    }
+    if (typeof prompt !== 'string' || !prompt.length) {
+      throw new Error('A prompt string is required for every completion request.');
+    }
+    if (Array.isArray(stop) && provider.maxStopSequences && stop.length > provider.maxStopSequences) {
+      throw new Error(`${provider.label} accepts at most ${provider.maxStopSequences} stop sequences.`);
+    }
+    const supports = parameter =>
+      providerSupportsRequestParameter(providerKey, parameter, modelEntry);
+    const includeTopP = supports('top_p') && Number.isFinite(topP) && topP > 0;
+    const includeTopK = supports('top_k') && Number.isFinite(topK) && topK > 0;
+    const includeMaxTokens = supports('max_tokens') && Number.isFinite(maxTokens) && maxTokens > 0;
     const includePresencePenalty =
-      provider.supportsPenalties && Number.isFinite(presencePenalty) && presencePenalty !== 0;
+      supports('presence_penalty') && Number.isFinite(presencePenalty) && presencePenalty !== 0;
     const includeFrequencyPenalty =
-      provider.supportsPenalties && Number.isFinite(frequencyPenalty) && frequencyPenalty !== 0;
+      supports('frequency_penalty') && Number.isFinite(frequencyPenalty) && frequencyPenalty !== 0;
+    const includeTemperature = supports('temperature') && Number.isFinite(temperature);
+    const includeStop = supports('stop') && stop;
+    const includeSuffix =
+      supports('suffix') && typeof suffix === 'string' && suffix.length > 0;
     // Every adapter starts with the same continuation contract: one prompt
     // string and no role-bearing messages. Capability flags only add fields
     // documented by that provider, preventing silent chat conversion in-client.
     const requestBody = {
       model,
       prompt,
-      ...(provider.supportsSuffix && typeof suffix === 'string' && suffix.length
-        ? { suffix }
-        : {}),
+      ...(includeSuffix ? { suffix } : {}),
       ...(includeMaxTokens ? { max_tokens: maxTokens } : {}),
       ...(includeTopP ? { top_p: topP } : {}),
       ...(includeTopK ? { top_k: topK } : {}),
       ...(includePresencePenalty ? { presence_penalty: presencePenalty } : {}),
       ...(includeFrequencyPenalty ? { frequency_penalty: frequencyPenalty } : {}),
-      temperature,
-      ...(stop ? { stop } : {}),
+      ...(includeTemperature ? { temperature } : {}),
+      ...(includeStop ? { stop } : {}),
       stream: false
     };
     const response = await fetch(endpoint, {
@@ -632,9 +810,13 @@
     const hasText = hasCompletionText(payload, provider.responseMode);
     const completion = hasText ? readCompletionText(payload, provider.responseMode) : '';
     if (!hasText) {
-      throw new Error(
-        'Model returned a chat-style response. Use a completion-capable model for pure continuation.'
-      );
+      const choice = readCompletionChoice(payload);
+      if (provider.responseMode === 'text' && typeof choice?.message?.content === 'string') {
+        throw new Error(
+          'Model returned a chat-style response. Use a completion-capable model for pure continuation.'
+        );
+      }
+      throw new Error(`${provider.label} did not return completion text in its documented response field.`);
     }
     return {
       id: toTrimmedString(payload?.id),
@@ -643,21 +825,42 @@
     };
   }
 
-  function normalizeSimpleModelEntries(payload) {
-    const data = Array.isArray(payload?.data)
-      ? payload.data
-      : Array.isArray(payload?.models)
-        ? payload.models
-        : [];
+  // Model-list responses are not actually OpenAI-uniform: Together returns a
+  // top-level array, Fireworks uses camelCase under `models`, Mistral publishes
+  // FIM capability flags, and OpenRouter prices per token. Normalize those
+  // shapes once so rendering, capability gating, and cost math share one record.
+  function normalizeSimpleModelEntries(payload, providerKey) {
+    const provider = getProviderOption(providerKey);
+    const data = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : Array.isArray(payload?.models)
+          ? payload.models
+          : [];
     const unique = new Map();
     data.forEach(entry => {
       const id = toTrimmedString(entry?.id || entry?.name);
       if (!id || unique.has(id)) return;
+      const contextLength = firstNumber([
+        entry?.context_length,
+        entry?.contextLength,
+        entry?.max_context_length,
+        entry?.top_provider?.context_length
+      ]);
+      const maxCompletionTokens = firstNumber([
+        entry?.max_completion_tokens,
+        entry?.maxCompletionTokens,
+        entry?.top_provider?.max_completion_tokens
+      ]);
+      const fimCapability = entry?.capabilities?.completion_fim;
+      const supportsServerless = entry?.supportsServerless ?? entry?.supports_serverless;
       unique.set(id, {
         id,
-        name: toTrimmedString(entry?.display_name || entry?.name || ''),
-        contextLength: Number.isFinite(entry?.context_length) ? entry.context_length : null,
-        pricing: readModelPricing(entry),
+        name: toTrimmedString(entry?.display_name || entry?.displayName || entry?.name || ''),
+        contextLength,
+        maxCompletionTokens,
+        pricing: readModelPricing(entry, provider.pricingScale),
         supportedParameters: Array.isArray(entry?.supported_parameters)
           ? entry.supported_parameters
           : null,
@@ -672,7 +875,18 @@
             ? entry.output_modalities
             : null,
         instructType: toTrimmedString(entry?.architecture?.instruct_type || entry?.instruct_type || ''),
-        task: toTrimmedString(entry?.task || entry?.type || entry?.modality || '')
+        task: toTrimmedString(
+          entry?.task ||
+          entry?.type ||
+          entry?.modality ||
+          entry?.baseModelDetails?.modelType ||
+          ''
+        ),
+        kind: toTrimmedString(entry?.kind || ''),
+        fimCapable: typeof fimCapability === 'boolean' ? fimCapability : null,
+        supportsServerless: typeof supportsServerless === 'boolean' ? supportsServerless : null,
+        archived: entry?.archived === true,
+        reasoningMandatory: entry?.reasoning?.mandatory === true
       });
     });
     return Array.from(unique.values()).sort((a, b) => a.id.localeCompare(b.id));
@@ -684,12 +898,9 @@
     return `${entry.id}${namePart}${ctxPart}`;
   }
 
-  function isHyperbolicCompletionModel(entry) {
-    const id = toTrimmedString(entry?.id).toLowerCase();
-    return HYPERBOLIC_COMPLETION_MODEL_IDS.has(id);
-  }
-
   function isMistralFimModel(entry) {
+    if (entry?.fimCapable === true) return true;
+    if (entry?.fimCapable === false) return false;
     const identity = `${entry?.id || ''} ${entry?.name || ''}`.toLowerCase();
     return identity.includes('codestral');
   }
@@ -699,6 +910,7 @@
   }
 
   function isLikelyTextCompletionModel(entry) {
+    if (entry?.archived || entry?.reasoningMandatory) return false;
     const inputModalities = toLowerArray(entry?.inputModalities);
     const outputModalities = toLowerArray(entry?.outputModalities);
     if (inputModalities.length && !inputModalities.includes('text')) return false;
@@ -738,20 +950,6 @@
     ]);
   }
 
-  function supportsCompletionsByMetadata(entry) {
-    const params = toLowerArray(entry?.supportedParameters);
-    if (!params.length) return null;
-    if (!params.includes('prompt')) return false;
-    if (
-      params.includes('max_tokens') ||
-      params.includes('max_new_tokens') ||
-      params.includes('max_completion_tokens')
-    ) {
-      return true;
-    }
-    return false;
-  }
-
   function renderModelPicker(modelPicker, entries, activeModel) {
     if (!modelPicker) return;
     modelPicker.innerHTML = '';
@@ -775,42 +973,52 @@
     }
   }
 
-  async function requestFireworksModelCatalog(apiKey) {
-    const endpoints = [FIREWORKS_MODELS_ENDPOINT, FIREWORKS_MODELS_FALLBACK_ENDPOINT];
-    let lastError = null;
-    for (let i = 0; i < endpoints.length; i += 1) {
-      const response = await fetch(endpoints[i], {
-        headers: buildOptionalAuthHeaders(apiKey)
-      });
-      if (response.ok) {
-        const payload = await response.json();
-        return normalizeSimpleModelEntries(payload);
-      }
-      const message = await readErrorMessage(response);
-      const error = new Error(message);
-      error.status = response.status;
-      lastError = error;
-      if (![404, 405].includes(response.status)) {
-        throw error;
-      }
-    }
-    throw lastError || new Error('Model list load failed');
-  }
-
+  // Read one native catalog completely. Most providers return one payload;
+  // Fireworks uses Google-style page tokens, so its provider record supplies
+  // the item/token paths and this loop merges every page before normalization.
   async function requestProviderModelCatalog(providerKey, apiKey) {
     const provider = getProviderOption(providerKey);
     if (!provider.modelsEndpoint) return [];
-    const response = await fetch(provider.modelsEndpoint, {
-      headers: buildOptionalAuthHeaders(apiKey)
-    });
-    if (!response.ok) {
-      const message = await readErrorMessage(response);
-      const error = new Error(message);
-      error.status = response.status;
-      throw error;
+    const pagination = provider.catalogPagination;
+    const maxPages = Math.max(1, Number(pagination?.maxPages) || 1);
+    const mergedItems = [];
+    const seenPageTokens = new Set();
+    let pageToken = '';
+    let lastPayload = null;
+
+    for (let pageIndex = 0; pageIndex < maxPages; pageIndex += 1) {
+      const requestUrl = new URL(provider.modelsEndpoint);
+      if (pageToken && pagination?.queryParameter) {
+        requestUrl.searchParams.set(pagination.queryParameter, pageToken);
+      }
+      const response = await fetch(requestUrl.href, {
+        headers: buildOptionalAuthHeaders(apiKey)
+      });
+      if (!response.ok) {
+        const message = await readErrorMessage(response);
+        const error = new Error(message);
+        error.status = response.status;
+        throw error;
+      }
+      lastPayload = await response.json();
+      if (!pagination) break;
+
+      const pageItems = readPath(lastPayload, pagination.itemsField);
+      if (Array.isArray(pageItems)) mergedItems.push(...pageItems);
+      const nextPageToken = toTrimmedString(
+        readPath(lastPayload, pagination.nextTokenField)
+      );
+      // An absent or repeated token is the documented end condition plus a
+      // defensive cycle break for malformed proxy/catalog responses.
+      if (!nextPageToken || seenPageTokens.has(nextPageToken)) break;
+      seenPageTokens.add(nextPageToken);
+      pageToken = nextPageToken;
     }
-    const payload = await response.json();
-    return normalizeSimpleModelEntries(payload);
+
+    const payload = pagination
+      ? { [pagination.itemsField]: mergedItems }
+      : lastPayload;
+    return normalizeSimpleModelEntries(payload, providerKey);
   }
 
   function getCuratedModels(providerKey) {
@@ -827,9 +1035,13 @@
   function filterModelsForProvider(providerKey, entries) {
     let filtered = entries.filter(isLikelyTextCompletionModel);
     if (providerKey === PROVIDER_KEYS.FIREWORKS) {
-      filtered = filtered.filter(entry => supportsCompletionsByMetadata(entry) !== false);
-    } else if (providerKey === PROVIDER_KEYS.HYPERBOLIC) {
-      filtered = filtered.filter(isHyperbolicCompletionModel);
+      filtered = filtered.filter(entry => entry.supportsServerless !== false);
+    } else if (providerKey === PROVIDER_KEYS.DEEPSEEK) {
+      // The general account catalog also contains chat-only V4 Flash. The FIM
+      // schema currently names only V4 Pro, so intersect rather than infer.
+      filtered = filtered.filter(entry => entry.id.toLowerCase() === 'deepseek-v4-pro');
+    } else if (providerKey === PROVIDER_KEYS.TOGETHER) {
+      filtered = filtered.filter(entry => ['language', 'code'].includes(entry.task.toLowerCase()));
     } else if (providerKey === PROVIDER_KEYS.MISTRAL) {
       filtered = filtered.filter(isMistralFimModel);
     } else if (providerKey === PROVIDER_KEYS.OPENAI) {
@@ -847,7 +1059,9 @@
       statusEl,
       excludedModelIds,
       modelPricingById,
-      isRequestStale
+      activeModel,
+      isRequestStale,
+      onModelsLoaded
     } = config;
     const stale = typeof isRequestStale === 'function' ? isRequestStale : () => false;
     if (!modelPicker) return;
@@ -862,71 +1076,82 @@
     const providerLabel = providerOption.label;
     const curatedEntries = getCuratedModels(provider);
     const key = toTrimmedString(apiKey);
-    if (!key) {
-      if (stale()) return;
-      if (modelPricingById) modelPricingById.clear();
-      renderModelPicker(modelPicker, curatedEntries, modelPicker.value);
-      if (curatedEntries.length) {
-        writeStatus(
-          statusEl,
-          `Loaded ${curatedEntries.length} documented ${providerLabel} completion model${curatedEntries.length === 1 ? '' : 's'}. Enter an API key before sending.`
-        );
-      } else {
-        writeStatus(statusEl, `Enter a ${providerLabel} API key to load models.`, true);
-      }
-      return;
-    }
-    if (stale()) return;
-    writeStatus(statusEl, `Loading ${providerLabel} models for this API key...`);
-    let entries = [];
-    let source = '';
-    let keyCatalogError = '';
-    try {
-      if (provider === PROVIDER_KEYS.FIREWORKS) {
-        entries = await requestFireworksModelCatalog(key);
-        source = '/v1/models';
-      } else if (providerOption.modelsEndpoint) {
-        entries = await requestProviderModelCatalog(provider, key);
-        source = '/v1/models';
-      } else {
-        entries = curatedEntries;
-        source = 'documented catalog';
-      }
-      entries = filterModelsForProvider(provider, entries);
-      if (!entries.length && curatedEntries.length) {
-        entries = curatedEntries;
-        source = 'documented catalog';
-      }
-
-      if (excludedModelIds && excludedModelIds.size) {
-        entries = entries.filter(entry => !excludedModelIds.has(entry.id));
-      }
-      if (stale()) return;
+    const notifyModelsLoaded = entries => {
+      if (typeof onModelsLoaded === 'function') onModelsLoaded(entries);
+    };
+    const commitEntries = entries => {
       if (modelPricingById) {
         modelPricingById.clear();
         entries.forEach(entry => {
           if (entry?.pricing) modelPricingById.set(entry.id, entry.pricing);
         });
       }
-      renderModelPicker(modelPicker, entries, modelPicker.value);
-      writeStatus(statusEl, `Loaded ${entries.length} completion models from ${providerLabel} ${source}.`);
+      renderModelPicker(modelPicker, entries, activeModel);
+      notifyModelsLoaded(entries);
+    };
+    if (!key && providerOption.modelsEndpoint && providerOption.catalogRequiresKey !== false) {
+      if (stale()) return;
+      commitEntries(curatedEntries);
+      if (curatedEntries.length) {
+        writeStatus(
+          statusEl,
+          `Loaded ${curatedEntries.length} documented ${providerLabel} completion model${curatedEntries.length === 1 ? '' : 's'}. Enter an API key before sending.`
+        );
+      } else {
+        writeStatus(statusEl, `Enter a ${providerLabel} API key to load models.`);
+      }
+      return;
+    }
+    if (stale()) return;
+    writeStatus(
+      statusEl,
+      key
+        ? `Loading ${providerLabel} models for this API key...`
+        : `Loading the public ${providerLabel} model catalog...`
+    );
+    let entries = [];
+    let source = '';
+    let keyCatalogError = '';
+    try {
+      if (providerOption.modelsEndpoint) {
+        entries = await requestProviderModelCatalog(provider, key);
+        source = providerOption.catalogLabel || '/v1/models';
+      } else {
+        entries = curatedEntries;
+        source = 'documented catalog';
+      }
+      entries = filterModelsForProvider(provider, entries);
+
+      if (excludedModelIds && excludedModelIds.size) {
+        entries = entries.filter(entry => !excludedModelIds.has(entry.id));
+      }
+      if (stale()) return;
+      commitEntries(entries);
+      const keyReminder = key ? '' : ' Enter an API key before sending.';
+      writeStatus(
+        statusEl,
+        `Loaded ${entries.length} completion models from ${providerLabel} ${source}.${keyReminder}`
+      );
     } catch (err) {
       if (stale()) return;
       if (curatedEntries.length && key && ![401, 403].includes(err?.status)) {
         const fallbackEntries = curatedEntries.filter(entry => !excludedModelIds?.has(entry.id));
-        if (modelPricingById) modelPricingById.clear();
-        renderModelPicker(modelPicker, fallbackEntries, modelPicker.value);
+        commitEntries(fallbackEntries);
         writeStatus(statusEl, `Loaded ${fallbackEntries.length} documented fallback ${providerLabel} models.`);
         return;
       }
       keyCatalogError = err && err.message ? err.message : 'request failed';
-      if (modelPricingById) modelPricingById.clear();
-      renderModelPicker(modelPicker, [], modelPicker.value);
+      commitEntries([]);
       writeStatus(statusEl, `${providerLabel} model list load failed: ${keyCatalogError}`, true);
     }
   }
 
-  function collectOpenRouterSettings(inputs, providerApiKeys) {
+  function collectOpenRouterSettings(
+    inputs,
+    providerApiKeys,
+    providerEndpoints,
+    providerModels
+  ) {
     const {
       providerSelect,
       endpointInput,
@@ -947,13 +1172,38 @@
     const apiKeys = createProviderMap(providerKey =>
       toTrimmedString(providerApiKeys?.[providerKey])
     );
+    const endpoints = createProviderMap(providerKey =>
+      normalizeEndpoint(providerEndpoints?.[providerKey], providerKey)
+    );
+    const models = createProviderMap(providerKey =>
+      toTrimmedString(providerModels?.[providerKey])
+    );
     apiKeys[provider] = toTrimmedString(apiKeyInput?.value);
+    endpoints[provider] = normalizeEndpoint(endpointInput?.value, provider);
+    models[provider] = toTrimmedString(modelPicker?.value);
+    const activeModelEntry = models[provider] ? { id: models[provider] } : null;
+    PROVIDER_KEY_LIST.forEach(providerKey => {
+      if (!isHttpCompletionEndpoint(endpoints[providerKey])) {
+        throw new Error(`${getProviderOption(providerKey).label} has an invalid completion endpoint.`);
+      }
+    });
     return {
+      kind: COMPLETION_SETTINGS_KIND,
+      version: COMPLETION_SETTINGS_VERSION,
       provider,
-      endpoint: normalizeEndpoint(endpointInput?.value, provider),
-      model: toTrimmedString(modelPicker?.value),
-      maxTokens: Math.round(readNumberInput(maxTokensInput, 0, 0, 200000)),
-      temperature: readNumberInput(temperatureInput, 1, 0, 2),
+      endpoints,
+      models,
+      endpoint: endpoints[provider],
+      model: models[provider],
+      maxTokens: Math.round(
+        readNumberInput(maxTokensInput, 0, 0, getModelMaxTokens(provider, activeModelEntry))
+      ),
+      temperature: readNumberInput(
+        temperatureInput,
+        1,
+        0,
+        getProviderTemperatureMax(provider)
+      ),
       topP: readNumberInput(topPInput, 0, 0, 1),
       topK: Math.round(readNumberInput(topKInput, 0, 0, TOP_K_MAX)),
       presencePenalty: readNumberInput(presencePenaltyInput, 0, -2, 2),
@@ -967,7 +1217,13 @@
     };
   }
 
-  function applyOpenRouterSettings(inputs, settings, providerApiKeys) {
+  function applyOpenRouterSettings(
+    inputs,
+    settings,
+    providerApiKeys,
+    providerEndpoints,
+    providerModels
+  ) {
     const {
       providerSelect,
       endpointInput,
@@ -984,33 +1240,70 @@
       titleInput,
       promptInput
     } = inputs;
-    const nextProvider = providerSelect
-      ? normalizeProviderKey(settings?.provider)
-      : DEFAULT_PROVIDER_KEY;
-    if (providerSelect) providerSelect.value = nextProvider;
+    if (
+      settings?.kind !== COMPLETION_SETTINGS_KIND ||
+      settings?.version !== COMPLETION_SETTINGS_VERSION ||
+      !PROVIDER_OPTIONS[settings?.provider] ||
+      !settings?.apiKeys ||
+      typeof settings.apiKeys !== 'object' ||
+      Array.isArray(settings.apiKeys) ||
+      !settings?.endpoints ||
+      typeof settings.endpoints !== 'object' ||
+      Array.isArray(settings.endpoints) ||
+      !settings?.models ||
+      typeof settings.models !== 'object' ||
+      Array.isArray(settings.models)
+    ) {
+      throw new Error('This is not a supported Completion API settings file.');
+    }
+    const nextProvider = settings.provider;
     const loadedApiKeys = createProviderMap('');
-    if (settings?.apiKeys && typeof settings.apiKeys === 'object') {
-      PROVIDER_KEY_LIST.forEach(providerKey => {
-        loadedApiKeys[providerKey] = toTrimmedString(settings.apiKeys[providerKey]);
-      });
-    }
-    const legacyApiKey = toTrimmedString(settings?.apiKey);
-    if (legacyApiKey && !loadedApiKeys[nextProvider]) {
-      loadedApiKeys[nextProvider] = legacyApiKey;
-    }
-    if (providerApiKeys) {
-      PROVIDER_KEY_LIST.forEach(providerKey => {
-        providerApiKeys[providerKey] = loadedApiKeys[providerKey];
-      });
-    }
-    if (endpointInput) endpointInput.value = normalizeEndpoint(settings?.endpoint, nextProvider);
+    const loadedEndpoints = createProviderMap(providerKey => defaultEndpointForProvider(providerKey));
+    const loadedModels = createProviderMap('');
+    PROVIDER_KEY_LIST.forEach(providerKey => {
+      loadedApiKeys[providerKey] = toTrimmedString(settings.apiKeys[providerKey]);
+      loadedEndpoints[providerKey] = normalizeEndpoint(settings.endpoints[providerKey], providerKey);
+      loadedModels[providerKey] = toTrimmedString(settings.models[providerKey]);
+      if (!isHttpCompletionEndpoint(loadedEndpoints[providerKey])) {
+        throw new Error(`${getProviderOption(providerKey).label} has an invalid completion endpoint.`);
+      }
+    });
+
+    // Mutation begins only after every product, version, provider, and endpoint
+    // check succeeds. A Terminal ciphertext or malformed provider map therefore
+    // cannot partially overwrite the active Completion workspace.
+    if (providerSelect) providerSelect.value = nextProvider;
+    PROVIDER_KEY_LIST.forEach(providerKey => {
+      if (providerApiKeys) providerApiKeys[providerKey] = loadedApiKeys[providerKey];
+      if (providerEndpoints) providerEndpoints[providerKey] = loadedEndpoints[providerKey];
+      if (providerModels) providerModels[providerKey] = loadedModels[providerKey];
+    });
+    if (endpointInput) endpointInput.value = loadedEndpoints[nextProvider];
     if (modelPicker) {
-      const requestedModel = toTrimmedString(settings?.model);
-      const hasOption = Array.from(modelPicker.options || []).some(option => option.value === requestedModel);
-      modelPicker.value = hasOption ? requestedModel : '';
+      const requestedModel = loadedModels[nextProvider];
+      renderModelPicker(
+        modelPicker,
+        requestedModel ? [{ id: requestedModel, name: 'Saved selection', contextLength: null }] : [],
+        requestedModel
+      );
     }
-    if (maxTokensInput) maxTokensInput.value = String(Math.round(readNumberInput({ value: settings?.maxTokens }, 0, 0, 200000)));
-    if (temperatureInput) temperatureInput.value = String(readNumberInput({ value: settings?.temperature }, 1, 0, 2));
+    const restoredModelEntry = { id: loadedModels[nextProvider] };
+    const restoredMaxTokens = getModelMaxTokens(nextProvider, restoredModelEntry);
+    if (maxTokensInput) {
+      maxTokensInput.value = String(
+        Math.round(readNumberInput({ value: settings?.maxTokens }, 0, 0, restoredMaxTokens))
+      );
+    }
+    if (temperatureInput) {
+      temperatureInput.value = String(
+        readNumberInput(
+          { value: settings?.temperature },
+          1,
+          0,
+          getProviderTemperatureMax(nextProvider)
+        )
+      );
+    }
     if (topPInput) topPInput.value = String(readNumberInput({ value: settings?.topP }, 0, 0, 1));
     if (topKInput) topKInput.value = String(Math.round(readNumberInput({ value: settings?.topK }, 0, 0, TOP_K_MAX)));
     if (presencePenaltyInput) presencePenaltyInput.value = String(readNumberInput({ value: settings?.presencePenalty }, 0, -2, 2));
@@ -1105,6 +1398,9 @@
     const outputEl = root.querySelector('.openrouter-output-text');
     const statusEl = root.querySelector('.openrouter-status');
     const providerApiKeys = createProviderMap('');
+    const providerEndpoints = createProviderMap(providerKey => defaultEndpointForProvider(providerKey));
+    const providerModels = createProviderMap('');
+    const modelEntriesByProvider = createProviderMap(() => new Map());
     const excludedModelIdsByProvider = createProviderMap(() => new Set());
     const modelPricingByProvider = createProviderMap(() => new Map());
     let activeProvider = normalizeProviderKey(providerSelect?.value);
@@ -1120,30 +1416,64 @@
       if (!modelPricingByProvider[key]) modelPricingByProvider[key] = new Map();
       return modelPricingByProvider[key];
     };
+    const getModelEntriesMap = providerKey => {
+      const key = normalizeProviderKey(providerKey);
+      if (!modelEntriesByProvider[key]) modelEntriesByProvider[key] = new Map();
+      return modelEntriesByProvider[key];
+    };
+    const getSelectedModelEntry = (providerKey = activeProvider) => {
+      const key = normalizeProviderKey(providerKey);
+      const modelId = key === activeProvider
+        ? toTrimmedString(modelPicker?.value)
+        : toTrimmedString(providerModels[key]);
+      if (!modelId) return null;
+      return getModelEntriesMap(key).get(modelId) || { id: modelId };
+    };
+    // Keep every provider's key, endpoint, and model together. Switching the
+    // picker can no longer leak a custom endpoint or model choice into the next
+    // adapter, and encrypted files serialize the same provider-scoped topology.
+    const persistActiveProviderState = () => {
+      providerApiKeys[activeProvider] = toTrimmedString(apiKeyInput?.value);
+      providerEndpoints[activeProvider] = normalizeEndpoint(endpointInput?.value, activeProvider);
+      providerModels[activeProvider] = toTrimmedString(modelPicker?.value);
+    };
     const syncApiKeyInputFromProvider = () => {
       if (apiKeyInput) apiKeyInput.value = providerApiKeys[activeProvider] || '';
     };
-    const syncEndpointForProvider = previousProvider => {
-      if (!endpointInput) return;
-      const current = toTrimmedString(endpointInput.value);
-      const previousDefault = defaultEndpointForProvider(previousProvider);
-      if (!current || current === previousDefault) {
-        endpointInput.value = defaultEndpointForProvider(activeProvider);
+    const syncEndpointInputFromProvider = () => {
+      if (endpointInput) {
+        endpointInput.value = normalizeEndpoint(providerEndpoints[activeProvider], activeProvider);
       }
     };
     const syncProviderCapabilities = () => {
       const provider = getProviderOption(activeProvider);
+      const modelEntry = getSelectedModelEntry();
+      const supports = parameter =>
+        providerSupportsRequestParameter(activeProvider, parameter, modelEntry);
       if (providerNote) providerNote.textContent = provider.capabilityNote || '';
-      if (suffixBlock) suffixBlock.classList.toggle('is-hidden', !provider.supportsSuffix);
-      if (suffixInput) suffixInput.disabled = !provider.supportsSuffix;
-      if (topKInput) topKInput.disabled = !provider.supportsTopK;
-      if (presencePenaltyInput) presencePenaltyInput.disabled = !provider.supportsPenalties;
-      if (frequencyPenaltyInput) frequencyPenaltyInput.disabled = !provider.supportsPenalties;
+      if (suffixBlock) suffixBlock.classList.toggle('is-hidden', !supports('suffix'));
+      if (suffixInput) suffixInput.disabled = !supports('suffix');
+      if (temperatureInput) temperatureInput.disabled = !supports('temperature');
+      if (topPInput) topPInput.disabled = !supports('top_p');
+      if (topKInput) topKInput.disabled = !supports('top_k');
+      if (presencePenaltyInput) presencePenaltyInput.disabled = !supports('presence_penalty');
+      if (frequencyPenaltyInput) frequencyPenaltyInput.disabled = !supports('frequency_penalty');
+      if (stopInput) stopInput.disabled = !supports('stop');
       if (maxTokensInput) {
-        maxTokensInput.max = String(provider.maxTokens || 200000);
+        const maxTokens = getModelMaxTokens(activeProvider, modelEntry);
+        maxTokensInput.disabled = !supports('max_tokens');
+        maxTokensInput.max = String(maxTokens);
         const currentMax = Math.max(0, Number(maxTokensInput.value) || 0);
-        if (provider.maxTokens && currentMax > provider.maxTokens) {
-          maxTokensInput.value = String(provider.maxTokens);
+        if (currentMax > maxTokens) {
+          maxTokensInput.value = String(maxTokens);
+        }
+      }
+      if (temperatureInput) {
+        const temperatureMax = getProviderTemperatureMax(activeProvider);
+        temperatureInput.max = String(temperatureMax);
+        const currentTemperature = Math.max(0, Number(temperatureInput.value) || 0);
+        if (currentTemperature > temperatureMax) {
+          temperatureInput.value = String(temperatureMax);
         }
       }
     };
@@ -1157,16 +1487,24 @@
         statusEl,
         excludedModelIds: getExcludedModelIds(requestedProvider),
         modelPricingById: getModelPricingMap(requestedProvider),
+        activeModel: providerModels[requestedProvider],
         isRequestStale: () => {
           if (requestToken !== modelLoadRequestToken) return true;
           const currentProvider = normalizeProviderKey(providerSelect?.value || activeProvider);
           return currentProvider !== requestedProvider;
+        },
+        onModelsLoaded: entries => {
+          const entriesMap = new Map(entries.map(entry => [entry.id, entry]));
+          modelEntriesByProvider[requestedProvider] = entriesMap;
+          if (requestToken !== modelLoadRequestToken || requestedProvider !== activeProvider) return;
+          providerModels[requestedProvider] = toTrimmedString(modelPicker?.value);
+          syncProviderCapabilities();
+          syncSliderValues();
         }
       });
     };
 
     const syncSliderValues = () => {
-      const provider = getProviderOption(activeProvider);
       const topP = Number(topPInput?.value);
       const topK = Number(topKInput?.value);
       const presencePenalty = Number(presencePenaltyInput?.value);
@@ -1176,28 +1514,30 @@
         topPValue.textContent = formatDisableableSliderValue(
           topPInput?.value,
           2,
-          Number.isFinite(topP) && topP <= 0
+          topPInput?.disabled || (Number.isFinite(topP) && topP <= 0)
         );
       }
       if (topKValue) {
         topKValue.textContent = formatDisableableSliderValue(
           topKInput?.value,
           0,
-          !provider.supportsTopK || (Number.isFinite(topK) && topK <= 0)
+          topKInput?.disabled || (Number.isFinite(topK) && topK <= 0)
         );
       }
       if (presencePenaltyValue) {
         presencePenaltyValue.textContent = formatDisableableSliderValue(
           presencePenaltyInput?.value,
           1,
-          !provider.supportsPenalties || (Number.isFinite(presencePenalty) && presencePenalty === 0)
+          presencePenaltyInput?.disabled ||
+            (Number.isFinite(presencePenalty) && presencePenalty === 0)
         );
       }
       if (frequencyPenaltyValue) {
         frequencyPenaltyValue.textContent = formatDisableableSliderValue(
           frequencyPenaltyInput?.value,
           1,
-          !provider.supportsPenalties || (Number.isFinite(frequencyPenalty) && frequencyPenalty === 0)
+          frequencyPenaltyInput?.disabled ||
+            (Number.isFinite(frequencyPenalty) && frequencyPenalty === 0)
         );
       }
     };
@@ -1211,9 +1551,6 @@
     bindSliderValue(topKInput);
     bindSliderValue(presencePenaltyInput);
     bindSliderValue(frequencyPenaltyInput);
-    syncProviderCapabilities();
-    syncSliderValues();
-
     if (titleInput && !toTrimmedString(titleInput.value)) {
       titleInput.value = 'Prompt Enhancer';
     }
@@ -1221,18 +1558,36 @@
     if (endpointInput && !toTrimmedString(endpointInput.value)) {
       endpointInput.value = defaultEndpointForProvider(activeProvider);
     }
+    providerEndpoints[activeProvider] = normalizeEndpoint(endpointInput?.value, activeProvider);
+    providerModels[activeProvider] = toTrimmedString(modelPicker?.value);
+    syncProviderCapabilities();
+    syncSliderValues();
 
     if (providerSelect) {
       providerSelect.addEventListener('change', () => {
-        const previousProvider = activeProvider;
-        providerApiKeys[previousProvider] = toTrimmedString(apiKeyInput?.value);
+        persistActiveProviderState();
         activeProvider = normalizeProviderKey(providerSelect.value);
         syncApiKeyInputFromProvider();
-        syncEndpointForProvider(previousProvider);
+        syncEndpointInputFromProvider();
+        const cachedEntries = Array.from(getModelEntriesMap(activeProvider).values());
+        renderModelPicker(modelPicker, cachedEntries, providerModels[activeProvider]);
         syncProviderCapabilities();
         syncSliderValues();
-        renderModelPicker(modelPicker, [], '');
         loadModelsForProvider(activeProvider, providerApiKeys[activeProvider]);
+      });
+    }
+
+    if (modelPicker) {
+      modelPicker.addEventListener('change', () => {
+        providerModels[activeProvider] = toTrimmedString(modelPicker.value);
+        syncProviderCapabilities();
+        syncSliderValues();
+      });
+    }
+
+    if (endpointInput) {
+      endpointInput.addEventListener('change', () => {
+        providerEndpoints[activeProvider] = normalizeEndpoint(endpointInput.value, activeProvider);
       });
     }
 
@@ -1242,7 +1597,6 @@
         loadModelsForProvider(activeProvider, providerApiKeys[activeProvider]);
       };
       apiKeyInput.addEventListener('change', refreshModelsFromKey);
-      apiKeyInput.addEventListener('blur', refreshModelsFromKey);
     }
 
     const settingsInputs = {
@@ -1290,8 +1644,13 @@
       }
       await runSettingsTask(async () => {
         try {
-          providerApiKeys[activeProvider] = toTrimmedString(apiKeyInput?.value);
-          const settings = collectOpenRouterSettings(settingsInputs, providerApiKeys);
+          persistActiveProviderState();
+          const settings = collectOpenRouterSettings(
+            settingsInputs,
+            providerApiKeys,
+            providerEndpoints,
+            providerModels
+          );
           const payload = await encryptSettings(password, settings);
           const stored = downloadEncryptedSettings(payload);
           writeStatus(
@@ -1325,17 +1684,42 @@
         try {
           const payload = await readEncryptedSettingsFile(file);
           const settings = await decryptSettings(password, payload);
-          const loadedProvider = applyOpenRouterSettings(settingsInputs, settings, providerApiKeys);
+          const loadedProvider = applyOpenRouterSettings(
+            settingsInputs,
+            settings,
+            providerApiKeys,
+            providerEndpoints,
+            providerModels
+          );
           activeProvider = normalizeProviderKey(loadedProvider);
+          const restoredModel = toTrimmedString(providerModels[activeProvider]);
+          // The encrypted provider maps replace the prior workspace as one
+          // transaction. Clear catalog-derived state for every adapter so an
+          // old option, price, or runtime exclusion cannot bleed into it.
+          PROVIDER_KEY_LIST.forEach(providerKey => {
+            modelEntriesByProvider[providerKey] = new Map();
+            getModelPricingMap(providerKey).clear();
+            getExcludedModelIds(providerKey).clear();
+          });
+          modelEntriesByProvider[activeProvider] = new Map(
+            restoredModel
+              ? [[restoredModel, {
+                  id: restoredModel,
+                  name: 'Saved selection',
+                  contextLength: null
+                }]]
+              : []
+          );
           syncProviderCapabilities();
           syncSliderValues();
-          await loadModelsForProvider(activeProvider, providerApiKeys[activeProvider]);
-          if (modelPicker) {
-            const requestedModel = toTrimmedString(settings?.model);
-            const hasOption = Array.from(modelPicker.options || []).some(option => option.value === requestedModel);
-            if (requestedModel && hasOption) modelPicker.value = requestedModel;
+          // A complete encrypted restore is locally ready immediately. Catalog
+          // refresh remains available by changing the key, but loading a saved
+          // provider/model/key never depends on another network round trip.
+          const needsCatalogRefresh = !restoredModel || !providerApiKeys[activeProvider];
+          if (needsCatalogRefresh) {
+            await loadModelsForProvider(activeProvider, providerApiKeys[activeProvider]);
           }
-          if (!statusEl?.classList?.contains('is-error')) {
+          if (!needsCatalogRefresh || !statusEl?.classList?.contains('is-error')) {
             writeStatus(statusEl, 'Encrypted settings loaded from file.');
           }
         } catch (err) {
@@ -1391,29 +1775,39 @@
 
     if (sendButton) {
       sendButton.addEventListener('click', async () => {
+        persistActiveProviderState();
         const providerKey = activeProvider;
-        const providerLabel = getProviderOption(providerKey).label;
+        const provider = getProviderOption(providerKey);
+        const providerLabel = provider.label;
         const apiKey = toTrimmedString(apiKeyInput?.value);
         providerApiKeys[providerKey] = apiKey;
         const model = toTrimmedString(modelPicker?.value);
+        providerModels[providerKey] = model;
+        const modelEntry = getSelectedModelEntry(providerKey);
         const prompt = promptInput?.value || '';
-        const suffix = providerSupports(providerKey, 'supportsSuffix')
+        const suffix = providerSupportsRequestParameter(providerKey, 'suffix', modelEntry)
           ? String(suffixInput?.value || '')
           : '';
         const endpoint = normalizeEndpoint(endpointInput?.value, providerKey);
-        const providerMaxTokens = getProviderOption(providerKey).maxTokens || 200000;
-        const maxTokens = Math.round(readNumberInput(maxTokensInput, 0, 0, providerMaxTokens));
-        const temperature = readNumberInput(temperatureInput, 1, 0, 2);
+        providerEndpoints[providerKey] = endpoint;
+        const modelMaxTokens = getModelMaxTokens(providerKey, modelEntry);
+        const maxTokens = Math.round(readNumberInput(maxTokensInput, 0, 0, modelMaxTokens));
+        const temperature = readNumberInput(
+          temperatureInput,
+          1,
+          0,
+          getProviderTemperatureMax(providerKey)
+        );
         const topP = readNumberInput(topPInput, 0, 0, 1);
         const topK = Math.round(readNumberInput(topKInput, 0, 0, TOP_K_MAX));
         const presencePenalty = readNumberInput(presencePenaltyInput, 0, -2, 2);
         const frequencyPenalty = readNumberInput(frequencyPenaltyInput, 0, -2, 2);
         const stop = parseStopSequences(stopInput?.value);
 
-        if (isChatCompletionsEndpoint(endpoint)) {
+        if (!isHttpCompletionEndpoint(endpoint)) {
           writeStatus(
             statusEl,
-            'This app is completions-only. Use /completions (prompt), not /chat/completions.',
+            'This completions-only app requires an absolute HTTP(S) endpoint ending in /completions. Chat, Responses, and Messages endpoints are not accepted.',
             true
           );
           return;
@@ -1426,8 +1820,16 @@
           writeStatus(statusEl, 'Select a completion model first.', true);
           return;
         }
-        if (!prompt.trim()) {
+        if (!prompt.length) {
           writeStatus(statusEl, 'Enter a prompt before sending.', true);
+          return;
+        }
+        if (stop && provider.maxStopSequences && stop.length > provider.maxStopSequences) {
+          writeStatus(
+            statusEl,
+            `${providerLabel} accepts at most ${provider.maxStopSequences} stop sequences.`,
+            true
+          );
           return;
         }
 
@@ -1440,6 +1842,7 @@
             endpoint,
             apiKey,
             model,
+            modelEntry,
             prompt,
             suffix,
             maxTokens,

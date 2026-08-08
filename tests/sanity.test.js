@@ -549,6 +549,9 @@ function runSanityCase(testCase) {
   const hasTerminalMenu = !!window.document.querySelector('.menu-item[data-window="terminal"]');
   const openRouterWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
   const openRouterWindowCount = window.document.querySelectorAll('.openrouter-window:not(.window-template)').length;
+  const completionProviderValues = Array.from(
+    openRouterWindow?.querySelector('.openrouter-provider')?.options || []
+  ).map(option => option.value);
   const terminalWindow = window.document.querySelector('.terminal-window:not(.window-template)');
   const terminalWindowCount = window.document.querySelectorAll('.terminal-window:not(.window-template)').length;
   const promptWindowCount = window.document.querySelectorAll('.app-window[data-window="prompts"]:not(.window-template)').length;
@@ -612,14 +615,23 @@ function runSanityCase(testCase) {
   const openRouterTitleHelp = openRouterWindow?.querySelector('.openrouter-title');
   const openRouterLoadHelp = openRouterWindow?.querySelector('[data-action="load-settings"]');
   const openRouterSaveHelp = openRouterWindow?.querySelector('[data-action="save-settings"]');
+  const openRouterEndpointHelp = openRouterWindow?.querySelector('.openrouter-endpoint');
+  const openRouterModelHelp = openRouterWindow?.querySelector('.openrouter-model-picker');
+  const openRouterTemperatureHelp = openRouterWindow?.querySelector('.openrouter-temperature');
   const openRouterTopKHelp = openRouterWindow?.querySelector('.openrouter-top-k');
+  const openRouterSuffixHelp = openRouterWindow?.querySelector('.openrouter-suffix');
+  const openRouterSendHelp = openRouterWindow?.querySelector('.openrouter-send');
   const openRouterStatusHelp = openRouterWindow?.querySelector('.openrouter-status');
   const hasAccurateOpenRouterHelp = !!(
     openRouterTitleHelp?.dataset.helpDetail?.includes('not included') &&
-    openRouterLoadHelp?.dataset.helpDetail?.includes('asks for its password') &&
-    !openRouterLoadHelp?.dataset.helpDetail?.includes('password field') &&
-    openRouterSaveHelp?.dataset.helpDetail?.includes('all sampling controls') &&
-    openRouterTopKHelp?.dataset.helpDetail?.includes('disabled for providers') &&
+    openRouterLoadHelp?.dataset.helpDetail?.includes('Completion product kind and version') &&
+    openRouterSaveHelp?.dataset.helpDetail?.includes("every provider's endpoint, model, and API key") &&
+    openRouterEndpointHelp?.dataset.helpDetail?.includes('Responses') &&
+    openRouterModelHelp?.dataset.helpDetail?.includes('nextPageToken') &&
+    openRouterTemperatureHelp?.dataset.helpDetail?.includes('maximum of 1.5') &&
+    openRouterTopKHelp?.dataset.helpDetail?.includes('advertise top_k') &&
+    openRouterSuffixHelp?.dataset.helpDetail?.includes('gpt-3.5-turbo-instruct') &&
+    openRouterSendHelp?.dataset.helpDetail?.includes('never contains messages') &&
     openRouterStatusHelp?.dataset.helpDetail?.includes('input/output tokens')
   );
   const hasOpenRouterSharedCopyControl = !!(
@@ -746,6 +758,7 @@ function runSanityCase(testCase) {
     hasOpenRouterMenu,
     hasTerminalMenu,
     openRouterWindowCount,
+    completionProviderValues,
     terminalWindowCount,
     promptWindowCount,
     taskbarButtonCount,
@@ -913,6 +926,9 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'openRouterWindowCount')) {
         expect(result.openRouterWindowCount).toBe(expected.openRouterWindowCount);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'completionProviderValues')) {
+        expect(result.completionProviderValues).toEqual(expected.completionProviderValues);
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'terminalWindowCount')) {
         expect(result.terminalWindowCount).toBe(expected.terminalWindowCount);

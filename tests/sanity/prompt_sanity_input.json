@@ -3007,7 +3007,7 @@
     },
     {
       "id": "openrouter_app_window",
-      "description": "Completion API opens with encrypted file actions, shared Help mode, and the standard boxed copy control.",
+      "description": "Completion API opens with exactly the seven currently documented prompt/FIM providers, including DeepSeek live-to-FIM catalog intersection, Hyperbolic's sunset base-only route, paginated Fireworks catalog guidance, provider-specific request bounds, versioned provider-scoped encrypted settings guidance, strict completion-only endpoint help, shared Help mode, and the standard boxed copy control.",
       "random": 0,
       "actions": [
         {

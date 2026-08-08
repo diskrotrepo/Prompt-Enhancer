@@ -10,9 +10,9 @@ The code is intentionally kept in a single `script.js` file so an LLM can search
 
 ## Completion API: prompt-only providers
 
-The **Completion API** start-menu app is for continuation-oriented requests. Every provider adapter sends a top-level `prompt` and never sends a `messages` array. FIM adapters may additionally send `suffix`. The app rejects `/chat/completions` endpoints so a copied chat URL cannot silently change the request contract.
+The **Completion API** start-menu app is for continuation-oriented requests. Every provider adapter sends a top-level `prompt` and never sends a `messages` array. Documented FIM adapters may additionally send `suffix`, as may OpenAI's model-specific legacy suffix path. Before any credential or prompt leaves the browser, the app requires an absolute HTTP(S) URL ending in `/completions`; Chat Completions, Responses, Messages, relative, and non-HTTP endpoints are rejected.
 
-Provider support was checked against official documentation on **2026-07-31**:
+Provider support was checked against official documentation on **2026-08-08**:
 
 | Provider | Default route | Continuation contract | Important caveat |
 | --- | --- | --- | --- |
@@ -20,11 +20,17 @@ Provider support was checked against official documentation on **2026-07-31**:
 | [DeepSeek](https://api-docs.deepseek.com/guides/fim_completion/) | `/beta/completions` | Native FIM `prompt` plus optional `suffix` | Currently documented with `deepseek-v4-pro`; FIM output is capped at 4K tokens. |
 | [Fireworks](https://docs.fireworks.ai/guides/completions-api) | `/inference/v1/completions` | Raw text generation without automatic message formatting | Model/template behavior still matters; base models provide the cleanest continuation semantics. |
 | [Together AI](https://docs.together.ai/reference/completions) | `/v1/completions` | One `prompt`; returned text is `choices[].text` | Select an appropriate base model or supply the complete prompt template yourself. |
-| [Mistral](https://docs.mistral.ai/fr/api/endpoint/fim) | `/v1/fim/completions` | Native FIM `prompt` plus optional `suffix` | The request is non-chat, although the current API wraps text in `choices[].message.content`. |
-| [OpenAI API](https://developers.openai.com/api/docs/models/gpt-3.5-turbo-instruct) | `/v1/completions` | Legacy prompt completion | Current flagship models use Responses; the remaining completion-only `gpt-3.5-turbo-instruct` model is deprecated. |
-| [Hyperbolic](https://www.hyperbolic.ai/docs/inference/text-apis) | `/v1/completions` | Raw base-model text completion without chat formatting | The documented Llama 3.1 405B base model carries a sunset notice, so this adapter may lose its only curated model before the endpoint disappears. |
+| [Mistral](https://docs.mistral.ai/api/endpoint/fim) | `/v1/fim/completions` | Native FIM `prompt` plus optional `suffix` | The request is non-chat, although the current API wraps text in `choices[].message.content`. |
+| [OpenAI API](https://developers.openai.com/api/reference/resources/completions/methods/create) | `/v1/completions` | Legacy prompt completion for `gpt-3.5-turbo-instruct`, `davinci-002`, and `babbage-002` | All three are deprecated; only `gpt-3.5-turbo-instruct` supports `suffix`, and current flagship models use Responses instead. |
+| [Hyperbolic](https://www.hyperbolic.ai/docs/inference/text-apis) | `/v1/completions` | Raw base-model `prompt`; returned text is `choices[].text` | Its only documented base-completion model, Llama 3.1 405B BASE, carries a sunset notice. The app keeps that one curated ID and does not substitute an instruct/chat model. |
 
-This distinction is deliberately precise: a JSON request with `prompt` instead of `messages` proves that the client is not forcing chat structure, but only a provider/model that preserves the raw prompt can guarantee tokenizer-level continuation behavior. The Jest provider matrix asserts each emitted body and the Mistral response adapter; live requests still require the user's own provider key and available model.
+Catalog parsing follows each provider's current native shape rather than assuming OpenAI uniformity. DeepSeek intersects its authenticated account list with the FIM schema's exact `deepseek-v4-pro` ID; Fireworks reads its documented account `models` collection and `supportsServerless` flag, then follows every `nextPageToken` because one response is capped at 200 records; Together reads the top-level array, keeps only `language`/`code` entries, and converts catalog prices from per-million to per-token before estimating cost; Mistral requires `capabilities.completion_fim`; OpenAI keeps only the three documented legacy completion IDs; and OpenRouter honors per-model `supported_parameters` plus mandatory-reasoning metadata. Hyperbolic uses its one documented sunset base ID without making an undocumented catalog request. A successful catalog with zero compatible models remains empty, while documentation-backed fallbacks are used only when discovery is unavailable.
+
+Request bounds are provider-aware rather than cosmetic slider limits. DeepSeek FIM is capped at 4K output and sixteen stop sequences; Fireworks, OpenAI, and OpenRouter accept at most four stop sequences; Together temperature is capped at 1; Mistral FIM temperature is capped at 1.5; and known model output/context limits constrain `max_tokens`. Parameters unsupported by the active provider or selected OpenRouter model are disabled and omitted from JSON; missing OpenRouter `supported_parameters` metadata is treated conservatively as no permission for optional fields.
+
+Hyperbolic illustrates why the modes remain separated: its primary hosted API uses `/v1/chat/completions` and instruct models, while a distinct documented section retains `/v1/completions` for the sunset base model. This distinction is deliberately precise: a JSON request with `prompt` instead of `messages` proves that the client is not forcing chat structure, but only a provider/model that preserves the raw prompt can guarantee tokenizer-level continuation behavior. The Jest provider matrix asserts all seven emitted request bodies and Mistral's unusual response adapter; live requests still require the user's own provider key and an account-available model.
+
+Each provider retains an isolated API key, endpoint, and model while the user switches adapters. Encrypted Completion settings store those maps inside a Completion-specific versioned schema, validate product kind/version and every endpoint before mutating the window, and make a complete restored provider/model/key ready without another catalog request.
 
 ### ChatGPT, Codex, and API credits
 
@@ -303,7 +309,7 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 
 - **Every visible Prompt control, title-bar icon, and resize handle has specific Help copy plus accessible icon labels** — `help_copy_coverage`, `tests/dom.test.js`
 - **Proportional Dropout Help explains relative-progress scheduling, local randomized windows, and unchanged child chunks** — `help_copy_coverage`
-- **Completion Help matches encrypted password prompts, all saved settings, provider-specific Top-k behavior, local-only Title, and token/cost status** — `openrouter_app_window`, `tests/dom.test.js`
+- **Completion Help explains versioned product-checked restores, provider-scoped endpoints/models/keys, per-model Top-k support, local-only Title, strict endpoints, and token/cost status** — `openrouter_app_window`, `tests/dom.test.js`
 - **Terminal removes its redundant Help button while retaining precise accessibility guidance on the inline prompt, masked key step, centered speaking face, `/sound` control, File actions, and title-bar controls** — `terminal_app_window`, `tests/dom.test.js`
 
 #### Window apps
@@ -321,12 +327,15 @@ Case ids refer to the entries in `tests/sanity/prompt_sanity_input.json` and
 - **Completion API encrypted settings actions live in the top file menu (password + file save/open)** — `openrouter_app_window`
 - **Completion API reuses the shell Help mode and standard boxed copy control** — `openrouter_app_window`
 - **Completion copy feedback preserves the token and cost status readout** — `tests/openrouterApp.test.js`
-- **Completion API model picker is dropdown-only, provider-scoped, and uses documented fallback models where live catalogs cannot express raw/FIM compatibility** — `openrouter_app_window`, `tests/openrouterApp.test.js`
+- **Completion API model picker is dropdown-only and provider-scoped; DeepSeek's live account list is intersected with its exact FIM model, native Fireworks/Together/Mistral/OpenAI/OpenRouter catalog shapes are normalized, every Fireworks `nextPageToken` is followed, successful zero-match catalogs stay empty, and documented fallbacks are reserved for unavailable discovery** — `openrouter_app_window`, `tests/openrouterApp.test.js`
 - **Completion API status breaks out billed input/output/total tokens and request cost when usage data is available** — `openrouter_app_window`
 - **Completion API treats empty completion text as a successful blank response when stop sequences halt immediately** — `tests/openrouterApp.test.js`
 - **Completion API copies intentionally blank output without treating it as failure** — `tests/openrouterApp.test.js`
-- **OpenRouter, Fireworks, Together, OpenAI legacy, and Hyperbolic adapters emit `prompt` with no `messages`; DeepSeek and Mistral add only optional FIM `suffix`** — `tests/openrouterApp.test.js`
-- **Provider capability controls omit unsupported Top-k/penalty fields, cap DeepSeek FIM output at 4K, and adapt Mistral's message-wrapped FIM response without changing its request shape** — `tests/openrouterApp.test.js`
+- **OpenRouter, Fireworks, Together, OpenAI Legacy, and Hyperbolic emit `prompt` with no `messages`; DeepSeek and Mistral add only documented optional FIM `suffix`, while OpenAI suffix is limited to `gpt-3.5-turbo-instruct`** — `tests/openrouterApp.test.js`
+- **Provider/model capability controls omit unsupported fields, treat missing OpenRouter parameter metadata as permission for no optional fields, enforce Fireworks/OpenAI/OpenRouter four-stop limits, DeepSeek's sixteen-stop/4K caps, Together's temperature-1 cap, Mistral FIM's temperature-1.5 cap, and known model token/context limits; they also convert Together per-million prices correctly and adapt Mistral's message-wrapped FIM response without changing its request shape** — `tests/openrouterApp.test.js`
+- **Completion API exposes exactly seven documented prompt/FIM providers; Hyperbolic is limited to its one sunset base-completion model, conservative fields, and no undocumented catalog route** — `openrouter_app_window`, `tests/openrouterApp.test.js`
+- **Completion endpoints must be absolute HTTP(S) `/completions` URLs, so Chat, Responses, Messages, relative, and non-HTTP targets are rejected before POST** — `tests/openrouterApp.test.js`
+- **Completion encrypted settings validate Completion kind/version and all endpoints before mutation, preserve every provider's key/endpoint/model, and restore a complete selection without a redundant catalog request** — `tests/openrouterApp.test.js`
 - **Terminal appears in the start menu as one phosphor console with only a standard gray File launcher as permanent app chrome, a centered container-scaled one-line ASCII face, transparent normal and masked Enter-driven prompts, nine hidden tools, and an empty knowledge seam** — `terminal_app_window`, `tests/terminalApp.test.js`, `tests/dom.test.js`
 - **Assistant lines drive at most eighteen calmly paced mouth poses inside one fixed 84x20 viewBox; eyes retain upper anchors, every mouth path retains its lower anchor independent of font metrics, and `/face` cancels leftover speech before applying a canonical emote** — `terminal_app_window`, `tests/terminalApp.test.js`, `tests/dom.test.js`
 - **The quiet Enter-unlocked procedural murmur follows the same bounded phrase plan; `/sound on|off` controls it without TTS, recordings, external audio, or new permanent controls** — `terminal_app_window`, `tests/terminalApp.test.js`, `tests/dom.test.js`

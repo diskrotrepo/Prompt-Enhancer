@@ -354,6 +354,15 @@
       "output": "",
       "hasOpenRouterMenu": true,
       "openRouterWindowCount": 1,
+      "completionProviderValues": [
+        "openrouter",
+        "deepseek",
+        "fireworks",
+        "together",
+        "mistral",
+        "openai",
+        "hyperbolic"
+      ],
       "hasOpenRouterEncryptedSettingsControls": true,
       "hasOpenRouterHelpMode": true,
       "hasCompleteHelpCopy": true,

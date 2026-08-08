@@ -450,8 +450,8 @@
                       <span class="prompt-menu-label">file</span>
                     </button>
                     <div class="prompt-menu-dropdown openrouter-menu-dropdown" role="menu" aria-hidden="true">
-                      <div class="prompt-menu-item" data-action="load-settings" role="menuitem" data-help="Open and decrypt a Completion settings file." data-help-detail="Chooses an encrypted JSON file, asks for its password, and restores provider, endpoint, model, sampling values, stop and suffix text, provider-specific API keys, saved title, and prompt.">Open Encrypted Settings</div>
-                      <div class="prompt-menu-item" data-action="save-settings" role="menuitem" data-help="Encrypt and download all Completion settings." data-help-detail="Asks for a password, then encrypts provider, endpoint, model, max tokens, all sampling controls, stop and suffix text, every provider-specific API key, saved title, and prompt into a JSON download.">Save Encrypted Settings</div>
+                      <div class="prompt-menu-item" data-action="load-settings" role="menuitem" data-help="Open and decrypt a Completion settings file." data-help-detail="Chooses an encrypted JSON file, validates its Completion product kind and version, and restores every provider's endpoint, model, and API key plus the shared request controls. A complete provider/model/key restore is ready without another catalog request.">Open Encrypted Settings</div>
+                      <div class="prompt-menu-item" data-action="save-settings" role="menuitem" data-help="Encrypt and download all Completion settings." data-help-detail="Asks for a password, then encrypts every provider's endpoint, model, and API key plus sampling controls, stop and suffix text, saved title, and prompt into a versioned Completion-only JSON envelope.">Save Encrypted Settings</div>
                     </div>
                     <div class="prompt-menu-spacer" aria-hidden="true"></div>
                     <button type="button" class="help-toggle" aria-pressed="false" data-help="Toggle help mode for Completion API controls." data-help-detail="When Help is on, clicking any menu, request, output, resize, or title-bar control explains it without performing the action. Click Help again or press Escape to exit.">Help</button>
@@ -461,63 +461,63 @@
                     <div class="openrouter-grid">
                       <div class="control-block">
                         <label>Provider</label>
-                        <select class="openrouter-provider" data-help="Completion provider." data-help-detail="Choose a documented prompt-only or FIM provider. API key, endpoint, model catalog, supported sampling fields, and continuation caveats are scoped to this selection.">
+                        <select class="openrouter-provider" data-help="Completion-only provider." data-help-detail="Choose one of seven providers with a documented prompt or FIM /completions route. Each provider keeps its own API key, endpoint, model, capability metadata, and continuation caveat; Hyperbolic is retained only for its sunset base-completion route.">
                           <option value="openrouter">OpenRouter</option>
                           <option value="deepseek">DeepSeek FIM</option>
                           <option value="fireworks" selected>Fireworks</option>
                           <option value="together">Together AI</option>
                           <option value="mistral">Mistral FIM</option>
                           <option value="openai">OpenAI API (Legacy)</option>
-                          <option value="hyperbolic">Hyperbolic</option>
+                          <option value="hyperbolic">Hyperbolic (Sunset)</option>
                         </select>
                       </div>
                       <div class="control-block">
                         <label>Endpoint</label>
-                        <input type="text" class="openrouter-endpoint" value="https://api.fireworks.ai/inference/v1/completions" data-help="Completions endpoint for the selected provider." data-help-detail="Defaults to the provider's documented /completions or /fim/completions route. This app rejects /chat/completions and always sends prompt without messages.">
+                        <input type="text" class="openrouter-endpoint" value="https://api.fireworks.ai/inference/v1/completions" data-help="Completions endpoint for the selected provider." data-help-detail="Defaults to the provider's documented /completions or /fim/completions route. Only an absolute HTTP(S) URL ending in /completions is accepted; chat, Responses, and Messages endpoints are rejected before sending.">
                       </div>
                       <div class="openrouter-provider-note" role="status" data-help="Provider continuation guarantee and caveats." data-help-detail="Explains whether the active provider promises raw generation, exposes FIM, wraps output in a chat-shaped response object, or may adapt a routed chat-trained model behind a prompt-only endpoint."></div>
                     <div class="control-block">
                       <label>Model</label>
-                      <select class="openrouter-model-picker" data-help="Completion-compatible models from the selected provider." data-help-detail="Loads text models from the provider, narrows families where official raw/FIM support is model-specific, and uses documentation-backed fallback entries when a catalog cannot express that capability.">
+                      <select class="openrouter-model-picker" data-help="Completion-compatible models from the selected provider." data-help-detail="Reads each provider's real catalog shape: DeepSeek's account list intersected with its documented FIM model, all Fireworks serverless-text pages through nextPageToken, language/code entries for Together, completion_fim capability for Mistral, the three legacy OpenAI completion IDs, per-model metadata from OpenRouter, and Hyperbolic's documented sunset base model without inventing a catalog route.">
                         <option value="">Loading completion models...</option>
                       </select>
                     </div>
                       <div class="control-block">
                         <label>Max Tokens</label>
-                      <input type="number" class="openrouter-max-tokens" min="0" step="1" value="0" data-help="Maximum completion tokens to request." data-help-detail="Sets max_tokens for the selected provider's completion request. Set to 0 to omit max_tokens and use provider defaults.">
+                      <input type="number" class="openrouter-max-tokens" min="0" step="1" value="0" data-help="Maximum completion tokens to request." data-help-detail="Sets max_tokens when the provider or selected model supports it. Set to 0 to use provider defaults; documented provider and model output caps are applied automatically.">
                       </div>
                       <div class="control-block">
                         <label>Temperature</label>
                         <div class="openrouter-slider-row">
-                          <input type="range" class="openrouter-temperature" min="0" max="2" step="0.01" value="1" data-help="Sampling temperature for completion randomness." data-help-detail="Lower values are more deterministic; higher values increase variation.">
+                          <input type="range" class="openrouter-temperature" min="0" max="2" step="0.01" value="1" data-help="Sampling temperature for completion randomness." data-help-detail="Lower values are more deterministic; higher values increase variation. The range follows provider documentation, including Together's maximum of 1 and Mistral FIM's maximum of 1.5.">
                           <span class="openrouter-slider-value openrouter-temperature-value">1</span>
                         </div>
                       </div>
                       <div class="control-block">
                         <label>Top P</label>
                         <div class="openrouter-slider-row">
-                          <input type="range" class="openrouter-top-p" min="0" max="1" step="0.01" value="0" data-help="Nucleus sampling probability mass." data-help-detail="Limits token sampling to the smallest token set whose cumulative probability exceeds this value. Set to 0 to disable.">
+                          <input type="range" class="openrouter-top-p" min="0" max="1" step="0.01" value="0" data-help="Nucleus sampling probability mass." data-help-detail="Limits token sampling to the smallest token set whose cumulative probability exceeds this value. Set to 0 to omit it; OpenRouter also disables it when the selected model does not advertise top_p.">
                           <span class="openrouter-slider-value openrouter-top-p-value">0</span>
                         </div>
                       </div>
                       <div class="control-block">
                         <label>Top K</label>
                         <div class="openrouter-slider-row">
-                          <input type="range" class="openrouter-top-k" min="0" max="100" step="1" value="0" data-help="Top-k token cutoff." data-help-detail="Limits sampling to the highest-probability K tokens (1-100) for OpenRouter, Fireworks, and Together. It is omitted at 0 and disabled for providers that do not document it.">
+                          <input type="range" class="openrouter-top-k" min="0" max="100" step="1" value="0" data-help="Top-k token cutoff." data-help-detail="Limits sampling to the highest-probability K tokens (1-100) for Fireworks and Together, and for OpenRouter models that advertise top_k. It is omitted at 0 or when unsupported.">
                           <span class="openrouter-slider-value openrouter-top-k-value">0</span>
                         </div>
                       </div>
                       <div class="control-block">
                         <label>Presence Penalty</label>
                         <div class="openrouter-slider-row">
-                          <input type="range" class="openrouter-presence-penalty" min="-2" max="2" step="0.1" value="0" data-help="Penalty for already-seen tokens." data-help-detail="Positive values push the model toward introducing new concepts; negative values can encourage repetition. Set to 0 to disable.">
+                          <input type="range" class="openrouter-presence-penalty" min="-2" max="2" step="0.1" value="0" data-help="Penalty for already-seen tokens." data-help-detail="Positive values push the model toward new concepts; negative values can encourage repetition. Zero omits it, and the control is disabled when the provider or selected OpenRouter model does not document it.">
                           <span class="openrouter-slider-value openrouter-presence-penalty-value">0</span>
                         </div>
                       </div>
                       <div class="control-block">
                         <label>Frequency Penalty</label>
                         <div class="openrouter-slider-row">
-                          <input type="range" class="openrouter-frequency-penalty" min="-2" max="2" step="0.1" value="0" data-help="Penalty for repeated token frequency." data-help-detail="Positive values reduce verbatim repetition by penalizing frequently emitted tokens. Set to 0 to disable.">
+                          <input type="range" class="openrouter-frequency-penalty" min="-2" max="2" step="0.1" value="0" data-help="Penalty for repeated token frequency." data-help-detail="Positive values reduce verbatim repetition by penalizing frequently emitted tokens. Zero omits it, and unsupported provider or model combinations disable the control.">
                           <span class="openrouter-slider-value openrouter-frequency-penalty-value">0</span>
                         </div>
                       </div>
@@ -532,18 +532,18 @@
                     </div>
                     <div class="control-block">
                       <label>Stop Sequences (optional, one per line)</label>
-                      <textarea class="openrouter-stop" rows="2" placeholder="Example:\n###\nEND" data-help="Optional stop sequences." data-help-detail="Provide one stop sequence per line. Generation ends when any sequence is matched."></textarea>
+                      <textarea class="openrouter-stop" rows="2" placeholder="Example:\n###\nEND" data-help="Optional stop sequences." data-help-detail="Provide one stop sequence per line. Generation ends when any sequence is matched, and documented limits such as Fireworks/OpenAI/OpenRouter's four or DeepSeek's sixteen are validated before sending."></textarea>
                     </div>
                     <div class="control-block openrouter-suffix-block is-hidden">
                       <label>Suffix (FIM, optional)</label>
-                      <textarea class="openrouter-suffix" rows="3" placeholder="Optional text after the missing span..." data-help="Optional fill-in-the-middle suffix." data-help-detail="DeepSeek and Mistral place generated text between the Prompt prefix and this Suffix. Leave it blank to continue directly after the prompt."></textarea>
+                      <textarea class="openrouter-suffix" rows="3" placeholder="Optional text after the missing span..." data-help="Optional fill-in-the-middle suffix." data-help-detail="DeepSeek and Mistral place generated text between the Prompt prefix and this Suffix. OpenAI exposes it only for gpt-3.5-turbo-instruct; leave it blank for forward continuation."></textarea>
                     </div>
                     <div class="control-block">
                       <label>Prompt</label>
                       <textarea class="openrouter-prompt" rows="8" placeholder="Write the completion prompt here..." data-help="Prompt text sent to the completions API." data-help-detail="Enter the text prefix you want the model to continue. The result appears in the output panel below."></textarea>
                     </div>
                     <div class="openrouter-actions">
-                      <button type="button" class="add-button openrouter-send" data-help="Send a prompt-only completion request." data-help-detail="Validates the API key, non-chat endpoint, model, and prompt, then sends prompt, optional FIM suffix, documented sampling fields, and stop sequences without a messages array.">Send Completion</button>
+                      <button type="button" class="add-button openrouter-send" data-help="Send a prompt-only completion request." data-help-detail="Validates the API key, absolute /completions endpoint, model, prompt, token cap, and stop count, then sends only documented continuation fields. The request always contains prompt and never contains messages.">Send Completion</button>
                     </div>
                     <div class="openrouter-status" role="status" aria-live="polite" data-help="Completion request and model status." data-help-detail="Reports model-catalog loading, validation or provider errors, and completed request accounting such as input/output tokens and returned or estimated cost.">Ready.</div>
                     <!-- Completion output uses the same colored box-header and

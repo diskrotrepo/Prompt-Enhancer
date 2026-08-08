@@ -106,7 +106,17 @@ function setupDom() {
             id: 'example/base-model',
             name: 'Example Base Model',
             context_length: 32768,
-            architecture: { input_modalities: ['text'], output_modalities: ['text'] }
+            architecture: { input_modalities: ['text'], output_modalities: ['text'] },
+            supported_parameters: [
+              'max_tokens',
+              'temperature',
+              'top_p',
+              'top_k',
+              'presence_penalty',
+              'frequency_penalty',
+              'stop'
+            ],
+            reasoning: { mandatory: false }
           }]
         })
       });
@@ -114,11 +124,33 @@ function setupDom() {
     if (target.includes('api.together.ai/v1/models')) {
       return Promise.resolve({
         ok: true,
-        json: async () => ({
-          data: [{
+        json: async () => ([{
             id: 'example/together-base',
-            name: 'Together Base',
-            context_length: 32768
+            display_name: 'Together Base',
+            context_length: 32768,
+            type: 'language',
+            pricing: { input: 0.3, output: 0.6 }
+          }, {
+            id: 'example/together-chat',
+            display_name: 'Together Chat',
+            context_length: 32768,
+            type: 'chat'
+          }])
+      });
+    }
+    if (target.includes('api.deepseek.com/models')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          object: 'list',
+          data: [{
+            id: 'deepseek-v4-flash',
+            object: 'model',
+            owned_by: 'deepseek'
+          }, {
+            id: 'deepseek-v4-pro',
+            object: 'model',
+            owned_by: 'deepseek'
           }]
         })
       });
@@ -130,41 +162,67 @@ function setupDom() {
           data: [{
             id: 'codestral-latest',
             name: 'Codestral Latest',
-            context_length: 32768
+            max_context_length: 32768,
+            capabilities: { completion_fim: true }
+          }, {
+            id: 'mistral-chat-only',
+            name: 'Mistral Chat Only',
+            max_context_length: 32768,
+            capabilities: { completion_fim: false }
           }]
         })
       });
     }
-    if (target.includes('fireworks.ai/v1/models') || target.includes('fireworks.ai/inference/v1/models')) {
+    if (target.includes('api.openai.com/v1/models')) {
       return Promise.resolve({
         ok: true,
         json: async () => ({
           data: [
             {
-              id: 'accounts/fireworks/models/minimax-m2p5',
-              name: 'MiniMax M2.5',
-              context_length: 131072,
-              supported_parameters: ['prompt', 'max_tokens', 'temperature']
+              id: 'gpt-3.5-turbo-instruct',
+              owned_by: 'openai'
             },
             {
-              id: 'accounts/fireworks/models/llama-v3p1-70b-instruct',
-              name: 'Llama v3.1 70B Instruct',
-              context_length: 131072,
-              supported_parameters: ['prompt', 'max_tokens', 'temperature']
+              id: 'davinci-002',
+              owned_by: 'openai'
+            },
+            {
+              id: 'babbage-002',
+              owned_by: 'openai'
+            },
+            {
+              id: 'gpt-5.6-chat',
+              owned_by: 'openai'
             }
           ]
         })
       });
     }
-    if (target.includes('hyperbolic.xyz/v1/models')) {
+    if (target.includes('api.fireworks.ai/v1/accounts/fireworks/models')) {
       return Promise.resolve({
         ok: true,
         json: async () => ({
-          data: [
+          models: [
             {
-              id: 'meta-llama/Meta-Llama-3.1-405B',
-              name: 'Llama 3.1 405B',
-              context_length: 131072
+              name: 'accounts/fireworks/models/minimax-m2p5',
+              displayName: 'MiniMax M2.5',
+              contextLength: 131072,
+              supportsServerless: true,
+              baseModelDetails: { modelType: 'text' }
+            },
+            {
+              name: 'accounts/fireworks/models/llama-v3p1-70b-instruct',
+              displayName: 'Llama v3.1 70B Instruct',
+              contextLength: 131072,
+              supportsServerless: true,
+              baseModelDetails: { modelType: 'text' }
+            },
+            {
+              name: 'accounts/example/models/not-serverless',
+              displayName: 'Not Serverless',
+              contextLength: 131072,
+              supportsServerless: false,
+              baseModelDetails: { modelType: 'text' }
             }
           ]
         })
@@ -187,21 +245,6 @@ function setupDom() {
         })
       });
     }
-    if (target.includes('hyperbolic.xyz/v1/completions')) {
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({
-          id: 'hb-gen-test-1',
-          choices: [{ text: 'hyperbolic result text' }],
-          usage: {
-            prompt_tokens: 60,
-            completion_tokens: 20,
-            total_tokens: 80,
-            cost: 0.0015
-          }
-        })
-      });
-    }
     if (target.includes('openrouter.ai/api/v1/completions')) {
       return Promise.resolve({
         ok: true,
@@ -209,6 +252,16 @@ function setupDom() {
           id: 'or-gen-test-1',
           choices: [{ text: 'openrouter raw result' }],
           usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 }
+        })
+      });
+    }
+    if (target.includes('api.hyperbolic.xyz/v1/completions')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          id: 'hyperbolic-raw-test-1',
+          choices: [{ text: 'hyperbolic raw result' }],
+          usage: { prompt_tokens: 11, completion_tokens: 4, total_tokens: 15 }
         })
       });
     }
@@ -279,6 +332,7 @@ describe('OpenRouter app module', () => {
     const providerSelect = appWindow.querySelector('.openrouter-provider');
     const keyInput = appWindow.querySelector('.openrouter-api-key');
     const modelPicker = appWindow.querySelector('.openrouter-model-picker');
+    const maxTokensInput = appWindow.querySelector('.openrouter-max-tokens');
     const topKInput = appWindow.querySelector('.openrouter-top-k');
     const promptInput = appWindow.querySelector('.openrouter-prompt');
     const sendButton = appWindow.querySelector('.openrouter-send');
@@ -308,7 +362,9 @@ describe('OpenRouter app module', () => {
     expect(modelPicker?.querySelectorAll('option').length).toBeGreaterThan(1);
     expect(modelPicker?.textContent || '').toContain('accounts/fireworks/models/minimax-m2p5');
     expect(modelPicker?.textContent || '').toContain('accounts/fireworks/models/llama-v3p1-70b-instruct');
+    expect(modelPicker?.textContent || '').not.toContain('accounts/example/models/not-serverless');
     expect(modelPicker.value).toBe('accounts/fireworks/models/llama-v3p1-70b-instruct');
+    expect(maxTokensInput.max).toBe('131072');
     promptInput.value = 'finish this sentence';
 
     sendButton.click();
@@ -373,6 +429,13 @@ describe('OpenRouter app module', () => {
       model: 'gpt-3.5-turbo-instruct',
       output: 'openai legacy result',
       supportsTopK: false
+    },
+    {
+      provider: 'hyperbolic',
+      endpoint: 'https://api.hyperbolic.xyz/v1/completions',
+      model: 'meta-llama/Meta-Llama-3.1-405B',
+      output: 'hyperbolic raw result',
+      supportsTopK: false
     }
   ])('sends $provider as prompt-only completion data', async providerCase => {
     const { window } = setupDom();
@@ -421,14 +484,16 @@ describe('OpenRouter app module', () => {
       endpoint: 'https://api.deepseek.com/beta/completions',
       model: 'deepseek-v4-pro',
       output: 'deepseek middle',
-      maxTokens: 4096
+      maxTokens: 4096,
+      temperatureMax: 2
     },
     {
       provider: 'mistral',
       endpoint: 'https://api.mistral.ai/v1/fim/completions',
       model: 'codestral-latest',
       output: 'mistral middle',
-      maxTokens: 9000
+      maxTokens: 9000,
+      temperatureMax: 1.5
     }
   ])('sends $provider FIM prefix and suffix without chat request fields', async providerCase => {
     const { window } = setupDom();
@@ -440,6 +505,7 @@ describe('OpenRouter app module', () => {
     const suffixBlock = appWindow.querySelector('.openrouter-suffix-block');
     const suffixInput = appWindow.querySelector('.openrouter-suffix');
     const maxTokensInput = appWindow.querySelector('.openrouter-max-tokens');
+    const temperatureInput = appWindow.querySelector('.openrouter-temperature');
     const topKInput = appWindow.querySelector('.openrouter-top-k');
     const presenceInput = appWindow.querySelector('.openrouter-presence-penalty');
     const frequencyInput = appWindow.querySelector('.openrouter-frequency-penalty');
@@ -455,8 +521,10 @@ describe('OpenRouter app module', () => {
     expect(topKInput.disabled).toBe(true);
     expect(presenceInput.disabled).toBe(true);
     expect(frequencyInput.disabled).toBe(true);
+    expect(temperatureInput.max).toBe(String(providerCase.temperatureMax));
 
     maxTokensInput.value = '9000';
+    temperatureInput.value = '2';
     topKInput.value = '31';
     presenceInput.value = '1';
     frequencyInput.value = '1';
@@ -475,86 +543,355 @@ describe('OpenRouter app module', () => {
     expect(payload.suffix).toBe('\n}');
     expect(payload.messages).toBeUndefined();
     expect(payload.max_tokens).toBe(providerCase.maxTokens);
+    expect(payload.temperature).toBe(providerCase.temperatureMax);
     expect(payload.top_k).toBeUndefined();
     expect(payload.presence_penalty).toBeUndefined();
     expect(payload.frequency_penalty).toBeUndefined();
   });
 
-  test('switches to hyperbolic and sends a hyperbolic completions request', async () => {
+  test('gates OpenAI suffix and output cap to the selected legacy completion model', async () => {
     const { window } = setupDom();
     window.document.querySelector('.menu-item[data-window="openrouter"]').click();
     const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
     const providerSelect = appWindow.querySelector('.openrouter-provider');
-    const endpointInput = appWindow.querySelector('.openrouter-endpoint');
     const keyInput = appWindow.querySelector('.openrouter-api-key');
     const modelPicker = appWindow.querySelector('.openrouter-model-picker');
+    const suffixBlock = appWindow.querySelector('.openrouter-suffix-block');
+    const suffixInput = appWindow.querySelector('.openrouter-suffix');
+    const maxTokensInput = appWindow.querySelector('.openrouter-max-tokens');
     const promptInput = appWindow.querySelector('.openrouter-prompt');
     const sendButton = appWindow.querySelector('.openrouter-send');
-    const output = appWindow.querySelector('.openrouter-output-text');
     const status = appWindow.querySelector('.openrouter-status');
 
-    providerSelect.value = 'hyperbolic';
+    providerSelect.value = 'openai';
     providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
-    expect(endpointInput.value).toBe('https://api.hyperbolic.xyz/v1/completions');
-
-    keyInput.value = 'hb-test-key';
+    keyInput.value = 'openai-test-key';
     keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
-    await waitFor(() => (status.textContent || '').includes('Loaded'));
-    expect(modelPicker?.textContent || '').toContain('meta-llama/Meta-Llama-3.1-405B');
-
-    promptInput.value = 'POEM 11';
-    sendButton.click();
-    await flush();
-    await flush();
-
-    const completionCalls = window.fetch.mock.calls.filter(call =>
-      String(call[0] || '').includes('hyperbolic.xyz/v1/completions')
+    await waitFor(() =>
+      (status.textContent || '').includes('OpenAI') && modelPicker.value === 'gpt-3.5-turbo-instruct'
     );
-    expect(completionCalls.length).toBeGreaterThan(0);
-    const [requestUrl, requestInit] = completionCalls[completionCalls.length - 1];
-    const payload = JSON.parse(requestInit.body);
-    expect(requestUrl).toBe('https://api.hyperbolic.xyz/v1/completions');
-    expect(requestInit.headers.Authorization).toBe('Bearer hb-test-key');
-    expect(payload.model).toBe('meta-llama/Meta-Llama-3.1-405B');
-    expect(payload.prompt).toBe('POEM 11');
-    expect(payload.max_tokens).toBeUndefined();
-    expect(payload.temperature).toBe(1);
-    expect(payload.top_p).toBeUndefined();
-    expect(payload.top_k).toBeUndefined();
-    expect(payload.presence_penalty).toBeUndefined();
-    expect(payload.frequency_penalty).toBeUndefined();
-    expect(payload.stop).toBeUndefined();
-    expect(payload.messages).toBeUndefined();
-    expect(output.textContent).toBe('hyperbolic result text');
+
+    expect(suffixBlock.classList.contains('is-hidden')).toBe(false);
+    maxTokensInput.value = '9000';
+    suffixInput.value = ' after-gap';
+    promptInput.value = 'before-gap ';
+    sendButton.click();
+    await waitFor(() => window.fetch.mock.calls.filter(call =>
+      String(call[0] || '') === 'https://api.openai.com/v1/completions'
+    ).length === 1);
+    const firstPayload = JSON.parse(window.fetch.mock.calls.find(call =>
+      String(call[0] || '') === 'https://api.openai.com/v1/completions'
+    )[1].body);
+    expect(firstPayload.suffix).toBe(' after-gap');
+    expect(firstPayload.max_tokens).toBe(4096);
+    expect(firstPayload.messages).toBeUndefined();
+    await waitFor(() => sendButton.disabled === false);
+
+    modelPicker.value = 'davinci-002';
+    modelPicker.dispatchEvent(new window.Event('change', { bubbles: true }));
+    expect(suffixBlock.classList.contains('is-hidden')).toBe(true);
+    maxTokensInput.value = '9000';
+    promptInput.value = 'forward only';
+    sendButton.click();
+    await waitFor(() => window.fetch.mock.calls.filter(call =>
+      String(call[0] || '') === 'https://api.openai.com/v1/completions'
+    ).length === 2);
+    const completionCalls = window.fetch.mock.calls.filter(call =>
+      String(call[0] || '') === 'https://api.openai.com/v1/completions'
+    );
+    const secondPayload = JSON.parse(completionCalls[1][1].body);
+    expect(secondPayload.model).toBe('davinci-002');
+    expect(secondPayload.suffix).toBeUndefined();
+    expect(secondPayload.max_tokens).toBe(9000);
+    expect(secondPayload.messages).toBeUndefined();
   });
 
-  test('falls back to top-level and estimated billing when usage cost is missing', async () => {
+  test('honors OpenRouter per-model parameter metadata and mandatory-reasoning flags', async () => {
     const { window } = setupDom();
     window.fetch = jest.fn((url, init) => {
       const target = String(url || '');
-      if (target.includes('fireworks.ai/v1/models') || target.includes('fireworks.ai/inference/v1/models')) {
+      if (target.includes('openrouter.ai/api/v1/models')) {
         return Promise.resolve({
           ok: true,
           json: async () => ({
-            data: [
-              {
-                id: 'accounts/fireworks/models/llama-v3p1-70b-instruct',
-                name: 'Llama v3.1 70B Instruct',
-                context_length: 131072,
-                pricing: {
-                  prompt: '0.000001',
-                  completion: '0.000002'
-                }
-              }
-            ]
+            data: [{
+              id: 'example/minimal-completion-model',
+              name: 'Minimal Completion Model',
+              architecture: { input_modalities: ['text'], output_modalities: ['text'] },
+              supported_parameters: ['max_tokens', 'temperature'],
+              reasoning: { mandatory: false }
+            }, {
+              id: 'example/mandatory-reasoning-model',
+              name: 'Mandatory Reasoning Model',
+              architecture: { input_modalities: ['text'], output_modalities: ['text'] },
+              supported_parameters: ['max_tokens', 'temperature', 'top_p'],
+              reasoning: { mandatory: true }
+            }]
           })
         });
       }
-      if (target.includes('fireworks.ai/inference/v1/completions')) {
+      if (target.includes('openrouter.ai/api/v1/completions')) {
         return Promise.resolve({
           ok: true,
           json: async () => ({
-            id: 'fw-gen-test-billing-fallback',
+            choices: [{ text: 'minimal continuation' }],
+            usage: { prompt_tokens: 2, completion_tokens: 1, total_tokens: 3 }
+          })
+        });
+      }
+      return Promise.resolve({
+        ok: false,
+        status: 404,
+        json: async () => ({ message: 'Not Found' })
+      });
+    });
+
+    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
+    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    const providerSelect = appWindow.querySelector('.openrouter-provider');
+    const keyInput = appWindow.querySelector('.openrouter-api-key');
+    const modelPicker = appWindow.querySelector('.openrouter-model-picker');
+    const topPInput = appWindow.querySelector('.openrouter-top-p');
+    const topKInput = appWindow.querySelector('.openrouter-top-k');
+    const stopInput = appWindow.querySelector('.openrouter-stop');
+    const status = appWindow.querySelector('.openrouter-status');
+
+    providerSelect.value = 'openrouter';
+    providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    keyInput.value = 'openrouter-test-key';
+    keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() => modelPicker.value === 'example/minimal-completion-model');
+    expect(modelPicker?.textContent || '').not.toContain('mandatory-reasoning-model');
+    expect(topPInput.disabled).toBe(true);
+    expect(topKInput.disabled).toBe(true);
+    expect(stopInput.disabled).toBe(true);
+
+    topPInput.value = '0.8';
+    topKInput.value = '25';
+    stopInput.value = 'END';
+    appWindow.querySelector('.openrouter-prompt').value = 'raw prefix';
+    appWindow.querySelector('.openrouter-send').click();
+    await waitFor(() => (status.textContent || '').includes('Completed.'));
+    const completionCall = window.fetch.mock.calls.find(call =>
+      String(call[0] || '') === 'https://openrouter.ai/api/v1/completions'
+    );
+    const payload = JSON.parse(completionCall[1].body);
+    expect(payload.prompt).toBe('raw prefix');
+    expect(payload.messages).toBeUndefined();
+    expect(payload.top_p).toBeUndefined();
+    expect(payload.top_k).toBeUndefined();
+    expect(payload.stop).toBeUndefined();
+  });
+
+  test('omits all optional OpenRouter fields when supported_parameters is absent', async () => {
+    const { window } = setupDom();
+    window.fetch = jest.fn((url, init) => {
+      const target = String(url || '');
+      if (target.includes('openrouter.ai/api/v1/models')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            data: [{
+              id: 'example/metadata-opaque-base',
+              name: 'Metadata Opaque Base',
+              architecture: { input_modalities: ['text'], output_modalities: ['text'] },
+              reasoning: { mandatory: false }
+            }]
+          })
+        });
+      }
+      if (target.includes('openrouter.ai/api/v1/completions')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            choices: [{ text: 'opaque continuation' }],
+            usage: { prompt_tokens: 2, completion_tokens: 1, total_tokens: 3 }
+          })
+        });
+      }
+      return Promise.resolve({
+        ok: false,
+        status: 404,
+        json: async () => ({ message: 'Not Found' })
+      });
+    });
+
+    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
+    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    const providerSelect = appWindow.querySelector('.openrouter-provider');
+    const keyInput = appWindow.querySelector('.openrouter-api-key');
+    const modelPicker = appWindow.querySelector('.openrouter-model-picker');
+    const promptInput = appWindow.querySelector('.openrouter-prompt');
+    const maxTokensInput = appWindow.querySelector('.openrouter-max-tokens');
+    const temperatureInput = appWindow.querySelector('.openrouter-temperature');
+    const topPInput = appWindow.querySelector('.openrouter-top-p');
+    const status = appWindow.querySelector('.openrouter-status');
+
+    providerSelect.value = 'openrouter';
+    providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    keyInput.value = 'openrouter-test-key';
+    keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() => modelPicker.value === 'example/metadata-opaque-base');
+    expect(maxTokensInput.disabled).toBe(true);
+    expect(temperatureInput.disabled).toBe(true);
+    expect(topPInput.disabled).toBe(true);
+
+    maxTokensInput.value = '99';
+    temperatureInput.value = '1.2';
+    topPInput.value = '0.8';
+    promptInput.value = 'opaque prefix';
+    appWindow.querySelector('.openrouter-send').click();
+    await waitFor(() => (status.textContent || '').includes('Completed.'));
+
+    const completionCall = window.fetch.mock.calls.find(call =>
+      String(call[0] || '') === 'https://openrouter.ai/api/v1/completions'
+    );
+    const payload = JSON.parse(completionCall[1].body);
+    expect(payload).toEqual({
+      model: 'example/metadata-opaque-base',
+      prompt: 'opaque prefix',
+      stream: false
+    });
+  });
+
+  test('offers only providers with a currently documented prompt or FIM completions route', async () => {
+    const { window } = setupDom();
+    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
+    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    const providerSelect = appWindow.querySelector('.openrouter-provider');
+    const keyInput = appWindow.querySelector('.openrouter-api-key');
+    const status = appWindow.querySelector('.openrouter-status');
+
+    expect(Array.from(providerSelect.options).map(option => option.value)).toEqual([
+      'openrouter',
+      'deepseek',
+      'fireworks',
+      'together',
+      'mistral',
+      'openai',
+      'hyperbolic'
+    ]);
+
+    keyInput.value = 'fw-catalog-key';
+    keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    keyInput.dispatchEvent(new window.Event('blur', { bubbles: true }));
+    await waitFor(() => (status.textContent || '').includes('Loaded'));
+    const catalogCalls = window.fetch.mock.calls.filter(call =>
+      String(call[0] || '').startsWith(
+        'https://api.fireworks.ai/v1/accounts/fireworks/models?filter=supports_serverless%3Dtrue'
+      )
+    );
+    const catalogCall = catalogCalls[0];
+    expect(catalogCalls).toHaveLength(1);
+    expect(catalogCall).toBeDefined();
+    expect(catalogCall[1].headers.Authorization).toBe('Bearer fw-catalog-key');
+  });
+
+  test('follows every documented Fireworks nextPageToken before populating models', async () => {
+    const { window } = setupDom();
+    window.fetch = jest.fn((url, init) => {
+      const target = new URL(String(url || ''));
+      if (target.hostname === 'api.fireworks.ai' && target.pathname.endsWith('/models')) {
+        const pageToken = target.searchParams.get('pageToken');
+        return Promise.resolve({
+          ok: true,
+          json: async () => pageToken
+            ? {
+                models: [{
+                  name: 'accounts/fireworks/models/page-two-base',
+                  displayName: 'Page Two Base',
+                  contextLength: 8192,
+                  supportsServerless: true,
+                  baseModelDetails: { modelType: 'text' }
+                }]
+              }
+            : {
+                models: [{
+                  name: 'accounts/fireworks/models/page-one-base',
+                  displayName: 'Page One Base',
+                  contextLength: 4096,
+                  supportsServerless: true,
+                  baseModelDetails: { modelType: 'text' }
+                }],
+                nextPageToken: 'page-two-token'
+              }
+        });
+      }
+      return Promise.resolve({
+        ok: false,
+        status: 404,
+        json: async () => ({ message: 'Not Found' })
+      });
+    });
+
+    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
+    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    const keyInput = appWindow.querySelector('.openrouter-api-key');
+    const modelPicker = appWindow.querySelector('.openrouter-model-picker');
+    const status = appWindow.querySelector('.openrouter-status');
+
+    keyInput.value = 'fw-pagination-key';
+    keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() => (status.textContent || '').includes('Loaded 2 completion models'));
+
+    const catalogCalls = window.fetch.mock.calls.filter(call =>
+      String(call[0] || '').includes('api.fireworks.ai/v1/accounts/fireworks/models')
+    );
+    expect(catalogCalls).toHaveLength(2);
+    expect(new URL(catalogCalls[0][0]).searchParams.get('pageToken')).toBeNull();
+    expect(new URL(catalogCalls[1][0]).searchParams.get('pageToken')).toBe('page-two-token');
+    expect(catalogCalls.every(call =>
+      call[1]?.headers?.Authorization === 'Bearer fw-pagination-key'
+    )).toBe(true);
+    expect(modelPicker.textContent).toContain('page-one-base');
+    expect(modelPicker.textContent).toContain('page-two-base');
+  });
+
+  test('keeps Hyperbolic on its one documented sunset base model and conservative fields', async () => {
+    const { window } = setupDom();
+    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
+    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    const providerSelect = appWindow.querySelector('.openrouter-provider');
+    const modelPicker = appWindow.querySelector('.openrouter-model-picker');
+    const providerNote = appWindow.querySelector('.openrouter-provider-note');
+
+    providerSelect.value = 'hyperbolic';
+    providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await flush();
+
+    expect(Array.from(modelPicker.options).map(option => option.value)).toEqual([
+      '',
+      'meta-llama/Meta-Llama-3.1-405B'
+    ]);
+    expect(providerNote.textContent).toContain('for removal');
+    expect(appWindow.querySelector('.openrouter-top-p').disabled).toBe(true);
+    expect(appWindow.querySelector('.openrouter-top-k').disabled).toBe(true);
+    expect(appWindow.querySelector('.openrouter-presence-penalty').disabled).toBe(true);
+    expect(appWindow.querySelector('.openrouter-frequency-penalty').disabled).toBe(true);
+    expect(appWindow.querySelector('.openrouter-stop').disabled).toBe(true);
+  });
+
+  test('normalizes Together per-million pricing and top-level request cost', async () => {
+    const { window } = setupDom();
+    window.fetch = jest.fn((url, init) => {
+      const target = String(url || '');
+      if (target.includes('api.together.ai/v1/models')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ([{
+            id: 'example/together-priced-language',
+            display_name: 'Together Priced Language',
+            context_length: 131072,
+            type: 'language',
+            pricing: { input: 0.3, output: 0.6 }
+          }])
+        });
+      }
+      if (target.includes('api.together.ai/v1/completions')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            id: 'together-gen-test-billing-fallback',
             choices: [{ text: 'fallback billing text' }],
             usage: {
               prompt_tokens: 100,
@@ -574,100 +911,116 @@ describe('OpenRouter app module', () => {
 
     window.document.querySelector('.menu-item[data-window="openrouter"]').click();
     const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    const providerSelect = appWindow.querySelector('.openrouter-provider');
     const keyInput = appWindow.querySelector('.openrouter-api-key');
     const promptInput = appWindow.querySelector('.openrouter-prompt');
+    const temperatureInput = appWindow.querySelector('.openrouter-temperature');
     const sendButton = appWindow.querySelector('.openrouter-send');
     const status = appWindow.querySelector('.openrouter-status');
 
-    keyInput.value = 'fw-test-key';
+    providerSelect.value = 'together';
+    providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    keyInput.value = 'together-test-key';
     keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
     await waitFor(() => (status.textContent || '').includes('Loaded'));
     promptInput.value = 'test billing fallback';
+    temperatureInput.value = '1.8';
 
     sendButton.click();
     await flush();
     await flush();
 
     expect(status.textContent).toContain('Request cost (USD): $0.0007');
-    expect(status.textContent).toContain('Estimated request cost (USD): $0.00018');
+    expect(status.textContent).toContain('Estimated request cost (USD): $0.000054');
+    const completionCall = window.fetch.mock.calls.find(call =>
+      String(call[0] || '') === 'https://api.together.ai/v1/completions'
+    );
+    expect(JSON.parse(completionCall[1].body).temperature).toBe(1);
   });
 
-  test('filters fireworks models that do not advertise prompt completions support', async () => {
+  test('uses Together top-level catalog shape and excludes chat-typed models', async () => {
     const { window } = setupDom();
-    window.fetch = jest.fn((url, init) => {
-      const target = String(url || '');
-      if (target.includes('fireworks.ai/v1/models') || target.includes('fireworks.ai/inference/v1/models')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            data: [
-              {
-                id: 'accounts/fireworks/models/llama-v3p1-70b-instruct',
-                name: 'Llama v3.1 70B Instruct',
-                context_length: 131072,
-                supported_parameters: ['prompt', 'max_tokens', 'temperature']
-              },
-              {
-                id: 'accounts/fireworks/models/chat-only-model',
-                name: 'Chat Only Model',
-                context_length: 131072,
-                supported_parameters: ['messages', 'max_tokens', 'temperature']
-              }
-            ]
-          })
-        });
-      }
-      if (target.includes('fireworks.ai/inference/v1/completions')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            id: 'fw-gen-filter-test',
-            choices: [{ text: 'ok' }],
-            usage: { prompt_tokens: 2, completion_tokens: 1, total_tokens: 3, cost: 0.0001 }
-          })
-        });
-      }
-      return Promise.resolve({
-        ok: false,
-        status: 404,
-        json: async () => ({ message: 'Not Found' })
-      });
-    });
-
     window.document.querySelector('.menu-item[data-window="openrouter"]').click();
     const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    const providerSelect = appWindow.querySelector('.openrouter-provider');
     const keyInput = appWindow.querySelector('.openrouter-api-key');
     const modelPicker = appWindow.querySelector('.openrouter-model-picker');
     const status = appWindow.querySelector('.openrouter-status');
 
-    keyInput.value = 'fw-test-key';
+    providerSelect.value = 'together';
+    providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    keyInput.value = 'together-test-key';
     keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
     await waitFor(() => (status.textContent || '').includes('Loaded'));
 
-    expect(modelPicker?.textContent || '').toContain('accounts/fireworks/models/llama-v3p1-70b-instruct');
-    expect(modelPicker?.textContent || '').not.toContain('accounts/fireworks/models/chat-only-model');
+    expect(modelPicker?.textContent || '').toContain('example/together-base');
+    expect(modelPicker?.textContent || '').not.toContain('example/together-chat');
   });
 
-  test('restricts hyperbolic model picker to curated 405B model only', async () => {
+  test('intersects DeepSeek FIM, Mistral FIM, and OpenAI legacy catalog capabilities', async () => {
     const { window } = setupDom();
-    window.fetch = jest.fn((url, init) => {
+    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
+    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    const providerSelect = appWindow.querySelector('.openrouter-provider');
+    const keyInput = appWindow.querySelector('.openrouter-api-key');
+    const modelPicker = appWindow.querySelector('.openrouter-model-picker');
+    const status = appWindow.querySelector('.openrouter-status');
+
+    providerSelect.value = 'deepseek';
+    providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    keyInput.value = 'deepseek-test-key';
+    keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() =>
+      (status.textContent || '').includes('DeepSeek') &&
+      (status.textContent || '').includes('Loaded')
+    );
+    expect(Array.from(modelPicker.options).map(option => option.value)).toEqual([
+      '',
+      'deepseek-v4-pro'
+    ]);
+    expect(modelPicker.textContent).not.toContain('deepseek-v4-flash');
+
+    providerSelect.value = 'mistral';
+    providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    keyInput.value = 'mistral-test-key';
+    keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() =>
+      (status.textContent || '').includes('Mistral') &&
+      (status.textContent || '').includes('Loaded')
+    );
+    expect(modelPicker?.textContent || '').toContain('codestral-latest');
+    expect(modelPicker?.textContent || '').not.toContain('mistral-chat-only');
+
+    providerSelect.value = 'openai';
+    providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    keyInput.value = 'openai-test-key';
+    keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() =>
+      (status.textContent || '').includes('OpenAI') &&
+      (status.textContent || '').includes('Loaded')
+    );
+    expect(Array.from(modelPicker.options).map(option => option.value)).toEqual([
+      '',
+      'babbage-002',
+      'davinci-002',
+      'gpt-3.5-turbo-instruct'
+    ]);
+    expect(modelPicker?.textContent || '').not.toContain('gpt-5.6-chat');
+  });
+
+  test('does not revive a curated Mistral model after a successful zero-FIM catalog', async () => {
+    const { window } = setupDom();
+    window.fetch = jest.fn(url => {
       const target = String(url || '');
-      if (target.includes('hyperbolic.xyz/v1/models')) {
+      if (target.includes('api.mistral.ai/v1/models')) {
         return Promise.resolve({
           ok: true,
           json: async () => ({
-            data: [
-              {
-                id: 'meta-llama/Meta-Llama-3.1-405B',
-                name: 'Llama 3.1 405B',
-                context_length: 131072
-              },
-              {
-                id: 'vendor/unsupported-chat-model',
-                name: 'Unsupported Chat Model',
-                context_length: 131072
-              }
-            ]
+            data: [{
+              id: 'mistral-chat-only',
+              name: 'Mistral Chat Only',
+              capabilities: { completion_fim: false }
+            }]
           })
         });
       }
@@ -685,15 +1038,16 @@ describe('OpenRouter app module', () => {
     const modelPicker = appWindow.querySelector('.openrouter-model-picker');
     const status = appWindow.querySelector('.openrouter-status');
 
-    providerSelect.value = 'hyperbolic';
+    providerSelect.value = 'mistral';
     providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
-    keyInput.value = 'hb-test-key';
+    expect(modelPicker?.textContent || '').toContain('codestral-latest');
+    keyInput.value = 'mistral-test-key';
     keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
-    await waitFor(() => (status.textContent || '').includes('Loaded'));
+    await waitFor(() => (status.textContent || '').includes('Loaded 0 completion models'));
 
-    expect(modelPicker?.textContent || '').toContain('meta-llama/Meta-Llama-3.1-405B');
-    expect(modelPicker?.textContent || '').not.toContain('vendor/unsupported-chat-model');
-    expect(status.textContent).toContain('Loaded 1 completion models');
+    expect(modelPicker.value).toBe('');
+    expect(modelPicker?.textContent || '').toBe('No completion models found');
+    expect(modelPicker?.textContent || '').not.toContain('codestral-latest');
   });
 
   test('omits disableable sampling params when sliders are set to zero', async () => {
@@ -748,48 +1102,62 @@ describe('OpenRouter app module', () => {
     expect(payload.temperature).toBe(1);
   });
 
-  test('keeps API key values separate per provider when switching', async () => {
+  test('keeps API key, endpoint, and model values separate per provider', async () => {
     const { window } = setupDom();
     window.document.querySelector('.menu-item[data-window="openrouter"]').click();
     const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
     const providerSelect = appWindow.querySelector('.openrouter-provider');
+    const endpointInput = appWindow.querySelector('.openrouter-endpoint');
     const keyInput = appWindow.querySelector('.openrouter-api-key');
+    const modelPicker = appWindow.querySelector('.openrouter-model-picker');
+    const status = appWindow.querySelector('.openrouter-status');
 
-    providerSelect.value = 'fireworks';
-    providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
     keyInput.value = 'fw-key';
     keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() => (status.textContent || '').includes('Fireworks') && modelPicker.value);
+    endpointInput.value = 'https://proxy.example/fireworks/completions';
+    modelPicker.value = 'accounts/fireworks/models/minimax-m2p5';
+    modelPicker.dispatchEvent(new window.Event('change', { bubbles: true }));
 
-    providerSelect.value = 'hyperbolic';
+    providerSelect.value = 'together';
     providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
-    keyInput.value = 'hb-key';
+    keyInput.value = 'together-key';
     keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() => (status.textContent || '').includes('Together') && modelPicker.value);
+    endpointInput.value = 'https://proxy.example/together/completions';
+    modelPicker.value = 'example/together-base';
+    modelPicker.dispatchEvent(new window.Event('change', { bubbles: true }));
 
     providerSelect.value = 'fireworks';
     providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
     expect(keyInput.value).toBe('fw-key');
+    expect(endpointInput.value).toBe('https://proxy.example/fireworks/completions');
+    expect(modelPicker.value).toBe('accounts/fireworks/models/minimax-m2p5');
 
-    providerSelect.value = 'hyperbolic';
+    providerSelect.value = 'together';
     providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
-    expect(keyInput.value).toBe('hb-key');
+    expect(keyInput.value).toBe('together-key');
+    expect(endpointInput.value).toBe('https://proxy.example/together/completions');
+    expect(modelPicker.value).toBe('example/together-base');
   });
 
   test('ignores stale provider model responses when switching providers quickly', async () => {
     const { window } = setupDom();
     window.fetch = jest.fn(url => {
       const target = String(url || '');
-      if (target.includes('fireworks.ai/v1/models') || target.includes('fireworks.ai/inference/v1/models')) {
+      if (target.includes('api.fireworks.ai/v1/accounts/fireworks/models')) {
         return new Promise(resolve => {
           setTimeout(() => {
             resolve({
               ok: true,
               json: async () => ({
-                data: [
+                models: [
                   {
-                    id: 'accounts/fireworks/models/fw-stale',
-                    name: 'Fireworks Stale',
-                    context_length: 123,
-                    supported_parameters: ['prompt', 'max_tokens', 'temperature']
+                    name: 'accounts/fireworks/models/fw-stale',
+                    displayName: 'Fireworks Stale',
+                    contextLength: 123,
+                    supportsServerless: true,
+                    baseModelDetails: { modelType: 'text' }
                   }
                 ]
               })
@@ -797,20 +1165,17 @@ describe('OpenRouter app module', () => {
           }, 80);
         });
       }
-      if (target.includes('hyperbolic.xyz/v1/models')) {
+      if (target.includes('api.together.ai/v1/models')) {
         return new Promise(resolve => {
           setTimeout(() => {
             resolve({
               ok: true,
-              json: async () => ({
-                data: [
-                  {
-                    id: 'meta-llama/Meta-Llama-3.1-405B',
-                    name: 'Hyperbolic Fresh',
-                    context_length: 456
-                  }
-                ]
-              })
+              json: async () => ([{
+                id: 'example/together-fresh',
+                display_name: 'Together Fresh',
+                context_length: 456,
+                type: 'language'
+              }])
             });
           }, 10);
         });
@@ -842,16 +1207,16 @@ describe('OpenRouter app module', () => {
     keyInput.value = 'fw-race-key';
     keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
 
-    providerSelect.value = 'hyperbolic';
+    providerSelect.value = 'together';
     providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
-    keyInput.value = 'hb-race-key';
+    keyInput.value = 'together-race-key';
     keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
 
     await new Promise(resolve => setTimeout(resolve, 140));
 
-    expect(providerSelect.value).toBe('hyperbolic');
-    expect(status.textContent || '').toContain('Hyperbolic');
-    expect(modelPicker?.textContent || '').toContain('meta-llama/Meta-Llama-3.1-405B');
+    expect(providerSelect.value).toBe('together');
+    expect(status.textContent || '').toContain('Together');
+    expect(modelPicker?.textContent || '').toContain('example/together-fresh');
     expect(modelPicker?.textContent || '').not.toContain('accounts/fireworks/models/fw-stale');
   });
 
@@ -883,19 +1248,55 @@ describe('OpenRouter app module', () => {
     expect(payload.stop).toEqual([' END', 'END ']);
   });
 
+  test.each([
+    {
+      provider: 'fireworks',
+      endpoint: 'https://api.fireworks.ai/inference/v1/completions'
+    },
+    {
+      provider: 'openai',
+      endpoint: 'https://api.openai.com/v1/completions'
+    }
+  ])('validates $provider four-stop limit before sending', async providerCase => {
+    const { window } = setupDom();
+    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
+    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    const providerSelect = appWindow.querySelector('.openrouter-provider');
+    const keyInput = appWindow.querySelector('.openrouter-api-key');
+    const promptInput = appWindow.querySelector('.openrouter-prompt');
+    const stopInput = appWindow.querySelector('.openrouter-stop');
+    const status = appWindow.querySelector('.openrouter-status');
+
+    providerSelect.value = providerCase.provider;
+    providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    keyInput.value = `${providerCase.provider}-test-key`;
+    keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() => (status.textContent || '').includes('Loaded'));
+    promptInput.value = 'continue';
+    stopInput.value = 'one\ntwo\nthree\nfour\nfive';
+    appWindow.querySelector('.openrouter-send').click();
+    await flush();
+
+    expect(status.textContent).toContain('at most 4 stop sequences');
+    expect(window.fetch.mock.calls.filter(call =>
+      String(call[0] || '') === providerCase.endpoint
+    )).toHaveLength(0);
+  });
+
   test('accepts successful empty completion text when stop sequences halt immediately', async () => {
     const { window, clipboardWrites } = setupDom();
     window.fetch = jest.fn((url, init) => {
       const target = String(url || '');
-      if (target.includes('fireworks.ai/v1/models') || target.includes('fireworks.ai/inference/v1/models')) {
+      if (target.includes('api.fireworks.ai/v1/accounts/fireworks/models')) {
         return Promise.resolve({
           ok: true,
           json: async () => ({
-            data: [
+            models: [
               {
-                id: 'accounts/fireworks/models/empty-stop-model',
-                name: 'Empty Stop Model',
-                supported_parameters: ['prompt', 'max_tokens', 'temperature']
+                name: 'accounts/fireworks/models/empty-stop-model',
+                displayName: 'Empty Stop Model',
+                supportsServerless: true,
+                baseModelDetails: { modelType: 'text' }
               }
             ]
           })
@@ -1004,6 +1405,9 @@ describe('OpenRouter app module', () => {
     apiKeyInput.value = '';
     titleInput.value = '';
     promptInput.value = '';
+    const catalogCallsBeforeRestore = window.fetch.mock.calls.filter(call =>
+      String(call[0] || '').includes('api.fireworks.ai/v1/accounts/fireworks/models')
+    ).length;
 
     await clickOpenRouterFileAction(window, appWindow, 'load-settings');
     const encryptedFile = new window.File(
@@ -1031,6 +1435,9 @@ describe('OpenRouter app module', () => {
     expect(apiKeyInput.value).toBe('fw-live-secret-value');
     expect(titleInput.value).toBe('Encrypted Settings Test');
     expect(promptInput.value).toBe('This prompt should be encrypted and restored.');
+    expect(window.fetch.mock.calls.filter(call =>
+      String(call[0] || '').includes('api.fireworks.ai/v1/accounts/fireworks/models')
+    ).length).toBe(catalogCallsBeforeRestore);
   });
 
   test('encrypted settings persist separate API keys for both providers', async () => {
@@ -1050,9 +1457,9 @@ describe('OpenRouter app module', () => {
     apiKeyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
     await waitFor(() => (status.textContent || '').includes('Loaded'));
 
-    providerSelect.value = 'hyperbolic';
+    providerSelect.value = 'together';
     providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
-    apiKeyInput.value = 'hb-key-persisted';
+    apiKeyInput.value = 'together-key-persisted';
     apiKeyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
     await waitFor(() => (status.textContent || '').includes('Loaded'));
 
@@ -1077,18 +1484,20 @@ describe('OpenRouter app module', () => {
       configurable: true
     });
     loadFileInput.dispatchEvent(new window.Event('change', { bubbles: true }));
-    await waitFor(() => providerSelect.value === 'hyperbolic' && apiKeyInput.value === 'hb-key-persisted');
+    await waitFor(() =>
+      providerSelect.value === 'together' && apiKeyInput.value === 'together-key-persisted'
+    );
 
-    expect(providerSelect.value).toBe('hyperbolic');
-    expect(apiKeyInput.value).toBe('hb-key-persisted');
+    expect(providerSelect.value).toBe('together');
+    expect(apiKeyInput.value).toBe('together-key-persisted');
 
     providerSelect.value = 'fireworks';
     providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
     expect(apiKeyInput.value).toBe('fw-key-persisted');
 
-    providerSelect.value = 'hyperbolic';
+    providerSelect.value = 'together';
     providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
-    expect(apiKeyInput.value).toBe('hb-key-persisted');
+    expect(apiKeyInput.value).toBe('together-key-persisted');
   });
 
   test('encrypted settings save reports cancellation when password prompt is dismissed', async () => {
@@ -1145,26 +1554,67 @@ describe('OpenRouter app module', () => {
     expect(titleInput.value).toBe('');
   });
 
+  test('rejects a decrypted settings file belonging to another product before mutation', async () => {
+    const { window } = setupDom();
+    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
+    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    const providerSelect = appWindow.querySelector('.openrouter-provider');
+    const apiKeyInput = appWindow.querySelector('.openrouter-api-key');
+    const titleInput = appWindow.querySelector('.openrouter-title');
+    const loadFileInput = appWindow.querySelector('.openrouter-load-settings-file');
+    const status = appWindow.querySelector('.openrouter-status');
+
+    apiKeyInput.value = 'keep-current-key';
+    titleInput.value = 'Keep Current Title';
+    const foreignPayload = await window.YolkEncryptedSettings.encrypt('schema-password', {
+      kind: 'yolk-terminal-settings',
+      version: 1,
+      provider: 'fireworks',
+      apiKeys: {},
+      endpoints: {},
+      models: {}
+    });
+    window.prompt.mockReturnValueOnce('schema-password');
+    await clickOpenRouterFileAction(window, appWindow, 'load-settings');
+    const foreignFile = new window.File(
+      [JSON.stringify(foreignPayload)],
+      'terminal-encrypted-settings.json',
+      { type: 'application/json' }
+    );
+    Object.defineProperty(loadFileInput, 'files', {
+      value: [foreignFile],
+      configurable: true
+    });
+    loadFileInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() => (status.textContent || '').includes('not a supported Completion API'));
+
+    expect(providerSelect.value).toBe('fireworks');
+    expect(apiKeyInput.value).toBe('keep-current-key');
+    expect(titleInput.value).toBe('Keep Current Title');
+  });
+
   test('filters out models that require mandatory reasoning after first failure', async () => {
     const { window } = setupDom();
     window.fetch = jest.fn((url, init) => {
       const target = String(url || '');
-      if (target.includes('fireworks.ai/v1/models') || target.includes('fireworks.ai/inference/v1/models')) {
+      if (target.includes('api.fireworks.ai/v1/accounts/fireworks/models')) {
         return Promise.resolve({
           ok: true,
           json: async () => ({
-            data: [
+            models: [
               {
-                id: 'minimax/minimax-m1',
-                name: 'MiniMax M1',
-                context_length: 1000000,
-                supported_parameters: ['prompt', 'max_tokens', 'temperature']
+                name: 'minimax/minimax-m1',
+                displayName: 'MiniMax M1',
+                contextLength: 1000000,
+                supportsServerless: true,
+                baseModelDetails: { modelType: 'text' }
               },
               {
-                id: 'accounts/fireworks/models/minimax-m2p5',
-                name: 'MiniMax M2.5',
-                context_length: 131072,
-                supported_parameters: ['prompt', 'max_tokens', 'temperature']
+                name: 'accounts/fireworks/models/minimax-m2p5',
+                displayName: 'MiniMax M2.5',
+                contextLength: 131072,
+                supportsServerless: true,
+                baseModelDetails: { modelType: 'text' }
               }
             ]
           })
@@ -1222,7 +1672,7 @@ describe('OpenRouter app module', () => {
     expect(modelPicker?.textContent || '').toContain('accounts/fireworks/models/minimax-m2p5');
   });
 
-  test('blocks chat/completions endpoints to keep requests as pure prompt completions', async () => {
+  test('blocks chat, Responses, Messages, relative, and non-HTTP endpoints', async () => {
     const { window } = setupDom();
     window.document.querySelector('.menu-item[data-window="openrouter"]').click();
     const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
@@ -1235,14 +1685,23 @@ describe('OpenRouter app module', () => {
     keyInput.value = 'fw-test-key';
     keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
     await waitFor(() => (status.textContent || '').includes('Loaded'));
-    endpointInput.value = 'https://api.fireworks.ai/inference/v1/chat/completions';
     promptInput.value = 'autocomplete me';
-    sendButton.click();
-    await waitFor(() => (status.textContent || '').includes('completions-only'));
+    const rejectedEndpoints = [
+      'https://api.fireworks.ai/inference/v1/chat/completions',
+      'https://api.openai.com/v1/responses',
+      'https://api.anthropic.com/v1/messages',
+      '/v1/completions',
+      'ftp://proxy.example/v1/completions'
+    ];
+    for (const endpoint of rejectedEndpoints) {
+      endpointInput.value = endpoint;
+      sendButton.click();
+      await flush();
+      expect(status.textContent).toContain('completions-only');
+    }
 
-    const completionCall = window.fetch.mock.calls.find(call => String(call[0] || '').includes('/chat/completions'));
-    expect(completionCall).toBeUndefined();
-    expect(status.textContent).toContain('completions-only');
+    const postCalls = window.fetch.mock.calls.filter(call => call[1]?.method === 'POST');
+    expect(postCalls).toHaveLength(0);
   });
 });
 

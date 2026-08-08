@@ -18,7 +18,19 @@ This directory contains Jest test suites verifying functionality of the Prompt E
   inspect the emitted JSON. Raw/FIM cases must assert `prompt`, absence of
   `messages`, capability-gated sampling fields, FIM `suffix`, and any unusual
   response wrapper. These tests establish client shape, not live credentials or
-  a router's hidden tokenizer input.
+  a router's hidden tokenizer input. Keep the seven-provider UI allowlist explicit,
+  with DeepSeek's live catalog intersected against exact FIM model V4 Pro and
+  Hyperbolic restricted to its one documented sunset base model and fields,
+  and cover the real catalog topologies: every Fireworks `models` page through
+  `nextPageToken` plus camelCase serverless metadata, Together's top-level language/code array and per-million
+  pricing, Mistral `completion_fim`, OpenAI's exact legacy IDs, and OpenRouter
+  per-model parameter/reasoning flags, treating absent OpenRouter parameter
+  metadata as permission for no optional fields. Hyperbolic must not trigger an invented
+  catalog read or accept a chat/instruct substitute. Regress absolute `/completions` endpoint
+  validation, provider stop/token/temperature caps (including Fireworks' four
+  stops and Mistral FIM's 1.5 temperature maximum), successful zero-model
+  catalogs, provider-scoped key/endpoint/model switching, product-kind/version
+  rejection, and no redundant catalog read after a complete encrypted restore.
 - **Terminal Harness**: Test OpenAI-compatible chat records, OpenAI Responses
   function calls, and Anthropic Messages `tool_use`/`tool_result` blocks. Drive
   provider setup by dispatching Enter from the inline prompt, assert masked keys
