@@ -461,9 +461,10 @@
                     <div class="openrouter-grid">
                       <div class="control-block">
                         <label>Provider</label>
-                        <select class="openrouter-provider" data-help="Completion-only provider." data-help-detail="Choose one of seven providers with a documented prompt or FIM /completions route. Each provider keeps its own API key, endpoint, model, capability metadata, and continuation caveat; Hyperbolic is retained only for its sunset base-completion route.">
+                        <select class="openrouter-provider" data-help="Completion-only provider." data-help-detail="Choose one of eight providers with a documented prompt or FIM /completions route. Each provider keeps its own API key, endpoint, model, capability metadata, and continuation caveat; DeepInfra uses its legacy raw-text route, while Hyperbolic is retained only for its sunset base-completion route.">
                           <option value="openrouter">OpenRouter</option>
                           <option value="deepseek">DeepSeek FIM</option>
+                          <option value="deepinfra">DeepInfra</option>
                           <option value="fireworks" selected>Fireworks</option>
                           <option value="together">Together AI</option>
                           <option value="mistral">Mistral FIM</option>
@@ -478,7 +479,7 @@
                       <div class="openrouter-provider-note" role="status" data-help="Provider continuation guarantee and caveats." data-help-detail="Explains whether the active provider promises raw generation, exposes FIM, wraps output in a chat-shaped response object, or may adapt a routed chat-trained model behind a prompt-only endpoint."></div>
                     <div class="control-block">
                       <label>Model</label>
-                      <select class="openrouter-model-picker" data-help="Completion-compatible models from the selected provider." data-help-detail="Reads each provider's real catalog shape: DeepSeek's account list intersected with its documented FIM model, all Fireworks serverless-text pages through nextPageToken, language/code entries for Together, completion_fim capability for Mistral, the three legacy OpenAI completion IDs, per-model metadata from OpenRouter, and Hyperbolic's documented sunset base model without inventing a catalog route.">
+                      <select class="openrouter-model-picker" data-help="Completion-compatible models from the selected provider." data-help-detail="Reads each provider's real catalog shape: DeepSeek's account list intersected with its documented FIM model, DeepInfra metadata tagged text-generation, all Fireworks serverless-text pages through nextPageToken, language/code entries for Together, completion_fim capability for Mistral, the three legacy OpenAI completion IDs, per-model metadata from OpenRouter, and Hyperbolic's documented sunset base model without inventing a catalog route.">
                         <option value="">Loading completion models...</option>
                       </select>
                     </div>
@@ -532,7 +533,7 @@
                     </div>
                     <div class="control-block">
                       <label>Stop Sequences (optional, one per line)</label>
-                      <textarea class="openrouter-stop" rows="2" placeholder="Example:\n###\nEND" data-help="Optional stop sequences." data-help-detail="Provide one stop sequence per line. Generation ends when any sequence is matched, and documented limits such as Fireworks/OpenAI/OpenRouter's four or DeepSeek's sixteen are validated before sending."></textarea>
+                      <textarea class="openrouter-stop" rows="2" placeholder="Example:\n###\nEND" data-help="Optional stop sequences." data-help-detail="Provide one stop sequence per line. Generation ends when any sequence is matched, and documented limits such as DeepInfra/Fireworks/OpenAI/OpenRouter's four or DeepSeek's sixteen are validated before sending."></textarea>
                     </div>
                     <div class="control-block openrouter-suffix-block is-hidden">
                       <label>Suffix (FIM, optional)</label>

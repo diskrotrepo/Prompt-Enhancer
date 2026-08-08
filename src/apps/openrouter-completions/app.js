@@ -13,6 +13,7 @@
   const PROVIDER_KEYS = Object.freeze({
     OPENROUTER: 'openrouter',
     DEEPSEEK: 'deepseek',
+    DEEPINFRA: 'deepinfra',
     FIREWORKS: 'fireworks',
     TOGETHER: 'together',
     MISTRAL: 'mistral',
@@ -63,6 +64,27 @@
       responseMode: 'text',
       maxTokens: 4096,
       capabilityNote: 'Native beta FIM route. Sends prompt plus an optional suffix with no messages array; DeepSeek currently documents deepseek-v4-pro for this endpoint and caps output at 4K tokens.'
+    },
+    [PROVIDER_KEYS.DEEPINFRA]: {
+      label: 'DeepInfra',
+      defaultEndpoint: 'https://api.deepinfra.com/v1/openai/completions',
+      modelsEndpoint: 'https://api.deepinfra.com/v1/models',
+      catalogKind: 'deepinfra',
+      catalogLabel: '/v1/models',
+      catalogRequiresKey: true,
+      // DeepInfra publishes LLM prices per million tokens. Its OpenAI-shaped
+      // catalog nests those prices and token limits inside `metadata`.
+      pricingScale: 0.000001,
+      temperatureMax: 2,
+      maxStopSequences: 4,
+      requestParameters: Object.freeze([
+        'max_tokens',
+        'temperature',
+        'top_p',
+        'stop'
+      ]),
+      responseMode: 'text',
+      capabilityNote: 'Legacy raw text-completion route. Sends one prompt string and reads choices[].text without chat messages; each model still requires its exact prompt template, so the picker admits only catalog entries tagged text-generation.'
     },
     [PROVIDER_KEYS.FIREWORKS]: {
       label: 'Fireworks',
@@ -404,15 +426,21 @@
     const scale = Number.isFinite(Number(pricingScale)) ? Number(pricingScale) : 1;
     const ambiguousInputPrice = readFirstPathNumber(modelEntry, [
       'pricing.input',
-      'pricing.prompt'
+      'pricing.prompt',
+      'metadata.pricing.input',
+      'metadata.pricing.prompt'
     ]);
     const ambiguousOutputPrice = readFirstPathNumber(modelEntry, [
       'pricing.output',
-      'pricing.completion'
+      'pricing.completion',
+      'metadata.pricing.output',
+      'metadata.pricing.completion'
     ]);
     const ambiguousCachedPrice = readFirstPathNumber(modelEntry, [
       'pricing.cached_input',
-      'pricing.cache_read'
+      'pricing.cache_read',
+      'metadata.pricing.cached_input',
+      'metadata.pricing.cache_read'
     ]);
     const inputUsdPerToken = readFirstPathNumber(modelEntry, [
       'pricing.input_token',
@@ -547,6 +575,7 @@
     ]);
     const costUsd = firstNumber([
       usage.cost,
+      usage.estimated_cost,
       usage.total_cost,
       usage.request_cost,
       usage.billing_cost,
@@ -826,9 +855,10 @@
   }
 
   // Model-list responses are not actually OpenAI-uniform: Together returns a
-  // top-level array, Fireworks uses camelCase under `models`, Mistral publishes
-  // FIM capability flags, and OpenRouter prices per token. Normalize those
-  // shapes once so rendering, capability gating, and cost math share one record.
+  // top-level array, Fireworks uses camelCase under `models`, DeepInfra nests
+  // tags/limits/pricing under `metadata`, Mistral publishes FIM capability
+  // flags, and OpenRouter prices per token. Normalize those shapes once so
+  // rendering, capability gating, and cost math share one record.
   function normalizeSimpleModelEntries(payload, providerKey) {
     const provider = getProviderOption(providerKey);
     const data = Array.isArray(payload)
@@ -846,11 +876,13 @@
         entry?.context_length,
         entry?.contextLength,
         entry?.max_context_length,
+        entry?.metadata?.context_length,
         entry?.top_provider?.context_length
       ]);
       const maxCompletionTokens = firstNumber([
         entry?.max_completion_tokens,
         entry?.maxCompletionTokens,
+        entry?.metadata?.max_tokens,
         entry?.top_provider?.max_completion_tokens
       ]);
       const fimCapability = entry?.capabilities?.completion_fim;
@@ -883,6 +915,11 @@
           ''
         ),
         kind: toTrimmedString(entry?.kind || ''),
+        tags: Array.isArray(entry?.metadata?.tags)
+          ? entry.metadata.tags
+          : Array.isArray(entry?.tags)
+            ? entry.tags
+            : null,
         fimCapable: typeof fimCapability === 'boolean' ? fimCapability : null,
         supportsServerless: typeof supportsServerless === 'boolean' ? supportsServerless : null,
         archived: entry?.archived === true,
@@ -907,6 +944,13 @@
 
   function isOpenAICompletionModel(entry) {
     return OPENAI_COMPLETION_MODEL_IDS.has(toTrimmedString(entry?.id).toLowerCase());
+  }
+
+  // `/v1/models` covers every DeepInfra product family. Requiring the catalog's
+  // own text-generation tag keeps image, audio, embedding, and reranking rows
+  // out without guessing from rapidly changing model ids.
+  function isDeepInfraTextGenerationModel(entry) {
+    return toLowerArray(entry?.tags).includes('text-generation');
   }
 
   function isLikelyTextCompletionModel(entry) {
@@ -1040,6 +1084,8 @@
       // The general account catalog also contains chat-only V4 Flash. The FIM
       // schema currently names only V4 Pro, so intersect rather than infer.
       filtered = filtered.filter(entry => entry.id.toLowerCase() === 'deepseek-v4-pro');
+    } else if (providerKey === PROVIDER_KEYS.DEEPINFRA) {
+      filtered = filtered.filter(isDeepInfraTextGenerationModel);
     } else if (providerKey === PROVIDER_KEYS.TOGETHER) {
       filtered = filtered.filter(entry => ['language', 'code'].includes(entry.task.toLowerCase()));
     } else if (providerKey === PROVIDER_KEYS.MISTRAL) {

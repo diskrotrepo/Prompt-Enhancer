@@ -628,6 +628,7 @@ function runSanityCase(testCase) {
     openRouterSaveHelp?.dataset.helpDetail?.includes("every provider's endpoint, model, and API key") &&
     openRouterEndpointHelp?.dataset.helpDetail?.includes('Responses') &&
     openRouterModelHelp?.dataset.helpDetail?.includes('nextPageToken') &&
+    openRouterModelHelp?.dataset.helpDetail?.includes('DeepInfra metadata tagged text-generation') &&
     openRouterTemperatureHelp?.dataset.helpDetail?.includes('maximum of 1.5') &&
     openRouterTopKHelp?.dataset.helpDetail?.includes('advertise top_k') &&
     openRouterSuffixHelp?.dataset.helpDetail?.includes('gpt-3.5-turbo-instruct') &&

@@ -357,6 +357,7 @@
       "completionProviderValues": [
         "openrouter",
         "deepseek",
+        "deepinfra",
         "fireworks",
         "together",
         "mistral",

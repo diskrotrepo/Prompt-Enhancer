@@ -138,6 +138,35 @@ function setupDom() {
           }])
       });
     }
+    if (target.includes('api.deepinfra.com/v1/models')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          object: 'list',
+          data: [{
+            id: 'deepseek-ai/DeepSeek-V4-Pro',
+            object: 'model',
+            owned_by: 'deepseek-ai',
+            metadata: {
+              description: 'DeepSeek V4 Pro',
+              pricing: { input: 1.3, output: 2.6, cached_input: 0.1 },
+              tags: ['text-generation'],
+              context_length: 1048576,
+              max_tokens: 16384
+            }
+          }, {
+            id: 'black-forest-labs/FLUX-2',
+            object: 'model',
+            owned_by: 'black-forest-labs',
+            metadata: {
+              tags: ['text-to-image'],
+              default_width: 1024,
+              default_height: 1024
+            }
+          }]
+        })
+      });
+    }
     if (target.includes('api.deepseek.com/models')) {
       return Promise.resolve({
         ok: true,
@@ -262,6 +291,21 @@ function setupDom() {
           id: 'hyperbolic-raw-test-1',
           choices: [{ text: 'hyperbolic raw result' }],
           usage: { prompt_tokens: 11, completion_tokens: 4, total_tokens: 15 }
+        })
+      });
+    }
+    if (target.includes('api.deepinfra.com/v1/openai/completions')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          id: 'deepinfra-raw-test-1',
+          choices: [{ text: 'deepinfra raw result' }],
+          usage: {
+            prompt_tokens: 10,
+            completion_tokens: 5,
+            total_tokens: 15,
+            estimated_cost: 0.000026
+          }
         })
       });
     }
@@ -422,6 +466,13 @@ describe('OpenRouter app module', () => {
       model: 'example/together-base',
       output: 'together raw result',
       supportsTopK: true
+    },
+    {
+      provider: 'deepinfra',
+      endpoint: 'https://api.deepinfra.com/v1/openai/completions',
+      model: 'deepseek-ai/DeepSeek-V4-Pro',
+      output: 'deepinfra raw result',
+      supportsTopK: false
     },
     {
       provider: 'openai',
@@ -765,6 +816,7 @@ describe('OpenRouter app module', () => {
     expect(Array.from(providerSelect.options).map(option => option.value)).toEqual([
       'openrouter',
       'deepseek',
+      'deepinfra',
       'fireworks',
       'together',
       'mistral',
@@ -785,6 +837,78 @@ describe('OpenRouter app module', () => {
     expect(catalogCalls).toHaveLength(1);
     expect(catalogCall).toBeDefined();
     expect(catalogCall[1].headers.Authorization).toBe('Bearer fw-catalog-key');
+  });
+
+  test('uses DeepInfra raw completions and admits only text-generation catalog metadata', async () => {
+    const { window } = setupDom();
+    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
+    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    const providerSelect = appWindow.querySelector('.openrouter-provider');
+    const endpointInput = appWindow.querySelector('.openrouter-endpoint');
+    const keyInput = appWindow.querySelector('.openrouter-api-key');
+    const modelPicker = appWindow.querySelector('.openrouter-model-picker');
+    const maxTokensInput = appWindow.querySelector('.openrouter-max-tokens');
+    const temperatureInput = appWindow.querySelector('.openrouter-temperature');
+    const topPInput = appWindow.querySelector('.openrouter-top-p');
+    const topKInput = appWindow.querySelector('.openrouter-top-k');
+    const presenceInput = appWindow.querySelector('.openrouter-presence-penalty');
+    const frequencyInput = appWindow.querySelector('.openrouter-frequency-penalty');
+    const stopInput = appWindow.querySelector('.openrouter-stop');
+    const suffixBlock = appWindow.querySelector('.openrouter-suffix-block');
+    const promptInput = appWindow.querySelector('.openrouter-prompt');
+    const output = appWindow.querySelector('.openrouter-output-text');
+    const status = appWindow.querySelector('.openrouter-status');
+
+    providerSelect.value = 'deepinfra';
+    providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    expect(endpointInput.value).toBe('https://api.deepinfra.com/v1/openai/completions');
+    keyInput.value = 'deepinfra-test-key';
+    keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() => (status.textContent || '').includes('Loaded 1 completion models'));
+
+    expect(Array.from(modelPicker.options).map(option => option.value)).toEqual([
+      '',
+      'deepseek-ai/DeepSeek-V4-Pro'
+    ]);
+    expect(modelPicker.textContent).toContain('(1048576 ctx)');
+    expect(modelPicker.textContent).not.toContain('FLUX-2');
+    expect(maxTokensInput.max).toBe('16384');
+    expect(temperatureInput.max).toBe('2');
+    expect(topPInput.disabled).toBe(false);
+    expect(topKInput.disabled).toBe(true);
+    expect(presenceInput.disabled).toBe(true);
+    expect(frequencyInput.disabled).toBe(true);
+    expect(stopInput.disabled).toBe(false);
+    expect(suffixBlock.classList.contains('is-hidden')).toBe(true);
+
+    maxTokensInput.value = '99999';
+    temperatureInput.value = '1.7';
+    topPInput.value = '0.75';
+    topKInput.value = '25';
+    presenceInput.value = '1';
+    frequencyInput.value = '1';
+    stopInput.value = 'one\ntwo\nthree\nfour';
+    promptInput.value = '<raw-prefix><assistant>';
+    appWindow.querySelector('.openrouter-send').click();
+
+    await waitFor(() => output.textContent === 'deepinfra raw result');
+    const completionCall = window.fetch.mock.calls.find(call =>
+      String(call[0] || '') === 'https://api.deepinfra.com/v1/openai/completions' &&
+      call[1]?.method === 'POST'
+    );
+    expect(completionCall).toBeDefined();
+    expect(completionCall[1].headers.Authorization).toBe('Bearer deepinfra-test-key');
+    expect(JSON.parse(completionCall[1].body)).toEqual({
+      model: 'deepseek-ai/DeepSeek-V4-Pro',
+      prompt: '<raw-prefix><assistant>',
+      max_tokens: 16384,
+      top_p: 0.75,
+      temperature: 1.7,
+      stop: ['one', 'two', 'three', 'four'],
+      stream: false
+    });
+    expect(status.textContent).toContain('Request cost (USD): $0.000026');
+    expect(status.textContent).toContain('Estimated request cost (USD): $0.000026');
   });
 
   test('follows every documented Fireworks nextPageToken before populating models', async () => {
@@ -1256,6 +1380,10 @@ describe('OpenRouter app module', () => {
     {
       provider: 'openai',
       endpoint: 'https://api.openai.com/v1/completions'
+    },
+    {
+      provider: 'deepinfra',
+      endpoint: 'https://api.deepinfra.com/v1/openai/completions'
     }
   ])('validates $provider four-stop limit before sending', async providerCase => {
     const { window } = setupDom();
@@ -1440,7 +1568,7 @@ describe('OpenRouter app module', () => {
     ).length).toBe(catalogCallsBeforeRestore);
   });
 
-  test('encrypted settings persist separate API keys for both providers', async () => {
+  test('encrypted settings persist separate API keys across provider adapters', async () => {
     const { window, downloadedBlobs, downloads } = setupDom();
     window.document.querySelector('.menu-item[data-window="openrouter"]').click();
     const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
@@ -1462,6 +1590,15 @@ describe('OpenRouter app module', () => {
     apiKeyInput.value = 'together-key-persisted';
     apiKeyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
     await waitFor(() => (status.textContent || '').includes('Loaded'));
+
+    providerSelect.value = 'deepinfra';
+    providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    apiKeyInput.value = 'deepinfra-key-persisted';
+    apiKeyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() =>
+      (status.textContent || '').includes('DeepInfra') &&
+      (status.textContent || '').includes('Loaded')
+    );
 
     window.prompt.mockReturnValue('dual-key-password');
     await clickOpenRouterFileAction(window, appWindow, 'save-settings');
@@ -1485,11 +1622,11 @@ describe('OpenRouter app module', () => {
     });
     loadFileInput.dispatchEvent(new window.Event('change', { bubbles: true }));
     await waitFor(() =>
-      providerSelect.value === 'together' && apiKeyInput.value === 'together-key-persisted'
+      providerSelect.value === 'deepinfra' && apiKeyInput.value === 'deepinfra-key-persisted'
     );
 
-    expect(providerSelect.value).toBe('together');
-    expect(apiKeyInput.value).toBe('together-key-persisted');
+    expect(providerSelect.value).toBe('deepinfra');
+    expect(apiKeyInput.value).toBe('deepinfra-key-persisted');
 
     providerSelect.value = 'fireworks';
     providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
@@ -1498,6 +1635,10 @@ describe('OpenRouter app module', () => {
     providerSelect.value = 'together';
     providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
     expect(apiKeyInput.value).toBe('together-key-persisted');
+
+    providerSelect.value = 'deepinfra';
+    providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    expect(apiKeyInput.value).toBe('deepinfra-key-persisted');
   });
 
   test('encrypted settings save reports cancellation when password prompt is dismissed', async () => {
