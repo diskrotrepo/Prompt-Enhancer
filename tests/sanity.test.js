@@ -17,7 +17,8 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
-// Sanity harness: spin up the UI, optionally run scripted actions, then collect visible state.
+// Sanity harness: spin up the UI, optionally edit or roundtrip a prompt, then
+// collect visible state and opt-in saved fields alongside generated output.
 // Inputs: testCase object from fixtures. Output: snapshot fields for expectations.
 function runSanityCase(testCase) {
   const html = fs.readFileSync(HTML_PATH, 'utf8');
@@ -354,6 +355,26 @@ function runSanityCase(testCase) {
       if (item) item.click();
       return;
     }
+    if (type === 'roundtripPrompt') {
+      // Cross the same JSON boundary as a file, then regenerate from restored
+      // controls. storageManager.test.js separately drives the actual Blob/File UI.
+      const state = JSON.parse(JSON.stringify(window.PromptMixer.exportMixState(root)));
+      window.PromptMixer.applyMixState(state, root);
+      setDeterministicRandom();
+      runAction('generate', root, actionResults);
+      return;
+    }
+    if (type === 'saveFirstColorPreset') {
+      const box = root?.querySelector('.mix-box, .chunk-box');
+      const colorInput = box?.querySelector('.color-custom-input');
+      const nameInput = box?.querySelector('.color-preset-name');
+      if (!colorInput || !nameInput) return;
+      colorInput.value = normalized.color;
+      colorInput.dispatchEvent(new window.Event('input', { bubbles: true }));
+      nameInput.value = normalized.name;
+      box.querySelector('.save-color-preset').click();
+      return;
+    }
     if (type === 'copyMixOutput') {
       const btn = root?.querySelector('.mix-box .copy-output');
       if (btn) btn.click();
@@ -619,7 +640,9 @@ function runSanityCase(testCase) {
   const openRouterModelHelp = openRouterWindow?.querySelector('.openrouter-model-picker');
   const openRouterTemperatureHelp = openRouterWindow?.querySelector('.openrouter-temperature');
   const openRouterTopKHelp = openRouterWindow?.querySelector('.openrouter-top-k');
-  const openRouterSuffixHelp = openRouterWindow?.querySelector('.openrouter-suffix');
+  const openRouterSettingsHelp = openRouterWindow?.querySelector('.openrouter-settings-summary');
+  const openRouterInfillHelp = openRouterWindow?.querySelector('.openrouter-mode-infill');
+  const openRouterEndingHelp = openRouterWindow?.querySelector('.openrouter-ending');
   const openRouterSendHelp = openRouterWindow?.querySelector('.openrouter-send');
   const openRouterStatusHelp = openRouterWindow?.querySelector('.openrouter-status');
   const hasAccurateOpenRouterHelp = !!(
@@ -631,9 +654,28 @@ function runSanityCase(testCase) {
     openRouterModelHelp?.dataset.helpDetail?.includes('DeepInfra metadata tagged text-generation') &&
     openRouterTemperatureHelp?.dataset.helpDetail?.includes('maximum of 1.5') &&
     openRouterTopKHelp?.dataset.helpDetail?.includes('advertise top_k') &&
-    openRouterSuffixHelp?.dataset.helpDetail?.includes('gpt-3.5-turbo-instruct') &&
+    openRouterSettingsHelp?.dataset.helpDetail?.includes('provider, model, and generation mode') &&
+    openRouterInfillHelp?.dataset.helpDetail?.includes('disabled for autocomplete-only models') &&
+    openRouterEndingHelp?.dataset.helpDetail?.includes('tokenizer sentinel tokens') &&
     openRouterSendHelp?.dataset.helpDetail?.includes('never contains messages') &&
     openRouterStatusHelp?.dataset.helpDetail?.includes('input/output tokens')
+  );
+  const completionFlow = openRouterWindow?.querySelector('.openrouter-generation-flow');
+  const completionFlowChildren = Array.from(completionFlow?.children || []);
+  const completionBeginning = openRouterWindow?.querySelector('.openrouter-beginning-segment');
+  const completionOutput = openRouterWindow?.querySelector('.openrouter-output');
+  const completionEnding = openRouterWindow?.querySelector('.openrouter-ending-segment');
+  const hasCompletionModeFlow = !!(
+    openRouterWindow?.querySelector('.openrouter-settings[open]') &&
+    openRouterWindow?.querySelector('.openrouter-advanced-settings') &&
+    openRouterWindow?.querySelector('.openrouter-mode-autocomplete')?.checked &&
+    openRouterWindow?.querySelector('.openrouter-mode-infill')?.disabled &&
+    completionFlow?.dataset.mode === 'autocomplete' &&
+    completionEnding?.classList.contains('is-hidden') &&
+    completionFlowChildren.indexOf(completionBeginning) < completionFlowChildren.indexOf(completionOutput) &&
+    completionFlowChildren.indexOf(completionOutput) < completionFlowChildren.indexOf(completionEnding) &&
+    !openRouterWindow?.querySelector('.openrouter-stop') &&
+    !openRouterWindow?.querySelector('.openrouter-suffix')
   );
   const hasOpenRouterSharedCopyControl = !!(
     openRouterWindow?.querySelector('.openrouter-output > .openrouter-output-header .copy-output.openrouter-copy-output')
@@ -727,6 +769,7 @@ function runSanityCase(testCase) {
   );
   const result = {
     id: testCase.id,
+    savedState: window.PromptMixer.exportMixState(root),
     output,
     chunkOutput,
     chunkLengthMode,
@@ -772,6 +815,7 @@ function runSanityCase(testCase) {
     hasAccessibleIconHelp,
     hasProportionalDropoutHelp,
     hasAccurateOpenRouterHelp,
+    hasCompletionModeFlow,
     hasOpenRouterSharedCopyControl,
     hasTerminalToolHarness,
     terminalToolCount: terminalTools.length,
@@ -823,6 +867,11 @@ describe('Sanity regression via real UI flow', () => {
         throw new Error(`Missing expected output for sanity case: ${result.id}`);
       }
       expect(result.output).toBe(expected.output);
+      // Fixtures assert authored fields explicitly; id generation and legacy
+      // compatibility aliases may add fields without weakening these checks.
+      if (Object.prototype.hasOwnProperty.call(expected, 'savedState')) {
+        expect(result.savedState).toMatchObject(expected.savedState);
+      }
       if (Object.prototype.hasOwnProperty.call(expected, 'lengthMode')) {
         expect(result.lengthMode).toBe(expected.lengthMode);
       }
@@ -945,6 +994,9 @@ describe('Sanity regression via real UI flow', () => {
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'hasAccurateOpenRouterHelp')) {
         expect(result.hasAccurateOpenRouterHelp).toBe(expected.hasAccurateOpenRouterHelp);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'hasCompletionModeFlow')) {
+        expect(result.hasCompletionModeFlow).toBe(expected.hasCompletionModeFlow);
       }
       if (Object.prototype.hasOwnProperty.call(expected, 'promptWindowCount')) {
         expect(result.promptWindowCount).toBe(expected.promptWindowCount);

@@ -72,6 +72,17 @@
   --chunk-header: #e082d2;
   --variable-header: #7cc2b2;
 
+  /* Completion keeps the same silver system chrome while a cooler drafting
+   * palette makes its writing surface recognizable beside Prompt Enhancer. */
+  --completion-deep: #12606a;
+  --completion-accent: #2d9697;
+  --completion-accent-soft: #91cbc5;
+  --completion-paper: #d7e8e5;
+  --completion-workspace: #a8b5b7;
+  --completion-grid: rgba(18, 96, 106, 0.16);
+  --completion-speck: rgba(239, 81, 63, 0.24);
+  --completion-ending: #d6b65a;
+
   /* Raised bevel: light top-left, shadow bottom-right (buttons, windows) */
   --bevel-up:
     inset 1px 1px 0 var(--w31-light),
@@ -199,7 +210,8 @@ textarea,
 
 /* Dotted focus rectangles, the classic keyboard focus cue. */
 button:focus-visible,
-select:focus-visible {
+select:focus-visible,
+summary:focus-visible {
   outline: 1px dotted var(--w31-black);
   outline-offset: -4px;
 }
@@ -2151,9 +2163,9 @@ textarea:focus-visible {
 /* ===== 8. COMPLETION API WINDOW ===== */
 .openrouter-window {
   color: var(--w31-ink);
-  height: min(78vh, 760px);
+  height: min(84vh, 820px);
   min-height: 360px;
-  width: min(980px, 92vw);
+  width: min(1000px, 94vw);
 }
 
 .openrouter-window > .box-body {
@@ -2186,30 +2198,286 @@ textarea:focus-visible {
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  gap: 0.7rem;
+  gap: 0.8rem;
   padding: 0.75rem;
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-gutter: stable;
+  background-color: var(--completion-workspace);
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(19, 19, 19, 0.045) 1px, transparent 1px);
+  background-size: 12px 12px;
+  box-shadow: var(--bevel-field);
+}
+
+/* The outer settings foldout is a miniature patterned box. Its summary holds
+ * the glanceable state; the mat appears only while open, making collapse a
+ * meaningful reduction rather than a cosmetic accordion animation. */
+.openrouter-settings {
+  flex: 0 0 auto;
+  border: 1px solid var(--w31-black);
+  background: var(--w31-face);
+  box-shadow: var(--bevel-up), 3px 3px 0 rgba(0, 0, 0, 0.2);
+}
+
+.openrouter-settings > summary,
+.openrouter-advanced-settings > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.openrouter-settings > summary::-webkit-details-marker,
+.openrouter-advanced-settings > summary::-webkit-details-marker {
+  display: none;
+}
+
+.openrouter-settings-summary {
+  display: grid;
+  grid-template-columns: auto minmax(150px, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 50px;
+  gap: 0.65rem;
+  padding: 0.4rem 0.55rem 0.4rem 0.42rem;
+  background: var(--w31-face);
+  box-shadow: var(--bevel-up);
+}
+
+.openrouter-settings[open] > .openrouter-settings-summary {
+  border-bottom: 1px solid var(--w31-black);
+  box-shadow: var(--bevel-down);
+}
+
+.openrouter-settings-summary::after {
+  content: "+";
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--w31-black);
+  background: var(--w31-face);
+  box-shadow: var(--bevel-up);
+  font-weight: 700;
+}
+
+.openrouter-settings[open] > .openrouter-settings-summary::after {
+  content: "−";
+  box-shadow: var(--bevel-down);
+}
+
+.openrouter-settings-mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 30px;
+  border: 1px solid var(--w31-black);
+  background: var(--completion-deep);
+  color: var(--w31-light);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.36);
+}
+
+.openrouter-settings-heading {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.08rem;
+}
+
+.openrouter-settings-heading strong {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.openrouter-settings-heading span {
+  color: var(--w31-ink-soft);
+  font-size: 10px;
+}
+
+.openrouter-settings-glance {
+  min-width: 0;
+  padding: 0.36rem 0.5rem;
+  border: 1px solid var(--w31-shadow);
+  background: var(--w31-field);
+  box-shadow: var(--bevel-field);
+  color: var(--completion-deep);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* This restrained microchip/terrazzo hybrid borrows the prompt-box procedural
+ * vocabulary. The nested face repaints silver so text fields stay quiet. */
+.openrouter-settings-mat {
+  padding: 10px;
+  background-color: var(--completion-paper);
+  background-image:
+    linear-gradient(var(--completion-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--completion-grid) 1px, transparent 1px),
+    radial-gradient(ellipse 5px 3px at 18% 30%, var(--completion-speck) 0 70%, transparent 78%),
+    radial-gradient(circle at 74% 68%, rgba(61, 91, 214, 0.18) 0 2px, transparent 2.5px);
+  background-size: 18px 18px, 18px 18px, 54px 48px, 62px 58px;
+}
+
+.openrouter-settings-surface {
+  padding: 0.7rem;
+  border: 1px solid var(--w31-shadow);
+  background: var(--w31-face);
+  box-shadow: var(--bevel-up);
+}
+
+.openrouter-setup-grid,
+.openrouter-advanced-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.openrouter-model-block,
+.openrouter-endpoint-block {
+  grid-column: span 1;
+}
+
+.openrouter-provider-note {
+  margin-top: 0.65rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--completion-deep);
+  border-left-width: 5px;
+  background: var(--completion-paper);
+  box-shadow: var(--bevel-field);
+  color: var(--w31-ink-soft);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.openrouter-mode-fieldset {
+  min-width: 0;
+  border: 0;
+}
+
+.openrouter-mode-fieldset legend {
+  margin-bottom: 0.3rem;
+  color: var(--w31-ink-soft);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.openrouter-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--w31-shadow);
   background: var(--w31-workspace);
   box-shadow: var(--bevel-field);
 }
 
-.openrouter-grid {
-  display: grid;
-  gap: 0.65rem;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+.openrouter-app .openrouter-mode-choice {
+  position: relative;
+  display: block;
+  min-width: 0;
+  margin: 0;
+  color: var(--w31-ink);
+  cursor: pointer;
 }
 
-.openrouter-provider-note {
-  grid-column: 1 / -1;
-  padding: 0.5rem 0.6rem;
+.openrouter-mode-choice input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.openrouter-mode-choice span {
+  display: grid;
+  place-items: center;
+  min-height: 31px;
+  padding: 0.32rem 0.4rem;
+  border: 1px solid var(--w31-black);
+  background: var(--w31-face);
+  box-shadow: var(--bevel-up);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.openrouter-mode-choice input:checked + span {
+  background: var(--completion-deep);
+  color: var(--w31-light);
+  box-shadow: var(--bevel-down);
+}
+
+.openrouter-mode-choice input:focus-visible + span {
+  outline: 1px dotted currentColor;
+  outline-offset: -4px;
+}
+
+.openrouter-mode-choice input:disabled + span {
+  color: var(--w31-shadow);
+  background: var(--w31-face);
+  box-shadow: var(--bevel-down);
+  text-shadow: 1px 1px 0 var(--w31-light);
+  cursor: not-allowed;
+}
+
+.openrouter-mode-note {
+  margin-top: 0.28rem;
+  min-height: 14px;
+  color: var(--w31-ink-soft);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.openrouter-mode-note.is-available {
+  color: var(--completion-deep);
+}
+
+.openrouter-advanced-settings {
+  margin-top: 0.65rem;
   border: 1px solid var(--w31-shadow);
   background: var(--w31-face);
   box-shadow: var(--etched);
-  color: var(--w31-ink-soft);
-  font-size: 11px;
-  line-height: 1.45;
+}
+
+.openrouter-advanced-settings > summary {
+  position: relative;
+  min-height: 32px;
+  padding: 0.48rem 2rem 0.4rem 0.65rem;
+  background: var(--w31-face-light);
+  color: var(--w31-ink);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.openrouter-advanced-settings > summary::after {
+  content: "+";
+  position: absolute;
+  top: 50%;
+  right: 0.65rem;
+  transform: translateY(-50%);
+  font-size: 14px;
+}
+
+.openrouter-advanced-settings[open] > summary {
+  border-bottom: 1px solid var(--w31-shadow);
+  box-shadow: var(--bevel-down);
+}
+
+.openrouter-advanced-settings[open] > summary::after {
+  content: "−";
+}
+
+.openrouter-advanced-grid {
+  padding: 0.65rem;
 }
 
 .openrouter-app .control-block textarea,
@@ -2238,20 +2506,95 @@ textarea:focus-visible {
   color: var(--w31-ink-soft);
 }
 
+/* The generation flow reads like a document rather than a form. Infill adds
+ * its ending segment after output, so the generated middle occupies the gap
+ * at every breakpoint without duplicating request controls. */
+.openrouter-generation-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.openrouter-document-segment {
+  border: 1px solid var(--w31-black);
+  background: var(--w31-face);
+  box-shadow: var(--bevel-up), 3px 3px 0 rgba(0, 0, 0, 0.2);
+}
+
+.openrouter-segment-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 34px;
+  gap: 0.55rem;
+  padding: 0.32rem 0.55rem 0.32rem 0.38rem;
+  border-bottom: 1px solid var(--w31-black);
+  background: var(--completion-deep);
+  color: var(--w31-light);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.openrouter-ending-segment .openrouter-segment-heading {
+  background: var(--completion-ending);
+  color: var(--w31-ink);
+}
+
+.openrouter-segment-number,
+.openrouter-output-title::before {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 21px;
+  border: 1px solid currentColor;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1;
+}
+
+.openrouter-segment-role {
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  opacity: 0.82;
+  text-transform: uppercase;
+}
+
+.openrouter-document-segment textarea {
+  display: block;
+  width: calc(100% - 1.2rem);
+  margin: 0.6rem;
+  resize: vertical;
+}
+
 .openrouter-prompt {
   min-height: 170px;
-  resize: vertical;
 }
 
-.openrouter-stop {
-  min-height: 54px;
-  max-height: 130px;
-  resize: vertical;
+.openrouter-ending {
+  min-height: 120px;
 }
 
-.openrouter-suffix {
-  min-height: 76px;
-  resize: vertical;
+.openrouter-generation-flow[data-mode="infill"] .openrouter-prompt {
+  height: 86px;
+  min-height: 86px;
+}
+
+.openrouter-generation-flow[data-mode="infill"] .openrouter-ending {
+  height: 86px;
+  min-height: 86px;
+}
+
+.openrouter-ending-segment.is-hidden {
+  display: none;
+}
+
+.openrouter-action-bar {
+  display: grid;
+  grid-template-columns: minmax(220px, auto) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0.6rem;
 }
 
 .openrouter-actions {
@@ -2268,6 +2611,7 @@ textarea:focus-visible {
  * Terminal instead behaves like a real console and submits on Enter. */
 .openrouter-actions .openrouter-send {
   position: relative;
+  min-width: 220px;
   height: 44px;
   padding: 0 1.4rem 4px;
   border: 1px solid var(--w31-black);
@@ -2313,7 +2657,9 @@ textarea:focus-visible {
 
 /* Status readout styled like a classic sunken status bar. */
 .openrouter-status {
-  margin-top: -0.1rem;
+  display: flex;
+  align-items: center;
+  margin: 0;
   padding: 0.45rem 0.55rem;
   border: 1px solid var(--w31-shadow);
   box-shadow: var(--etched);
@@ -2334,7 +2680,7 @@ textarea:focus-visible {
 /* The response is a miniature shared box: teal title chip, standard copy
  * square, silver body, and the same sunken monospace well as prompt output. */
 .openrouter-output {
-  margin-top: 0.1rem;
+  margin: 0;
 }
 
 .openrouter-output > .box-header {
@@ -2344,6 +2690,16 @@ textarea:focus-visible {
   padding: 0.32rem 0.4rem 0.32rem 0.6rem;
   border-bottom: 1px solid var(--w31-black);
   color: var(--w31-ink);
+}
+
+.openrouter-output-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.openrouter-output-title::before {
+  content: "02";
 }
 
 .openrouter-output > .box-header .box-title {
@@ -2362,6 +2718,21 @@ textarea:focus-visible {
   margin: 0;
   min-height: 170px;
   max-height: 340px;
+}
+
+.openrouter-generation-flow[data-mode="infill"] .openrouter-output-text {
+  min-height: 82px;
+  max-height: 240px;
+}
+
+.openrouter-generation-flow[data-mode="infill"] .openrouter-output > .box-body {
+  padding: 0.5rem;
+}
+
+.openrouter-output-text:empty::before {
+  content: attr(data-placeholder);
+  color: var(--w31-shadow);
+  font-style: italic;
 }
 
 /* ===== 9. TERMINAL TOOL-CHAT WINDOW ===== */
@@ -3229,6 +3600,39 @@ button:disabled {
     max-width: 100%;
   }
 
+  .openrouter-window {
+    width: min(96vw, 1000px);
+  }
+
+  .openrouter-settings-summary {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .openrouter-settings-summary::after {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .openrouter-settings-glance {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .openrouter-action-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .openrouter-generation-flow[data-mode="infill"] .openrouter-prompt,
+  .openrouter-generation-flow[data-mode="infill"] .openrouter-ending,
+  .openrouter-generation-flow[data-mode="infill"] .openrouter-output-text {
+    height: 100px;
+    min-height: 100px;
+  }
+
+  .openrouter-actions .openrouter-send {
+    width: 100%;
+  }
+
 }
 
 /* Mobile: compact paddings, centered text buttons, icons pinned right.
@@ -3275,5 +3679,76 @@ button:disabled {
 
   .button-col.text-button-group {
     justify-content: center;
+  }
+
+  .openrouter-content {
+    gap: 0.55rem;
+    padding: 0.5rem;
+  }
+
+  .openrouter-settings-summary {
+    gap: 0.45rem;
+    padding: 0.35rem;
+  }
+
+  .openrouter-settings-mark {
+    width: 36px;
+  }
+
+  .openrouter-settings-heading > span {
+    display: none;
+  }
+
+  .openrouter-settings-mat {
+    padding: 6px;
+  }
+
+  .openrouter-settings-surface,
+  .openrouter-advanced-grid {
+    padding: 0.5rem;
+  }
+
+  .openrouter-setup-grid,
+  .openrouter-advanced-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .openrouter-model-block,
+  .openrouter-endpoint-block {
+    grid-column: auto;
+  }
+
+  .openrouter-provider-note {
+    margin-top: 0.5rem;
+  }
+
+  .openrouter-segment-role {
+    display: none;
+  }
+
+  .openrouter-segment-heading {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .openrouter-document-segment textarea {
+    width: calc(100% - 0.8rem);
+    margin: 0.4rem;
+  }
+
+  .openrouter-prompt,
+  .openrouter-generation-flow[data-mode="infill"] .openrouter-prompt {
+    height: 130px;
+    min-height: 130px;
+  }
+
+  .openrouter-ending,
+  .openrouter-generation-flow[data-mode="infill"] .openrouter-output-text {
+    height: 110px;
+    min-height: 110px;
+  }
+
+  .openrouter-output-text {
+    min-height: 140px;
   }
 }

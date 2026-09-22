@@ -6,7 +6,7 @@
   // - Procedural wallpaper model (palette chapters + deterministic shape bands)
   // - Chunking + mixing engine (single-pass + proportional/dropout seed traversal + first chunk behavior)
   // - Box evaluation
-  // - Box creation + state serialization (hydrates custom size/length controls + append-save imports)
+  // - Box creation + state serialization (complete box trees, dormant controls, per-prompt palettes + append imports)
   // - UI helpers + audited Help Mode coverage + event wiring
   // - Procedural wallpaper rendering + background-only input + touch momentum
   // - Window management + pointer-anchored drag + frame resize + shared Snap layout
@@ -1071,7 +1071,8 @@
     return value.replace(/["\\]/g, '\\$&');
   }
 
-  // Color presets are shared across boxes; custom entries are user-defined and serialized.
+  // Color presets are shared within one prompt; custom entries travel with that
+  // document so opening another window cannot silently replace its saved palette.
   // The built-ins favor pigment-like midtones that recur in print, interiors,
   // early software, and contemporary UI instead of one decade's neon extremes.
   const DEFAULT_COLOR_PRESETS = [
@@ -1127,7 +1128,7 @@
   const BOX_PATTERN_DARK = { r: 19, g: 19, b: 19 };
   const VARIABLE_PATTERN_COLOR = '#7cc2b2';
 
-  let customColorPresets = [];
+  const customColorPresetsByRoot = new WeakMap();
 
   function normalizeHexColor(value) {
     if (typeof value !== 'string') return '';
@@ -1148,47 +1149,99 @@
       .replace(/^-+|-+$/g, '');
   }
 
-  function getAllColorPresets() {
-    return [...DEFAULT_COLOR_PRESETS, ...customColorPresets];
+  // Resolve either a prompt root or one of its controls to its palette owner.
+  // Detached hydration receives that owner explicitly before boxes are appended.
+  function getColorPresetRoot(scope) {
+    return scope?.closest?.('.mix-root') || scope?.querySelector?.('.mix-root') ||
+      document.querySelector('.mix-root');
+  }
+
+  // Return the mutable user palette owned by a root or one of its controls.
+  function getCustomColorPresets(scope) {
+    const root = getColorPresetRoot(scope);
+    if (!root) return [];
+    if (!customColorPresetsByRoot.has(root)) customColorPresetsByRoot.set(root, []);
+    return customColorPresetsByRoot.get(root);
+  }
+
+  // Combine defaults with that prompt's definitions, honoring explicit ids.
+  function getAllColorPresets(scope) {
+    const custom = getCustomColorPresets(scope);
+    const customIds = new Set(custom.map(entry => entry.id));
+    // A saved user preset named Sunset must not resolve to the built-in Sunset.
+    return [...DEFAULT_COLOR_PRESETS.filter(entry => !customIds.has(entry.id)), ...custom];
   }
 
   function readColorPresetEntries(state) {
     const raw = Array.isArray(state?.colorPresets) ? state.colorPresets : [];
     return raw
       .map(entry => ({
-        id: slugifyPresetName(entry?.name || entry?.id || ''),
+        id: toTrimmedString(entry?.id) || slugifyPresetName(entry?.name || ''),
         name: typeof entry?.name === 'string' ? entry.name.trim() : '',
         color: normalizeHexColor(entry?.color)
       }))
       .filter(entry => entry.id && entry.name && entry.color);
   }
 
-  function loadColorPresets(state) {
-    customColorPresets = readColorPresetEntries(state);
+  function loadColorPresets(state, scope) {
+    const root = getColorPresetRoot(scope);
+    if (root) customColorPresetsByRoot.set(root, readColorPresetEntries(state));
   }
 
-  function mergeColorPresets(state) {
-    // Append-save imports should bring their preset names along without wiping
-    // colors already available in the receiving prompt window.
-    readColorPresetEntries(state).forEach(entry => {
-      upsertCustomPreset(entry.name, entry.color);
+  // Return old-to-new preset ids for this import. Conflicting colors get a new
+  // identity, just like imported box ids, without changing the receiving boxes.
+  function mergeColorPresets(state, scope) {
+    const presets = getCustomColorPresets(scope);
+    const existingById = new Map(getAllColorPresets(scope).map(entry => [entry.id, entry]));
+    const idMap = new Map();
+    const incoming = readColorPresetEntries(state);
+    const incomingIds = new Set(incoming.map(entry => entry.id));
+    const includeReferencedDefaults = entries => entries.forEach(entry => {
+      if (entry?.colorMode === 'preset' && !incomingIds.has(entry.colorPreset)) {
+        const preset = DEFAULT_COLOR_PRESETS.find(item => item.id === entry.colorPreset);
+        if (preset) {
+          incoming.push(preset);
+          incomingIds.add(preset.id);
+        }
+      }
+      if (Array.isArray(entry?.children)) includeReferencedDefaults(entry.children);
     });
+    // Built-ins normally need no file entry, but an imported Sunset must still
+    // keep its hue when the receiving document has a custom preset of that id.
+    includeReferencedDefaults(Array.isArray(state?.mixes) ? state.mixes : []);
+    incoming.forEach(entry => {
+      let id = entry.id;
+      let suffix = 2;
+      let existing = existingById.get(id);
+      while (existing && (existing.name !== entry.name || existing.color !== entry.color)) {
+        id = `${entry.id}-${suffix++}`;
+        existing = existingById.get(id);
+      }
+      if (!existing) {
+        const imported = { ...entry, id };
+        presets.push(imported);
+        existingById.set(id, imported);
+      }
+      idMap.set(entry.id, id);
+    });
+    return idMap;
   }
 
-  function exportColorPresets() {
-    return customColorPresets.map(entry => ({
+  function exportColorPresets(scope) {
+    return getCustomColorPresets(scope).map(entry => ({
       id: entry.id,
       name: entry.name,
       color: entry.color
     }));
   }
 
-  function upsertCustomPreset(name, color) {
+  function upsertCustomPreset(name, color, scope) {
     const cleanName = typeof name === 'string' ? name.trim() : '';
     const cleanColor = normalizeHexColor(color);
     if (!cleanName || !cleanColor) return null;
     const id = slugifyPresetName(cleanName) || `preset-${Date.now()}`;
-    const existing = customColorPresets.find(entry => entry.id === id);
+    const customColorPresets = getCustomColorPresets(scope);
+    const existing = customColorPresets.find(entry => entry.id === id || entry.name === cleanName);
     if (existing) {
       existing.name = cleanName;
       existing.color = cleanColor;
@@ -1199,9 +1252,9 @@
     return preset;
   }
 
-  function getPresetById(id) {
+  function getPresetById(id, scope) {
     if (!id) return null;
-    return getAllColorPresets().find(entry => entry.id === id) || null;
+    return getAllColorPresets(scope).find(entry => entry.id === id) || null;
   }
 
   function getAutoColorHex(box) {
@@ -1356,7 +1409,7 @@
   }
 
   // Switch between auto, preset, or custom colors while keeping the original auto variant on hand.
-  function setBoxColorMode(box, mode, value) {
+  function setBoxColorMode(box, mode, value, presetScope = box) {
     if (!box) return;
     const autoColor = box.dataset.autoColor || box.dataset.color || '';
     if (mode === 'auto') {
@@ -1368,7 +1421,7 @@
       return;
     }
     if (mode === 'preset') {
-      const preset = getPresetById(value);
+      const preset = getPresetById(value, presetScope);
       if (!preset) {
         // Preset missing? Fall back to auto rather than leaving stale colors.
         setBoxColorMode(box, 'auto');
@@ -1422,9 +1475,9 @@
 
   function refreshColorPresetSelects(scope) {
     const root = scope || document;
-    const presets = getAllColorPresets();
     root.querySelectorAll('.color-preset-select').forEach(select => {
       const box = select.closest('.mix-box, .chunk-box');
+      const presets = getAllColorPresets(box);
       select.innerHTML = '';
       const autoOption = document.createElement('option');
       autoOption.value = 'auto';
@@ -1440,6 +1493,11 @@
         option.textContent = preset.name;
         select.appendChild(option);
       });
+      // Editing a named preset updates every box using it before the next save;
+      // the displayed color and the value restored from that file stay identical.
+      if (box?.dataset.colorMode === 'preset') {
+        setBoxColorMode(box, 'preset', box.dataset.colorPreset);
+      }
       syncColorControls(box);
     });
   }
@@ -2322,6 +2380,8 @@
     });
   }
 
+  // Hydrate editable values without confusing intentional blanks or inactive
+  // rechunk settings with missing fields from an older save.
   function createMixWrapper(config = {}, context = {}) {
     const template = document.getElementById('mix-box-template');
     const fragment = template.content.cloneNode(true);
@@ -2344,7 +2404,7 @@
     box.dataset.autoColor = box.dataset.color;
     box.dataset.colorMode = 'auto';
     applyBoxPattern(box, context);
-    if (titleInput) titleInput.value = config.title || 'Mix';
+    if (titleInput) titleInput.value = config.title ?? 'Mix';
     if (limitInput) limitInput.value = config.limit || 1000;
     if (lengthMode) {
       lengthMode.value = getMixLengthModeConfig(config);
@@ -2356,6 +2416,15 @@
     if (delimiterSize) {
       if (config.preserve) {
         delimiterSize.value = 'preserve';
+        // Preserve is a temporary lock: retain the last numeric size in the
+        // same slot used while editing, including a dormant custom-size input.
+        const savedSize = parseInt(config.delimiter?.size, 10);
+        if (savedSize > 0) {
+          delimiterSize.dataset.lastNumeric = String(savedSize);
+          if (delimiterSizeCustom && !Array.from(delimiterSize.options).some(option => option.value === String(savedSize))) {
+            delimiterSizeCustom.value = String(savedSize);
+          }
+        }
       } else if (config.delimiter?.size) {
         const sizeValue = String(config.delimiter.size);
         const optionValues = Array.from(delimiterSize.options).map(option => option.value);
@@ -2378,7 +2447,7 @@
     if (config.colorMode === 'custom' && config.colorValue) {
       setBoxColorMode(box, 'custom', config.colorValue);
     } else if (config.colorMode === 'preset' && config.colorPreset) {
-      setBoxColorMode(box, 'preset', config.colorPreset);
+      setBoxColorMode(box, 'preset', context.presetIdMap?.get(config.colorPreset) || config.colorPreset, context.presetScope);
     } else if (config.colorMode === 'auto') {
       setBoxColorMode(box, 'auto');
     } else if (config.colorValue) {
@@ -2396,7 +2465,9 @@
             previousColor: prevColor,
             parentPattern: box.dataset.pattern,
             previousPattern,
-            idRegistry: context.idRegistry
+            idRegistry: context.idRegistry,
+            presetScope: context.presetScope,
+            presetIdMap: context.presetIdMap
           });
           childContainer.appendChild(childWrapper);
           prevColor = childWrapper.querySelector('.mix-box')?.dataset.color || prevColor;
@@ -2405,7 +2476,9 @@
           const childWrapper = createVariableWrapper(child, {
             parentPattern: box.dataset.pattern,
             previousPattern,
-            idRegistry: context.idRegistry
+            idRegistry: context.idRegistry,
+            presetScope: context.presetScope,
+            presetIdMap: context.presetIdMap
           });
           childContainer.appendChild(childWrapper);
           previousPattern = childWrapper.querySelector('.variable-box')?.dataset.pattern || previousPattern;
@@ -2415,7 +2488,9 @@
             previousColor: prevColor,
             parentPattern: box.dataset.pattern,
             previousPattern,
-            idRegistry: context.idRegistry
+            idRegistry: context.idRegistry,
+            presetScope: context.presetScope,
+            presetIdMap: context.presetIdMap
           });
           childContainer.appendChild(childWrapper);
           prevColor = childWrapper.querySelector('.chunk-box')?.dataset.color || prevColor;
@@ -2457,7 +2532,7 @@
     box.dataset.autoColor = box.dataset.color;
     box.dataset.colorMode = 'auto';
     applyBoxPattern(box, context);
-    if (titleInput) titleInput.value = config.title || 'String';
+    if (titleInput) titleInput.value = config.title ?? 'String';
     if (input) input.value = config.text || '';
     if (limitInput) limitInput.value = config.limit || 1000;
     if (lengthMode) {
@@ -2489,7 +2564,7 @@
     if (config.colorMode === 'custom' && config.colorValue) {
       setBoxColorMode(box, 'custom', config.colorValue);
     } else if (config.colorMode === 'preset' && config.colorPreset) {
-      setBoxColorMode(box, 'preset', config.colorPreset);
+      setBoxColorMode(box, 'preset', context.presetIdMap?.get(config.colorPreset) || config.colorPreset, context.presetScope);
     } else if (config.colorMode === 'auto') {
       setBoxColorMode(box, 'auto');
     } else if (config.colorValue) {
@@ -2505,6 +2580,8 @@
     return wrapper;
   }
 
+  // Variables keep their source identity and visibility just like other boxes;
+  // their displayed title is derived from the referenced source after hydration.
   function createVariableWrapper(config = {}, context = {}) {
     const template = document.getElementById('variable-box-template');
     const fragment = template.content.cloneNode(true);
@@ -2513,6 +2590,9 @@
     const select = fragment.querySelector('.variable-select');
 
     box.dataset.boxId = resolveBoxId(config.id, 'var', context.idRegistry);
+    if (config.collapsed === true || config.minimized === true || config.maximized === false) {
+      box.classList.add('is-collapsed');
+    }
     applyBoxPattern(box, context);
     const originalTargetId = typeof config.targetId === 'string' ? config.targetId.trim() : '';
     const mappedTargetId = originalTargetId && context.idRegistry?.idMap?.get(originalTargetId)
@@ -2546,7 +2626,8 @@
   }
 
   function getSavedMixEntries(state, useDefault = true) {
-    if (Array.isArray(state?.mixes) && state.mixes.length) return state.mixes;
+    // An empty array is a complete empty document, not a request for startup defaults.
+    if (Array.isArray(state?.mixes)) return state.mixes;
     return useDefault ? [{ type: 'mix', title: 'Mix', children: [] }] : [];
   }
 
@@ -2577,7 +2658,7 @@
     return {
       type: 'chunk',
       id: box.dataset.boxId,
-      title: titleInput?.value || 'String',
+      title: titleInput?.value ?? 'String',
       text: input?.value || '',
       limit: readNumber(limitInput, 1000),
       lengthMode: readChunkLengthMode(box),
@@ -2602,11 +2683,26 @@
   }
 
   function serializeVariableBox(box) {
+    const collapsed = box.classList.contains('is-collapsed');
     return {
       type: 'variable',
       id: box.dataset.boxId,
-      targetId: readVariableTargetId(box)
+      targetId: readVariableTargetId(box),
+      collapsed,
+      minimized: collapsed,
+      maximized: !collapsed
     };
+  }
+
+  // Root and nested containers share one traversal and all three box kinds.
+  // Only immediate wrapper children belong here; descendants recurse with mixes.
+  function serializeBoxChildren(container) {
+    return Array.from(container?.children || [])
+      .map(wrapper => wrapper.querySelector(':scope > .mix-box, :scope > .chunk-box, :scope > .variable-box'))
+      .filter(Boolean)
+      .map(box => box.classList.contains('mix-box')
+        ? serializeMixBox(box)
+        : box.classList.contains('variable-box') ? serializeVariableBox(box) : serializeChunkBox(box));
   }
 
   function serializeMixBox(box) {
@@ -2620,22 +2716,11 @@
     const orderMode = readMixOrderMode(box);
     const collapsed = box.classList.contains('is-collapsed');
     const childContainer = box.querySelector('.mix-children');
-    const children = childContainer
-      ? Array.from(childContainer.children)
-          .map(child => child.querySelector('.mix-box, .chunk-box, .variable-box'))
-          .filter(Boolean)
-          .map(child =>
-            child.classList.contains('mix-box')
-              ? serializeMixBox(child)
-              : child.classList.contains('variable-box')
-              ? serializeVariableBox(child)
-              : serializeChunkBox(child)
-          )
-      : [];
+    const children = serializeBoxChildren(childContainer);
     return {
       type: 'mix',
       id: box.dataset.boxId,
-      title: titleInput?.value || 'Mix',
+      title: titleInput?.value ?? 'Mix',
       limit: readNumber(limitInput, 1000),
       lengthMode: readMixLengthMode(box),
       exact: readExactMode(box),
@@ -2664,14 +2749,11 @@
   function exportMixState(rootEl) {
     const root = rootEl || document.querySelector('.mix-root');
     if (!root) return { mixes: [] };
-    // Keep the "mixes" key for compatibility, but include root-level strings too.
-    const mixes = Array.from(root.children)
-      .map(child => child.querySelector('.mix-box, .chunk-box'))
-      .filter(Boolean)
-      .map(box => (box.classList.contains('mix-box') ? serializeMixBox(box) : serializeChunkBox(box)));
+    // Keep the legacy "mixes" key while saving every root box in visible order.
+    const mixes = serializeBoxChildren(root);
     return {
       mixes,
-      colorPresets: exportColorPresets()
+      colorPresets: exportColorPresets(root)
     };
   }
 
@@ -2679,32 +2761,24 @@
     const root = rootEl || document.querySelector('.mix-root');
     if (!root) return;
     root.innerHTML = '';
-    loadColorPresets(state);
+    loadColorPresets(state, root);
     const idRegistry = createHydrationRegistry();
     const mixes = getSavedMixEntries(state, true);
     let prevMixColor = null;
     let prevChunkColor = null;
     let previousPattern = null;
     mixes.forEach(cfg => {
-      if (cfg?.type === 'chunk') {
-        const wrapper = createChunkWrapper(cfg, {
-          previousColor: prevChunkColor,
-          previousPattern,
-          idRegistry
-        });
-        root.appendChild(wrapper);
-        prevChunkColor = wrapper.querySelector('.chunk-box')?.dataset.color || prevChunkColor;
-        previousPattern = wrapper.querySelector('.chunk-box')?.dataset.pattern || previousPattern;
-        return;
-      }
-      const wrapper = createMixWrapper(cfg, {
-        previousColor: prevMixColor,
+      const wrapper = createWrapperFromState(cfg, {
+        previousColor: cfg?.type === 'chunk' ? prevChunkColor : prevMixColor,
         previousPattern,
-        idRegistry
+        idRegistry,
+        presetScope: root
       });
       root.appendChild(wrapper);
-      prevMixColor = wrapper.querySelector('.mix-box')?.dataset.color || prevMixColor;
-      previousPattern = wrapper.querySelector('.mix-box')?.dataset.pattern || previousPattern;
+      const box = wrapper.firstElementChild;
+      if (box.classList.contains('mix-box')) prevMixColor = box.dataset.color || prevMixColor;
+      if (box.classList.contains('chunk-box')) prevChunkColor = box.dataset.color || prevChunkColor;
+      previousPattern = box.dataset.pattern || previousPattern;
     });
     remapHydratedVariableTargets(root, idRegistry);
     updateEmptyState(root);
@@ -2748,13 +2822,12 @@
 
   function appendMixState(state, targetEl = null, rootEl = null) {
     const container = resolveAppendContainer(targetEl);
-    if (!container) return 0;
+    if (!container || !Array.isArray(state?.mixes)) return 0;
     const root = resolveRootForAppend(container, rootEl);
-    const entries = getSavedMixEntries(state, true);
-    if (!entries.length) return 0;
+    const entries = getSavedMixEntries(state, false);
     // Add Save is an append operation: import file presets and boxes without replacing
     // the receiving tree, the window title, or any existing file name.
-    mergeColorPresets(state);
+    const presetIdMap = mergeColorPresets(state, root);
     const idRegistry = createHydrationRegistry(root);
     const parentMix = container.closest?.('.mix-box') || null;
     let previousColor = getPreviousChildColor(container);
@@ -2767,7 +2840,9 @@
         previousColor,
         parentPattern: parentMix?.dataset?.pattern,
         previousPattern,
-        idRegistry
+        idRegistry,
+        presetScope: root,
+        presetIdMap
       });
       if (!wrapper) return;
       container.appendChild(wrapper);
@@ -3140,7 +3215,12 @@
         if (!customRow) return;
         const isCustom = select.value === 'custom';
         customRow.style.display = isCustom ? 'block' : 'none';
-        if (!isCustom && customInput) customInput.value = '';
+        // Preserve hides chunk-size controls without discarding their saved
+        // numeric setting; choosing Custom restores that remembered size.
+        if (isCustom && customInput && !customInput.value && select.dataset.lastNumeric) {
+          customInput.value = select.dataset.lastNumeric;
+        }
+        if (!isCustom && select.value !== 'preserve' && customInput) customInput.value = '';
       };
       if (!select.dataset.sizeInit) {
         select.addEventListener('change', toggle);
@@ -3258,7 +3338,8 @@
     const emptyState = windowEl.querySelector('.empty-state');
     if (!emptyState) return;
     const hasBoxes = Array.from(root.children).some(child =>
-      child.classList.contains('mix-wrapper') || child.classList.contains('chunk-wrapper')
+      child.classList.contains('mix-wrapper') || child.classList.contains('chunk-wrapper') ||
+      child.classList.contains('variable-wrapper')
     );
     emptyState.style.display = hasBoxes ? 'none' : 'flex';
   }
@@ -3515,7 +3596,7 @@
           if (!box) return;
           const nameInput = box.querySelector('.color-preset-name');
           const colorInput = box.querySelector('.color-custom-input');
-          const preset = upsertCustomPreset(nameInput?.value || '', colorInput?.value || '');
+          const preset = upsertCustomPreset(nameInput?.value || '', colorInput?.value || '', root);
           if (!preset) return;
           if (nameInput) nameInput.value = '';
           refreshColorPresetSelects(root);

@@ -4,9 +4,9 @@
   // Table of contents:
   // - Registry + safe readers
   // - Provider capability matrix (raw prompt, FIM, and legacy routes)
-  // - Request/response helpers (completions + provider model catalogs)
+  // - Request/response helpers (autocomplete, native infill + model catalogs)
   // - Shared encrypted-settings adapter + app-specific settings mapping
-  // - Window binding + shared copy feedback
+  // - Window binding, mode presentation + shared copy feedback
   // - App registration
 
   const APP_KEY = 'openrouter-completions';
@@ -28,6 +28,10 @@
       catalogKind: 'openrouter',
       catalogLabel: '/api/v1/models',
       catalogRequiresKey: false,
+      // OpenRouter is the one current catalog in this app that documents a
+      // model-level default_parameters object. A stop value is automatic only
+      // when that exact metadata exists; parameter support alone is not a stop.
+      catalogStopPath: 'default_parameters.stop',
       modelParameterGating: true,
       pricingScale: 1,
       temperatureMax: 2,
@@ -63,7 +67,7 @@
       ]),
       responseMode: 'text',
       maxTokens: 4096,
-      capabilityNote: 'Native beta FIM route. Sends prompt plus an optional suffix with no messages array; DeepSeek currently documents deepseek-v4-pro for this endpoint and caps output at 4K tokens.'
+      capabilityNote: 'Native beta Infill route. Autocomplete sends Beginning text alone; Infill adds Ending text through the documented FIM field. DeepSeek currently documents deepseek-v4-pro here and caps FIM output at 4K tokens.'
     },
     [PROVIDER_KEYS.DEEPINFRA]: {
       label: 'DeepInfra',
@@ -155,7 +159,7 @@
         'suffix'
       ]),
       responseMode: 'message-content',
-      capabilityNote: 'Native prompt/suffix FIM generation. The picker requires capabilities.completion_fim from the live catalog. The request is not chat-formatted, although Mistral wraps returned text inside choices[].message.content.'
+      capabilityNote: 'Native Infill generation. The picker requires capabilities.completion_fim from the live catalog; Autocomplete omits Ending text. The request is not chat-formatted, although Mistral wraps returned text inside choices[].message.content.'
     },
     [PROVIDER_KEYS.OPENAI]: {
       label: 'OpenAI API (Legacy)',
@@ -185,7 +189,7 @@
         'suffix'
       ]),
       responseMode: 'text',
-      capabilityNote: 'Legacy non-chat API using deprecated completion-only models. Only gpt-3.5-turbo-instruct supports suffix; davinci-002 and babbage-002 are forward-only base models. OpenAI Platform billing is separate from ChatGPT.'
+      capabilityNote: 'Legacy non-chat API using deprecated completion-only models. Only gpt-3.5-turbo-instruct supports Infill; davinci-002 and babbage-002 are Autocomplete-only base models. OpenAI Platform billing is separate from ChatGPT.'
     },
     [PROVIDER_KEYS.HYPERBOLIC]: {
       label: 'Hyperbolic (Sunset)',
@@ -227,9 +231,15 @@
     }
   ]);
   const TOP_K_MAX = 100;
+  const COMPLETION_MODES = Object.freeze({
+    AUTOCOMPLETE: 'autocomplete',
+    INFILL: 'infill'
+  });
   const COMPLETION_SETTINGS_KIND = 'yolk-completion-api-settings';
-  const COMPLETION_SETTINGS_VERSION = 1;
+  const COMPLETION_SETTINGS_VERSION = 2;
+  const LEGACY_COMPLETION_SETTINGS_VERSION = 1;
   const DEFAULT_SETTINGS_FILE_NAME = 'completion-providers-encrypted-settings.json';
+  let completionWindowSequence = 0;
 
   function ensureAppRegistry() {
     if (typeof window === 'undefined') return null;
@@ -262,11 +272,25 @@
     return disabled ? `${formatted} (disabled)` : formatted;
   }
 
-  function parseStopSequences(value) {
-    const lines = String(value || '')
-      .split(/\r?\n/)
-      .filter(line => line.length > 0);
-    return lines.length ? lines : undefined;
+  function normalizeCompletionMode(value) {
+    return value === COMPLETION_MODES.INFILL
+      ? COMPLETION_MODES.INFILL
+      : COMPLETION_MODES.AUTOCOMPLETE;
+  }
+
+  // Stop strings are protocol metadata, never user-entered guesses. Preserve
+  // their exact whitespace because providers match literal token text; reject
+  // malformed or over-limit metadata instead of silently rewriting it.
+  function normalizeAutomaticStopSequences(value, maxSequences = null) {
+    const candidates = Array.isArray(value)
+      ? value
+      : typeof value === 'string'
+        ? [value]
+        : [];
+    const sequences = candidates.filter(item => typeof item === 'string' && item.length > 0);
+    if (!sequences.length || sequences.length !== candidates.length) return undefined;
+    if (Number.isFinite(maxSequences) && sequences.length > maxSequences) return undefined;
+    return sequences;
   }
 
   function toLowerArray(value) {
@@ -328,6 +352,26 @@
         advertised.includes(parameter.toLowerCase());
     }
     return true;
+  }
+
+  function isModelInfillCapable(providerKey, modelEntry = null) {
+    return providerSupportsRequestParameter(providerKey, 'suffix', modelEntry);
+  }
+
+  function getAutomaticStopSequences(providerKey, modelEntry = null) {
+    const provider = getProviderOption(providerKey);
+    const modelId = toTrimmedString(modelEntry?.id);
+    const fromMetadata = normalizeAutomaticStopSequences(
+      modelEntry?.automaticStopSequences,
+      provider.maxStopSequences
+    );
+    if (fromMetadata) return fromMetadata;
+    // Exact provider/model lookups may be added only when official endpoint
+    // documentation names a required default. The current matrix needs none.
+    return normalizeAutomaticStopSequences(
+      provider.modelStopSequences?.[modelId],
+      provider.maxStopSequences
+    );
   }
 
   function getProviderTemperatureMax(providerKey) {
@@ -778,14 +822,14 @@
       model,
       modelEntry,
       prompt,
-      suffix,
+      mode,
+      endingText,
       maxTokens,
       temperature,
       topP,
       topK,
       presencePenalty,
-      frequencyPenalty,
-      stop
+      frequencyPenalty
     } = config;
     const provider = getProviderOption(providerKey);
     if (!isHttpCompletionEndpoint(endpoint)) {
@@ -794,11 +838,16 @@
     if (typeof prompt !== 'string' || !prompt.length) {
       throw new Error('A prompt string is required for every completion request.');
     }
-    if (Array.isArray(stop) && provider.maxStopSequences && stop.length > provider.maxStopSequences) {
-      throw new Error(`${provider.label} accepts at most ${provider.maxStopSequences} stop sequences.`);
-    }
     const supports = parameter =>
       providerSupportsRequestParameter(providerKey, parameter, modelEntry);
+    const completionMode = normalizeCompletionMode(mode);
+    const isInfill = completionMode === COMPLETION_MODES.INFILL;
+    if (isInfill && !supports('suffix')) {
+      throw new Error(`${provider.label} does not document native Infill for this model.`);
+    }
+    if (isInfill && (typeof endingText !== 'string' || !endingText.length)) {
+      throw new Error('Ending text is required in Infill mode.');
+    }
     const includeTopP = supports('top_p') && Number.isFinite(topP) && topP > 0;
     const includeTopK = supports('top_k') && Number.isFinite(topK) && topK > 0;
     const includeMaxTokens = supports('max_tokens') && Number.isFinite(maxTokens) && maxTokens > 0;
@@ -807,23 +856,27 @@
     const includeFrequencyPenalty =
       supports('frequency_penalty') && Number.isFinite(frequencyPenalty) && frequencyPenalty !== 0;
     const includeTemperature = supports('temperature') && Number.isFinite(temperature);
-    const includeStop = supports('stop') && stop;
-    const includeSuffix =
-      supports('suffix') && typeof suffix === 'string' && suffix.length > 0;
+    const automaticStop = supports('stop')
+      ? getAutomaticStopSequences(providerKey, modelEntry)
+      : undefined;
+    const includeStop = Array.isArray(automaticStop) && automaticStop.length > 0;
+    const includeSuffix = isInfill && typeof endingText === 'string' && endingText.length > 0;
     // Every adapter starts with the same continuation contract: one prompt
     // string and no role-bearing messages. Capability flags only add fields
     // documented by that provider, preventing silent chat conversion in-client.
     const requestBody = {
       model,
       prompt,
-      ...(includeSuffix ? { suffix } : {}),
+      // `suffix` is API terminology only. The UI calls this Ending text and
+      // exposes it solely inside a native Infill document flow.
+      ...(includeSuffix ? { suffix: endingText } : {}),
       ...(includeMaxTokens ? { max_tokens: maxTokens } : {}),
       ...(includeTopP ? { top_p: topP } : {}),
       ...(includeTopK ? { top_k: topK } : {}),
       ...(includePresencePenalty ? { presence_penalty: presencePenalty } : {}),
       ...(includeFrequencyPenalty ? { frequency_penalty: frequencyPenalty } : {}),
       ...(includeTemperature ? { temperature } : {}),
-      ...(includeStop ? { stop } : {}),
+      ...(includeStop ? { stop: automaticStop } : {}),
       stream: false
     };
     const response = await fetch(endpoint, {
@@ -923,16 +976,23 @@
         fimCapable: typeof fimCapability === 'boolean' ? fimCapability : null,
         supportsServerless: typeof supportsServerless === 'boolean' ? supportsServerless : null,
         archived: entry?.archived === true,
-        reasoningMandatory: entry?.reasoning?.mandatory === true
+        reasoningMandatory: entry?.reasoning?.mandatory === true,
+        automaticStopSequences: provider.catalogStopPath
+          ? normalizeAutomaticStopSequences(
+              readPath(entry, provider.catalogStopPath),
+              provider.maxStopSequences
+            )
+          : undefined
       });
     });
     return Array.from(unique.values()).sort((a, b) => a.id.localeCompare(b.id));
   }
 
-  function formatModelOption(entry) {
+  function formatModelOption(entry, providerKey) {
     const namePart = entry.name && entry.name !== entry.id ? ` - ${entry.name}` : '';
     const ctxPart = Number.isFinite(entry.contextLength) ? ` (${entry.contextLength} ctx)` : '';
-    return `${entry.id}${namePart}${ctxPart}`;
+    const infillPart = isModelInfillCapable(providerKey, entry) ? ' · Infill' : '';
+    return `${entry.id}${namePart}${ctxPart}${infillPart}`;
   }
 
   function isMistralFimModel(entry) {
@@ -994,7 +1054,7 @@
     ]);
   }
 
-  function renderModelPicker(modelPicker, entries, activeModel) {
+  function renderModelPicker(modelPicker, entries, activeModel, providerKey = DEFAULT_PROVIDER_KEY) {
     if (!modelPicker) return;
     modelPicker.innerHTML = '';
     const placeholder = document.createElement('option');
@@ -1004,7 +1064,7 @@
     entries.forEach(entry => {
       const option = document.createElement('option');
       option.value = entry.id;
-      option.textContent = formatModelOption(entry);
+      option.textContent = formatModelOption(entry, providerKey);
       modelPicker.appendChild(option);
     });
     const current = toTrimmedString(activeModel);
@@ -1132,7 +1192,7 @@
           if (entry?.pricing) modelPricingById.set(entry.id, entry.pricing);
         });
       }
-      renderModelPicker(modelPicker, entries, activeModel);
+      renderModelPicker(modelPicker, entries, activeModel, provider);
       notifyModelsLoaded(entries);
     };
     if (!key && providerOption.modelsEndpoint && providerOption.catalogRequiresKey !== false) {
@@ -1208,8 +1268,8 @@
       topKInput,
       presencePenaltyInput,
       frequencyPenaltyInput,
-      stopInput,
-      suffixInput,
+      modeInfillInput,
+      endingInput,
       apiKeyInput,
       titleInput,
       promptInput
@@ -1228,6 +1288,13 @@
     endpoints[provider] = normalizeEndpoint(endpointInput?.value, provider);
     models[provider] = toTrimmedString(modelPicker?.value);
     const activeModelEntry = models[provider] ? { id: models[provider] } : null;
+    const requestedMode = modeInfillInput?.checked
+      ? COMPLETION_MODES.INFILL
+      : COMPLETION_MODES.AUTOCOMPLETE;
+    const mode = requestedMode === COMPLETION_MODES.INFILL &&
+      isModelInfillCapable(provider, activeModelEntry)
+      ? COMPLETION_MODES.INFILL
+      : COMPLETION_MODES.AUTOCOMPLETE;
     PROVIDER_KEY_LIST.forEach(providerKey => {
       if (!isHttpCompletionEndpoint(endpoints[providerKey])) {
         throw new Error(`${getProviderOption(providerKey).label} has an invalid completion endpoint.`);
@@ -1254,8 +1321,8 @@
       topK: Math.round(readNumberInput(topKInput, 0, 0, TOP_K_MAX)),
       presencePenalty: readNumberInput(presencePenaltyInput, 0, -2, 2),
       frequencyPenalty: readNumberInput(frequencyPenaltyInput, 0, -2, 2),
-      stopText: String(stopInput?.value || ''),
-      suffix: String(suffixInput?.value || ''),
+      mode,
+      endingText: String(endingInput?.value || ''),
       apiKeys,
       apiKey: apiKeys[provider],
       title: toTrimmedString(titleInput?.value),
@@ -1280,15 +1347,19 @@
       topKInput,
       presencePenaltyInput,
       frequencyPenaltyInput,
-      stopInput,
-      suffixInput,
+      modeAutocompleteInput,
+      modeInfillInput,
+      endingInput,
       apiKeyInput,
       titleInput,
       promptInput
     } = inputs;
+    const settingsVersion = settings?.version;
+    const versionSupported = settingsVersion === COMPLETION_SETTINGS_VERSION ||
+      settingsVersion === LEGACY_COMPLETION_SETTINGS_VERSION;
     if (
       settings?.kind !== COMPLETION_SETTINGS_KIND ||
-      settings?.version !== COMPLETION_SETTINGS_VERSION ||
+      !versionSupported ||
       !PROVIDER_OPTIONS[settings?.provider] ||
       !settings?.apiKeys ||
       typeof settings.apiKeys !== 'object' ||
@@ -1303,6 +1374,14 @@
       throw new Error('This is not a supported Completion API settings file.');
     }
     const nextProvider = settings.provider;
+    const restoredEndingText = settingsVersion === LEGACY_COMPLETION_SETTINGS_VERSION
+      ? String(settings?.suffix || '')
+      : String(settings?.endingText || '');
+    const restoredRequestedMode = settingsVersion === LEGACY_COMPLETION_SETTINGS_VERSION
+      ? restoredEndingText.length
+        ? COMPLETION_MODES.INFILL
+        : COMPLETION_MODES.AUTOCOMPLETE
+      : normalizeCompletionMode(settings?.mode);
     const loadedApiKeys = createProviderMap('');
     const loadedEndpoints = createProviderMap(providerKey => defaultEndpointForProvider(providerKey));
     const loadedModels = createProviderMap('');
@@ -1330,7 +1409,8 @@
       renderModelPicker(
         modelPicker,
         requestedModel ? [{ id: requestedModel, name: 'Saved selection', contextLength: null }] : [],
-        requestedModel
+        requestedModel,
+        nextProvider
       );
     }
     const restoredModelEntry = { id: loadedModels[nextProvider] };
@@ -1354,8 +1434,15 @@
     if (topKInput) topKInput.value = String(Math.round(readNumberInput({ value: settings?.topK }, 0, 0, TOP_K_MAX)));
     if (presencePenaltyInput) presencePenaltyInput.value = String(readNumberInput({ value: settings?.presencePenalty }, 0, -2, 2));
     if (frequencyPenaltyInput) frequencyPenaltyInput.value = String(readNumberInput({ value: settings?.frequencyPenalty }, 0, -2, 2));
-    if (stopInput) stopInput.value = String(settings?.stopText || '');
-    if (suffixInput) suffixInput.value = String(settings?.suffix || '');
+    const restoredMode = restoredRequestedMode === COMPLETION_MODES.INFILL &&
+      isModelInfillCapable(nextProvider, restoredModelEntry)
+      ? COMPLETION_MODES.INFILL
+      : COMPLETION_MODES.AUTOCOMPLETE;
+    if (modeAutocompleteInput) {
+      modeAutocompleteInput.checked = restoredMode === COMPLETION_MODES.AUTOCOMPLETE;
+    }
+    if (modeInfillInput) modeInfillInput.checked = restoredMode === COMPLETION_MODES.INFILL;
+    if (endingInput) endingInput.value = restoredEndingText;
     if (apiKeyInput) apiKeyInput.value = loadedApiKeys[nextProvider];
     if (titleInput) titleInput.value = toTrimmedString(settings?.title);
     if (promptInput) promptInput.value = String(settings?.prompt || '');
@@ -1430,12 +1517,19 @@
     const presencePenaltyValue = root.querySelector('.openrouter-presence-penalty-value');
     const frequencyPenaltyInput = root.querySelector('.openrouter-frequency-penalty');
     const frequencyPenaltyValue = root.querySelector('.openrouter-frequency-penalty-value');
-    const stopInput = root.querySelector('.openrouter-stop');
-    const suffixBlock = root.querySelector('.openrouter-suffix-block');
-    const suffixInput = root.querySelector('.openrouter-suffix');
+    const modeAutocompleteInput = root.querySelector('.openrouter-mode-autocomplete');
+    const modeInfillInput = root.querySelector('.openrouter-mode-infill');
+    const modeNote = root.querySelector('.openrouter-mode-note');
     const apiKeyInput = root.querySelector('.openrouter-api-key');
     const titleInput = root.querySelector('.openrouter-title');
     const promptInput = root.querySelector('.openrouter-prompt');
+    const endingInput = root.querySelector('.openrouter-ending');
+    const endingSegment = root.querySelector('.openrouter-ending-segment');
+    const generationFlow = root.querySelector('.openrouter-generation-flow');
+    const beginningLabel = root.querySelector('.openrouter-beginning-label');
+    const beginningRole = root.querySelector('.openrouter-beginning-role');
+    const outputTitle = root.querySelector('.openrouter-output-title');
+    const settingsGlance = root.querySelector('.openrouter-settings-glance');
     const sendButton = root.querySelector('.openrouter-send');
     const copyButton = root.querySelector('.openrouter-copy-output');
     const fileMenuToggle = root.querySelector('.openrouter-menu-start');
@@ -1451,6 +1545,11 @@
     const modelPricingByProvider = createProviderMap(() => new Map());
     let activeProvider = normalizeProviderKey(providerSelect?.value);
     let modelLoadRequestToken = 0;
+    completionWindowSequence += 1;
+    const modeGroupName = `completion-mode-${completionWindowSequence}`;
+    [modeAutocompleteInput, modeInfillInput].forEach(input => {
+      if (input) input.name = modeGroupName;
+    });
 
     const getExcludedModelIds = providerKey => {
       const key = normalizeProviderKey(providerKey);
@@ -1475,6 +1574,61 @@
       if (!modelId) return null;
       return getModelEntriesMap(key).get(modelId) || { id: modelId };
     };
+    const readActiveMode = () => modeInfillInput?.checked
+      ? COMPLETION_MODES.INFILL
+      : COMPLETION_MODES.AUTOCOMPLETE;
+    const syncSettingsGlance = () => {
+      if (!settingsGlance) return;
+      const providerLabel = getProviderOption(activeProvider).label;
+      const modelId = toTrimmedString(modelPicker?.value) || 'Select model';
+      const modeLabel = readActiveMode() === COMPLETION_MODES.INFILL
+        ? 'Infill'
+        : 'Autocomplete';
+      settingsGlance.textContent = `${providerLabel} · ${modelId} · ${modeLabel}`;
+    };
+    const syncModePresentation = () => {
+      const modelEntry = getSelectedModelEntry();
+      const hasModel = !!toTrimmedString(modelEntry?.id);
+      const infillCapable = hasModel && isModelInfillCapable(activeProvider, modelEntry);
+      if (modeInfillInput) modeInfillInput.disabled = !infillCapable;
+      if (!infillCapable && modeInfillInput?.checked && modeAutocompleteInput) {
+        modeAutocompleteInput.checked = true;
+      }
+      const mode = readActiveMode();
+      const isInfill = mode === COMPLETION_MODES.INFILL && infillCapable;
+      root.dataset.completionMode = isInfill
+        ? COMPLETION_MODES.INFILL
+        : COMPLETION_MODES.AUTOCOMPLETE;
+      if (generationFlow) generationFlow.dataset.mode = root.dataset.completionMode;
+      if (endingSegment) endingSegment.classList.toggle('is-hidden', !isInfill);
+      if (endingInput) endingInput.disabled = !isInfill;
+      if (beginningLabel) beginningLabel.textContent = isInfill
+        ? 'Beginning text'
+        : 'Text to continue';
+      if (beginningRole) beginningRole.textContent = isInfill
+        ? 'Context before the gap'
+        : 'Beginning';
+      if (outputTitle) outputTitle.textContent = isInfill
+        ? 'Generated middle'
+        : 'Continuation';
+      if (sendButton) sendButton.textContent = isInfill
+        ? 'Generate Infill'
+        : 'Generate Autocomplete';
+      if (outputEl) {
+        outputEl.dataset.placeholder = isInfill
+          ? 'The generated middle will appear here.'
+          : 'The continuation will appear here.';
+      }
+      if (modeNote) {
+        modeNote.textContent = !hasModel
+          ? 'Select a model to check Infill support.'
+          : infillCapable
+            ? 'Infill is available for this model.'
+            : 'Autocomplete only — this model has no documented native Infill contract.';
+        modeNote.classList.toggle('is-available', infillCapable);
+      }
+      syncSettingsGlance();
+    };
     // Keep every provider's key, endpoint, and model together. Switching the
     // picker can no longer leak a custom endpoint or model choice into the next
     // adapter, and encrypted files serialize the same provider-scoped topology.
@@ -1497,14 +1651,11 @@
       const supports = parameter =>
         providerSupportsRequestParameter(activeProvider, parameter, modelEntry);
       if (providerNote) providerNote.textContent = provider.capabilityNote || '';
-      if (suffixBlock) suffixBlock.classList.toggle('is-hidden', !supports('suffix'));
-      if (suffixInput) suffixInput.disabled = !supports('suffix');
       if (temperatureInput) temperatureInput.disabled = !supports('temperature');
       if (topPInput) topPInput.disabled = !supports('top_p');
       if (topKInput) topKInput.disabled = !supports('top_k');
       if (presencePenaltyInput) presencePenaltyInput.disabled = !supports('presence_penalty');
       if (frequencyPenaltyInput) frequencyPenaltyInput.disabled = !supports('frequency_penalty');
-      if (stopInput) stopInput.disabled = !supports('stop');
       if (maxTokensInput) {
         const maxTokens = getModelMaxTokens(activeProvider, modelEntry);
         maxTokensInput.disabled = !supports('max_tokens');
@@ -1522,6 +1673,7 @@
           temperatureInput.value = String(temperatureMax);
         }
       }
+      syncModePresentation();
     };
     const loadModelsForProvider = (providerKey, apiKey) => {
       const requestedProvider = normalizeProviderKey(providerKey);
@@ -1598,7 +1750,7 @@
     bindSliderValue(presencePenaltyInput);
     bindSliderValue(frequencyPenaltyInput);
     if (titleInput && !toTrimmedString(titleInput.value)) {
-      titleInput.value = 'Prompt Enhancer';
+      titleInput.value = 'Completion API';
     }
 
     if (endpointInput && !toTrimmedString(endpointInput.value)) {
@@ -1616,12 +1768,20 @@
         syncApiKeyInputFromProvider();
         syncEndpointInputFromProvider();
         const cachedEntries = Array.from(getModelEntriesMap(activeProvider).values());
-        renderModelPicker(modelPicker, cachedEntries, providerModels[activeProvider]);
+        renderModelPicker(modelPicker, cachedEntries, providerModels[activeProvider], activeProvider);
         syncProviderCapabilities();
         syncSliderValues();
         loadModelsForProvider(activeProvider, providerApiKeys[activeProvider]);
       });
     }
+
+    [modeAutocompleteInput, modeInfillInput].forEach(input => {
+      input?.addEventListener('change', () => {
+        if (!input.checked) return;
+        if (outputEl) outputEl.textContent = '';
+        syncModePresentation();
+      });
+    });
 
     if (modelPicker) {
       modelPicker.addEventListener('change', () => {
@@ -1655,8 +1815,9 @@
       topKInput,
       presencePenaltyInput,
       frequencyPenaltyInput,
-      stopInput,
-      suffixInput,
+      modeAutocompleteInput,
+      modeInfillInput,
+      endingInput,
       apiKeyInput,
       titleInput,
       promptInput
@@ -1831,8 +1992,13 @@
         providerModels[providerKey] = model;
         const modelEntry = getSelectedModelEntry(providerKey);
         const prompt = promptInput?.value || '';
-        const suffix = providerSupportsRequestParameter(providerKey, 'suffix', modelEntry)
-          ? String(suffixInput?.value || '')
+        const requestedMode = readActiveMode();
+        const mode = requestedMode === COMPLETION_MODES.INFILL &&
+          isModelInfillCapable(providerKey, modelEntry)
+          ? COMPLETION_MODES.INFILL
+          : COMPLETION_MODES.AUTOCOMPLETE;
+        const endingText = mode === COMPLETION_MODES.INFILL
+          ? String(endingInput?.value || '')
           : '';
         const endpoint = normalizeEndpoint(endpointInput?.value, providerKey);
         providerEndpoints[providerKey] = endpoint;
@@ -1848,7 +2014,6 @@
         const topK = Math.round(readNumberInput(topKInput, 0, 0, TOP_K_MAX));
         const presencePenalty = readNumberInput(presencePenaltyInput, 0, -2, 2);
         const frequencyPenalty = readNumberInput(frequencyPenaltyInput, 0, -2, 2);
-        const stop = parseStopSequences(stopInput?.value);
 
         if (!isHttpCompletionEndpoint(endpoint)) {
           writeStatus(
@@ -1867,15 +2032,16 @@
           return;
         }
         if (!prompt.length) {
-          writeStatus(statusEl, 'Enter a prompt before sending.', true);
+          writeStatus(statusEl, 'Enter beginning text before sending.', true);
           return;
         }
-        if (stop && provider.maxStopSequences && stop.length > provider.maxStopSequences) {
-          writeStatus(
-            statusEl,
-            `${providerLabel} accepts at most ${provider.maxStopSequences} stop sequences.`,
-            true
-          );
+        if (requestedMode === COMPLETION_MODES.INFILL && mode !== COMPLETION_MODES.INFILL) {
+          syncModePresentation();
+          writeStatus(statusEl, 'This model is Autocomplete-only; choose a native Infill model first.', true);
+          return;
+        }
+        if (mode === COMPLETION_MODES.INFILL && !endingText.length) {
+          writeStatus(statusEl, 'Enter ending text before generating an Infill.', true);
           return;
         }
 
@@ -1890,14 +2056,14 @@
             model,
             modelEntry,
             prompt,
-            suffix,
+            mode,
+            endingText,
             maxTokens,
             temperature,
             topP,
             topK,
             presencePenalty,
-            frequencyPenalty,
-            stop
+            frequencyPenalty
           });
           if (outputEl) outputEl.textContent = result.text || '';
           const modelPricing = getModelPricingMap(providerKey).get(model) || null;

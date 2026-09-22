@@ -7,6 +7,7 @@ This directory contains Jest test suites verifying functionality of the Prompt E
 - **Randomized Sequential Tests**: In addition to deterministic unit tests, create tests that simulate a full user session. Randomly perform a sequence of actions—load, generate, modify, save—and assert that no errors are thrown and the generated output remains valid. Run these sequences multiple times to explore edge cases.
 - **Toggle Map**: For complex option interactions, maintain a table mapping toggle combinations to their expected output. Drive parameterized tests from this table so each scenario is explicitly verified.
 - **Sanity Fixtures**: Keep the real-UI sanity regression in sync (`tests/sanity/`). Any behavior change must update both the input/expected JSON fixtures and the README Heuristic rule index.
+- **Prompt File Fidelity**: `storageManager.test.js` reads real download Blobs and opens real Files through the menu inputs. Check every root/nested box kind, order and forward references, literal text and blank titles, collapse flags, all control families, dormant Preserve/empty-string settings, and explicit empty documents. Include repeated seeded edit/generate/save/open sessions, compare saved fields against authored expectations as well as re-exported JSON, and verify deterministic generation before/after. Palette tests must cover unused definitions, separate windows, stable ids, named edits, and append conflicts through nested boxes. Sanity `roundtripPrompt` actions use the JSON boundary and `savedState` expectations for matching compact fixtures.
 - **Procedural Wallpaper**: Keep deterministic world-model checks, bare-desktop wheel isolation, and mobile release-momentum coverage in `wallpaper.test.js`. Assert stable signatures, bounded pool size, continuous palette parameters, long-tail touch glide distance/decay/cancellation, and window-scroll isolation; leave subjective composition and texture balance to browser visual QA rather than brittle pixel snapshots.
 - **Desktop Window Geometry**: Reproduce drag/resize regressions with explicit
   desktop and window DOMRects. Assert pointer-to-frame offset during off-canvas
@@ -16,8 +17,12 @@ This directory contains Jest test suites verifying functionality of the Prompt E
   leave texture and translucent-preview appearance to browser visual QA.
 - **Completion Provider Matrix**: Mock each documented provider endpoint and
   inspect the emitted JSON. Raw/FIM cases must assert `prompt`, absence of
-  `messages`, capability-gated sampling fields, FIM `suffix`, and any unusual
-  response wrapper. These tests establish client shape, not live credentials or
+  `messages`, capability-gated sampling fields, explicitly selected Infill
+  `suffix`, and any unusual response wrapper. Regress the foldable Settings +
+  nested Advanced structure, default Autocomplete mode, disabled Infill on
+  forward-only models, Beginning → generated middle → Ending DOM order, and
+  complete absence of manual stop/loose suffix fields. These tests establish
+  client shape, not live credentials or
   a router's hidden tokenizer input. Keep the eight-provider UI allowlist explicit,
   with DeepSeek's live catalog intersected against exact FIM model V4 Pro,
   DeepInfra restricted to `metadata.tags` text-generation models and its conservative
@@ -26,12 +31,16 @@ This directory contains Jest test suites verifying functionality of the Prompt E
   `nextPageToken` plus camelCase serverless metadata, Together's top-level language/code array and per-million
   pricing, DeepInfra's nested metadata limits/prices, Mistral `completion_fim`, OpenAI's exact legacy IDs, and OpenRouter
   per-model parameter/reasoning flags, treating absent OpenRouter parameter
-  metadata as permission for no optional fields. Hyperbolic must not trigger an invented
+  metadata as permission for no optional fields. Preserve literal OpenRouter
+  `default_parameters.stop` metadata only within the documented cap; malformed
+  or absent defaults must be omitted, and tokenizer sentinel markers remain
+  provider-owned rather than browser lookup guesses. Hyperbolic must not trigger an invented
   catalog read or accept a chat/instruct substitute. Regress absolute `/completions` endpoint
-  validation, provider stop/token/temperature caps (including DeepInfra/Fireworks' four
-  stops and Mistral FIM's 1.5 temperature maximum), successful zero-model
+  validation, provider token/temperature caps (including Mistral FIM's 1.5
+  temperature maximum), successful zero-model
   catalogs, provider-scoped key/endpoint/model switching, product-kind/version
-  rejection, and no redundant catalog read after a complete encrypted restore.
+  rejection, v1 suffix-to-v2 Ending-text migration, and no redundant catalog
+  read after a complete encrypted restore.
 - **Terminal Harness**: Test OpenAI-compatible chat records, OpenAI Responses
   function calls, and Anthropic Messages `tool_use`/`tool_result` blocks. Drive
   provider setup by dispatching Enter from the inline prompt, assert masked keys

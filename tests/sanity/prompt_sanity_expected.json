@@ -1,6 +1,238 @@
 {
   "cases": [
     {
+      "id": "edited_preset_and_builtin_import_roundtrip",
+      "output": "one two ",
+      "colorValue": "#123456",
+      "chunkColorValue": "#123456",
+      "savedState": {
+        "colorPresets": [
+          {
+            "id": "sunset",
+            "name": "Sunset",
+            "color": "#123456"
+          },
+          {
+            "id": "sunset-2",
+            "name": "Sunset",
+            "color": "#d79a3d"
+          }
+        ],
+        "mixes": [
+          {
+            "type": "mix",
+            "id": "host",
+            "colorPreset": "sunset",
+            "colorValue": "#123456",
+            "children": [
+              {
+                "type": "chunk",
+                "id": "original",
+                "colorPreset": "sunset",
+                "colorValue": "#123456"
+              },
+              {
+                "type": "mix",
+                "id": "imported",
+                "children": [
+                  {
+                    "type": "chunk",
+                    "id": "builtin",
+                    "colorPreset": "sunset-2",
+                    "colorValue": "#d79a3d"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "prompt_complete_state_roundtrip",
+      "output": "a a b b ",
+      "mixCount": 2,
+      "variableCount": 2,
+      "mixCollapsed": true,
+      "chunkCollapsed": true,
+      "savedState": {
+        "colorPresets": [
+          {
+            "id": "brand-v1",
+            "name": "Renamed Brand",
+            "color": "#445566"
+          },
+          {
+            "id": "unused",
+            "name": "Unused",
+            "color": "#778899"
+          }
+        ],
+        "mixes": [
+          {
+            "type": "variable",
+            "id": "root-reference",
+            "targetId": "source",
+            "collapsed": true
+          },
+          {
+            "type": "mix",
+            "id": "host",
+            "title": "",
+            "limit": 37,
+            "lengthMode": "fit-largest",
+            "preserve": true,
+            "firstChunkBehavior": "random-start",
+            "orderMode": "canonical",
+            "colorMode": "preset",
+            "colorPreset": "brand-v1",
+            "collapsed": true,
+            "delimiter": {
+              "mode": "custom-any",
+              "custom": "|,",
+              "size": 23
+            },
+            "children": [
+              {
+                "type": "variable",
+                "id": "nested-reference",
+                "targetId": "source",
+                "collapsed": true
+              },
+              {
+                "type": "mix",
+                "id": "nested",
+                "title": "Nested",
+                "lengthMode": "fit-smallest",
+                "preserve": true,
+                "firstChunkBehavior": "between",
+                "orderMode": "canonical",
+                "colorMode": "custom",
+                "colorValue": "#112233",
+                "delimiter": {
+                  "mode": "pipe",
+                  "size": 3
+                },
+                "children": [
+                  {
+                    "type": "chunk",
+                    "id": "source",
+                    "title": "",
+                    "text": "a b ",
+                    "limit": 19,
+                    "lengthMode": "exact-once",
+                    "firstChunkBehavior": "size",
+                    "orderMode": "canonical",
+                    "colorMode": "preset",
+                    "colorPreset": "brand-v1",
+                    "collapsed": true,
+                    "delimiter": {
+                      "mode": "whitespace",
+                      "size": 1
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "chunk",
+            "id": "blank",
+            "title": "",
+            "text": "",
+            "limit": 17,
+            "lengthMode": "dropout",
+            "firstChunkBehavior": "random-start",
+            "orderMode": "full-randomize",
+            "colorMode": "auto",
+            "delimiter": {
+              "mode": "custom-all",
+              "custom": "||\\n",
+              "size": 17
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "empty_prompt_roundtrip",
+      "output": "",
+      "mixCount": 0,
+      "variableCount": 0,
+      "savedState": {
+        "mixes": [],
+        "colorPresets": []
+      }
+    },
+    {
+      "id": "append_palette_collision_roundtrip",
+      "output": "old new ",
+      "mixCount": 2,
+      "savedState": {
+        "colorPresets": [
+          {
+            "id": "palette-uid",
+            "name": "Shared Label",
+            "color": "#123456"
+          },
+          {
+            "id": "palette-uid-2",
+            "name": "Shared Label",
+            "color": "#abcdef"
+          }
+        ],
+        "mixes": [
+          {
+            "type": "mix",
+            "id": "host",
+            "children": [
+              {
+                "type": "chunk",
+                "id": "existing",
+                "colorMode": "preset",
+                "colorPreset": "palette-uid",
+                "colorValue": "#123456"
+              },
+              {
+                "type": "mix",
+                "id": "imported",
+                "children": [
+                  {
+                    "type": "chunk",
+                    "id": "imported-source",
+                    "colorMode": "preset",
+                    "colorPreset": "palette-uid-2",
+                    "colorValue": "#abcdef"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "empty_save_imports_palette_only",
+      "output": "",
+      "mixCount": 1,
+      "savedState": {
+        "mixes": [
+          {
+            "type": "mix",
+            "id": "host",
+            "children": []
+          }
+        ],
+        "colorPresets": [
+          {
+            "id": "unused",
+            "name": "Unused",
+            "color": "#778899"
+          }
+        ]
+      }
+    },
+    {
       "id": "default_ui_state",
       "output": "",
       "lengthMode": "fit-smallest",
@@ -369,6 +601,7 @@
       "hasCompleteHelpCopy": true,
       "hasAccessibleIconHelp": true,
       "hasAccurateOpenRouterHelp": true,
+      "hasCompletionModeFlow": true,
       "hasOpenRouterSharedCopyControl": true
     },
     {

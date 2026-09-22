@@ -371,13 +371,15 @@
                   </div>
                 </template>
 
+                <!-- Variables share the Mix/String save contract: source id and collapse state persist. -->
                 <template id="variable-box-template">
                   <div class="variable-wrapper">
                     <div class="variable-box box-shell" data-box-type="variable">
                       <div class="box-header">
                         <span class="box-title">Variable</span>
                         <div class="button-col">
-                          <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Collapse variable" aria-label="Collapse variable" data-expanded="-" data-collapsed="+" data-help="Collapse or expand this variable." data-help-detail="Hides or reveals the source selector without changing which chunk list the variable forwards. The collapsed state is currently a workspace convenience, not saved variable data.">-</button>
+                          <!-- The collapse icon is synchronized after hydration, including legacy visibility aliases. -->
+                          <button type="button" class="toggle-button icon-button hide-button collapse-toggle" title="Collapse variable" aria-label="Collapse variable" data-expanded="-" data-collapsed="+" data-help="Collapse or expand this variable." data-help-detail="Hides or reveals the source selector without changing which chunk list the variable forwards. The collapsed state and selected source are preserved in saved JSON.">-</button>
                           <button type="button" class="delete-button icon-button remove-box" title="Remove variable" aria-label="Remove variable" data-help="Remove this variable." data-help-detail="Deletes only this reference from its parent mix; the source mix or string remains unchanged.">X</button>
                         </div>
                       </div>
@@ -443,7 +445,7 @@
                 </div>
               </div>
               <div class="box-body">
-                <div class="openrouter-app" data-help="Completion API workspace." data-help-detail="Configure a provider, prompt-only endpoint, completion model, sampling controls, optional FIM suffix, stop sequences, API key, and prompt; then inspect returned text, token usage, and cost status.">
+                <div class="openrouter-app" data-help="Autocomplete and infill workspace." data-help-detail="Continue beginning text with a pure Completion API request, or use Infill on a model that explicitly supports beginning and ending context. Provider controls remain available inside the foldable Settings panel.">
                   <div class="prompt-menu openrouter-file-menu">
                     <button type="button" class="prompt-menu-start openrouter-menu-start" aria-haspopup="true" aria-expanded="false" data-help="Open encrypted settings file menu." data-help-detail="Use this file menu to save encrypted completion settings to a JSON file or load them back from an encrypted settings file.">
                       <span class="prompt-menu-glyph" aria-hidden="true">///</span>
@@ -451,116 +453,168 @@
                     </button>
                     <div class="prompt-menu-dropdown openrouter-menu-dropdown" role="menu" aria-hidden="true">
                       <div class="prompt-menu-item" data-action="load-settings" role="menuitem" data-help="Open and decrypt a Completion settings file." data-help-detail="Chooses an encrypted JSON file, validates its Completion product kind and version, and restores every provider's endpoint, model, and API key plus the shared request controls. A complete provider/model/key restore is ready without another catalog request.">Open Encrypted Settings</div>
-                      <div class="prompt-menu-item" data-action="save-settings" role="menuitem" data-help="Encrypt and download all Completion settings." data-help-detail="Asks for a password, then encrypts every provider's endpoint, model, and API key plus sampling controls, stop and suffix text, saved title, and prompt into a versioned Completion-only JSON envelope.">Save Encrypted Settings</div>
+                      <div class="prompt-menu-item" data-action="save-settings" role="menuitem" data-help="Encrypt and download all Completion settings." data-help-detail="Asks for a password, then encrypts every provider's endpoint, model, and API key plus the selected mode, sampling controls, beginning text, ending text, and local title into a versioned Completion-only JSON envelope.">Save Encrypted Settings</div>
                     </div>
                     <div class="prompt-menu-spacer" aria-hidden="true"></div>
                     <button type="button" class="help-toggle" aria-pressed="false" data-help="Toggle help mode for Completion API controls." data-help-detail="When Help is on, clicking any menu, request, output, resize, or title-bar control explains it without performing the action. Click Help again or press Escape to exit.">Help</button>
                   </div>
                   <input type="file" class="openrouter-load-settings-file" accept="application/json,.json" style="display:none">
                   <div class="openrouter-content">
-                    <div class="openrouter-grid">
-                      <div class="control-block">
-                        <label>Provider</label>
-                        <select class="openrouter-provider" data-help="Completion-only provider." data-help-detail="Choose one of eight providers with a documented prompt or FIM /completions route. Each provider keeps its own API key, endpoint, model, capability metadata, and continuation caveat; DeepInfra uses its legacy raw-text route, while Hyperbolic is retained only for its sunset base-completion route.">
-                          <option value="openrouter">OpenRouter</option>
-                          <option value="deepseek">DeepSeek FIM</option>
-                          <option value="deepinfra">DeepInfra</option>
-                          <option value="fireworks" selected>Fireworks</option>
-                          <option value="together">Together AI</option>
-                          <option value="mistral">Mistral FIM</option>
-                          <option value="openai">OpenAI API (Legacy)</option>
-                          <option value="hyperbolic">Hyperbolic (Sunset)</option>
-                        </select>
-                      </div>
-                      <div class="control-block">
-                        <label>Endpoint</label>
-                        <input type="text" class="openrouter-endpoint" value="https://api.fireworks.ai/inference/v1/completions" data-help="Completions endpoint for the selected provider." data-help-detail="Defaults to the provider's documented /completions or /fim/completions route. Only an absolute HTTP(S) URL ending in /completions is accepted; chat, Responses, and Messages endpoints are rejected before sending.">
-                      </div>
-                      <div class="openrouter-provider-note" role="status" data-help="Provider continuation guarantee and caveats." data-help-detail="Explains whether the active provider promises raw generation, exposes FIM, wraps output in a chat-shaped response object, or may adapt a routed chat-trained model behind a prompt-only endpoint."></div>
-                    <div class="control-block">
-                      <label>Model</label>
-                      <select class="openrouter-model-picker" data-help="Completion-compatible models from the selected provider." data-help-detail="Reads each provider's real catalog shape: DeepSeek's account list intersected with its documented FIM model, DeepInfra metadata tagged text-generation, all Fireworks serverless-text pages through nextPageToken, language/code entries for Together, completion_fim capability for Mistral, the three legacy OpenAI completion IDs, per-model metadata from OpenRouter, and Hyperbolic's documented sunset base model without inventing a catalog route.">
-                        <option value="">Loading completion models...</option>
-                      </select>
-                    </div>
-                      <div class="control-block">
-                        <label>Max Tokens</label>
-                      <input type="number" class="openrouter-max-tokens" min="0" step="1" value="0" data-help="Maximum completion tokens to request." data-help-detail="Sets max_tokens when the provider or selected model supports it. Set to 0 to use provider defaults; documented provider and model output caps are applied automatically.">
-                      </div>
-                      <div class="control-block">
-                        <label>Temperature</label>
-                        <div class="openrouter-slider-row">
-                          <input type="range" class="openrouter-temperature" min="0" max="2" step="0.01" value="1" data-help="Sampling temperature for completion randomness." data-help-detail="Lower values are more deterministic; higher values increase variation. The range follows provider documentation, including Together's maximum of 1 and Mistral FIM's maximum of 1.5.">
-                          <span class="openrouter-slider-value openrouter-temperature-value">1</span>
+                    <!-- Settings use a patterned outer mat and opaque silver
+                         islands, matching prompt-box nesting without letting
+                         decoration compete with labels or credential fields. -->
+                    <details class="openrouter-settings" open data-help="Foldable provider and generation settings." data-help-detail="Collapse this panel after setup to leave a calm writing surface. Provider, model, key, mode, endpoint, and sampling values remain active while the panel is closed.">
+                      <summary class="openrouter-settings-summary" data-help="Expand or collapse Completion settings." data-help-detail="Shows the active provider, model, and generation mode at a glance. Open it to change connection, model, mode, endpoint, or sampling controls.">
+                        <span class="openrouter-settings-mark" aria-hidden="true">CFG</span>
+                        <span class="openrouter-settings-heading">
+                          <strong>Settings</strong>
+                          <span>Provider, model &amp; generation</span>
+                        </span>
+                        <span class="openrouter-settings-glance">Fireworks · Loading model · Autocomplete</span>
+                      </summary>
+                      <div class="openrouter-settings-mat">
+                        <div class="openrouter-settings-surface">
+                          <div class="openrouter-setup-grid">
+                            <div class="control-block">
+                              <label>Provider</label>
+                              <select class="openrouter-provider" data-help="Completion-only provider." data-help-detail="Choose one of eight providers with a documented prompt or FIM /completions route. Each provider keeps its own API key, endpoint, model, and continuation caveat; no chat fields are constructed by this app.">
+                                <option value="openrouter">OpenRouter</option>
+                                <option value="deepseek">DeepSeek FIM</option>
+                                <option value="deepinfra">DeepInfra</option>
+                                <option value="fireworks" selected>Fireworks</option>
+                                <option value="together">Together AI</option>
+                                <option value="mistral">Mistral FIM</option>
+                                <option value="openai">OpenAI API (Legacy)</option>
+                                <option value="hyperbolic">Hyperbolic (Sunset)</option>
+                              </select>
+                            </div>
+                            <div class="control-block openrouter-model-block">
+                              <label>Model</label>
+                              <select class="openrouter-model-picker" data-help="Completion-compatible models from the selected provider." data-help-detail="Reads each provider's real catalog shape: DeepSeek's account list intersected with its documented FIM model, DeepInfra metadata tagged text-generation, all Fireworks pages through nextPageToken, Together language/code entries, Mistral completion_fim capability, OpenAI legacy completion IDs, OpenRouter per-model metadata, and Hyperbolic's documented sunset base model. Infill-capable rows are marked in the picker.">
+                                <option value="">Loading completion models...</option>
+                              </select>
+                            </div>
+                            <div class="control-block">
+                              <label>API Key</label>
+                              <input type="password" class="openrouter-api-key" placeholder="Provider API key..." autocomplete="off" data-help="Provider API key sent as Bearer token." data-help-detail="A separate API key is tracked in memory for each provider and can be saved only in an encrypted settings file.">
+                            </div>
+                            <fieldset class="control-block openrouter-mode-fieldset">
+                              <legend>Generation Mode</legend>
+                              <div class="openrouter-mode-switch">
+                                <label class="openrouter-mode-choice" data-help="Choose Autocomplete mode." data-help-detail="Continues directly from Beginning text and keeps the Ending segment out of both the workspace and request.">
+                                  <input type="radio" class="openrouter-mode-autocomplete" name="completion-mode" value="autocomplete" checked data-help="Use Autocomplete mode." data-help-detail="Sends only the beginning text as prompt and places the provider's continuation after it. No ending text or chat messages are sent.">
+                                  <span>Autocomplete</span>
+                                </label>
+                                <label class="openrouter-mode-choice" data-help="Choose Infill mode." data-help-detail="Reveals Beginning, generated middle, and Ending as one document flow. This choice stays disabled until the selected model exposes native Infill.">
+                                  <input type="radio" class="openrouter-mode-infill" name="completion-mode" value="infill" data-help="Use Infill mode when this model supports it." data-help-detail="Sends Beginning text as prompt and Ending text through the provider's documented native FIM field. This choice is disabled for autocomplete-only models.">
+                                  <span>Infill</span>
+                                </label>
+                              </div>
+                              <div class="openrouter-mode-note" role="status" data-help="Selected model's infill availability." data-help-detail="States whether the chosen provider and model expose a documented native infill contract. Unsupported selections automatically remain in Autocomplete mode.">Checking model capability…</div>
+                            </fieldset>
+                          </div>
+                          <div class="openrouter-provider-note" role="status" data-help="Provider continuation guarantee and caveats." data-help-detail="Explains whether the active provider promises raw generation, exposes native infill, wraps output in a chat-shaped response object, or may adapt a routed chat-trained model behind a prompt-only endpoint."></div>
+                          <details class="openrouter-advanced-settings" data-help="Foldable advanced request settings." data-help-detail="Contains the endpoint, token limit, sampling controls, and local settings-file title. These values are optional or provider-gated and stay out of the main writing flow.">
+                            <summary data-help="Expand or collapse advanced request settings." data-help-detail="Open to edit the exact completions endpoint, output cap, temperature, nucleus or top-k sampling, penalties, and local encrypted-file title.">Advanced request settings</summary>
+                            <div class="openrouter-advanced-grid">
+                              <div class="control-block openrouter-endpoint-block">
+                                <label>Endpoint</label>
+                                <input type="text" class="openrouter-endpoint" value="https://api.fireworks.ai/inference/v1/completions" data-help="Completions endpoint for the selected provider." data-help-detail="Defaults to the provider's documented /completions or /fim/completions route. Only an absolute HTTP(S) URL ending in /completions is accepted; chat, Responses, and Messages endpoints are rejected before sending.">
+                              </div>
+                              <div class="control-block">
+                                <label>Max Tokens</label>
+                                <input type="number" class="openrouter-max-tokens" min="0" step="1" value="0" data-help="Maximum completion tokens to request." data-help-detail="Sets max_tokens when the provider or selected model supports it. Set to 0 to use provider defaults; documented provider and model output caps are applied automatically.">
+                              </div>
+                              <div class="control-block">
+                                <label>Temperature</label>
+                                <div class="openrouter-slider-row">
+                                  <input type="range" class="openrouter-temperature" min="0" max="2" step="0.01" value="1" data-help="Sampling temperature for completion randomness." data-help-detail="Lower values are more deterministic; higher values increase variation. The range follows provider documentation, including Together's maximum of 1 and Mistral FIM's maximum of 1.5.">
+                                  <span class="openrouter-slider-value openrouter-temperature-value">1</span>
+                                </div>
+                              </div>
+                              <div class="control-block">
+                                <label>Top P</label>
+                                <div class="openrouter-slider-row">
+                                  <input type="range" class="openrouter-top-p" min="0" max="1" step="0.01" value="0" data-help="Nucleus sampling probability mass." data-help-detail="Limits sampling to the smallest token set whose cumulative probability exceeds this value. Set to 0 to omit it; OpenRouter also disables it when the selected model does not advertise top_p.">
+                                  <span class="openrouter-slider-value openrouter-top-p-value">0</span>
+                                </div>
+                              </div>
+                              <div class="control-block">
+                                <label>Top K</label>
+                                <div class="openrouter-slider-row">
+                                  <input type="range" class="openrouter-top-k" min="0" max="100" step="1" value="0" data-help="Top-k token cutoff." data-help-detail="Limits sampling to the highest-probability K tokens for Fireworks and Together, and for OpenRouter models that advertise top_k. It is omitted at 0 or when unsupported.">
+                                  <span class="openrouter-slider-value openrouter-top-k-value">0</span>
+                                </div>
+                              </div>
+                              <div class="control-block">
+                                <label>Presence Penalty</label>
+                                <div class="openrouter-slider-row">
+                                  <input type="range" class="openrouter-presence-penalty" min="-2" max="2" step="0.1" value="0" data-help="Penalty for already-seen tokens." data-help-detail="Positive values push the model toward new concepts; negative values can encourage repetition. Zero omits it, and the control is disabled when the provider or selected model does not document it.">
+                                  <span class="openrouter-slider-value openrouter-presence-penalty-value">0</span>
+                                </div>
+                              </div>
+                              <div class="control-block">
+                                <label>Frequency Penalty</label>
+                                <div class="openrouter-slider-row">
+                                  <input type="range" class="openrouter-frequency-penalty" min="-2" max="2" step="0.1" value="0" data-help="Penalty for repeated token frequency." data-help-detail="Positive values reduce verbatim repetition by penalizing frequently emitted tokens. Zero omits it, and unsupported provider or model combinations disable the control.">
+                                  <span class="openrouter-slider-value openrouter-frequency-penalty-value">0</span>
+                                </div>
+                              </div>
+                              <div class="control-block">
+                                <label>Title (optional)</label>
+                                <input type="text" class="openrouter-title" placeholder="Completion API" data-help="Optional local settings title." data-help-detail="Stores a label in encrypted settings files for your own reference. This title is not included in any provider API request.">
+                              </div>
+                            </div>
+                          </details>
                         </div>
                       </div>
-                      <div class="control-block">
-                        <label>Top P</label>
-                        <div class="openrouter-slider-row">
-                          <input type="range" class="openrouter-top-p" min="0" max="1" step="0.01" value="0" data-help="Nucleus sampling probability mass." data-help-detail="Limits token sampling to the smallest token set whose cumulative probability exceeds this value. Set to 0 to omit it; OpenRouter also disables it when the selected model does not advertise top_p.">
-                          <span class="openrouter-slider-value openrouter-top-p-value">0</span>
+                    </details>
+
+                    <!-- One DOM order serves both modes. Autocomplete hides the
+                         ending segment; Infill reveals it below the generated
+                         middle so the spatial model matches the API contract. -->
+                    <div class="openrouter-generation-flow" data-mode="autocomplete">
+                      <section class="openrouter-document-segment openrouter-beginning-segment">
+                        <div class="openrouter-segment-heading">
+                          <span class="openrouter-segment-number">01</span>
+                          <span class="openrouter-beginning-label">Text to continue</span>
+                          <span class="openrouter-segment-role openrouter-beginning-role">Beginning</span>
+                        </div>
+                        <textarea class="openrouter-prompt" rows="8" placeholder="Write the text you want the model to continue..." data-help="Beginning text sent as the required prompt." data-help-detail="In Autocomplete, the provider continues directly from this text. In Infill, this is the content before the missing middle. Every request contains this prompt and never contains messages."></textarea>
+                      </section>
+
+                      <div class="openrouter-action-bar">
+                        <div class="openrouter-actions">
+                          <button type="button" class="add-button openrouter-send" data-help="Generate a pure text completion." data-help-detail="Validates the provider, model, key, endpoint, and beginning text, then sends only documented completion fields. Infill adds Ending text only for a capable model; the request always contains prompt and never contains messages.">Generate Autocomplete</button>
+                        </div>
+                        <div class="openrouter-status" role="status" aria-live="polite" data-help="Completion request and model status." data-help-detail="Reports model-catalog loading, validation or provider errors, mode fallback, and completed request accounting such as input/output tokens and returned or estimated cost.">Ready.</div>
+                      </div>
+
+                      <!-- Completion output keeps the shared colored box and
+                           copy-control contract, but occupies the actual gap
+                           between beginning and ending text in Infill mode. -->
+                      <div class="openrouter-output box-shell" data-help="Generated continuation or middle text." data-help-detail="Shows only the first generated completion returned by the provider. In Infill mode this panel is physically positioned between Beginning text and Ending text.">
+                        <div class="box-header openrouter-output-header">
+                          <span class="box-title openrouter-output-title">Continuation</span>
+                          <div class="button-col">
+                            <button type="button" class="copy-button icon-button copy-output openrouter-copy-output" title="Copy generated text" aria-label="Copy generated text" data-help="Copy the generated text." data-help-detail="Copies the exact generated continuation or middle text without making another request, then briefly changes this icon to a success checkmark.">&#128203;</button>
+                          </div>
+                        </div>
+                        <div class="box-body">
+                          <div class="input-row">
+                            <pre class="openrouter-output-text" data-placeholder="Generated text will appear here."></pre>
+                          </div>
                         </div>
                       </div>
-                      <div class="control-block">
-                        <label>Top K</label>
-                        <div class="openrouter-slider-row">
-                          <input type="range" class="openrouter-top-k" min="0" max="100" step="1" value="0" data-help="Top-k token cutoff." data-help-detail="Limits sampling to the highest-probability K tokens (1-100) for Fireworks and Together, and for OpenRouter models that advertise top_k. It is omitted at 0 or when unsupported.">
-                          <span class="openrouter-slider-value openrouter-top-k-value">0</span>
+
+                      <section class="openrouter-document-segment openrouter-ending-segment is-hidden">
+                        <div class="openrouter-segment-heading">
+                          <span class="openrouter-segment-number">03</span>
+                          <span>Ending text</span>
+                          <span class="openrouter-segment-role">Context after the gap</span>
                         </div>
-                      </div>
-                      <div class="control-block">
-                        <label>Presence Penalty</label>
-                        <div class="openrouter-slider-row">
-                          <input type="range" class="openrouter-presence-penalty" min="-2" max="2" step="0.1" value="0" data-help="Penalty for already-seen tokens." data-help-detail="Positive values push the model toward new concepts; negative values can encourage repetition. Zero omits it, and the control is disabled when the provider or selected OpenRouter model does not document it.">
-                          <span class="openrouter-slider-value openrouter-presence-penalty-value">0</span>
-                        </div>
-                      </div>
-                      <div class="control-block">
-                        <label>Frequency Penalty</label>
-                        <div class="openrouter-slider-row">
-                          <input type="range" class="openrouter-frequency-penalty" min="-2" max="2" step="0.1" value="0" data-help="Penalty for repeated token frequency." data-help-detail="Positive values reduce verbatim repetition by penalizing frequently emitted tokens. Zero omits it, and unsupported provider or model combinations disable the control.">
-                          <span class="openrouter-slider-value openrouter-frequency-penalty-value">0</span>
-                        </div>
-                      </div>
-                      <div class="control-block">
-                        <label>API Key</label>
-                        <input type="password" class="openrouter-api-key" placeholder="Provider API key..." autocomplete="off" data-help="Provider API key sent as Bearer token." data-help-detail="A separate API key is tracked in-memory for each provider and can be saved only in encrypted settings files.">
-                      </div>
-                      <div class="control-block">
-                        <label>Title (optional)</label>
-                        <input type="text" class="openrouter-title" placeholder="Prompt Enhancer" data-help="Optional local settings title." data-help-detail="Stores a label in encrypted settings files for your own reference. This title is not included in any provider API request.">
-                      </div>
-                    </div>
-                    <div class="control-block">
-                      <label>Stop Sequences (optional, one per line)</label>
-                      <textarea class="openrouter-stop" rows="2" placeholder="Example:\n###\nEND" data-help="Optional stop sequences." data-help-detail="Provide one stop sequence per line. Generation ends when any sequence is matched, and documented limits such as DeepInfra/Fireworks/OpenAI/OpenRouter's four or DeepSeek's sixteen are validated before sending."></textarea>
-                    </div>
-                    <div class="control-block openrouter-suffix-block is-hidden">
-                      <label>Suffix (FIM, optional)</label>
-                      <textarea class="openrouter-suffix" rows="3" placeholder="Optional text after the missing span..." data-help="Optional fill-in-the-middle suffix." data-help-detail="DeepSeek and Mistral place generated text between the Prompt prefix and this Suffix. OpenAI exposes it only for gpt-3.5-turbo-instruct; leave it blank for forward continuation."></textarea>
-                    </div>
-                    <div class="control-block">
-                      <label>Prompt</label>
-                      <textarea class="openrouter-prompt" rows="8" placeholder="Write the completion prompt here..." data-help="Prompt text sent to the completions API." data-help-detail="Enter the text prefix you want the model to continue. The result appears in the output panel below."></textarea>
-                    </div>
-                    <div class="openrouter-actions">
-                      <button type="button" class="add-button openrouter-send" data-help="Send a prompt-only completion request." data-help-detail="Validates the API key, absolute /completions endpoint, model, prompt, token cap, and stop count, then sends only documented continuation fields. The request always contains prompt and never contains messages.">Send Completion</button>
-                    </div>
-                    <div class="openrouter-status" role="status" aria-live="polite" data-help="Completion request and model status." data-help-detail="Reports model-catalog loading, validation or provider errors, and completed request accounting such as input/output tokens and returned or estimated cost.">Ready.</div>
-                    <!-- Completion output uses the same colored box-header and
-                         26x24 copy control contract as generated prompt boxes. -->
-                    <div class="openrouter-output box-shell" data-help="Completion output returned by the selected provider." data-help-detail="Shows the first completion text returned by the API response.">
-                      <div class="box-header openrouter-output-header">
-                        <span class="box-title">Output</span>
-                        <div class="button-col">
-                          <button type="button" class="copy-button icon-button copy-output openrouter-copy-output" title="Copy completion output" aria-label="Copy completion output" data-help="Copy the completion output text." data-help-detail="Copies the exact currently displayed completion text without sending another request, then briefly changes this icon to a success checkmark.">&#128203;</button>
-                        </div>
-                      </div>
-                      <div class="box-body">
-                        <div class="input-row">
-                          <pre class="openrouter-output-text"></pre>
-                        </div>
-                      </div>
+                        <textarea class="openrouter-ending" rows="6" placeholder="Write the text that should come after the generated middle..." data-help="Ending text for native Infill." data-help-detail="Provides forward-looking context after the missing span. It is sent only in Infill mode and only through a provider/model's documented native FIM field; the API adapter handles tokenizer sentinel tokens."></textarea>
+                      </section>
                     </div>
                   </div>
                 </div>

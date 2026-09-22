@@ -546,15 +546,17 @@ describe('OpenRouter app module', () => {
       maxTokens: 9000,
       temperatureMax: 1.5
     }
-  ])('sends $provider FIM prefix and suffix without chat request fields', async providerCase => {
+  ])('sends $provider native Infill beginning and ending text without chat fields', async providerCase => {
     const { window } = setupDom();
     window.document.querySelector('.menu-item[data-window="openrouter"]').click();
     const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
     const providerSelect = appWindow.querySelector('.openrouter-provider');
     const keyInput = appWindow.querySelector('.openrouter-api-key');
     const modelPicker = appWindow.querySelector('.openrouter-model-picker');
-    const suffixBlock = appWindow.querySelector('.openrouter-suffix-block');
-    const suffixInput = appWindow.querySelector('.openrouter-suffix');
+    const modeInfillInput = appWindow.querySelector('.openrouter-mode-infill');
+    const endingSegment = appWindow.querySelector('.openrouter-ending-segment');
+    const endingInput = appWindow.querySelector('.openrouter-ending');
+    const generationFlow = appWindow.querySelector('.openrouter-generation-flow');
     const maxTokensInput = appWindow.querySelector('.openrouter-max-tokens');
     const temperatureInput = appWindow.querySelector('.openrouter-temperature');
     const topKInput = appWindow.querySelector('.openrouter-top-k');
@@ -568,7 +570,13 @@ describe('OpenRouter app module', () => {
     keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
     await waitFor(() => status.textContent.includes('Loaded'));
     expect(modelPicker.value).toBe(providerCase.model);
-    expect(suffixBlock.classList.contains('is-hidden')).toBe(false);
+    expect(modelPicker.textContent).toContain('Infill');
+    expect(modeInfillInput.disabled).toBe(false);
+    expect(endingSegment.classList.contains('is-hidden')).toBe(true);
+    modeInfillInput.click();
+    expect(generationFlow.dataset.mode).toBe('infill');
+    expect(endingSegment.classList.contains('is-hidden')).toBe(false);
+    expect(appWindow.querySelector('.openrouter-output-title').textContent).toBe('Generated middle');
     expect(topKInput.disabled).toBe(true);
     expect(presenceInput.disabled).toBe(true);
     expect(frequencyInput.disabled).toBe(true);
@@ -580,7 +588,7 @@ describe('OpenRouter app module', () => {
     presenceInput.value = '1';
     frequencyInput.value = '1';
     appWindow.querySelector('.openrouter-prompt').value = 'function greet() {';
-    suffixInput.value = '\n}';
+    endingInput.value = '\n}';
     appWindow.querySelector('.openrouter-send').click();
 
     await waitFor(() => appWindow.querySelector('.openrouter-output-text').textContent === providerCase.output);
@@ -600,15 +608,17 @@ describe('OpenRouter app module', () => {
     expect(payload.frequency_penalty).toBeUndefined();
   });
 
-  test('gates OpenAI suffix and output cap to the selected legacy completion model', async () => {
+  test('gates OpenAI Infill and output cap to the one supported legacy completion model', async () => {
     const { window } = setupDom();
     window.document.querySelector('.menu-item[data-window="openrouter"]').click();
     const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
     const providerSelect = appWindow.querySelector('.openrouter-provider');
     const keyInput = appWindow.querySelector('.openrouter-api-key');
     const modelPicker = appWindow.querySelector('.openrouter-model-picker');
-    const suffixBlock = appWindow.querySelector('.openrouter-suffix-block');
-    const suffixInput = appWindow.querySelector('.openrouter-suffix');
+    const modeAutocompleteInput = appWindow.querySelector('.openrouter-mode-autocomplete');
+    const modeInfillInput = appWindow.querySelector('.openrouter-mode-infill');
+    const endingSegment = appWindow.querySelector('.openrouter-ending-segment');
+    const endingInput = appWindow.querySelector('.openrouter-ending');
     const maxTokensInput = appWindow.querySelector('.openrouter-max-tokens');
     const promptInput = appWindow.querySelector('.openrouter-prompt');
     const sendButton = appWindow.querySelector('.openrouter-send');
@@ -622,9 +632,12 @@ describe('OpenRouter app module', () => {
       (status.textContent || '').includes('OpenAI') && modelPicker.value === 'gpt-3.5-turbo-instruct'
     );
 
-    expect(suffixBlock.classList.contains('is-hidden')).toBe(false);
+    expect(modeInfillInput.disabled).toBe(false);
+    expect(endingSegment.classList.contains('is-hidden')).toBe(true);
+    modeInfillInput.click();
+    expect(endingSegment.classList.contains('is-hidden')).toBe(false);
     maxTokensInput.value = '9000';
-    suffixInput.value = ' after-gap';
+    endingInput.value = ' after-gap';
     promptInput.value = 'before-gap ';
     sendButton.click();
     await waitFor(() => window.fetch.mock.calls.filter(call =>
@@ -640,7 +653,9 @@ describe('OpenRouter app module', () => {
 
     modelPicker.value = 'davinci-002';
     modelPicker.dispatchEvent(new window.Event('change', { bubbles: true }));
-    expect(suffixBlock.classList.contains('is-hidden')).toBe(true);
+    expect(modeInfillInput.disabled).toBe(true);
+    expect(modeAutocompleteInput.checked).toBe(true);
+    expect(endingSegment.classList.contains('is-hidden')).toBe(true);
     maxTokensInput.value = '9000';
     promptInput.value = 'forward only';
     sendButton.click();
@@ -704,7 +719,7 @@ describe('OpenRouter app module', () => {
     const modelPicker = appWindow.querySelector('.openrouter-model-picker');
     const topPInput = appWindow.querySelector('.openrouter-top-p');
     const topKInput = appWindow.querySelector('.openrouter-top-k');
-    const stopInput = appWindow.querySelector('.openrouter-stop');
+    const modeInfillInput = appWindow.querySelector('.openrouter-mode-infill');
     const status = appWindow.querySelector('.openrouter-status');
 
     providerSelect.value = 'openrouter';
@@ -715,11 +730,11 @@ describe('OpenRouter app module', () => {
     expect(modelPicker?.textContent || '').not.toContain('mandatory-reasoning-model');
     expect(topPInput.disabled).toBe(true);
     expect(topKInput.disabled).toBe(true);
-    expect(stopInput.disabled).toBe(true);
+    expect(modeInfillInput.disabled).toBe(true);
+    expect(appWindow.querySelector('.openrouter-stop')).toBeNull();
 
     topPInput.value = '0.8';
     topKInput.value = '25';
-    stopInput.value = 'END';
     appWindow.querySelector('.openrouter-prompt').value = 'raw prefix';
     appWindow.querySelector('.openrouter-send').click();
     await waitFor(() => (status.textContent || '').includes('Completed.'));
@@ -853,8 +868,8 @@ describe('OpenRouter app module', () => {
     const topKInput = appWindow.querySelector('.openrouter-top-k');
     const presenceInput = appWindow.querySelector('.openrouter-presence-penalty');
     const frequencyInput = appWindow.querySelector('.openrouter-frequency-penalty');
-    const stopInput = appWindow.querySelector('.openrouter-stop');
-    const suffixBlock = appWindow.querySelector('.openrouter-suffix-block');
+    const modeInfillInput = appWindow.querySelector('.openrouter-mode-infill');
+    const endingSegment = appWindow.querySelector('.openrouter-ending-segment');
     const promptInput = appWindow.querySelector('.openrouter-prompt');
     const output = appWindow.querySelector('.openrouter-output-text');
     const status = appWindow.querySelector('.openrouter-status');
@@ -878,8 +893,9 @@ describe('OpenRouter app module', () => {
     expect(topKInput.disabled).toBe(true);
     expect(presenceInput.disabled).toBe(true);
     expect(frequencyInput.disabled).toBe(true);
-    expect(stopInput.disabled).toBe(false);
-    expect(suffixBlock.classList.contains('is-hidden')).toBe(true);
+    expect(modeInfillInput.disabled).toBe(true);
+    expect(endingSegment.classList.contains('is-hidden')).toBe(true);
+    expect(appWindow.querySelector('.openrouter-stop')).toBeNull();
 
     maxTokensInput.value = '99999';
     temperatureInput.value = '1.7';
@@ -887,7 +903,6 @@ describe('OpenRouter app module', () => {
     topKInput.value = '25';
     presenceInput.value = '1';
     frequencyInput.value = '1';
-    stopInput.value = 'one\ntwo\nthree\nfour';
     promptInput.value = '<raw-prefix><assistant>';
     appWindow.querySelector('.openrouter-send').click();
 
@@ -904,7 +919,6 @@ describe('OpenRouter app module', () => {
       max_tokens: 16384,
       top_p: 0.75,
       temperature: 1.7,
-      stop: ['one', 'two', 'three', 'four'],
       stream: false
     });
     expect(status.textContent).toContain('Request cost (USD): $0.000026');
@@ -992,7 +1006,8 @@ describe('OpenRouter app module', () => {
     expect(appWindow.querySelector('.openrouter-top-k').disabled).toBe(true);
     expect(appWindow.querySelector('.openrouter-presence-penalty').disabled).toBe(true);
     expect(appWindow.querySelector('.openrouter-frequency-penalty').disabled).toBe(true);
-    expect(appWindow.querySelector('.openrouter-stop').disabled).toBe(true);
+    expect(appWindow.querySelector('.openrouter-mode-infill').disabled).toBe(true);
+    expect(appWindow.querySelector('.openrouter-stop')).toBeNull();
   });
 
   test('normalizes Together per-million pricing and top-level request cost', async () => {
@@ -1344,74 +1359,110 @@ describe('OpenRouter app module', () => {
     expect(modelPicker?.textContent || '').not.toContain('accounts/fireworks/models/fw-stale');
   });
 
-  test('preserves stop sequence leading and trailing spaces in completions payload', async () => {
+  test('uses exact OpenRouter stop defaults from model metadata without exposing a stop field', async () => {
     const { window } = setupDom();
-    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
-    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
-    const keyInput = appWindow.querySelector('.openrouter-api-key');
-    const promptInput = appWindow.querySelector('.openrouter-prompt');
-    const stopInput = appWindow.querySelector('.openrouter-stop');
-    const sendButton = appWindow.querySelector('.openrouter-send');
-    const status = appWindow.querySelector('.openrouter-status');
+    window.fetch = jest.fn((url, init) => {
+      const target = String(url || '');
+      if (target.includes('openrouter.ai/api/v1/models')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            data: [{
+              id: 'example/catalog-stop-model',
+              architecture: { input_modalities: ['text'], output_modalities: ['text'] },
+              supported_parameters: ['max_tokens', 'temperature', 'stop'],
+              default_parameters: { stop: [' END', 'END '] },
+              reasoning: { mandatory: false }
+            }]
+          })
+        });
+      }
+      if (target.includes('openrouter.ai/api/v1/completions')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            choices: [{ text: 'continued' }],
+            usage: { prompt_tokens: 2, completion_tokens: 1, total_tokens: 3 }
+          })
+        });
+      }
+      return Promise.resolve({ ok: false, status: 404, json: async () => ({}) });
+    });
 
-    keyInput.value = 'fw-test-key';
-    keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
-    await waitFor(() => (status.textContent || '').includes('Loaded'));
-
-    promptInput.value = 'continue';
-    stopInput.value = ' END\nEND ';
-    sendButton.click();
-    await flush();
-    await flush();
-
-    const completionCall = window.fetch.mock.calls.find(call =>
-      String(call[0] || '').includes('fireworks.ai/inference/v1/completions')
-    );
-    expect(completionCall).toBeDefined();
-    const payload = JSON.parse(completionCall[1].body);
-    expect(payload.stop).toEqual([' END', 'END ']);
-  });
-
-  test.each([
-    {
-      provider: 'fireworks',
-      endpoint: 'https://api.fireworks.ai/inference/v1/completions'
-    },
-    {
-      provider: 'openai',
-      endpoint: 'https://api.openai.com/v1/completions'
-    },
-    {
-      provider: 'deepinfra',
-      endpoint: 'https://api.deepinfra.com/v1/openai/completions'
-    }
-  ])('validates $provider four-stop limit before sending', async providerCase => {
-    const { window } = setupDom();
     window.document.querySelector('.menu-item[data-window="openrouter"]').click();
     const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
     const providerSelect = appWindow.querySelector('.openrouter-provider');
     const keyInput = appWindow.querySelector('.openrouter-api-key');
     const promptInput = appWindow.querySelector('.openrouter-prompt');
-    const stopInput = appWindow.querySelector('.openrouter-stop');
-    const status = appWindow.querySelector('.openrouter-status');
+    const modelPicker = appWindow.querySelector('.openrouter-model-picker');
 
-    providerSelect.value = providerCase.provider;
+    providerSelect.value = 'openrouter';
     providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
-    keyInput.value = `${providerCase.provider}-test-key`;
-    keyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
-    await waitFor(() => (status.textContent || '').includes('Loaded'));
+    await waitFor(() => modelPicker.value === 'example/catalog-stop-model');
+    keyInput.value = 'openrouter-catalog-stop-key';
+    expect(appWindow.querySelector('.openrouter-stop')).toBeNull();
     promptInput.value = 'continue';
-    stopInput.value = 'one\ntwo\nthree\nfour\nfive';
     appWindow.querySelector('.openrouter-send').click();
-    await flush();
+    await waitFor(() => appWindow.querySelector('.openrouter-output-text').textContent === 'continued');
 
-    expect(status.textContent).toContain('at most 4 stop sequences');
-    expect(window.fetch.mock.calls.filter(call =>
-      String(call[0] || '') === providerCase.endpoint
-    )).toHaveLength(0);
+    const completionCall = window.fetch.mock.calls.find(call =>
+      String(call[0] || '') === 'https://openrouter.ai/api/v1/completions'
+    );
+    const payload = JSON.parse(completionCall[1].body);
+    expect(payload.stop).toEqual([' END', 'END ']);
   });
 
-  test('accepts successful empty completion text when stop sequences halt immediately', async () => {
+  test('omits malformed over-limit automatic stop metadata instead of sending an invalid request', async () => {
+    const { window } = setupDom();
+    window.fetch = jest.fn((url, init) => {
+      const target = String(url || '');
+      if (target.includes('openrouter.ai/api/v1/models')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            data: [{
+              id: 'example/over-limit-stop-model',
+              architecture: { input_modalities: ['text'], output_modalities: ['text'] },
+              supported_parameters: ['temperature', 'stop'],
+              default_parameters: { stop: ['1', '2', '3', '4', '5'] },
+              reasoning: { mandatory: false }
+            }]
+          })
+        });
+      }
+      if (target.includes('openrouter.ai/api/v1/completions')) {
+        const body = JSON.parse(init.body);
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            choices: [{ text: body.stop ? 'invalid' : 'safe' }],
+            usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
+          })
+        });
+      }
+      return Promise.resolve({ ok: false, status: 404, json: async () => ({}) });
+    });
+
+    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
+    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    const providerSelect = appWindow.querySelector('.openrouter-provider');
+    const keyInput = appWindow.querySelector('.openrouter-api-key');
+    const modelPicker = appWindow.querySelector('.openrouter-model-picker');
+    providerSelect.value = 'openrouter';
+    providerSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() => modelPicker.value === 'example/over-limit-stop-model');
+    keyInput.value = 'openrouter-over-limit-key';
+    appWindow.querySelector('.openrouter-prompt').value = 'continue';
+    appWindow.querySelector('.openrouter-send').click();
+    await waitFor(() => appWindow.querySelector('.openrouter-output-text').textContent === 'safe');
+
+    const completionCall = window.fetch.mock.calls.find(call =>
+      String(call[0] || '') === 'https://openrouter.ai/api/v1/completions'
+    );
+    expect(JSON.parse(completionCall[1].body).stop).toBeUndefined();
+  });
+
+  test('accepts successful empty completion text and copies it intentionally', async () => {
     const { window, clipboardWrites } = setupDom();
     window.fetch = jest.fn((url, init) => {
       const target = String(url || '');
@@ -1451,7 +1502,6 @@ describe('OpenRouter app module', () => {
     const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
     const keyInput = appWindow.querySelector('.openrouter-api-key');
     const promptInput = appWindow.querySelector('.openrouter-prompt');
-    const stopInput = appWindow.querySelector('.openrouter-stop');
     const sendButton = appWindow.querySelector('.openrouter-send');
     const output = appWindow.querySelector('.openrouter-output-text');
     const status = appWindow.querySelector('.openrouter-status');
@@ -1462,7 +1512,6 @@ describe('OpenRouter app module', () => {
     await waitFor(() => (status.textContent || '').includes('Loaded'));
 
     promptInput.value = 'STOP';
-    stopInput.value = 'STOP';
     sendButton.click();
     await waitFor(() => (status.textContent || '').includes('Completed.'));
 
@@ -1490,7 +1539,8 @@ describe('OpenRouter app module', () => {
     const topKInput = appWindow.querySelector('.openrouter-top-k');
     const presencePenaltyInput = appWindow.querySelector('.openrouter-presence-penalty');
     const frequencyPenaltyInput = appWindow.querySelector('.openrouter-frequency-penalty');
-    const stopInput = appWindow.querySelector('.openrouter-stop');
+    const modeAutocompleteInput = appWindow.querySelector('.openrouter-mode-autocomplete');
+    const endingInput = appWindow.querySelector('.openrouter-ending');
     const apiKeyInput = appWindow.querySelector('.openrouter-api-key');
     const titleInput = appWindow.querySelector('.openrouter-title');
     const promptInput = appWindow.querySelector('.openrouter-prompt');
@@ -1503,7 +1553,7 @@ describe('OpenRouter app module', () => {
     topKInput.value = '77';
     presencePenaltyInput.value = '0.6';
     frequencyPenaltyInput.value = '0.2';
-    stopInput.value = '###\nEND';
+    endingInput.value = 'A preserved Infill ending draft.';
     apiKeyInput.value = 'fw-live-secret-value';
     apiKeyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
     await waitFor(() => (modelPicker?.textContent || '').includes('accounts/fireworks/models/minimax-m2p5'));
@@ -1529,7 +1579,7 @@ describe('OpenRouter app module', () => {
     topKInput.value = '1';
     presencePenaltyInput.value = '0';
     frequencyPenaltyInput.value = '0';
-    stopInput.value = '';
+    endingInput.value = '';
     apiKeyInput.value = '';
     titleInput.value = '';
     promptInput.value = '';
@@ -1559,13 +1609,69 @@ describe('OpenRouter app module', () => {
     expect(topKInput.value).toBe('77');
     expect(presencePenaltyInput.value).toBe('0.6');
     expect(frequencyPenaltyInput.value).toBe('0.2');
-    expect(stopInput.value).toBe('###\nEND');
+    expect(modeAutocompleteInput.checked).toBe(true);
+    expect(endingInput.value).toBe('A preserved Infill ending draft.');
     expect(apiKeyInput.value).toBe('fw-live-secret-value');
     expect(titleInput.value).toBe('Encrypted Settings Test');
     expect(promptInput.value).toBe('This prompt should be encrypted and restored.');
     expect(window.fetch.mock.calls.filter(call =>
       String(call[0] || '').includes('api.fireworks.ai/v1/accounts/fireworks/models')
     ).length).toBe(catalogCallsBeforeRestore);
+  });
+
+  test('migrates a valid version-1 suffix draft into version-2 Infill presentation', async () => {
+    const { window } = setupDom();
+    window.document.querySelector('.menu-item[data-window="openrouter"]').click();
+    const appWindow = window.document.querySelector('.openrouter-window:not(.window-template)');
+    const loadFileInput = appWindow.querySelector('.openrouter-load-settings-file');
+    const status = appWindow.querySelector('.openrouter-status');
+    const endpoints = {
+      openrouter: 'https://openrouter.ai/api/v1/completions',
+      deepseek: 'https://api.deepseek.com/beta/completions',
+      deepinfra: 'https://api.deepinfra.com/v1/openai/completions',
+      fireworks: 'https://api.fireworks.ai/inference/v1/completions',
+      together: 'https://api.together.ai/v1/completions',
+      mistral: 'https://api.mistral.ai/v1/fim/completions',
+      openai: 'https://api.openai.com/v1/completions',
+      hyperbolic: 'https://api.hyperbolic.xyz/v1/completions'
+    };
+    const apiKeys = Object.fromEntries(Object.keys(endpoints).map(key => [key, '']));
+    const models = Object.fromEntries(Object.keys(endpoints).map(key => [key, '']));
+    apiKeys.openai = 'legacy-openai-key';
+    models.openai = 'gpt-3.5-turbo-instruct';
+    const encryptedPayload = await window.YolkEncryptedSettings.encrypt('legacy-password', {
+      kind: 'yolk-completion-api-settings',
+      version: 1,
+      provider: 'openai',
+      endpoints,
+      models,
+      apiKeys,
+      prompt: 'before the missing span ',
+      suffix: ' after the missing span',
+      stopText: 'ignored legacy manual stop',
+      temperature: 0.4,
+      maxTokens: 128
+    });
+
+    window.prompt.mockReturnValueOnce('legacy-password');
+    await clickOpenRouterFileAction(window, appWindow, 'load-settings');
+    const encryptedFile = new window.File(
+      [JSON.stringify(encryptedPayload)],
+      'legacy-completion-settings.json',
+      { type: 'application/json' }
+    );
+    Object.defineProperty(loadFileInput, 'files', {
+      value: [encryptedFile],
+      configurable: true
+    });
+    loadFileInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await waitFor(() => (status.textContent || '').includes('Encrypted settings loaded'));
+
+    expect(appWindow.querySelector('.openrouter-provider').value).toBe('openai');
+    expect(appWindow.querySelector('.openrouter-mode-infill').checked).toBe(true);
+    expect(appWindow.querySelector('.openrouter-ending').value).toBe(' after the missing span');
+    expect(appWindow.querySelector('.openrouter-ending-segment').classList.contains('is-hidden')).toBe(false);
+    expect(appWindow.querySelector('.openrouter-stop')).toBeNull();
   });
 
   test('encrypted settings persist separate API keys across provider adapters', async () => {

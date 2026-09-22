@@ -1,6 +1,276 @@
 {
   "cases": [
     {
+      "id": "edited_preset_and_builtin_import_roundtrip",
+      "description": "Editing a named preset updates linked boxes; appending a built-in with the same id preserves its original color through save/load.",
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "id": "host",
+            "title": "Colors",
+            "preserve": true,
+            "colorMode": "preset",
+            "colorPreset": "sunset",
+            "children": [
+              {
+                "type": "chunk",
+                "id": "original",
+                "text": "one ",
+                "colorMode": "preset",
+                "colorPreset": "sunset"
+              }
+            ]
+          }
+        ]
+      },
+      "actions": [
+        "openPromptsWindow",
+        {
+          "type": "saveFirstColorPreset",
+          "name": "Sunset",
+          "color": "#123456"
+        },
+        {
+          "type": "appendSaveToFirstMix",
+          "state": {
+            "mixes": [
+              {
+                "type": "mix",
+                "id": "imported",
+                "preserve": true,
+                "children": [
+                  {
+                    "type": "chunk",
+                    "id": "builtin",
+                    "text": "two ",
+                    "colorMode": "preset",
+                    "colorPreset": "sunset"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "roundtripPrompt"
+      ]
+    },
+    {
+      "id": "prompt_complete_state_roundtrip",
+      "description": "Save/load keeps all box kinds, forward references, blank titles, locked settings, collapse flags, and prompt-local palettes after another window opens.",
+      "state": {
+        "colorPresets": [
+          {
+            "id": "brand-v1",
+            "name": "Renamed Brand",
+            "color": "#445566"
+          },
+          {
+            "id": "unused",
+            "name": "Unused",
+            "color": "#778899"
+          }
+        ],
+        "mixes": [
+          {
+            "type": "variable",
+            "id": "root-reference",
+            "targetId": "source",
+            "collapsed": true
+          },
+          {
+            "type": "mix",
+            "id": "host",
+            "title": "",
+            "limit": 37,
+            "lengthMode": "fit-largest",
+            "preserve": true,
+            "firstChunkBehavior": "random-start",
+            "orderMode": "canonical",
+            "colorMode": "preset",
+            "colorPreset": "brand-v1",
+            "collapsed": true,
+            "delimiter": {
+              "mode": "custom-any",
+              "custom": "|,",
+              "size": 23
+            },
+            "children": [
+              {
+                "type": "variable",
+                "id": "nested-reference",
+                "targetId": "source",
+                "collapsed": true
+              },
+              {
+                "type": "mix",
+                "id": "nested",
+                "title": "Nested",
+                "lengthMode": "fit-smallest",
+                "preserve": true,
+                "firstChunkBehavior": "between",
+                "orderMode": "canonical",
+                "colorMode": "custom",
+                "colorValue": "#112233",
+                "delimiter": {
+                  "mode": "pipe",
+                  "size": 3
+                },
+                "children": [
+                  {
+                    "type": "chunk",
+                    "id": "source",
+                    "title": "",
+                    "text": "a b ",
+                    "limit": 19,
+                    "lengthMode": "exact-once",
+                    "firstChunkBehavior": "size",
+                    "orderMode": "canonical",
+                    "colorMode": "preset",
+                    "colorPreset": "brand-v1",
+                    "collapsed": true,
+                    "delimiter": {
+                      "mode": "whitespace",
+                      "size": 1
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "chunk",
+            "id": "blank",
+            "title": "",
+            "text": "",
+            "limit": 17,
+            "lengthMode": "dropout",
+            "firstChunkBehavior": "random-start",
+            "orderMode": "full-randomize",
+            "colorMode": "auto",
+            "delimiter": {
+              "mode": "custom-all",
+              "custom": "||\\n",
+              "size": 17
+            }
+          }
+        ]
+      },
+      "actions": [
+        "openPromptsWindow",
+        "roundtripPrompt",
+        {
+          "type": "openWindow",
+          "windowType": "prompts"
+        },
+        "roundtripPrompt"
+      ]
+    },
+    {
+      "id": "empty_prompt_roundtrip",
+      "description": "A saved empty mixes array restores an empty document rather than a startup placeholder.",
+      "state": {
+        "mixes": []
+      },
+      "actions": [
+        "openPromptsWindow",
+        "roundtripPrompt"
+      ]
+    },
+    {
+      "id": "append_palette_collision_roundtrip",
+      "description": "Append imports remap conflicting preset ids through nested boxes while retaining both colors on the next save/load.",
+      "state": {
+        "colorPresets": [
+          {
+            "id": "palette-uid",
+            "name": "Shared Label",
+            "color": "#123456"
+          }
+        ],
+        "mixes": [
+          {
+            "type": "mix",
+            "id": "host",
+            "title": "Palette Host",
+            "preserve": true,
+            "children": [
+              {
+                "type": "chunk",
+                "id": "existing",
+                "text": "old ",
+                "colorMode": "preset",
+                "colorPreset": "palette-uid"
+              }
+            ]
+          }
+        ]
+      },
+      "actions": [
+        "openPromptsWindow",
+        {
+          "type": "appendSaveToFirstMix",
+          "state": {
+            "colorPresets": [
+              {
+                "id": "palette-uid",
+                "name": "Shared Label",
+                "color": "#abcdef"
+              }
+            ],
+            "mixes": [
+              {
+                "type": "mix",
+                "id": "imported",
+                "title": "Imported",
+                "preserve": true,
+                "children": [
+                  {
+                    "type": "chunk",
+                    "id": "imported-source",
+                    "text": "new ",
+                    "colorMode": "preset",
+                    "colorPreset": "palette-uid"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "roundtripPrompt"
+      ]
+    },
+    {
+      "id": "empty_save_imports_palette_only",
+      "description": "A save with no boxes can contribute unused color definitions without appending a phantom mix.",
+      "state": {
+        "mixes": [
+          {
+            "type": "mix",
+            "id": "host",
+            "children": []
+          }
+        ]
+      },
+      "actions": [
+        "openPromptsWindow",
+        {
+          "type": "appendSaveToFirstMix",
+          "state": {
+            "mixes": [],
+            "colorPresets": [
+              {
+                "id": "unused",
+                "name": "Unused",
+                "color": "#778899"
+              }
+            ]
+          }
+        },
+        "roundtripPrompt"
+      ]
+    },
+    {
       "id": "default_ui_state",
       "description": "Default UI state on first load without an explicit mix state.",
       "random": 0
@@ -3007,7 +3277,7 @@
     },
     {
       "id": "openrouter_app_window",
-      "description": "Completion API opens with exactly the eight currently documented prompt/FIM providers, including DeepSeek live-to-FIM catalog intersection, DeepInfra text-generation metadata filtering, Hyperbolic's sunset base-only route, paginated Fireworks catalog guidance, provider-specific request bounds, versioned provider-scoped encrypted settings guidance, strict completion-only endpoint help, shared Help mode, and the standard boxed copy control.",
+      "description": "Completion API opens with exactly the eight documented prompt/FIM providers and a cool procedural identity mat, keeps provider/model/mode controls in foldable Settings with sampling nested under Advanced, defaults to Autocomplete, disables Infill for the Fireworks model, removes all manual stop/suffix fields, orders Beginning then generated output then hidden Ending in one responsive flow, retains strict completion-only endpoint and encrypted-settings help, and uses the standard boxed copy control.",
       "random": 0,
       "actions": [
         {

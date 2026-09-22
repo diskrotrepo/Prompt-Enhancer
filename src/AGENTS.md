@@ -13,7 +13,7 @@ Add a short table of contents at the top of `script.js` and each app module file
 
 ### Completion and Terminal application contracts
 
-`apps/openrouter-completions/app.js` now owns the multi-provider Completion API window despite its legacy folder name. Treat its body shape as a hard invariant: `prompt` is required, `messages` is forbidden, and `suffix` is provider/model-gated to DeepSeek FIM, Mistral FIM, or `gpt-3.5-turbo-instruct`. Only OpenRouter, DeepSeek, DeepInfra, Fireworks, Together, Mistral, OpenAI Legacy, and Hyperbolic's sunset base-completion route belong in this surface while their documented hosted protocols retain prompt/FIM `/completions` routes. DeepInfra uses `/v1/openai/completions`, limits this UI to its guide-level `max_tokens`/`temperature`/`top_p`/four-stop contract, reads `choices[].text`, and filters the authenticated `/v1/models` catalog to exact `metadata.tags` value `text-generation`; models still require their provider-documented raw prompt template. Hyperbolic is a deliberately narrow exception: expose only the documented `meta-llama/Meta-Llama-3.1-405B` base model, send only its conservative documented sampling fields, and never infer a model-catalog endpoint or replace it with a chat/instruct model. Provider option records are the single capability allowlist for absolute completion endpoints, request fields, stop/temperature/token limits, response shapes, catalog parsing/pagination, and pricing units. Catalog normalization must intersect DeepSeek's authenticated list with exact FIM model `deepseek-v4-pro`, honor DeepInfra's nested `metadata` tags/context/output/pricing fields, preserve all Fireworks `models` pages through `nextPageToken` plus camelCase serverless flags, keep Together's top-level language/code records and per-million pricing, require Mistral `capabilities.completion_fim`, retain OpenAI's exact three legacy completion IDs, and honor OpenRouter per-model `supported_parameters`/mandatory reasoning. Keep Mistral FIM temperature at or below 1.5 and DeepInfra/Fireworks/OpenAI/OpenRouter stop arrays at four entries or fewer. Successful zero-match catalogs stay empty instead of reviving a fallback. Provider switches must retain isolated key, endpoint, and model values. A non-chat endpoint does not by itself prove that a router preserves raw model input, so keep provider/model caveats visible. Completion and Terminal both delegate password-file cryptography to `apps/shared/encrypted-settings.js`; keep its versioned PBKDF2/AES-GCM envelope product-neutral, validate each app's product kind/version before mutation, and do not force a catalog call after a complete restored provider/model/key.
+`apps/openrouter-completions/app.js` now owns the multi-provider Completion API window despite its legacy folder name. Treat its body shape as a hard invariant: `prompt` is required, `messages` is forbidden, and wire-level `suffix` is added only when **Infill** is explicitly selected for DeepSeek FIM, Mistral FIM, or `gpt-3.5-turbo-instruct`. Autocomplete must never send or display Ending text. The visible workspace keeps provider/model/key/mode inside foldable Settings, nests endpoint/sampling under Advanced, removes manual stop and loose suffix controls, and renders Infill as Beginning text → Generated middle → Ending text; unsupported models disable Infill and restore Autocomplete. Reuse the prompt-box procedural mat vocabulary around opaque silver settings surfaces, with Completion's cooler palette kept in root design tokens and responsive rules verified at desktop/mobile widths. Only OpenRouter, DeepSeek, DeepInfra, Fireworks, Together, Mistral, OpenAI Legacy, and Hyperbolic's sunset base-completion route belong in this surface while their documented hosted protocols retain prompt/FIM `/completions` routes. DeepInfra uses `/v1/openai/completions`, limits requests to its guide-level `max_tokens`/`temperature`/`top_p`/provider-stop contract, reads `choices[].text`, and filters the authenticated `/v1/models` catalog to exact `metadata.tags` value `text-generation`; models still require their provider-documented raw prompt template. Hyperbolic is a deliberately narrow exception: expose only the documented `meta-llama/Meta-Llama-3.1-405B` base model, send only its conservative documented sampling fields, and never infer a model-catalog endpoint or replace it with a chat/instruct model. Provider option records are the single capability allowlist for absolute completion endpoints, request fields, stop/temperature/token limits, response shapes, catalog parsing/pagination, and pricing units. An automatic stop may come only from an exact documented catalog path or provider/model lookup and must fit the provider cap; absent or malformed metadata is omission, not permission to guess. Native FIM endpoints—not UI code—own tokenizer sentinel markers. Catalog normalization must intersect DeepSeek's authenticated list with exact FIM model `deepseek-v4-pro`, honor DeepInfra's nested `metadata` tags/context/output/pricing fields, preserve all Fireworks `models` pages through `nextPageToken` plus camelCase serverless flags, keep Together's top-level language/code records and per-million pricing, require Mistral `capabilities.completion_fim`, retain OpenAI's exact three legacy completion IDs, and honor OpenRouter per-model `supported_parameters`/`default_parameters`/mandatory reasoning. Keep Mistral FIM temperature at or below 1.5. Successful zero-match catalogs stay empty instead of reviving a fallback. Provider switches must retain isolated key, endpoint, and model values. A non-chat endpoint does not by itself prove that a router preserves raw model input, so keep provider/model caveats visible. Completion and Terminal both delegate password-file cryptography to `apps/shared/encrypted-settings.js`; keep its versioned PBKDF2/AES-GCM envelope product-neutral, validate each app's product kind/version before mutation, migrate supported Completion v1 suffix drafts to v2 Ending text, and do not force a catalog call after a complete restored provider/model/key.
 
 `apps/terminal/app.js` owns Chat Completions, OpenAI Responses, and native Anthropic Messages transport loops, `window.YolkToolRegistry`, built-in desktop/Prompt Enhancer adapters, `window.YolkTerminalKnowledge`, transcript rendering, model matching, encrypted settings application, and ASCII emotes. `script.js` exposes the data-only `window.YolkDesktop` manifest plus open/focus/close bridge; app tools must reuse that bridge instead of simulating menu clicks. Keep cross-origin iframe applications open/focus-only until they install an explicit adapter, cap tool loops, and serialize/truncate tool output. Provider keys stay in the cloned Terminal window's memory unless the user explicitly exports the password-encrypted File-menu artifact.
 
@@ -134,7 +134,13 @@ output, not the raw input text.
 Mix and String boxes now support per-box color customization. The header color
 button opens a panel with Auto/Custom modes, preset selection, and a Save Preset
 flow. Custom presets are serialized with mix state so they can be reused across
-boxes and sessions. Custom colors render flat (solid header fill plus a
+boxes and sessions. `customColorPresetsByRoot` owns each prompt's palette in a
+WeakMap; never reset another window's definitions during Open or fresh startup.
+Hydration passes `presetScope` to detached boxes and `presetIdMap` through nested
+imports. Preserve explicit preset ids independently of display names, keep unused
+definitions, and remap conflicting imports (including referenced built-ins).
+Refreshing preset choices also synchronizes linked box colors after a named edit.
+Custom colors render flat (solid header fill plus a
 darkened border via `applyCustomBoxStyles`) and retint the box's procedural mat.
 Keep controls on the shared opaque silver islands so a vivid user color cannot
 reduce field, label, or output contrast.
@@ -280,10 +286,23 @@ file usage without network fetches.
 
 ### Box Collapse State
 
-Mix and String collapse UI state is serialized (`collapsed`, plus compatibility
+Mix, String, and Variable collapse UI state is serialized (`collapsed`, plus compatibility
 aliases `minimized`/`maximized`) and should roundtrip through
 `applyMixState`/`exportMixState`. Keep this behavior intact when changing box
 templates or collapse button wiring.
+
+### Prompt Serialization
+
+`serializeBoxChildren` is the shared root/nested traversal for all three box
+kinds; `createWrapperFromState` dispatches both Open and append imports. Retain
+the legacy `mixes` key without assuming its entries are all mixes. Save every
+editable prompt value, including blank titles and settings temporarily hidden by
+Preserve or the empty-string lock. In particular, restore `delimiter.size` to
+`data-last-numeric` when Preserve is active, and recover custom sizes on unlock.
+An explicit `mixes: []` stays empty; only absent startup state creates a default
+mix. Add Save may import palette-only files without creating placeholder boxes.
+Generated output and transient chrome (menus, Help, color-panel draft names,
+window geometry) are derived/workspace state rather than prompt file contents.
 
 ## Testing
 
